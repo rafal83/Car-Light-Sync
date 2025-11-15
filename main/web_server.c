@@ -1039,7 +1039,17 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    can_event_type_t event = (can_event_type_t)event_item->valueint;
+    can_event_type_t event = CAN_EVENT_NONE;
+    if (cJSON_IsString(event_item)) {
+        event = config_manager_id_to_enum(event_item->valuestring);
+    } else if (cJSON_IsNumber(event_item)) {
+        // Support legacy payloads that still send a numeric enum
+        event = (can_event_type_t)event_item->valueint;
+    } else {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid event parameter");
+        cJSON_Delete(root);
+        return ESP_FAIL;
+    }
 
     // Arrêter l'événement
     config_manager_stop_event(event);
@@ -1124,7 +1134,17 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    can_event_type_t event = (can_event_type_t)event_item->valueint;
+    can_event_type_t event = CAN_EVENT_NONE;
+    if (cJSON_IsString(event_item)) {
+        event = config_manager_id_to_enum(event_item->valuestring);
+    } else if (cJSON_IsNumber(event_item)) {
+        // Support legacy payloads that still send numeric enums
+        event = (can_event_type_t)event_item->valueint;
+    } else {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid event parameter");
+        cJSON_Delete(root);
+        return ESP_FAIL;
+    }
 
     // Vérifier que l'événement est valide
     if (event <= CAN_EVENT_NONE || event >= CAN_EVENT_MAX) {

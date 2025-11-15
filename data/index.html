@@ -759,24 +759,24 @@
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.turnSignals">Clignotants</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-1">
-                        <label class="event-toggle-label" for="toggle-1" data-i18n="simulation.left">Gauche</label>
+                    <div class="event-toggle-container" id="event-toggle-TURN_LEFT">
+                        <label class="event-toggle-label" for="toggle-TURN_LEFT" data-i18n="simulation.left">Gauche</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-1" onchange="toggleEvent(1, this.checked)">
+                            <input type="checkbox" id="toggle-TURN_LEFT" onchange="toggleEvent('TURN_LEFT', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-2">
-                        <label class="event-toggle-label" for="toggle-2" data-i18n="simulation.right">Droite</label>
+                    <div class="event-toggle-container" id="event-toggle-TURN_RIGHT">
+                        <label class="event-toggle-label" for="toggle-TURN_RIGHT" data-i18n="simulation.right">Droite</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-2" onchange="toggleEvent(2, this.checked)">
+                            <input type="checkbox" id="toggle-TURN_RIGHT" onchange="toggleEvent('TURN_RIGHT', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-3">
-                        <label class="event-toggle-label" for="toggle-3" data-i18n="simulation.hazard">Warning</label>
+                    <div class="event-toggle-container" id="event-toggle-TURN_HAZARD">
+                        <label class="event-toggle-label" for="toggle-TURN_HAZARD" data-i18n="simulation.hazard">Warning</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-3" onchange="toggleEvent(3, this.checked)">
+                            <input type="checkbox" id="toggle-TURN_HAZARD" onchange="toggleEvent('TURN_HAZARD', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -786,17 +786,17 @@
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.charging">Charge</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-4">
-                        <label class="event-toggle-label" for="toggle-4" data-i18n="simulation.chargingNow">En charge</label>
+                    <div class="event-toggle-container" id="event-toggle-CHARGING">
+                        <label class="event-toggle-label" for="toggle-CHARGING" data-i18n="simulation.chargingNow">En charge</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-4" onchange="toggleEvent(4, this.checked)">
+                            <input type="checkbox" id="toggle-CHARGING" onchange="toggleEvent('CHARGING', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-5">
-                        <label class="event-toggle-label" for="toggle-5" data-i18n="simulation.chargeComplete">Charge complète</label>
+                    <div class="event-toggle-container" id="event-toggle-CHARGE_COMPLETE">
+                        <label class="event-toggle-label" for="toggle-CHARGE_COMPLETE" data-i18n="simulation.chargeComplete">Charge complète</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-5" onchange="toggleEvent(5, this.checked)">
+                            <input type="checkbox" id="toggle-CHARGE_COMPLETE" onchange="toggleEvent('CHARGE_COMPLETE', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -806,17 +806,17 @@
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.doors">Portes</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-11">
-                        <label class="event-toggle-label" for="toggle-11" data-i18n="simulation.doorOpen">Porte ouverte</label>
+                    <div class="event-toggle-container" id="event-toggle-DOOR_OPEN">
+                        <label class="event-toggle-label" for="toggle-DOOR_OPEN" data-i18n="simulation.doorOpen">Porte ouverte</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-11" onchange="toggleEvent(11, this.checked)">
+                            <input type="checkbox" id="toggle-DOOR_OPEN" onchange="toggleEvent('DOOR_OPEN', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-12">
-                        <label class="event-toggle-label" for="toggle-12" data-i18n="simulation.doorClose">Porte fermée</label>
+                    <div class="event-toggle-container" id="event-toggle-DOOR_CLOSE">
+                        <label class="event-toggle-label" for="toggle-DOOR_CLOSE" data-i18n="simulation.doorClose">Porte fermée</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-12" onchange="toggleEvent(12, this.checked)">
+                            <input type="checkbox" id="toggle-DOOR_CLOSE" onchange="toggleEvent('DOOR_CLOSE', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -826,17 +826,17 @@
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.lock">Verrouillage</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-13">
-                        <label class="event-toggle-label" for="toggle-13" data-i18n="simulation.locked">Verrouillé</label>
+                    <div class="event-toggle-container" id="event-toggle-LOCKED">
+                        <label class="event-toggle-label" for="toggle-LOCKED" data-i18n="simulation.locked">Verrouillé</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-13" onchange="toggleEvent(13, this.checked)">
+                            <input type="checkbox" id="toggle-LOCKED" onchange="toggleEvent('LOCKED', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-14">
-                        <label class="event-toggle-label" for="toggle-14" data-i18n="simulation.unlocked">Déverrouillé</label>
+                    <div class="event-toggle-container" id="event-toggle-UNLOCKED">
+                        <label class="event-toggle-label" for="toggle-UNLOCKED" data-i18n="simulation.unlocked">Déverrouillé</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-14" onchange="toggleEvent(14, this.checked)">
+                            <input type="checkbox" id="toggle-UNLOCKED" onchange="toggleEvent('UNLOCKED', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -846,24 +846,24 @@
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.driving">Conduite</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-15">
-                        <label class="event-toggle-label" for="toggle-15" data-i18n="simulation.brakeOn">Frein ON</label>
+                    <div class="event-toggle-container" id="event-toggle-BRAKE_ON">
+                        <label class="event-toggle-label" for="toggle-BRAKE_ON" data-i18n="simulation.brakeOn">Frein ON</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-15" onchange="toggleEvent(15, this.checked)">
+                            <input type="checkbox" id="toggle-BRAKE_ON" onchange="toggleEvent('BRAKE_ON', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-16">
-                        <label class="event-toggle-label" for="toggle-16" data-i18n="simulation.brakeOff">Frein OFF</label>
+                    <div class="event-toggle-container" id="event-toggle-BRAKE_OFF">
+                        <label class="event-toggle-label" for="toggle-BRAKE_OFF" data-i18n="simulation.brakeOff">Frein OFF</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-16" onchange="toggleEvent(16, this.checked)">
+                            <input type="checkbox" id="toggle-BRAKE_OFF" onchange="toggleEvent('BRAKE_OFF', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-22">
-                        <label class="event-toggle-label" for="toggle-22" data-i18n="simulation.speedThreshold">Seuil Vitesse</label>
+                    <div class="event-toggle-container" id="event-toggle-SPEED_THRESHOLD">
+                        <label class="event-toggle-label" for="toggle-SPEED_THRESHOLD" data-i18n="simulation.speedThreshold">Seuil Vitesse</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-22" onchange="toggleEvent(22, this.checked)">
+                            <input type="checkbox" id="toggle-SPEED_THRESHOLD" onchange="toggleEvent('SPEED_THRESHOLD', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -873,17 +873,17 @@
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.blindspot">Angle Mort</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-17">
-                        <label class="event-toggle-label" for="toggle-17" data-i18n="simulation.blindspotLeft">Gauche</label>
+                    <div class="event-toggle-container" id="event-toggle-BLINDSPOT_LEFT">
+                        <label class="event-toggle-label" for="toggle-BLINDSPOT_LEFT" data-i18n="simulation.blindspotLeft">Gauche</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-17" onchange="toggleEvent(17, this.checked)">
+                            <input type="checkbox" id="toggle-BLINDSPOT_LEFT" onchange="toggleEvent('BLINDSPOT_LEFT', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="event-toggle-container" id="event-toggle-18">
-                        <label class="event-toggle-label" for="toggle-18" data-i18n="simulation.blindspotRight">Droite</label>
+                    <div class="event-toggle-container" id="event-toggle-BLINDSPOT_RIGHT">
+                        <label class="event-toggle-label" for="toggle-BLINDSPOT_RIGHT" data-i18n="simulation.blindspotRight">Droite</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-18" onchange="toggleEvent(18, this.checked)">
+                            <input type="checkbox" id="toggle-BLINDSPOT_RIGHT" onchange="toggleEvent('BLINDSPOT_RIGHT', this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -1671,17 +1671,29 @@
 
             // If no data from API, create default rows for all events
             if (eventsConfigData.length === 0) {
-                for (let i = 1; i <= 16; i++) {
-                    eventsConfigData.push({
-                        event: i,
-                        effect: 1,
-                        brightness: 128,
-                        speed: 128,
-                        color: 0xFF0000,
-                        duration: 0,
-                        priority: 100,
-                        enabled: true
-                    });
+                const defaultEffectId =
+                    effectsList.find(effect => !effect.can_required)?.id ||
+                    effectsList[0]?.id ||
+                    'OFF';
+
+                if (eventTypesList.length > 0) {
+                    eventTypesList
+                        .filter(evt => evt.id !== 'NONE')
+                        .forEach(evt => {
+                            eventsConfigData.push({
+                                event: evt.id,
+                                effect: defaultEffectId,
+                                brightness: 128,
+                                speed: 128,
+                                color: 0xFF0000,
+                                duration: 0,
+                                priority: 100,
+                                enabled: true,
+                                action_type: 0,
+                                profile_id: -1,
+                                can_switch_profile: false
+                            });
+                        });
                 }
             }
 
@@ -2597,9 +2609,8 @@
             const statusDiv = document.getElementById('sim-status');
             const statusText = document.getElementById('sim-status-text');
 
-            // Event 20 = Night Mode ON, Event 21 = Night Mode OFF
-            const eventType = isEnabled ? 20 : 21;
-            const eventName = isEnabled ? 'Mode Nuit Activé' : 'Mode Nuit Désactivé';
+            const eventType = isEnabled ? 'NIGHT_MODE_ON' : 'NIGHT_MODE_OFF';
+            const eventName = isEnabled ? t('canEvents.nightModeOn') : t('canEvents.nightModeOff');
 
             try {
                 statusDiv.style.display = 'block';
@@ -2656,8 +2667,17 @@
         // Helper pour obtenir le nom d'un événement (depuis API uniquement)
         function getEventName(eventId) {
             if (eventTypesList.length > 0) {
-                const event = eventTypesList.find(e => e.id === eventId);
-                return event ? event.name : `Event ${eventId}`;
+                // API renvoie un ID string mais certaines parties du code utilisent l'index numérique
+                const stringId = typeof eventId === 'string' ? eventId : String(eventId);
+                const eventById = eventTypesList.find(e => e.id === stringId);
+                if (eventById) {
+                    return eventById.name;
+                }
+
+                const numericIndex = typeof eventId === 'number' ? eventId : parseInt(eventId, 10);
+                if (!Number.isNaN(numericIndex) && eventTypesList[numericIndex]) {
+                    return eventTypesList[numericIndex].name;
+                }
             }
             return `Event ${eventId}`;
         }
