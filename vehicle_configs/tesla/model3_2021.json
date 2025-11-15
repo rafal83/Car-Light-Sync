@@ -1,0 +1,872 @@
+{
+  "schema_version": "1.0",
+  "vehicle": {
+    "make": "Unknown",
+    "model": "Unknown",
+    "year": 0,
+    "variant": "",
+    "description": "Configuration CAN filtrée pour Unknown Unknown 0 (événements uniquement)"
+  },
+  "can_config": {
+    "buses": {
+      "chassis": 0,
+      "powertrain": 1,
+      "body": 2
+    },
+    "baudrate": 500000
+  },
+  "messages": [
+    {
+      "id": "0x204",
+      "name": "ID204PCS_chgStatus",
+      "bus": "powertrain",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "PCS_hvChargeStatus",
+          "start_bit": 4,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 3,
+          "mapping": {
+            "1": "PCS_CHARGE_BLOCKED",
+            "2": "PCS_CHARGE_ENABLED",
+            "3": "PCS_CHARGE_FAULTED",
+            "0": "PCS_CHARGE_STANDBY"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x273",
+      "name": "ID273UI_vehicleControl",
+      "bus": "powertrain",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "UI_lockRequest",
+          "start_bit": 17,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 7,
+          "mapping": {
+            "0": "UI_LOCK_REQUEST_IDLE",
+            "1": "UI_LOCK_REQUEST_LOCK",
+            "4": "UI_LOCK_REQUEST_REMOTE_LOCK",
+            "3": "UI_LOCK_REQUEST_REMOTE_UNLOCK",
+            "7": "UI_LOCK_REQUEST_SNA",
+            "2": "UI_LOCK_REQUEST_UNLOCK"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "LOCKED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "UNLOCKED"
+            }
+          ]
+        },
+        {
+          "name": "UI_ambientLightingEnabled",
+          "start_bit": 40,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "NIGHT_MODE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "NIGHT_MODE_OFF"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x25D",
+      "name": "ID25DCP_status",
+      "bus": "powertrain",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "CP_chargeCablePresent",
+          "start_bit": 3,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "mapping": {
+            "0": "CABLE_NOT_PRESENT",
+            "1": "CABLE_PRESENT"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "CHARGING_CABLE_DISCONNECTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "CHARGING_CABLE_CONNECTED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x399",
+      "name": "ID399DAS_status",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "DAS_blindSpotRearLeft",
+          "start_bit": 4,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 3,
+          "mapping": {
+            "0": "NO_WARNING",
+            "3": "SNA",
+            "1": "WARNING_LEVEL_1",
+            "2": "WARNING_LEVEL_2"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "BLINDSPOT_WARNING"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "BLINDSPOT_WARNING"
+            }
+          ]
+        },
+        {
+          "name": "DAS_blindSpotRearRight",
+          "start_bit": 6,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 3,
+          "mapping": {
+            "0": "NO_WARNING",
+            "3": "SNA",
+            "1": "WARNING_LEVEL_1",
+            "2": "WARNING_LEVEL_2"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "BLINDSPOT_WARNING"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "BLINDSPOT_WARNING"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x3A1",
+      "name": "ID3A1VCFRONT_vehicleStatus",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "VCFRONT_driverDoorStatus",
+          "start_bit": 31,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "mapping": {
+            "1": "DOOR_CLOSED",
+            "0": "DOOR_OPEN"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "DOOR_CLOSE"
+            },
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "DOOR_OPEN"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x3F5",
+      "name": "ID3F5VCFRONT_lighting",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "VCFRONT_indicatorLeftRequest",
+          "start_bit": 0,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 2,
+          "mapping": {
+            "2": "TURN_SIGNAL_ACTIVE_HIGH",
+            "1": "TURN_SIGNAL_ACTIVE_LOW",
+            "0": "TURN_SIGNAL_OFF"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "TURN_LEFT"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "TURN_LEFT"
+            }
+          ]
+        },
+        {
+          "name": "VCFRONT_indicatorRightRequest",
+          "start_bit": 2,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 2,
+          "mapping": {
+            "2": "TURN_SIGNAL_ACTIVE_HIGH",
+            "1": "TURN_SIGNAL_ACTIVE_LOW",
+            "0": "TURN_SIGNAL_OFF"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "TURN_RIGHT"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "TURN_RIGHT"
+            }
+          ]
+        },
+        {
+          "name": "VCFRONT_hazardLightRequest",
+          "start_bit": 4,
+          "length": 4,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 8,
+          "mapping": {
+            "1": "HAZARD_REQUEST_BUTTON",
+            "6": "HAZARD_REQUEST_CAR_ALARM",
+            "5": "HAZARD_REQUEST_CRASH",
+            "7": "HAZARD_REQUEST_DAS",
+            "2": "HAZARD_REQUEST_LOCK",
+            "4": "HAZARD_REQUEST_MISLOCK",
+            "0": "HAZARD_REQUEST_NONE",
+            "8": "HAZARD_REQUEST_UDS",
+            "3": "HAZARD_REQUEST_UNLOCK"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "TURN_HAZARD"
+            }
+          ]
+        },
+        {
+          "name": "VCFRONT_hazardSwitchBacklight",
+          "start_bit": 27,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "TURN_HAZARD"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x3FD",
+      "name": "ID3FDUI_autopilotControl",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "UI_fsdVisualizationEnabled",
+          "start_bit": 37,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "AUTOPILOT_ENGAGED"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "AUTOPILOT_DISENGAGED"
+            }
+          ]
+        },
+        {
+          "name": "UI_fsdStopsControlEnabled",
+          "start_bit": 38,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "AUTOPILOT_ENGAGED"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "AUTOPILOT_DISENGAGED"
+            }
+          ]
+        },
+        {
+          "name": "UI_enableAutopilotStopWarning",
+          "start_bit": 44,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "AUTOPILOT_ENGAGED"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "AUTOPILOT_DISENGAGED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x23D",
+      "name": "ID23DCP_chargeStatus",
+      "bus": "powertrain",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "CP_hvChargeStatus",
+          "start_bit": 0,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 6,
+          "mapping": {
+            "1": "CP_CHARGE_CONNECTED",
+            "5": "CP_CHARGE_ENABLED",
+            "6": "CP_CHARGE_FAULTED",
+            "0": "CP_CHARGE_INACTIVE",
+            "2": "CP_CHARGE_STANDBY",
+            "4": "CP_EVSE_TEST_PASSED",
+            "3": "CP_EXT_EVSE_TEST_ACTIVE"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "5",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x13D",
+      "name": "ID13DCP_chargeStatus",
+      "bus": "chassis",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "CP_hvChargeStatus",
+          "start_bit": 0,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 6,
+          "mapping": {
+            "1": "CP_CHARGE_CONNECTED",
+            "5": "CP_CHARGE_ENABLED",
+            "6": "CP_CHARGE_FAULTED",
+            "0": "CP_CHARGE_INACTIVE",
+            "2": "CP_CHARGE_STANDBY",
+            "4": "CP_EVSE_TEST_PASSED",
+            "3": "CP_EXT_EVSE_TEST_ACTIVE"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "5",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x43D",
+      "name": "ID43DCP_chargeStatusLog",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "CP_hvChargeStatus_log",
+          "start_bit": 0,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 6,
+          "mapping": {
+            "1": "CP_CHARGE_CONNECTED",
+            "5": "CP_CHARGE_ENABLED",
+            "6": "CP_CHARGE_FAULTED",
+            "0": "CP_CHARGE_INACTIVE",
+            "2": "CP_CHARGE_STANDBY",
+            "4": "CP_EVSE_TEST_PASSED",
+            "3": "CP_EXT_EVSE_TEST_ACTIVE"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "5",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x7D5",
+      "name": "ID7D5DIR_debug",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "DIR_brakeSwitchNO",
+          "start_bit": 62,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "BRAKE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "BRAKE_OFF"
+            }
+          ]
+        },
+        {
+          "name": "DIR_brakeSwitchNC",
+          "start_bit": 63,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "BRAKE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "BRAKE_OFF"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x757",
+      "name": "ID757DIF_debug",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "DIF_brakeSwitchNO",
+          "start_bit": 62,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "BRAKE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "BRAKE_OFF"
+            }
+          ]
+        },
+        {
+          "name": "DIF_brakeSwitchNC",
+          "start_bit": 63,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "BRAKE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "BRAKE_OFF"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x2F1",
+      "name": "ID2F1VCFRONT_eFuseDebugStatus",
+      "bus": "powertrain",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "VCFRONT_autopilot1Fault",
+          "start_bit": 10,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "AUTOPILOT_ENGAGED"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "AUTOPILOT_DISENGAGED"
+            }
+          ]
+        },
+        {
+          "name": "VCFRONT_autopilot2Fault",
+          "start_bit": 10,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "AUTOPILOT_ENGAGED"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "AUTOPILOT_DISENGAGED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x3C2",
+      "name": "ID3C2VCLEFT_switchStatus",
+      "bus": "body",
+      "cycle_time_ms": 50,
+      "signals": [
+        {
+          "name": "VCLEFT_hazardButtonPressed",
+          "start_bit": 3,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "TURN_HAZARD"
+            }
+          ]
+        },
+        {
+          "name": "VCLEFT_brakeSwitchPressed",
+          "start_bit": 4,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "BRAKE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "BRAKE_OFF"
+            }
+          ]
+        },
+        {
+          "name": "VCLEFT_brakePressed",
+          "start_bit": 60,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "BRAKE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "BRAKE_OFF"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x293",
+      "name": "ID293UI_chassisControl",
+      "bus": "powertrain",
+      "cycle_time_ms": 500,
+      "signals": [
+        {
+          "name": "UI_rebootAutopilot",
+          "start_bit": 27,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "AUTOPILOT_ENGAGED"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "AUTOPILOT_DISENGAGED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x118",
+      "name": "ID118DriveSystemStatus",
+      "bus": "chassis",
+      "cycle_time_ms": 10,
+      "signals": [
+        {
+          "name": "DI_gear",
+          "start_bit": 21,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 7,
+          "mapping": {
+            "4": "DI_GEAR_D",
+            "0": "DI_GEAR_INVALID",
+            "3": "DI_GEAR_N",
+            "1": "DI_GEAR_P",
+            "2": "DI_GEAR_R",
+            "7": "DI_GEAR_SNA"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "4",
+              "trigger": "GEAR_DRIVE"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "GEAR_PARK"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "GEAR_REVERSE"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

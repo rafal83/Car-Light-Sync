@@ -1,4 +1,6 @@
 #include "tesla_can.h"
+#include "vehicle_can_config.h"
+#include "vehicle_can_config_generated.h"
 #include <string.h>
 
 void decode_vehicle_status(const can_frame_t* frame, vehicle_state_t* state) {
@@ -142,59 +144,68 @@ void decode_night_mode(const can_frame_t* frame, vehicle_state_t* state) {
 }
 
 void process_can_frame(const can_frame_t* frame, vehicle_state_t* state) {
+    // Essayer d'abord le décodeur générique basé sur la configuration DBC
+    const vehicle_can_config_static_t* config = get_vehicle_can_config();
+    if (vehicle_can_decode_message_static(config, frame->id, frame->data, frame->dlc, 0, state)) {
+        // Message décodé avec succès par le système générique
+        state->last_update = frame->timestamp;
+        return;
+    }
+
+    // Fallback sur les décodeurs manuels (pour compatibilité / debugging)
     switch (frame->id) {
         case CAN_ID_VEHICLE_STATUS:
             decode_vehicle_status(frame, state);
             break;
-            
+
         case CAN_ID_SPEED:
             decode_speed(frame, state);
             break;
-            
+
         case CAN_ID_DOOR_STATUS:
             decode_door_status(frame, state);
             break;
-            
+
         case CAN_ID_LOCK_STATUS:
             decode_lock_status(frame, state);
             break;
-            
+
         case CAN_ID_WINDOW_STATUS:
             decode_window_status(frame, state);
             break;
-            
+
         case CAN_ID_TRUNK_STATUS:
             decode_trunk_status(frame, state);
             break;
-            
+
         case CAN_ID_LIGHT_STATUS:
             decode_light_status(frame, state);
             break;
-            
+
         case CAN_ID_BRAKE_STATUS:
             decode_brake_status(frame, state);
             break;
-            
+
         case CAN_ID_TURN_SIGNAL:
             decode_turn_signal(frame, state);
             break;
-            
+
         case CAN_ID_CHARGE_STATUS:
             decode_charge_status(frame, state);
             break;
-            
+
         case CAN_ID_BATTERY_VOLTAGE:
             decode_battery_voltage(frame, state);
             break;
-            
+
         case CAN_ID_BLINDSPOT:
             decode_blindspot(frame, state);
             break;
-            
+
         case CAN_ID_NIGHT_MODE:
             decode_night_mode(frame, state);
             break;
-            
+
         default:
             // Frame non gérée
             break;

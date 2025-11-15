@@ -4,6 +4,7 @@ idf_component_register(
         "wifi_manager.c"
         "commander.c"
         "tesla_can.c"
+        "vehicle_can_config.c"
         "led_effects.c"
         "led_strip_encoder.c"
         "web_server.c"
