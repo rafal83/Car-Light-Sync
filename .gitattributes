@@ -1,0 +1,11 @@
+# Force les fins de lignes UNIX partout
+* text eol=lf
+
+# Binaire : pas de conversions
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary
+*.exe binary
+*.dll binary

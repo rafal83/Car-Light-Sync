@@ -1,0 +1,66 @@
+menu "Tesla Strip Configuration"
+
+    config LED_GPIO
+        int "LED GPIO Pin"
+        default 5
+        help
+            GPIO pin connected to the WS2812 LED strip data line.
+
+    config LED_COUNT
+        int "Number of LEDs"
+        default 60
+        range 1 300
+        help
+            Number of LEDs in the strip.
+
+    config WIFI_AP_SSID
+        string "WiFi AP SSID"
+        default "Tesla-Strip"
+        help
+            SSID for the access point.
+
+    config WIFI_AP_PASSWORD
+        string "WiFi AP Password"
+        default "tesla123"
+        help
+            Password for the access point (min 8 characters).
+
+    config PANDA_WIFI_PREFIX
+        string "Panda WiFi SSID Prefix"
+        default "panda-"
+        help
+            Prefix to search for Panda Commander WiFi networks.
+
+    config PANDA_WIFI_PASSWORD
+        string "Panda WiFi Password"
+        default "testing123"
+        help
+            Password for connecting to Panda Commander.
+
+    config COMMANDER_PORT
+        int "Commander TCP Port"
+        default 1338
+        help
+            TCP port for Commander connection.
+
+    config WEB_SERVER_PORT
+        int "Web Server Port"
+        default 80
+        help
+            HTTP server port.
+
+    config DEFAULT_BRIGHTNESS
+        int "Default LED Brightness"
+        default 128
+        range 0 255
+        help
+            Default brightness level (0-255).
+
+    config DEFAULT_EFFECT
+        int "Default LED Effect"
+        default 3
+        range 0 15
+        help
+            Default LED effect on startup.
+
+endmenu

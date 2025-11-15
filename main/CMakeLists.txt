@@ -1,0 +1,25 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "wifi_manager.c"
+        "commander.c"
+        "tesla_can.c"
+        "led_effects.c"
+        "led_strip_encoder.c"
+        "web_server.c"
+        "config_manager.c"
+        "ota_update.c"
+    INCLUDE_DIRS
+        "."
+        "../include"
+    EMBED_FILES
+        "../data/index.html.gz"
+    REQUIRES
+        esp_wifi
+        esp_http_server
+        nvs_flash
+        driver
+        esp_netif
+        json
+        app_update
+)

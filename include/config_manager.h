@@ -1,0 +1,295 @@
+#ifndef CONFIG_MANAGER_H
+#define CONFIG_MANAGER_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include "led_effects.h"
+
+#define MAX_PROFILES 10
+#define PROFILE_NAME_MAX_LEN 32
+
+// IDs alphanumériques stables pour les événements CAN (ne changent jamais)
+#define EVENT_ID_NONE               "NONE"
+#define EVENT_ID_TURN_LEFT          "TURN_LEFT"
+#define EVENT_ID_TURN_RIGHT         "TURN_RIGHT"
+#define EVENT_ID_TURN_HAZARD        "TURN_HAZARD"
+#define EVENT_ID_CHARGING           "CHARGING"
+#define EVENT_ID_CHARGE_COMPLETE    "CHARGE_COMPLETE"
+#define EVENT_ID_DOOR_OPEN          "DOOR_OPEN"
+#define EVENT_ID_DOOR_CLOSE         "DOOR_CLOSE"
+#define EVENT_ID_LOCKED             "LOCKED"
+#define EVENT_ID_UNLOCKED           "UNLOCKED"
+#define EVENT_ID_BRAKE_ON           "BRAKE_ON"
+#define EVENT_ID_BRAKE_OFF          "BRAKE_OFF"
+#define EVENT_ID_BLINDSPOT_LEFT     "BLINDSPOT_LEFT"
+#define EVENT_ID_BLINDSPOT_RIGHT    "BLINDSPOT_RIGHT"
+#define EVENT_ID_NIGHT_MODE_ON      "NIGHT_MODE_ON"
+#define EVENT_ID_NIGHT_MODE_OFF     "NIGHT_MODE_OFF"
+#define EVENT_ID_SPEED_THRESHOLD    "SPEED_THRESHOLD"
+#define EVENT_ID_AUTOPILOT_ENGAGED  "AUTOPILOT_ENGAGED"
+#define EVENT_ID_AUTOPILOT_DISENGAGED "AUTOPILOT_DISENGAGED"
+#define EVENT_ID_GEAR_DRIVE         "GEAR_DRIVE"
+#define EVENT_ID_GEAR_REVERSE       "GEAR_REVERSE"
+#define EVENT_ID_GEAR_PARK          "GEAR_PARK"
+
+#define EVENT_ID_MAX_LEN 32  // Longueur max d'un ID d'événement
+
+// Types d'événements CAN qui peuvent déclencher des effets (enum interne, peut changer)
+typedef enum {
+    CAN_EVENT_NONE = 0,
+    CAN_EVENT_TURN_LEFT,
+    CAN_EVENT_TURN_RIGHT,
+    CAN_EVENT_TURN_HAZARD,
+    CAN_EVENT_CHARGING,
+    CAN_EVENT_CHARGE_COMPLETE,
+    CAN_EVENT_DOOR_OPEN,
+    CAN_EVENT_DOOR_CLOSE,
+    CAN_EVENT_LOCKED,
+    CAN_EVENT_UNLOCKED,
+    CAN_EVENT_BRAKE_ON,
+    CAN_EVENT_BRAKE_OFF,
+    CAN_EVENT_BLINDSPOT_LEFT,
+    CAN_EVENT_BLINDSPOT_RIGHT,
+    CAN_EVENT_NIGHT_MODE_ON,
+    CAN_EVENT_NIGHT_MODE_OFF,
+    CAN_EVENT_SPEED_THRESHOLD,  // Déclenché quand vitesse > seuil
+    CAN_EVENT_AUTOPILOT_ENGAGED,
+    CAN_EVENT_AUTOPILOT_DISENGAGED,
+    CAN_EVENT_GEAR_DRIVE,       // Passage en mode Drive
+    CAN_EVENT_GEAR_REVERSE,     // Passage en marche arrière
+    CAN_EVENT_GEAR_PARK,        // Passage en mode Park
+    CAN_EVENT_MAX
+} can_event_type_t;
+
+// Type d'action pour un événement CAN
+typedef enum {
+    EVENT_ACTION_APPLY_EFFECT = 0,  // Applique un effet LED
+    EVENT_ACTION_SWITCH_PROFILE,    // Change de profil
+    EVENT_ACTION_BOTH               // Change de profil ET applique un effet
+} event_action_type_t;
+
+// Configuration d'un effet pour un événement CAN spécifique
+typedef struct {
+    can_event_type_t event;
+    event_action_type_t action_type; // Type d'action à effectuer
+    effect_config_t effect_config;
+    uint16_t duration_ms;       // Durée de l'effet (0 = permanent jusqu'à nouvel événement)
+    uint8_t priority;           // Priorité (0-255, plus haut = prioritaire)
+    int8_t profile_id;          // ID du profil à activer (-1 = aucun)
+    bool enabled;               // Actif ou non
+} can_event_effect_t;
+
+// Profil de configuration complet
+typedef struct {
+    char name[PROFILE_NAME_MAX_LEN];
+    effect_config_t default_effect;     // Effet par défaut
+    effect_config_t night_mode_effect;  // Effet en mode nuit
+    
+    can_event_effect_t event_effects[CAN_EVENT_MAX];  // Effets par événement
+    
+    // Paramètres généraux
+    bool auto_night_mode;       // Active automatiquement le mode nuit
+    uint8_t night_brightness;   // Luminosité en mode nuit (0-255)
+    uint16_t speed_threshold;   // Seuil de vitesse pour événement (km/h)
+    
+    // Métadonnées
+    bool active;                // Profil actif
+    uint32_t created_timestamp;
+    uint32_t modified_timestamp;
+} config_profile_t;
+
+/**
+ * @brief Initialise le gestionnaire de configuration
+ * @return true si succès
+ */
+bool config_manager_init(void);
+
+/**
+ * @brief Charge tous les profils depuis NVS
+ * @return Nombre de profils chargés
+ */
+int config_manager_load_profiles(void);
+
+/**
+ * @brief Sauvegarde un profil en NVS
+ * @param profile_id ID du profil (0-9)
+ * @param profile Profil à sauvegarder
+ * @return true si succès
+ */
+bool config_manager_save_profile(uint8_t profile_id, const config_profile_t* profile);
+
+/**
+ * @brief Charge un profil depuis NVS
+ * @param profile_id ID du profil
+ * @param profile Pointeur vers le profil
+ * @return true si succès
+ */
+bool config_manager_load_profile(uint8_t profile_id, config_profile_t* profile);
+
+/**
+ * @brief Supprime un profil
+ * @param profile_id ID du profil
+ * @return true si succès
+ */
+bool config_manager_delete_profile(uint8_t profile_id);
+
+/**
+ * @brief Active un profil
+ * @param profile_id ID du profil
+ * @return true si succès
+ */
+bool config_manager_activate_profile(uint8_t profile_id);
+
+/**
+ * @brief Obtient le profil actif
+ * @param profile Pointeur vers le profil
+ * @return true si un profil est actif
+ */
+bool config_manager_get_active_profile(config_profile_t* profile);
+
+/**
+ * @brief Obtient l'ID du profil actif
+ * @return ID du profil actif (-1 si aucun)
+ */
+int config_manager_get_active_profile_id(void);
+
+/**
+ * @brief Liste tous les profils disponibles
+ * @param profiles Array pour stocker les profils
+ * @param max_profiles Taille max du array
+ * @return Nombre de profils trouvés
+ */
+int config_manager_list_profiles(config_profile_t* profiles, int max_profiles);
+
+/**
+ * @brief Crée un profil par défaut
+ * @param profile Pointeur vers le profil
+ * @param name Nom du profil
+ */
+void config_manager_create_default_profile(config_profile_t* profile, const char* name);
+
+/**
+ * @brief Associe un effet à un événement CAN
+ * @param profile_id ID du profil
+ * @param event Type d'événement
+ * @param effect_config Configuration de l'effet
+ * @param duration_ms Durée de l'effet
+ * @param priority Priorité
+ * @return true si succès
+ */
+bool config_manager_set_event_effect(uint8_t profile_id,
+                                     can_event_type_t event,
+                                     const effect_config_t* effect_config,
+                                     uint16_t duration_ms,
+                                     uint8_t priority);
+
+/**
+ * @brief Active ou désactive un événement
+ * @param profile_id ID du profil
+ * @param event Type d'événement
+ * @param enabled true pour activer, false pour désactiver
+ * @return true si succès
+ */
+bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event, bool enabled);
+
+/**
+ * @brief Traite un événement CAN et applique l'effet correspondant
+ * @param event Type d'événement
+ * @return true si un effet a été appliqué
+ */
+bool config_manager_process_can_event(can_event_type_t event);
+
+/**
+ * @brief Arrête manuellement un événement actif
+ * @param event Type d'événement à arrêter
+ */
+void config_manager_stop_event(can_event_type_t event);
+
+/**
+ * @brief Met à jour les effets en fonction du temps
+ * Gère les effets temporaires et retourne à l'effet par défaut
+ */
+void config_manager_update(void);
+
+/**
+ * @brief Exporte un profil en JSON
+ * @param profile_id ID du profil
+ * @param json_buffer Buffer pour le JSON
+ * @param buffer_size Taille du buffer
+ * @return true si succès
+ */
+bool config_manager_export_profile(uint8_t profile_id, char* json_buffer, size_t buffer_size);
+
+/**
+ * @brief Importe un profil depuis JSON
+ * @param profile_id ID du profil
+ * @param json_string JSON du profil
+ * @return true si succès
+ */
+bool config_manager_import_profile(uint8_t profile_id, const char* json_string);
+
+/**
+ * @brief Obtient le nom d'un événement CAN
+ * @param event Type d'événement
+ * @return Nom de l'événement
+ */
+const char* config_manager_get_event_name(can_event_type_t event);
+
+/**
+ * @brief Obtient la configuration d'effet pour un événement spécifique
+ * @param event Type d'événement
+ * @param event_effect Pointeur vers la structure d'effet
+ * @return true si succès (profil actif existe)
+ */
+bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t* event_effect);
+
+/**
+ * @brief Obtient le nombre de LEDs configuré
+ * @return Nombre de LEDs
+ */
+uint16_t config_manager_get_led_count(void);
+
+/**
+ * @brief Obtient le pin GPIO pour les LEDs
+ * @return Numéro du pin GPIO
+ */
+uint8_t config_manager_get_led_pin(void);
+
+/**
+ * @brief Définit la configuration matérielle des LEDs
+ * @param led_count Nombre de LEDs (1-1000)
+ * @param data_pin Pin GPIO pour les données (0-39)
+ * @return true si succès et sauvegardé en NVS
+ */
+bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin);
+
+/**
+ * @brief Convertit un enum d'événement en ID alphanumérique
+ * @param event Type d'événement
+ * @return ID alphanumérique (constante statique)
+ */
+const char* config_manager_enum_to_id(can_event_type_t event);
+
+/**
+ * @brief Convertit un ID alphanumérique en enum d'événement
+ * @param id ID alphanumérique
+ * @return Type d'événement (CAN_EVENT_NONE si ID inconnu)
+ */
+can_event_type_t config_manager_id_to_enum(const char* id);
+
+/**
+ * @brief Vérifie si un événement peut déclencher un changement de profil
+ * @param event Type d'événement
+ * @return true si l'événement peut changer de profil
+ */
+bool config_manager_event_can_switch_profile(can_event_type_t event);
+
+/**
+ * @brief Réinitialise tous les paramètres aux valeurs d'usine
+ * Supprime tous les profils et crée un profil par défaut
+ * @return true si succès
+ */
+bool config_manager_factory_reset(void);
+
+#endif // CONFIG_MANAGER_H

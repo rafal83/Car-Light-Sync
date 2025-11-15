@@ -1,0 +1,45 @@
+# ESP-IDF
+build/
+sdkconfig
+sdkconfig.old
+*.pyc
+
+# PlatformIO
+.pio/
+.vscode/
+.clang_complete
+.gcc-flags.json
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.claude
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.bin
+*.elf
+*.map
+
+# Logs
+*.log
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Windows/Linux device files
+nul
