@@ -252,7 +252,7 @@ bool config_manager_delete_profile(uint8_t profile_id) {
         if (profiles[p].name[0] == '\0') continue; // Profil vide
 
         for (int e = 0; e < CAN_EVENT_MAX; e++) {
-            if (profiles[p].event_effects[e].profile_id == profile_id) {
+            if ((profiles[p].event_effects[e].profile_id == profile_id) && (profile_id != p)) {
                 ESP_LOGW(TAG, "Cannot delete profile %d: used by event %d in profile %d",
                          profile_id, e, p);
                 return false;
@@ -528,6 +528,33 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
     profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].priority = 140;
     profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].enabled = true;
 
+    // Câble connecté
+    memcpy(&profile->event_effects[CAN_EVENT_CHARGING_STARTED],
+           &profile->event_effects[CAN_EVENT_CHARGE_COMPLETE],
+           sizeof(can_event_effect_t));    
+    profile->event_effects[CAN_EVENT_CHARGING_STARTED].event = CAN_EVENT_CHARGING_STARTED;
+    profile->event_effects[CAN_EVENT_CHARGING_STARTED].enabled = false;
+
+    memcpy(&profile->event_effects[CAN_EVENT_CHARGING_STOPPED],
+           &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
+           sizeof(can_event_effect_t));    
+    profile->event_effects[CAN_EVENT_CHARGING_STOPPED].event = CAN_EVENT_CHARGING_STOPPED;
+
+    memcpy(&profile->event_effects[CAN_EVENT_CHARGING_CABLE_CONNECTED],
+           &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
+           sizeof(can_event_effect_t));    
+    profile->event_effects[CAN_EVENT_CHARGING_CABLE_CONNECTED].event = CAN_EVENT_CHARGING_CABLE_CONNECTED;
+
+    memcpy(&profile->event_effects[CAN_EVENT_CHARGING_CABLE_DISCONNECTED],
+           &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
+           sizeof(can_event_effect_t));    
+    profile->event_effects[CAN_EVENT_CHARGING_CABLE_DISCONNECTED].event = CAN_EVENT_CHARGING_CABLE_DISCONNECTED;
+    
+    memcpy(&profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED],
+           &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
+           sizeof(can_event_effect_t));    
+    profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED].event = CAN_EVENT_CHARGING_PORT_OPENED;
+
     // Porte ouverte
     profile->event_effects[CAN_EVENT_DOOR_OPEN].event = CAN_EVENT_DOOR_OPEN;
     profile->event_effects[CAN_EVENT_DOOR_OPEN].action_type = EVENT_ACTION_APPLY_EFFECT;
@@ -635,6 +662,31 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
     profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].duration_ms = 0;
     profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].priority = 60;
     profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].enabled = false; // Désactivé par défaut
+
+    memcpy(&profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED],
+           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           sizeof(can_event_effect_t));
+    profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED].event = CAN_EVENT_AUTOPILOT_ENGAGED;
+
+    memcpy(&profile->event_effects[CAN_EVENT_AUTOPILOT_DISENGAGED],
+           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           sizeof(can_event_effect_t));   
+    profile->event_effects[CAN_EVENT_AUTOPILOT_DISENGAGED].event = CAN_EVENT_AUTOPILOT_DISENGAGED;
+
+    memcpy(&profile->event_effects[CAN_EVENT_GEAR_DRIVE],
+           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           sizeof(can_event_effect_t));   
+    profile->event_effects[CAN_EVENT_GEAR_DRIVE].event = CAN_EVENT_GEAR_DRIVE;
+
+    memcpy(&profile->event_effects[CAN_EVENT_GEAR_REVERSE],
+           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           sizeof(can_event_effect_t));   
+    profile->event_effects[CAN_EVENT_GEAR_REVERSE].event = CAN_EVENT_GEAR_REVERSE;
+
+    memcpy(&profile->event_effects[CAN_EVENT_GEAR_PARK],
+           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           sizeof(can_event_effect_t));   
+    profile->event_effects[CAN_EVENT_GEAR_PARK].event = CAN_EVENT_GEAR_PARK;
 
     // Paramètres généraux
     profile->auto_night_mode = false; // Désactivé par défaut, l'utilisateur peut l'activer manuellement
@@ -1074,6 +1126,11 @@ const char* config_manager_enum_to_id(can_event_type_t event) {
         case CAN_EVENT_TURN_HAZARD:         return EVENT_ID_TURN_HAZARD;
         case CAN_EVENT_CHARGING:            return EVENT_ID_CHARGING;
         case CAN_EVENT_CHARGE_COMPLETE:     return EVENT_ID_CHARGE_COMPLETE;
+        case CAN_EVENT_CHARGING_STARTED:     return EVENT_ID_CHARGING_STARTED;
+        case CAN_EVENT_CHARGING_STOPPED:     return EVENT_ID_CHARGING_STOPPED;
+        case CAN_EVENT_CHARGING_CABLE_CONNECTED:     return EVENT_ID_CHARGING_CABLE_CONNECTED;
+        case CAN_EVENT_CHARGING_CABLE_DISCONNECTED:     return EVENT_ID_CHARGING_CABLE_DISCONNECTED;
+        case CAN_EVENT_CHARGING_PORT_OPENED:     return EVENT_ID_CHARGING_PORT_OPENED;
         case CAN_EVENT_DOOR_OPEN:           return EVENT_ID_DOOR_OPEN;
         case CAN_EVENT_DOOR_CLOSE:          return EVENT_ID_DOOR_CLOSE;
         case CAN_EVENT_LOCKED:              return EVENT_ID_LOCKED;
@@ -1104,6 +1161,11 @@ can_event_type_t config_manager_id_to_enum(const char* id) {
     if (strcmp(id, EVENT_ID_TURN_HAZARD) == 0)          return CAN_EVENT_TURN_HAZARD;
     if (strcmp(id, EVENT_ID_CHARGING) == 0)             return CAN_EVENT_CHARGING;
     if (strcmp(id, EVENT_ID_CHARGE_COMPLETE) == 0)      return CAN_EVENT_CHARGE_COMPLETE;
+    if (strcmp(id, EVENT_ID_CHARGING_STARTED) == 0)      return CAN_EVENT_CHARGING_STARTED;
+    if (strcmp(id, EVENT_ID_CHARGING_STOPPED) == 0)      return CAN_EVENT_CHARGING_STOPPED;
+    if (strcmp(id, EVENT_ID_CHARGING_CABLE_CONNECTED) == 0)      return CAN_EVENT_CHARGING_CABLE_CONNECTED;
+    if (strcmp(id, EVENT_ID_CHARGING_CABLE_DISCONNECTED) == 0)      return CAN_EVENT_CHARGING_CABLE_DISCONNECTED;
+    if (strcmp(id, EVENT_ID_CHARGING_PORT_OPENED) == 0)      return CAN_EVENT_CHARGING_PORT_OPENED;
     if (strcmp(id, EVENT_ID_DOOR_OPEN) == 0)            return CAN_EVENT_DOOR_OPEN;
     if (strcmp(id, EVENT_ID_DOOR_CLOSE) == 0)           return CAN_EVENT_DOOR_CLOSE;
     if (strcmp(id, EVENT_ID_LOCKED) == 0)               return CAN_EVENT_LOCKED;

@@ -16,9 +16,15 @@
 #include "config_manager.h"
 #include "ota_update.h"
 
+#ifdef CONFIG_HAS_PSRAM
+#include "cJSON.h"
+#include "esp_heap_caps.h"
+#endif
+
 static const char *TAG = "Main";
 
 static vehicle_state_t last_vehicle_state = {0};
+
 
 // Callback pour les frames CAN
 static void vehicle_can_callback(const can_frame_t* frame, void* user_data) {
@@ -227,6 +233,9 @@ static void monitor_task(void *pvParameters) {
             }
             
             ESP_LOGI(TAG, "Mémoire libre: %lu bytes", esp_get_free_heap_size());
+#ifdef CONFIG_HAS_PSRAM
+            ESP_LOGI(TAG, "PSRAM libre: %d bytes", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+#endif
             ESP_LOGI(TAG, "==============");
             
             last_print = now;
@@ -236,7 +245,27 @@ static void monitor_task(void *pvParameters) {
     }
 }
 
+#ifdef CONFIG_HAS_PSRAM
+// Fonctions d'allocation mémoire pour cJSON utilisant la PSRAM
+static void* psram_malloc(size_t size) {
+    return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+}
+
+static void psram_free(void* ptr) {
+    heap_caps_free(ptr);
+}
+#endif
+
 void app_main(void) {
+#ifdef CONFIG_HAS_PSRAM
+    // Configurer cJSON pour utiliser la PSRAM pour les allocations
+    cJSON_Hooks hooks = {
+        .malloc_fn = psram_malloc,
+        .free_fn = psram_free
+    };
+    cJSON_InitHooks(&hooks);
+#endif
+
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "    Tesla Strip Controller      ");
     ESP_LOGI(TAG, "       Version 2.1.0            ");

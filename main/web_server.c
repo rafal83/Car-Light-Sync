@@ -1373,7 +1373,11 @@ esp_err_t web_server_start(void) {
     config.server_port = WEB_SERVER_PORT;
     config.max_uri_handlers = 30; // Augmenté pour supporter toutes les routes (actuellement 26)
     config.lru_purge_enable = true;
-    config.stack_size = 16384; // Augmenter la stack à 16 Ko pour éviter les overflows
+    #ifndef CONFIG_HAS_PSRAM
+    config.stack_size = 24576; // Augmenter la stack pour la version sans PSRAM
+#else
+    config.stack_size = 16384; // Stack par défaut pour la version PSRAM
+#endif
     config.recv_wait_timeout = 30; // Timeout de réception (30s au lieu de 10s)
     config.send_wait_timeout = 30; // Timeout d'envoi (30s au lieu de 10s)
 
