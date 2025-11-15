@@ -67,6 +67,9 @@
             padding: 15px;
             background: #1A1A1A;
             border-bottom: 1px solid #222222;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
         .status-item { text-align: center; font-size: 12px; }
         .status-value { font-weight: bold; font-size: 16px; margin-top: 5px; }
@@ -79,6 +82,9 @@
             background: #1A1A1A;
             border-bottom: 2px solid #222222;
             overflow-x: auto;
+            position: sticky;
+            top: 62px;
+            z-index: 90;
         }
         .tab {
             padding: 15px 20px;
@@ -2187,6 +2193,9 @@
                 document.getElementById('vehicle-status').textContent = data.vehicle_active ? t('status.active') : t('status.inactive');
                 document.getElementById('vehicle-status').className = 'status-value ' + (data.vehicle_active ? 'status-online' : 'status-offline');
 
+                if (data.active_profile_name) {
+                    document.getElementById('profile-status').textContent = data.active_profile_name;
+                }
                 // Données véhicule complètes
                 if (data.vehicle && data.vehicle_active) {
                     const v = data.vehicle;

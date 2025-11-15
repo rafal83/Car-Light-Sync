@@ -131,6 +131,19 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON_AddItemToObject(vehicle, "safety", safety);
 
     cJSON_AddItemToObject(root, "vehicle", vehicle);
+
+    // Profil actuellement appliqu�� (peut changer temporairement via ��v��nements)
+    int active_profile_id = config_manager_get_active_profile_id();
+    cJSON_AddNumberToObject(root, "active_profile_id", active_profile_id);
+    config_profile_t *active_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+    if (active_profile && config_manager_get_active_profile(active_profile)) {
+        cJSON_AddStringToObject(root, "active_profile_name", active_profile->name);
+    } else {
+        cJSON_AddStringToObject(root, "active_profile_name", "None");
+    }
+    if (active_profile) {
+        free(active_profile);
+    }
     
     const char *json_string = cJSON_Print(root);
     httpd_resp_set_type(req, "application/json");
