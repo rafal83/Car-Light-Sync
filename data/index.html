@@ -19,7 +19,7 @@
             background: #0C0C0C;
             border-radius: 4px;
             box-shadow: 0 4px 20px rgba(232, 33, 39, 0.1);
-            overflow: hidden;
+            overflow: visible;
             border: 1px solid #222222;
         }
         .header {
@@ -408,14 +408,25 @@
             color: #999999;
         }
         .notification {
+            position: fixed;
+            top: 80px;
+            right: 30px;
+            min-width: 260px;
             padding: 12px 20px;
-            margin-bottom: 15px;
-            border-radius: 4px;
+            border-radius: 6px;
             border-left: 3px solid;
-            display: none;
+            background: #1A1A1A;
+            color: #FFFFFF;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+            z-index: 300;
         }
         .notification.show {
-            display: block;
+            opacity: 1;
+            transform: translateY(0);
         }
         .notification.success {
             background: rgba(16, 185, 129, 0.1);
@@ -426,6 +437,11 @@
             background: rgba(232, 33, 39, 0.1);
             border-color: #E82127;
             color: #E82127;
+        }
+        .notification.info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+            color: #3b82f6;
         }
 
         /* Responsive adjustments */
@@ -758,6 +774,8 @@
         <div id="simulation-tab" class="tab-content">
             <div class="section-title" data-i18n="simulation.title">Simulation d'Événements CAN</div>
 
+            <div id="simulation-notification" class="notification"></div>
+
             <p style="margin-bottom: 20px; color: #999999; font-size: 14px;" data-i18n="simulation.description">
                 Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule.
             </p>
@@ -909,9 +927,6 @@
                 </div>
             </div>
 
-            <div id="sim-status" style="margin-top: 20px; padding: 12px; background: #1A1A1A; border-radius: 4px; font-size: 14px; display: none; border-left: 3px solid;">
-                <span id="sim-status-text"></span>
-            </div>
         </div>
 
         <!-- Tab: Configuration -->
@@ -1642,7 +1657,22 @@
             notification.className = 'notification ' + type + ' show';
             setTimeout(() => {
                 notification.classList.remove('show');
-            }, 3000);
+            }, 2000);
+        }
+
+        async function parseApiResponse(response) {
+            const rawText = await response.text();
+            let data = null;
+            if (rawText) {
+                try {
+                    data = JSON.parse(rawText);
+                } catch (e) {
+                    data = null;
+                }
+            }
+            const status = data && typeof data.status === 'string' ? data.status : null;
+            const success = response.ok && (status === null || status === 'ok');
+            return { success, data, raw: rawText };
         }
 
         // Events Configuration
@@ -1938,15 +1968,24 @@
             if (!name) return;
 
             try {
-                await fetch(API_BASE + '/api/profile/create', {
+                const response = await fetch(API_BASE + '/api/profile/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: name })
                 });
-                hideNewProfileDialog();
-                loadProfiles();
+                const apiResult = await parseApiResponse(response);
+                if (apiResult.success) {
+                    hideNewProfileDialog();
+                    document.getElementById('new-profile-name').value = '';
+                    loadProfiles();
+                    showNotification('profiles-notification', t('profiles.create') + ' ' + t('config.saveSuccess'), 'success');
+                } else {
+                    const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
+                    showNotification('profiles-notification', message, 'error');
+                }
             } catch (e) {
                 console.error('Erreur:', e);
+                showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
 
@@ -1955,14 +1994,22 @@
             if (!confirm(t('profiles.deleteConfirm'))) return;
 
             try {
-                await fetch(API_BASE + '/api/profile/delete', {
+                const response = await fetch(API_BASE + '/api/profile/delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ profile_id: profileId })
                 });
-                loadProfiles();
+                const apiResult = await parseApiResponse(response);
+                if (apiResult.success) {
+                    loadProfiles();
+                    showNotification('profiles-notification', t('profiles.delete') + ' ' + t('config.saveSuccess'), 'success');
+                } else {
+                    const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
+                    showNotification('profiles-notification', message, 'error');
+                }
             } catch (e) {
                 console.error('Erreur:', e);
+                showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
 
@@ -2056,14 +2103,16 @@
                     })
                 });
 
-                const result = await response.json();
-                if (result.status === 'ok') {
-                    console.log('Profile settings saved successfully');
+                const apiResult = await parseApiResponse(response);
+                if (apiResult.success) {
+                    showNotification('profiles-notification', t('config.saveSuccess'), 'success');
                 } else {
-                    console.error('Failed to save profile settings');
+                    const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
+                    showNotification('profiles-notification', message, 'error');
                 }
             } catch (e) {
                 console.error('Error saving profile settings:', e);
+                showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
 
@@ -2088,15 +2137,16 @@
                     })
                 });
 
-                const result = await response.json();
-                if (result.status === 'ok') {
+                const apiResult = await parseApiResponse(response);
+                if (apiResult.success) {
                     showNotification('profiles-notification', t('profiles.saveDefault') + ' ' + t('config.saveSuccess'), 'success');
                 } else {
-                    showNotification('profiles-notification', t('config.saveError'), 'error');
+                    const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
+                    showNotification('profiles-notification', message, 'error');
                 }
             } catch (e) {
                 console.error('Error saving default effect:', e);
-                showNotification('profiles-notification', t('config.saveError'), 'error');
+                showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
 
@@ -2432,14 +2482,8 @@
 
         // Simulation des événements CAN
         async function simulateEvent(eventType) {
-            const statusDiv = document.getElementById('sim-status');
-            const statusText = document.getElementById('sim-status-text');
-
             try {
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = 'rgba(255, 193, 7, 0.1)';
-                statusDiv.style.borderColor = '#ffc107';
-                statusText.textContent = t('simulation.sending') + ': ' + getEventName(eventType) + '...';
+                showNotification('simulation-notification', t('simulation.sending') + ': ' + getEventName(eventType) + '...', 'info');
 
                 const response = await fetch(API_BASE + '/api/simulate/event', {
                     method: 'POST',
@@ -2450,28 +2494,13 @@
                 const result = await response.json();
 
                 if (result.status === 'ok') {
-                    statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-                    statusDiv.style.borderColor = '#10b981';
-                    statusText.textContent = '✓ ' + t('simulation.simulated') + ': ' + getEventName(eventType);
+                    showNotification('simulation-notification', 'OK - ' + t('simulation.simulated') + ': ' + getEventName(eventType), 'success');
                 } else {
-                    statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                    statusDiv.style.borderColor = '#E82127';
-                    statusText.textContent = '✗ ' + t('simulation.error');
+                    showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
                 }
-
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
-
             } catch (e) {
                 console.error('Erreur:', e);
-                statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                statusDiv.style.borderColor = '#E82127';
-                statusText.textContent = '✗ ' + t('simulation.error');
-
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
+                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
 
@@ -2490,35 +2519,21 @@
                         color3: 0
                     })
                 });
-
-                const statusDiv = document.getElementById('sim-status');
-                const statusText = document.getElementById('sim-status-text');
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-                statusDiv.style.borderColor = '#10b981';
-                statusText.textContent = '⏹ ' + t('simulation.stopped');
-
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 2000);
+                showNotification('simulation-notification', 'Stop - ' + t('simulation.stopped'), 'success');
             } catch (e) {
                 console.error('Erreur:', e);
+                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
 
         // Toggle event on/off
         async function toggleEvent(eventType, isEnabled) {
             const toggleContainer = document.getElementById('event-toggle-' + eventType);
-            const statusDiv = document.getElementById('sim-status');
-            const statusText = document.getElementById('sim-status-text');
 
-            if (isEnabled) {
-                // Activate event
-                try {
-                    statusDiv.style.display = 'block';
-                    statusDiv.style.background = 'rgba(255, 193, 7, 0.1)';
-                    statusDiv.style.borderColor = '#ffc107';
-                    statusText.textContent = t('simulation.sending') + ': ' + getEventName(eventType) + '...';
+            try {
+                if (isEnabled) {
+                    toggleContainer.classList.add('active');
+                    showNotification('simulation-notification', t('simulation.sending') + ': ' + getEventName(eventType) + '...', 'info');
 
                     const response = await fetch(API_BASE + '/api/simulate/event', {
                         method: 'POST',
@@ -2529,45 +2544,16 @@
                     const result = await response.json();
 
                     if (result.status === 'ok') {
-                        toggleContainer.classList.add('active');
-                        statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-                        statusDiv.style.borderColor = '#10b981';
-                        statusText.textContent = '✓ ' + getEventName(eventType) + ' ' + t('simulation.active');
-                        // Sauvegarder l'état
+                        showNotification('simulation-notification', 'OK - ' + getEventName(eventType) + ' ' + t('simulation.active'), 'success');
                         simulationTogglesState[eventType] = true;
                     } else {
-                        // Revert checkbox if API call failed
                         document.getElementById('toggle-' + eventType).checked = false;
-                        statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                        statusDiv.style.borderColor = '#E82127';
-                        statusText.textContent = '✗ ' + t('simulation.error');
+                        toggleContainer.classList.remove('active');
+                        showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
                         simulationTogglesState[eventType] = false;
                     }
-
-                    setTimeout(() => {
-                        statusDiv.style.display = 'none';
-                    }, 3000);
-
-                } catch (e) {
-                    console.error('Erreur:', e);
-                    document.getElementById('toggle-' + eventType).checked = false;
-                    simulationTogglesState[eventType] = false;
-                    statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                    statusDiv.style.borderColor = '#E82127';
-                    statusText.textContent = '✗ ' + t('simulation.error');
-
-                    setTimeout(() => {
-                        statusDiv.style.display = 'none';
-                    }, 3000);
-                }
-            } else {
-                // Deactivate event - call API to stop the event
-                try {
-                    toggleContainer.classList.remove('active');
-                    statusDiv.style.display = 'block';
-                    statusDiv.style.background = 'rgba(255, 193, 7, 0.1)';
-                    statusDiv.style.borderColor = '#ffc107';
-                    statusText.textContent = t('simulation.stopping') + ': ' + getEventName(eventType) + '...';
+                } else {
+                    showNotification('simulation-notification', t('simulation.stopping') + ': ' + getEventName(eventType) + '...', 'info');
 
                     const response = await fetch(API_BASE + '/api/stop/event', {
                         method: 'POST',
@@ -2578,54 +2564,33 @@
                     const result = await response.json();
 
                     if (result.status === 'ok') {
-                        statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-                        statusDiv.style.borderColor = '#10b981';
-                        statusText.textContent = '⏹ ' + getEventName(eventType) + ' ' + t('simulation.stopped');
-                        // Sauvegarder l'état
+                        toggleContainer.classList.remove('active');
+                        showNotification('simulation-notification', 'Stop - ' + getEventName(eventType) + ' ' + t('simulation.stopped'), 'success');
                         simulationTogglesState[eventType] = false;
                     } else {
-                        // Revert checkbox if API call failed
                         document.getElementById('toggle-' + eventType).checked = true;
                         toggleContainer.classList.add('active');
-                        statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                        statusDiv.style.borderColor = '#E82127';
-                        statusText.textContent = '✗ ' + t('simulation.error');
+                        showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
                         simulationTogglesState[eventType] = true;
                     }
-
-                    setTimeout(() => {
-                        statusDiv.style.display = 'none';
-                    }, 2000);
-                } catch (e) {
-                    console.error('Erreur:', e);
-                    // Revert checkbox on error
-                    document.getElementById('toggle-' + eventType).checked = true;
-                    toggleContainer.classList.add('active');
-                    statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                    statusDiv.style.borderColor = '#E82127';
-                    statusText.textContent = '✗ ' + t('simulation.error');
-
-                    setTimeout(() => {
-                        statusDiv.style.display = 'none';
-                    }, 2000);
                 }
+            } catch (e) {
+                console.error('Erreur:', e);
+                document.getElementById('toggle-' + eventType).checked = true;
+                toggleContainer.classList.add('active');
+                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
 
         // Toggle night mode simulation (single switch for ON/OFF)
         async function toggleNightMode(isEnabled) {
             const toggleContainer = document.getElementById('event-toggle-nightmode');
-            const statusDiv = document.getElementById('sim-status');
-            const statusText = document.getElementById('sim-status-text');
 
             const eventType = isEnabled ? 'NIGHT_MODE_ON' : 'NIGHT_MODE_OFF';
             const eventName = isEnabled ? t('canEvents.nightModeOn') : t('canEvents.nightModeOff');
 
             try {
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = 'rgba(255, 193, 7, 0.1)';
-                statusDiv.style.borderColor = '#ffc107';
-                statusText.textContent = t('simulation.sending') + ': ' + eventName + '...';
+                showNotification('simulation-notification', t('simulation.sending') + ': ' + eventName + '...', 'info');
 
                 const response = await fetch(API_BASE + '/api/simulate/event', {
                     method: 'POST',
@@ -2636,40 +2601,20 @@
                 const result = await response.json();
 
                 if (result.status === 'ok') {
-                    if (isEnabled) {
-                        toggleContainer.classList.add('active');
-                    } else {
-                        toggleContainer.classList.remove('active');
-                    }
-                    statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-                    statusDiv.style.borderColor = '#10b981';
-                    statusText.textContent = '✓ ' + eventName;
-                    // Sauvegarder l'état
+                    toggleContainer.classList.toggle('active', isEnabled);
+                    showNotification('simulation-notification', 'OK - ' + eventName, 'success');
                     simulationTogglesState['nightmode'] = isEnabled;
                 } else {
-                    // Revert checkbox if API call failed
                     document.getElementById('toggle-nightmode').checked = !isEnabled;
                     simulationTogglesState['nightmode'] = !isEnabled;
-                    statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                    statusDiv.style.borderColor = '#E82127';
-                    statusText.textContent = '✗ ' + t('simulation.error');
+                    showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
                 }
-
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
 
             } catch (e) {
                 console.error('Erreur:', e);
                 document.getElementById('toggle-nightmode').checked = !isEnabled;
                 simulationTogglesState['nightmode'] = !isEnabled;
-                statusDiv.style.background = 'rgba(232, 33, 39, 0.1)';
-                statusDiv.style.borderColor = '#E82127';
-                statusText.textContent = '✗ ' + t('simulation.error');
-
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
+                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
 
