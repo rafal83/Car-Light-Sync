@@ -93,6 +93,24 @@
           ]
         },
         {
+          "name": "UI_alarmEnabled",
+          "start_bit": 20,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_ALERT"
+            }
+          ]
+        },
+        {
           "name": "UI_ambientLightingEnabled",
           "start_bit": 40,
           "length": 1,
@@ -347,6 +365,11 @@
               "condition": "value_equals",
               "value": "1",
               "trigger": "TURN_HAZARD"
+            },
+            {
+              "condition": "value_equals",
+              "value": "6",
+              "trigger": "SENTRY_ALERT"
             }
           ]
         },
@@ -439,6 +462,66 @@
             {
               "condition": "falling_edge",
               "trigger": "AUTOPILOT_DISENGAGED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x3B3",
+      "name": "ID3B3UI_vehicleControl2",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "UI_alarmTriggerRequest",
+          "start_bit": 13,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_ALERT"
+            }
+          ]
+        },
+        {
+          "name": "UI_autopilotPowerStateRequest",
+          "start_bit": 25,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 2,
+          "mapping": {
+            "0": "AUTOPILOT_NOMINAL",
+            "1": "AUTOPILOT_SENTRY",
+            "2": "AUTOPILOT_SUSPEND"
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "SENTRY_MODE_OFF"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "SENTRY_MODE_ON"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "SENTRY_MODE_OFF"
             }
           ]
         }
@@ -666,6 +749,34 @@
             {
               "condition": "falling_edge",
               "trigger": "BRAKE_OFF"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0x284",
+      "name": "ID284UIvehicleModes",
+      "bus": "powertrain",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "UIsentryMode284",
+          "start_bit": 5,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_MODE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "SENTRY_MODE_OFF"
             }
           ]
         }

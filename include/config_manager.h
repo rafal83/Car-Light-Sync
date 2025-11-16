@@ -38,6 +38,9 @@
 #define EVENT_ID_GEAR_DRIVE         "GEAR_DRIVE"
 #define EVENT_ID_GEAR_REVERSE       "GEAR_REVERSE"
 #define EVENT_ID_GEAR_PARK          "GEAR_PARK"
+#define EVENT_ID_SENTRY_MODE_ON     "SENTRY_MODE_ON"
+#define EVENT_ID_SENTRY_MODE_OFF    "SENTRY_MODE_OFF"
+#define EVENT_ID_SENTRY_ALERT       "SENTRY_ALERT"
 
 #define EVENT_ID_MAX_LEN 32  // Longueur max d'un ID d'événement
 
@@ -71,6 +74,9 @@ typedef enum {
     CAN_EVENT_GEAR_DRIVE,       // Passage en mode Drive
     CAN_EVENT_GEAR_REVERSE,     // Passage en marche arrière
     CAN_EVENT_GEAR_PARK,        // Passage en mode Park
+    CAN_EVENT_SENTRY_MODE_ON,   // Mode sentry armé
+    CAN_EVENT_SENTRY_MODE_OFF,  // Mode sentry désarmé
+    CAN_EVENT_SENTRY_ALERT,     // Détection/alarme sentry
     CAN_EVENT_MAX
 } can_event_type_t;
 

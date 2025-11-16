@@ -73,7 +73,8 @@ KNOWN_SIGNAL_EVENTS = {
     'hazard': {
         'ON': 'TURN_HAZARD',
         'BUTTON': 'TURN_HAZARD',
-        'PRESSED': 'TURN_HAZARD'
+        'PRESSED': 'TURN_HAZARD',
+        'CAR_ALARM': 'SENTRY_ALERT'
     },
     'charging': {
         'CABLE_PRESENT': 'CHARGING_CABLE_CONNECTED',
@@ -85,12 +86,42 @@ KNOWN_SIGNAL_EVENTS = {
     },
     'night_mode': {
         # Boolean signal pour ambient lighting
+    },
+    'sentry_mode': {
+        'ON': 'SENTRY_MODE_ON',
+        'OFF': 'SENTRY_MODE_OFF',
+        'ACTIVE': 'SENTRY_MODE_ON',
+        'INACTIVE': 'SENTRY_MODE_OFF',
+        'ENABLED': 'SENTRY_MODE_ON',
+        'DISABLED': 'SENTRY_MODE_OFF',
+        'SENTRY': 'SENTRY_MODE_ON',
+        'NOMINAL': 'SENTRY_MODE_OFF',
+        'SUSPEND': 'SENTRY_MODE_OFF'
+    },
+    'sentry_alert': {
+        'TRIGGER': 'SENTRY_ALERT',
+        'TRIGGERED': 'SENTRY_ALERT',
+        'ALARM': 'SENTRY_ALERT',
+        'CAR_ALARM': 'SENTRY_ALERT',
+        'ACTIVE': 'SENTRY_ALERT'
     }
 }
 
 def detect_signal_type(signal):
     """Détecte le type de signal et les événements potentiels"""
     name_lower = signal.name.lower()
+
+    # Sentry / alarm modes avant tout
+    if 'sentry' in name_lower:
+        return 'sentry_mode', KNOWN_SIGNAL_EVENTS['sentry_mode']
+
+    if 'alarm' in name_lower:
+        return 'sentry_alert', KNOWN_SIGNAL_EVENTS['sentry_alert']
+
+    if getattr(signal, 'choices', None):
+        for choice in signal.choices.values():
+            if 'sentry' in choice.name.lower():
+                return 'sentry_mode', KNOWN_SIGNAL_EVENTS['sentry_mode']
 
     # Détection par nom (ordre important - du plus spécifique au plus général)
     if 'gear' in name_lower or 'prnd' in name_lower or 'shifter' in name_lower:
@@ -259,6 +290,30 @@ def signal_to_json(signal, message):
                     "condition": "falling_edge",
                     "trigger": "NIGHT_MODE_OFF"
                 })
+            elif signal_type == 'sentry_mode':
+                on_trigger = (event_mapping.get('ON') or
+                              event_mapping.get('ACTIVE') or
+                              event_mapping.get('ENABLED'))
+                off_trigger = (event_mapping.get('OFF') or
+                               event_mapping.get('INACTIVE') or
+                               event_mapping.get('DISABLED'))
+                if on_trigger:
+                    events.append({
+                        "condition": "rising_edge",
+                        "trigger": on_trigger
+                    })
+                if off_trigger:
+                    events.append({
+                        "condition": "falling_edge",
+                        "trigger": off_trigger
+                    })
+            elif signal_type == 'sentry_alert':
+                trigger = next(iter(event_mapping.values()), None)
+                if trigger:
+                    events.append({
+                        "condition": "rising_edge",
+                        "trigger": trigger
+                    })
             elif 'PRESSED' in event_mapping or 'LEFT' in event_mapping or 'ENGAGED' in event_mapping:
                 events.append({
                     "condition": "rising_edge",

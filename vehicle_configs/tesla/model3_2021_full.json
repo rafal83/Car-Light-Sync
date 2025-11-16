@@ -4902,7 +4902,19 @@
             "2": "PCS_CHARGE_ENABLED",
             "3": "PCS_CHARGE_FAULTED",
             "0": "PCS_CHARGE_STANDBY"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
         },
         {
           "name": "PCS_gridConfig",
@@ -5446,7 +5458,19 @@
             "3": "UI_LOCK_REQUEST_REMOTE_UNLOCK",
             "7": "UI_LOCK_REQUEST_SNA",
             "2": "UI_LOCK_REQUEST_UNLOCK"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "LOCKED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "UNLOCKED"
+            }
+          ]
         },
         {
           "name": "UI_alarmEnabled",
@@ -5458,7 +5482,13 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 1
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_ALERT"
+            }
+          ]
         },
         {
           "name": "UI_intrusionSensorOn",
@@ -5592,7 +5622,17 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 1
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "NIGHT_MODE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "NIGHT_MODE_OFF"
+            }
+          ]
         },
         {
           "name": "UI_autoHighBeamEnabled",
@@ -7469,7 +7509,19 @@
           "mapping": {
             "0": "CABLE_NOT_PRESENT",
             "1": "CABLE_PRESENT"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "CHARGING_CABLE_DISCONNECTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "CHARGING_CABLE_CONNECTED"
+            }
+          ]
         },
         {
           "name": "CP_chargeCableSecured",
@@ -9491,7 +9543,19 @@
             "3": "SNA",
             "1": "WARNING_LEVEL_1",
             "2": "WARNING_LEVEL_2"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "BLINDSPOT_WARNING"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "BLINDSPOT_WARNING"
+            }
+          ]
         },
         {
           "name": "DAS_blindSpotRearRight",
@@ -9509,7 +9573,19 @@
             "3": "SNA",
             "1": "WARNING_LEVEL_1",
             "2": "WARNING_LEVEL_2"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "BLINDSPOT_WARNING"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "BLINDSPOT_WARNING"
+            }
+          ]
         },
         {
           "name": "DAS_fusedSpeedLimit",
@@ -11273,7 +11349,19 @@
             "0": "HAZARD_REQUEST_NONE",
             "8": "HAZARD_REQUEST_UDS",
             "3": "HAZARD_REQUEST_UNLOCK"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "TURN_HAZARD"
+            },
+            {
+              "condition": "value_equals",
+              "value": "6",
+              "trigger": "SENTRY_ALERT"
+            }
+          ]
         },
         {
           "name": "VCFRONT_ambientLightingBrightnes",
@@ -11351,7 +11439,13 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 1
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "TURN_HAZARD"
+            }
+          ]
         },
         {
           "name": "VCFRONT_lowBeamLeftStatus",
@@ -14309,7 +14403,13 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 1
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_ALERT"
+            }
+          ]
         },
         {
           "name": "UI_VCSECFeature1",
@@ -14435,7 +14535,24 @@
             "0": "AUTOPILOT_NOMINAL",
             "1": "AUTOPILOT_SENTRY",
             "2": "AUTOPILOT_SUSPEND"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "SENTRY_MODE_OFF"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "SENTRY_MODE_ON"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "SENTRY_MODE_OFF"
+            }
+          ]
         },
         {
           "name": "UI_shorted12VCellTestMode",
@@ -16194,7 +16311,19 @@
             "2": "CP_CHARGE_STANDBY",
             "4": "CP_EVSE_TEST_PASSED",
             "3": "CP_EXT_EVSE_TEST_ACTIVE"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "5",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
         },
         {
           "name": "CP_chargeShutdownRequest",
@@ -16288,7 +16417,19 @@
             "2": "CP_CHARGE_STANDBY",
             "4": "CP_EVSE_TEST_PASSED",
             "3": "CP_EXT_EVSE_TEST_ACTIVE"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "5",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
         },
         {
           "name": "CP_chargeShutdownRequest",
@@ -16411,7 +16552,19 @@
             "2": "CP_CHARGE_STANDBY",
             "4": "CP_EVSE_TEST_PASSED",
             "3": "CP_EXT_EVSE_TEST_ACTIVE"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "5",
+              "trigger": "CHARGING_STARTED"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "CHARGING_STOPPED"
+            }
+          ]
         },
         {
           "name": "CP_chargeShutdownRequest_log",
@@ -22118,7 +22271,17 @@
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": ""
+          "unit": "",
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_MODE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "SENTRY_MODE_OFF"
+            }
+          ]
         },
         {
           "name": "UIhomelinkV2Command0284",
@@ -29548,7 +29711,13 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 1
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "TURN_HAZARD"
+            }
+          ]
         },
         {
           "name": "VCLEFT_swcLeftTiltRight",

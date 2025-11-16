@@ -58,7 +58,10 @@ static const char* event_names[] = {
     "Autopilot Disengaged",
     "Gear Drive",
     "Gear Reverse",
-    "Gear Park"
+    "Gear Park",
+    "Sentry Mode On",
+    "Sentry Mode Off",
+    "Sentry Alert"
 };
 
 bool config_manager_init(void) {
@@ -702,6 +705,36 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
            sizeof(can_event_effect_t));   
     profile->event_effects[CAN_EVENT_GEAR_PARK].event = CAN_EVENT_GEAR_PARK;
 
+    // Mode Sentry armé/désarmé
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].event = CAN_EVENT_SENTRY_MODE_ON;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].action_type = EVENT_ACTION_APPLY_EFFECT;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].profile_id = -1;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.effect = EFFECT_BREATHING;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.brightness = 180;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.speed = 40;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.color1 = 0xFF0000;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].duration_ms = 0;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].priority = 160;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].enabled = false;
+
+    memcpy(&profile->event_effects[CAN_EVENT_SENTRY_MODE_OFF],
+           &profile->event_effects[CAN_EVENT_SENTRY_MODE_ON],
+           sizeof(can_event_effect_t));
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_OFF].event = CAN_EVENT_SENTRY_MODE_OFF;
+    profile->event_effects[CAN_EVENT_SENTRY_MODE_OFF].effect_config.color1 = 0x0040FF;
+
+    // Alerte Sentry
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].event = CAN_EVENT_SENTRY_ALERT;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].action_type = EVENT_ACTION_APPLY_EFFECT;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].profile_id = -1;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.effect = EFFECT_STROBE;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.brightness = 255;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.speed = 220;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.color1 = 0xFF2020;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].duration_ms = 3000;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].priority = 240;
+    profile->event_effects[CAN_EVENT_SENTRY_ALERT].enabled = true;
+
     // Paramètres généraux
     profile->auto_night_mode = false; // Désactivé par défaut, l'utilisateur peut l'activer manuellement
     profile->night_brightness = 30;
@@ -1173,6 +1206,9 @@ const char* config_manager_enum_to_id(can_event_type_t event) {
         case CAN_EVENT_GEAR_DRIVE:          return EVENT_ID_GEAR_DRIVE;
         case CAN_EVENT_GEAR_REVERSE:        return EVENT_ID_GEAR_REVERSE;
         case CAN_EVENT_GEAR_PARK:           return EVENT_ID_GEAR_PARK;
+        case CAN_EVENT_SENTRY_MODE_ON:      return EVENT_ID_SENTRY_MODE_ON;
+        case CAN_EVENT_SENTRY_MODE_OFF:     return EVENT_ID_SENTRY_MODE_OFF;
+        case CAN_EVENT_SENTRY_ALERT:        return EVENT_ID_SENTRY_ALERT;
         default:                            return EVENT_ID_NONE;
     }
 }
@@ -1209,6 +1245,9 @@ can_event_type_t config_manager_id_to_enum(const char* id) {
     if (strcmp(id, EVENT_ID_GEAR_DRIVE) == 0)           return CAN_EVENT_GEAR_DRIVE;
     if (strcmp(id, EVENT_ID_GEAR_REVERSE) == 0)         return CAN_EVENT_GEAR_REVERSE;
     if (strcmp(id, EVENT_ID_GEAR_PARK) == 0)            return CAN_EVENT_GEAR_PARK;
+    if (strcmp(id, EVENT_ID_SENTRY_MODE_ON) == 0)       return CAN_EVENT_SENTRY_MODE_ON;
+    if (strcmp(id, EVENT_ID_SENTRY_MODE_OFF) == 0)      return CAN_EVENT_SENTRY_MODE_OFF;
+    if (strcmp(id, EVENT_ID_SENTRY_ALERT) == 0)         return CAN_EVENT_SENTRY_ALERT;
 
     ESP_LOGW(TAG, "ID d'événement inconnu: %s", id);
     return CAN_EVENT_NONE;
@@ -1231,6 +1270,8 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
         case CAN_EVENT_GEAR_DRIVE:
         case CAN_EVENT_GEAR_REVERSE:
         case CAN_EVENT_GEAR_PARK:
+        case CAN_EVENT_SENTRY_MODE_ON:
+        case CAN_EVENT_SENTRY_MODE_OFF:
             return true;
         default:
             return false;

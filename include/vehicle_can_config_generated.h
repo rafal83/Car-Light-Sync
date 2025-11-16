@@ -49,8 +49,17 @@ static const can_event_config_t events_MSG_273UI_vehicleControl_sig0[] = {
     },
 };
 
-// Événements pour UI_ambientLightingEnabled
+// Événements pour UI_alarmEnabled
 static const can_event_config_t events_MSG_273UI_vehicleControl_sig1[] = {
+    {
+        .condition = EVENT_CONDITION_RISING_EDGE,
+        .trigger = CAN_EVENT_SENTRY_ALERT,
+        .value = 0.0f
+    },
+};
+
+// Événements pour UI_ambientLightingEnabled
+static const can_event_config_t events_MSG_273UI_vehicleControl_sig2[] = {
     {
         .condition = EVENT_CONDITION_RISING_EDGE,
         .trigger = CAN_EVENT_NIGHT_MODE_ON,
@@ -75,6 +84,16 @@ static const can_signal_config_static_t signals_MSG_273UI_vehicleControl[] = {
         .events = events_MSG_273UI_vehicleControl_sig0,
         .event_count = 2
     },
+    { // UI_alarmEnabled
+        .start_bit = 20,
+        .length = 1,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_BOOLEAN,
+        .factor = 1.0f,
+        .offset = 0.0f,
+        .events = events_MSG_273UI_vehicleControl_sig1,
+        .event_count = 1
+    },
     { // UI_ambientLightingEnabled
         .start_bit = 40,
         .length = 1,
@@ -82,7 +101,7 @@ static const can_signal_config_static_t signals_MSG_273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor = 1.0f,
         .offset = 0.0f,
-        .events = events_MSG_273UI_vehicleControl_sig1,
+        .events = events_MSG_273UI_vehicleControl_sig2,
         .event_count = 2
     },
 };
@@ -230,6 +249,11 @@ static const can_event_config_t events_MSG_3F5VCFRONT_lighting_sig2[] = {
         .trigger = CAN_EVENT_TURN_HAZARD,
         .value = 1.0f
     },
+    {
+        .condition = EVENT_CONDITION_VALUE_EQUALS,
+        .trigger = CAN_EVENT_SENTRY_ALERT,
+        .value = 6.0f
+    },
 };
 
 // Événements pour VCFRONT_hazardSwitchBacklight
@@ -271,7 +295,7 @@ static const can_signal_config_static_t signals_MSG_3F5VCFRONT_lighting[] = {
         .factor = 1.0f,
         .offset = 0.0f,
         .events = events_MSG_3F5VCFRONT_lighting_sig2,
-        .event_count = 1
+        .event_count = 2
     },
     { // VCFRONT_hazardSwitchBacklight
         .start_bit = 27,
@@ -358,6 +382,58 @@ static const can_signal_config_static_t signals_MSG_3FDUI_autopilotControl[] = {
         .offset = 0.0f,
         .events = events_MSG_3FDUI_autopilotControl_sig2,
         .event_count = 2
+    },
+};
+
+// Événements pour UI_alarmTriggerRequest
+static const can_event_config_t events_MSG_3B3UI_vehicleControl2_sig0[] = {
+    {
+        .condition = EVENT_CONDITION_RISING_EDGE,
+        .trigger = CAN_EVENT_SENTRY_ALERT,
+        .value = 0.0f
+    },
+};
+
+// Événements pour UI_autopilotPowerStateRequest
+static const can_event_config_t events_MSG_3B3UI_vehicleControl2_sig1[] = {
+    {
+        .condition = EVENT_CONDITION_VALUE_EQUALS,
+        .trigger = CAN_EVENT_SENTRY_MODE_OFF,
+        .value = 0.0f
+    },
+    {
+        .condition = EVENT_CONDITION_VALUE_EQUALS,
+        .trigger = CAN_EVENT_SENTRY_MODE_ON,
+        .value = 1.0f
+    },
+    {
+        .condition = EVENT_CONDITION_VALUE_EQUALS,
+        .trigger = CAN_EVENT_SENTRY_MODE_OFF,
+        .value = 2.0f
+    },
+};
+
+// Signaux pour message 0x3B3 - ID3B3UI_vehicleControl2
+static const can_signal_config_static_t signals_MSG_3B3UI_vehicleControl2[] = {
+    { // UI_alarmTriggerRequest
+        .start_bit = 13,
+        .length = 1,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_BOOLEAN,
+        .factor = 1.0f,
+        .offset = 0.0f,
+        .events = events_MSG_3B3UI_vehicleControl2_sig0,
+        .event_count = 1
+    },
+    { // UI_autopilotPowerStateRequest
+        .start_bit = 25,
+        .length = 2,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor = 1.0f,
+        .offset = 0.0f,
+        .events = events_MSG_3B3UI_vehicleControl2_sig1,
+        .event_count = 3
     },
 };
 
@@ -545,6 +621,34 @@ static const can_signal_config_static_t signals_MSG_757DIF_debug[] = {
         .factor = 1.0f,
         .offset = 0.0f,
         .events = events_MSG_757DIF_debug_sig1,
+        .event_count = 2
+    },
+};
+
+// Événements pour UIsentryMode284
+static const can_event_config_t events_MSG_284UIvehicleModes_sig0[] = {
+    {
+        .condition = EVENT_CONDITION_RISING_EDGE,
+        .trigger = CAN_EVENT_SENTRY_MODE_ON,
+        .value = 0.0f
+    },
+    {
+        .condition = EVENT_CONDITION_FALLING_EDGE,
+        .trigger = CAN_EVENT_SENTRY_MODE_OFF,
+        .value = 0.0f
+    },
+};
+
+// Signaux pour message 0x284 - ID284UIvehicleModes
+static const can_signal_config_static_t signals_MSG_284UIvehicleModes[] = {
+    { // UIsentryMode284
+        .start_bit = 5,
+        .length = 1,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_BOOLEAN,
+        .factor = 1.0f,
+        .offset = 0.0f,
+        .events = events_MSG_284UIvehicleModes_sig0,
         .event_count = 2
     },
 };
@@ -745,7 +849,7 @@ static const can_message_config_static_t can_messages[] = {
         .message_id = 0x273,
         .bus = 1,
         .signals = signals_MSG_273UI_vehicleControl,
-        .signal_count = 2
+        .signal_count = 3
     },
     { // 0x25D - ID25DCP_status
         .message_id = 0x25D,
@@ -777,6 +881,12 @@ static const can_message_config_static_t can_messages[] = {
         .signals = signals_MSG_3FDUI_autopilotControl,
         .signal_count = 3
     },
+    { // 0x3B3 - ID3B3UI_vehicleControl2
+        .message_id = 0x3B3,
+        .bus = 2,
+        .signals = signals_MSG_3B3UI_vehicleControl2,
+        .signal_count = 2
+    },
     { // 0x23D - ID23DCP_chargeStatus
         .message_id = 0x23D,
         .bus = 1,
@@ -807,6 +917,12 @@ static const can_message_config_static_t can_messages[] = {
         .signals = signals_MSG_757DIF_debug,
         .signal_count = 2
     },
+    { // 0x284 - ID284UIvehicleModes
+        .message_id = 0x284,
+        .bus = 1,
+        .signals = signals_MSG_284UIvehicleModes,
+        .signal_count = 1
+    },
     { // 0x2F1 - ID2F1VCFRONT_eFuseDebugStatus
         .message_id = 0x2F1,
         .bus = 1,
@@ -836,7 +952,7 @@ static const can_message_config_static_t can_messages[] = {
 // Configuration globale du véhicule
 static const vehicle_can_config_static_t vehicle_config = {
     .messages = can_messages,
-    .message_count = 16
+    .message_count = 18
 };
 
 // Fonction pour obtenir la configuration
