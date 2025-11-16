@@ -759,6 +759,21 @@
                     <div class="vehicle-value" id="v-blindspot-right">--</div>
                 </div>
             </div>
+            <div class="section-subtitle" data-i18n="vehicle.sentryTitle">Mode Sentry</div>
+            <div class="vehicle-grid">
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.sentryMode">État UI</div>
+                    <div class="vehicle-value" id="v-sentry-mode">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.sentryRequest">Requête Autopilot</div>
+                    <div class="vehicle-value" id="v-sentry-request">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.sentryAlert">Alerte</div>
+                    <div class="vehicle-value" id="v-sentry-alert">--</div>
+                </div>
+            </div>
         </div>
         <!-- Tab: Profils -->
         <div id="profiles-tab" class="tab-content">
@@ -1162,7 +1177,13 @@
                     blindspotRight: "Angle Mort D",
                     open: "Ouvert",
                     closed: "Fermé",
-                    none: "Aucun"
+                    none: "Aucun",
+                    sentryTitle: "Mode Sentry",
+                    sentryMode: "État UI",
+                    sentryRequest: "Requête Autopilot",
+                    sentryAlert: "Alerte",
+                    sentryNominal: "Nominal",
+                    sentrySuspend: "Suspendu"
                 },
                 simulation: {
                     title: "Simulation d'événements CAN",
@@ -1202,6 +1223,10 @@
                     blindspotLeft: "Gauche",
                     blindspotRight: "Droite",
                     blindspotWarning: "Alerte angle mort",
+                    sentry: "Mode Sentry",
+                    sentryOn: "Sentry ON",
+                    sentryOff: "Sentry OFF",
+                    sentryAlert: "Alerte Sentry",
                     nightMode: "Mode Nuit",
                     nightModeToggle: "Mode Nuit",
                     nightModeOn: "Activer",
@@ -1241,7 +1266,10 @@
                     AUTOPILOT_DISENGAGED: "Autopilot désactivé",
                     GEAR_DRIVE: "Passage en Drive",
                     GEAR_REVERSE: "Marche arrière",
-                    GEAR_PARK: "Mode Park"
+                    GEAR_PARK: "Mode Park",
+                    SENTRY_MODE_ON: "Sentry activé",
+                    SENTRY_MODE_OFF: "Sentry désactivé",
+                    SENTRY_ALERT: "Alerte Sentry"
                 },
                 effectNames: {
                     OFF: "Aucun",
@@ -1490,7 +1518,13 @@
                     blindspotRight: "Blindspot R",
                     open: "Open",
                     closed: "Closed",
-                    none: "None"
+                    none: "None",
+                    sentryTitle: "Sentry Mode",
+                    sentryMode: "UI State",
+                    sentryRequest: "Autopilot Request",
+                    sentryAlert: "Alert",
+                    sentryNominal: "Nominal",
+                    sentrySuspend: "Suspend"
                 },
                 simulation: {
                     title: "CAN Event Simulation",
@@ -1530,6 +1564,10 @@
                     blindspotLeft: "Left",
                     blindspotRight: "Right",
                     blindspotWarning: "Blindspot warning",
+                    sentry: "Sentry Mode",
+                    sentryOn: "Sentry ON",
+                    sentryOff: "Sentry OFF",
+                    sentryAlert: "Sentry Alert",
                     nightMode: "Night Mode",
                     nightModeToggle: "Night Mode",
                     nightModeOn: "Activate",
@@ -1569,7 +1607,10 @@
                     AUTOPILOT_DISENGAGED: "Autopilot disengaged",
                     GEAR_DRIVE: "Gear Drive",
                     GEAR_REVERSE: "Gear Reverse",
-                    GEAR_PARK: "Gear Park"
+                    GEAR_PARK: "Gear Park",
+                    SENTRY_MODE_ON: "Sentry enabled",
+                    SENTRY_MODE_OFF: "Sentry disabled",
+                    SENTRY_ALERT: "Sentry alert"
                 },
                 effectNames: {
                     OFF: "Off",
@@ -1705,6 +1746,14 @@
                     { id: 'BLINDSPOT_LEFT', labelKey: 'simulation.blindspotLeft' },
                     { id: 'BLINDSPOT_RIGHT', labelKey: 'simulation.blindspotRight' },
                     { id: 'BLINDSPOT_WARNING', labelKey: 'simulation.blindspotWarning' }
+                ]
+            },
+            {
+                titleKey: 'simulation.sentry',
+                events: [
+                    { id: 'SENTRY_MODE_ON', labelKey: 'simulation.sentryOn' },
+                    { id: 'SENTRY_MODE_OFF', labelKey: 'simulation.sentryOff' },
+                    { id: 'SENTRY_ALERT', labelKey: 'simulation.sentryAlert' }
                 ]
             }
         ];
@@ -2621,6 +2670,35 @@
                         document.getElementById('v-night').textContent = v.safety.night_mode ? t('status.active') : t('status.inactive');
                         document.getElementById('v-blindspot-left').textContent = v.safety.blindspot_left ? t('status.active') : t('status.inactive');
                         document.getElementById('v-blindspot-right').textContent = v.safety.blindspot_right ? t('status.active') : t('status.inactive');
+
+                        const sentryModeEl = document.getElementById('v-sentry-mode');
+                        if (sentryModeEl) {
+                            if (typeof v.safety.sentry_mode === 'boolean') {
+                                sentryModeEl.textContent = v.safety.sentry_mode ? t('simulation.sentryOn') : t('simulation.sentryOff');
+                            } else {
+                                sentryModeEl.textContent = t('vehicle.none');
+                            }
+                        }
+
+                        const sentryRequestEl = document.getElementById('v-sentry-request');
+                        if (sentryRequestEl) {
+                            const requestMap = {
+                                AUTOPILOT_NOMINAL: t('vehicle.sentryNominal'),
+                                AUTOPILOT_SENTRY: t('simulation.sentryOn'),
+                                AUTOPILOT_SUSPEND: t('vehicle.sentrySuspend')
+                            };
+                            const requestState = v.safety.sentry_request;
+                            sentryRequestEl.textContent = requestState ? (requestMap[requestState] || requestState) : t('vehicle.none');
+                        }
+
+                        const sentryAlertEl = document.getElementById('v-sentry-alert');
+                        if (sentryAlertEl) {
+                            if (typeof v.safety.sentry_alert === 'boolean') {
+                                sentryAlertEl.textContent = v.safety.sentry_alert ? t('simulation.sentryAlert') : t('vehicle.none');
+                            } else {
+                                sentryAlertEl.textContent = t('vehicle.none');
+                            }
+                        }
                     }
                 } else {
                     // Afficher des tirets quand il n'y a pas de données
@@ -2630,7 +2708,8 @@
                         'v-window-fl', 'v-window-fr', 'v-window-rl', 'v-window-rr',
                         'v-charging', 'v-charge', 'v-charge-power',
                         'v-headlights', 'v-high-beams', 'v-fog-lights', 'v-turn-signal',
-                        'v-battery', 'v-odometer', 'v-night', 'v-blindspot-left', 'v-blindspot-right'
+                        'v-battery', 'v-odometer', 'v-night', 'v-blindspot-left', 'v-blindspot-right',
+                        'v-sentry-mode', 'v-sentry-request', 'v-sentry-alert'
                     ];
                     fields.forEach(id => {
                         const element = document.getElementById(id);
