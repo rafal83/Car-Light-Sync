@@ -874,6 +874,7 @@
                         <div id="ota-progress-bar" style="background: #E82127; height: 100%; width: 0%; transition: width 0.3s;"></div>
                     </div>
                     <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: #999999;"></div>
+                    <div id="ota-reboot-countdown" style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
                 </div>
             </div>
 
@@ -1155,7 +1156,8 @@
                     wrongExtension: "Le fichier doit avoir l'extension .bin",
                     confirmUpdate: "Êtes-vous sûr de vouloir mettre à jour le firmware ? L'appareil redémarrera.",
                     confirmRestart: "Redémarrer maintenant ?",
-                    restarting: "Redémarrage en cours... Reconnexion dans 10 secondes."
+                    restarting: "Redémarrage en cours... Reconnexion dans 10 secondes.",
+                    autoRestartIn: "Redémarrage automatique dans"
                 }
             },
             en: {
@@ -1416,7 +1418,8 @@
                     wrongExtension: "File must have .bin extension",
                     confirmUpdate: "Are you sure you want to update the firmware? The device will restart.",
                     confirmRestart: "Restart now?",
-                    restarting: "Restarting... Reconnecting in 10 seconds."
+                    restarting: "Restarting... Reconnecting in 10 seconds.",
+                    autoRestartIn: "Auto reboot in"
                 }
             }
         };
@@ -2551,14 +2554,42 @@
         }
 
         // OTA Functions
+        let otaReloadScheduled = false;
+
         async function loadOTAInfo() {
             try {
                 const response = await fetch(API_BASE + '/api/ota/info');
                 const data = await response.json();
                 document.getElementById('ota-version').textContent = 'v' + data.version;
+
+                const rebootCountdownEl = document.getElementById('ota-reboot-countdown');
+                if (rebootCountdownEl) {
+                    if (typeof data.reboot_countdown === 'number' && data.reboot_countdown >= 0) {
+                        const progressContainer = document.getElementById('ota-progress-container');
+                        if (progressContainer) {
+                            progressContainer.style.display = 'block';
+                        }
+                        rebootCountdownEl.style.display = 'block';
+                        if (data.reboot_countdown === 0) {
+                            rebootCountdownEl.textContent = t('ota.restarting');
+                            if (!otaReloadScheduled) {
+                                otaReloadScheduled = true;
+                                setTimeout(() => window.location.reload(), 5000);
+                            }
+                        } else {
+                            rebootCountdownEl.textContent = t('ota.autoRestartIn') + ' ' + data.reboot_countdown + 's';
+                        }
+                    } else {
+                        rebootCountdownEl.style.display = 'none';
+                    }
+                }
             } catch (e) {
                 console.error('Erreur:', e);
                 document.getElementById('ota-version').innerHTML = '<span data-i18n="ota.loading">' + t('ota.loading') + '</span>';
+                const rebootCountdownEl = document.getElementById('ota-reboot-countdown');
+                if (rebootCountdownEl) {
+                    rebootCountdownEl.style.display = 'none';
+                }
             }
         }
 
@@ -2932,6 +2963,7 @@
             updateStatus();
             loadOTAInfo();
             setInterval(updateStatus, 2000);
+            setInterval(loadOTAInfo, 1000);
         });
     </script>
 </body>

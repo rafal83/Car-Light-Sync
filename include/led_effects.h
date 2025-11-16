@@ -225,4 +225,32 @@ led_effect_t led_effects_id_to_enum(const char* id);
  */
 bool led_effects_requires_can(led_effect_t effect);
 
+/**
+ * @brief Active l'affichage de progression OTA sur la strip
+ */
+void led_effects_start_progress_display(void);
+
+/**
+ * @brief Met à jour le pourcentage de progression OTA affiché
+ * @param percent Pourcentage 0-100
+ */
+void led_effects_update_progress(uint8_t percent);
+
+/**
+ * @brief Désactive l'affichage de progression OTA
+ */
+void led_effects_stop_progress_display(void);
+
+/**
+ * @brief Affiche un effet indiquant que l'appareil est prêt à redémarrer
+ *        après une mise à jour OTA réussie.
+ */
+void led_effects_show_upgrade_ready(void);
+
+/**
+ * @brief Affiche un effet indiquant qu'une mise à jour OTA a échoué
+ *        mais que l'appareil redémarrera automatiquement.
+ */
+void led_effects_show_upgrade_error(void);
+
 #endif // LED_EFFECTS_H

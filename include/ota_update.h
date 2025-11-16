@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include "esp_err.h"
 
 /**
@@ -37,7 +38,7 @@ esp_err_t ota_init(void);
  * @brief Démarre une mise à jour OTA
  * @return ESP_OK si succès
  */
-esp_err_t ota_begin(void);
+esp_err_t ota_begin(size_t total_size);
 
 /**
  * @brief Écrit des données de firmware
@@ -80,5 +81,11 @@ void ota_restart(void);
  * @return ESP_OK si succès
  */
 esp_err_t ota_validate_current_partition(void);
+
+/**
+ * @brief Retourne le nombre de secondes restantes avant redémarrage auto
+ * @return Compte à rebours (>=0) ou -1 si aucun redémarrage planifié
+ */
+int ota_get_reboot_countdown(void);
 
 #endif // OTA_UPDATE_H

@@ -935,6 +935,7 @@ static esp_err_t ota_info_handler(httpd_req_t *req) {
     cJSON_AddNumberToObject(root, "progress", progress.progress);
     cJSON_AddNumberToObject(root, "written_size", progress.written_size);
     cJSON_AddNumberToObject(root, "total_size", progress.total_size);
+    cJSON_AddNumberToObject(root, "reboot_countdown", ota_get_reboot_countdown());
 
     if (strlen(progress.error_msg) > 0) {
         cJSON_AddStringToObject(root, "error", progress.error_msg);
@@ -961,7 +962,7 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Début upload OTA, taille: %d octets", remaining);
 
     // Démarrer l'OTA
-    ret = ota_begin();
+    ret = ota_begin(req->content_len);
     if (ret != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA begin failed");
         return ESP_FAIL;

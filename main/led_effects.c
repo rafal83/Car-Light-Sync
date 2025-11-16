@@ -30,6 +30,10 @@ static effect_config_t current_config;
 static bool enabled = true;
 static uint32_t effect_counter = 0;
 static vehicle_state_t last_vehicle_state = {0};
+static bool ota_progress_mode = false;
+static bool ota_ready_mode = false;
+static bool ota_error_mode = false;
+static uint8_t ota_progress_percent = 0;
 
 // Accumulateur flottant pour animation de charge fluide
 static float charge_anim_position = 0.0f;
@@ -55,6 +59,8 @@ static rgb_t color_to_rgb(uint32_t color) {
     return rgb;
 }
 
+static void fill_solid(rgb_t color);
+
 // Applique la luminosité à une couleur (avec prise en compte du mode nuit)
 static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
     rgb_t result;
@@ -71,6 +77,48 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
     }
 
     return result;
+}
+
+// static rgb_t progress_base_color = {0, 160, 32};
+static rgb_t progress_base_color = {16, 255, 16};
+
+static void render_progress_display(void) {
+    if (NUM_LEDS == 0) {
+        return;
+    }
+
+    float ratio = (float)ota_progress_percent / 100.0f;
+    if (ratio < 0.0f) {
+        ratio = 0.0f;
+    } else if (ratio > 1.0f) {
+        ratio = 1.0f;
+    }
+
+    int lit_leds = (int)floorf(ratio * NUM_LEDS + 1e-4f);
+    if (ota_progress_percent > 0 && lit_leds == 0) {
+        lit_leds = 1;
+    }
+    if (lit_leds > NUM_LEDS) {
+        lit_leds = NUM_LEDS;
+    }
+
+    for (int i = 0; i < NUM_LEDS; i++) {
+        if (i < lit_leds) {
+            leds[i] = progress_base_color;
+        } else {
+            leds[i] = (rgb_t){0, 0, 0};
+        }
+    }
+}
+
+static void render_status_display(bool error_mode) {
+    float phase = (sinf(effect_counter * 0.25f) + 1.0f) * 0.5f;
+    uint8_t intensity = 50 + (uint8_t)(phase * 205);
+    rgb_t color = error_mode ? (rgb_t){intensity, 0, 0}
+                             : (rgb_t){0, 40, intensity};
+    for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = color;
+    }
 }
 
 // Conversion HSV vers RGB pour rainbow
@@ -966,10 +1014,31 @@ void led_effects_get_config(effect_config_t* config) {
 }
 
 void led_effects_update(void) {
-    if (!enabled) {
+    if (!enabled && !ota_progress_mode && !ota_ready_mode && !ota_error_mode) {
         fill_solid((rgb_t){0, 0, 0});
         led_strip_show();
         dual_directional_mode = false;
+        return;
+    }
+
+    if (ota_progress_mode) {
+        render_progress_display();
+        led_strip_show();
+        effect_counter++;
+        return;
+    }
+
+    if (ota_error_mode) {
+        render_status_display(true);
+        led_strip_show();
+        effect_counter++;
+        return;
+    }
+
+    if (ota_ready_mode) {
+        render_status_display(false);
+        led_strip_show();
+        effect_counter++;
         return;
     }
 
@@ -1079,6 +1148,41 @@ void led_effects_set_speed(uint8_t speed) {
 void led_effects_set_solid_color(uint32_t color) {
     current_config.effect = EFFECT_SOLID;
     current_config.color1 = color;
+}
+
+void led_effects_start_progress_display(void) {
+    ota_ready_mode = false;
+    ota_error_mode = false;
+    ota_progress_mode = true;
+    ota_progress_percent = 0;
+    dual_directional_mode = false;
+}
+
+void led_effects_update_progress(uint8_t percent) {
+    if (percent > 100) {
+        percent = 100;
+    }
+    ota_progress_percent = percent;
+}
+
+void led_effects_stop_progress_display(void) {
+    ota_progress_mode = false;
+    ota_progress_percent = 0;
+    ota_ready_mode = false;
+    ota_error_mode = false;
+}
+
+void led_effects_show_upgrade_ready(void) {
+    ota_progress_mode = false;
+    ota_progress_percent = 100;
+    ota_error_mode = false;
+    ota_ready_mode = true;
+}
+
+void led_effects_show_upgrade_error(void) {
+    ota_progress_mode = false;
+    ota_ready_mode = false;
+    ota_error_mode = true;
 }
 
 const char* led_effects_get_name(led_effect_t effect) {

@@ -1025,6 +1025,15 @@ void config_manager_stop_event(can_event_type_t event) {
     }
 }
 
+void config_manager_stop_all_events(void) {
+    for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+        if (active_events[i].active) {
+            ESP_LOGI(TAG, "Arret global de l'evenement '%s'", config_manager_get_event_name(active_events[i].event));
+            active_events[i].active = false;
+        }
+    }
+}
+
 void config_manager_update(void) {
     uint32_t now = xTaskGetTickCount();
     bool any_active = false;

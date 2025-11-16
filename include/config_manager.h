@@ -216,6 +216,7 @@ bool config_manager_process_can_event(can_event_type_t event);
  * @param event Type d'événement à arrêter
  */
 void config_manager_stop_event(can_event_type_t event);
+void config_manager_stop_all_events(void);
 
 /**
  * @brief Met à jour les effets en fonction du temps
