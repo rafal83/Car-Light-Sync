@@ -68,6 +68,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 20px;
         }
         .header-logo {
             width: 64px;
@@ -81,6 +82,26 @@
         }
         .header-content {
             flex: 1;
+            text-align: left;
+        }
+        .header-controls {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+            text-align: left;
+        }
+        .header-control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 140px;
+            text-align: left;
+        }
+        .header-control label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-muted);
         }
         .header h1 {
             font-size: 28px;
@@ -92,21 +113,6 @@
             font-size: 14px;
             opacity: 0.7;
             font-weight: 300;
-        }
-        .lang-toggle {
-            padding: 8px 16px;
-            background: var(--color-border);
-            border: 1px solid var(--color-input-border);
-            color: var(--color-text);
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-        .lang-toggle:hover {
-            background: var(--color-input-border);
-            border-color: #E82127;
         }
         .status-bar {
             display: flex;
@@ -520,6 +526,20 @@
             .header {
                 flex-direction: column;
                 gap: 15px;
+                align-items: stretch;
+            }
+            .header-controls {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            .header-control {
+                width: 100%;
+                align-items: center;
+                text-align: center;
+            }
+            .header-control select {
+                width: 100%;
             }
             .tabs {
                 flex-wrap: nowrap;
@@ -536,6 +556,22 @@
             <div class="header-content">
                 <h1 data-i18n="app.title">TESLA STRIP CONTROLLER</h1>
                 <p data-i18n="app.subtitle">Contrôle RGB synchronisé avec votre Tesla</p>
+            </div>
+            <div class="header-controls">
+                <div class="header-control">
+                    <label for="language-select" data-i18n="config.language">Langue</label>
+                    <select id="language-select" onchange="setLanguage(this.value)">
+                        <option value="fr" data-i18n="config.languageFrench">Français</option>
+                        <option value="en" data-i18n="config.languageEnglish">English</option>
+                    </select>
+                </div>
+                <div class="header-control">
+                    <label for="theme-select" data-i18n="config.theme">Thème</label>
+                    <select id="theme-select" onchange="setTheme(this.value)">
+                        <option value="dark" data-i18n="config.themeDark">Mode sombre</option>
+                        <option value="light" data-i18n="config.themeLight">Mode clair</option>
+                    </select>
+                </div>
             </div>
         </div>
         <div class="status-bar">
@@ -851,20 +887,6 @@
             <div class="checkbox-container" style="margin-top: 20px;">
                 <input type="checkbox" id="strip-reverse">
                 <label for="strip-reverse" data-i18n="config.stripReverse">Inverser le sens de la strip LED</label>
-            </div>
-            <div class="control-group">
-                <label class="control-label" data-i18n="config.language">Langue</label>
-                <select id="language-select" onchange="setLanguage(this.value)">
-                    <option value="fr" data-i18n="config.languageFrench">Français</option>
-                    <option value="en" data-i18n="config.languageEnglish">English</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label class="control-label" data-i18n="config.theme">Thème</label>
-                <select id="theme-select" onchange="setTheme(this.value)">
-                    <option value="dark" data-i18n="config.themeDark">Mode sombre</option>
-                    <option value="light" data-i18n="config.themeLight">Mode clair</option>
-                </select>
             </div>
             <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
             <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
