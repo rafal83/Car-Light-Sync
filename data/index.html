@@ -23,6 +23,13 @@
             --color-button-bg: #1f1f1f;
             --color-button-border: #3d3d3d;
             --color-shadow: rgba(0, 0, 0, 0.35);
+            --carbon-base: #131313;
+            --carbon-a: #151515;
+            --carbon-b: #222222;
+            --carbon-c: #1b1b1b;
+            --carbon-d: #1d1d1d;
+            --carbon-e: #1a1a1a;
+            --carbon-f: #242424;
         }
         body.light-theme {
             --color-bg: #e9e9e4;
@@ -41,11 +48,26 @@
             --color-button-bg: #f7f6f2;
             --color-button-border: #c0beb8;
             --color-shadow: rgba(0, 0, 0, 0.15);
+            --carbon-base: #ececec;
+            --carbon-a: #eaeaea;
+            --carbon-b: #dddddd;
+            --carbon-c: #e4e4e4;
+            --carbon-d: #e2e2e2;
+            --carbon-e: #e5e5e5;
+            --carbon-f: #dbdbdb;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: var(--color-bg);
+            background:
+              linear-gradient(27deg, var(--carbon-a) 5px, transparent 5px) 0 5px,
+              linear-gradient(207deg, var(--carbon-a) 5px, transparent 5px) 10px 0px,
+              linear-gradient(27deg, var(--carbon-b) 5px, transparent 5px) 0px 10px,
+              linear-gradient(207deg, var(--carbon-b) 5px, transparent 5px) 10px 5px,
+              linear-gradient(90deg, var(--carbon-c) 10px, transparent 10px),
+              linear-gradient(var(--carbon-d) 25%, var(--carbon-e) 25%, var(--carbon-e) 50%, transparent 50%, transparent 75%, var(--carbon-f) 75%, var(--carbon-f));
+            background-color: var(--carbon-base);
+            background-size: 20px 20px;
             min-height: 100vh;
             padding: 20px;
             color: var(--color-text);
