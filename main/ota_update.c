@@ -12,6 +12,7 @@
 
 static const char *TAG = "OTA";
 static const uint32_t OTA_REBOOT_DELAY_MS = 30000;
+static const uint32_t OTA_WRITE_THROTTLE_MS = 5;
 
 static ota_progress_t current_progress = {0};
 static esp_ota_handle_t ota_handle = 0;
@@ -129,6 +130,9 @@ esp_err_t ota_write(const void *data, size_t size) {
         }
     }
     led_effects_update_progress(current_progress.progress);
+    if (OTA_WRITE_THROTTLE_MS > 0) {
+        vTaskDelay(pdMS_TO_TICKS(OTA_WRITE_THROTTLE_MS));
+    }
 
     ESP_LOGD(TAG, "OTA écrit %d octets, total: %lu", size, current_progress.written_size);
     return ESP_OK;

@@ -836,6 +836,7 @@
 
             <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
             <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
+            <button class="btn-danger" style="margin-left: 10px;" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
 
             <div class="section" style="margin-top: 40px; border-top: 2px solid #E82127; padding-top: 20px;">
                 <div class="section-title" style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</div>
@@ -1151,16 +1152,26 @@
                     restart: "Redémarrer",
                     uploading: "Téléversement en cours...",
                     success: "Mise à jour réussie ! Vous pouvez redémarrer.",
-                    error: "Erreur lors de la mise à jour",
-                    selectFile: "Veuillez sélectionner un fichier firmware",
-                    wrongExtension: "Le fichier doit avoir l'extension .bin",
-                    confirmUpdate: "Êtes-vous sûr de vouloir mettre à jour le firmware ? L'appareil redémarrera.",
-                    confirmRestart: "Redémarrer maintenant ?",
-                    restarting: "Redémarrage en cours... Reconnexion dans 10 secondes.",
-                    autoRestartIn: "Redémarrage automatique dans"
+                error: "Erreur lors de la mise à jour",
+                selectFile: "Veuillez sélectionner un fichier firmware",
+                wrongExtension: "Le fichier doit avoir l'extension .bin",
+                confirmUpdate: "Êtes-vous sûr de vouloir mettre à jour le firmware ? L'appareil redémarrera.",
+                confirmRestart: "Redémarrer maintenant ?",
+                restarting: "Redémarrage en cours... Reconnexion dans 10 secondes.",
+                autoRestartIn: "Redémarrage automatique dans",
+                states: {
+                    idle: "En attente d'une mise à jour",
+                    receiving: "Réception du firmware...",
+                    writing: "Écriture du firmware...",
+                    success: "Mise à jour terminée, redémarrage imminent",
+                    error: "Erreur pendant la mise à jour"
                 }
             },
-            en: {
+            config: {
+                restartEsp: "Redémarrer"
+            }
+        },
+        en: {
                 app: {
                     title: "TESLA STRIP CONTROLLER",
                     subtitle: "RGB Control Synchronized with your Tesla"
@@ -1413,16 +1424,42 @@
                     restart: "Restart",
                     uploading: "Uploading...",
                     success: "Update successful! You can restart.",
-                    error: "Update error",
-                    selectFile: "Please select a firmware file",
-                    wrongExtension: "File must have .bin extension",
-                    confirmUpdate: "Are you sure you want to update the firmware? The device will restart.",
-                    confirmRestart: "Restart now?",
-                    restarting: "Restarting... Reconnecting in 10 seconds.",
-                    autoRestartIn: "Auto reboot in"
+                error: "Update error",
+                selectFile: "Please select a firmware file",
+                wrongExtension: "File must have .bin extension",
+                confirmUpdate: "Are you sure you want to update the firmware? The device will restart.",
+                confirmRestart: "Restart now?",
+                restarting: "Restarting... Reconnecting in 10 seconds.",
+                autoRestartIn: "Auto reboot in",
+                states: {
+                    idle: "Waiting for an update",
+                    receiving: "Receiving firmware...",
+                    writing: "Writing firmware to flash...",
+                    success: "Update completed, restart pending",
+                    error: "Update failed"
                 }
+            },
+            config: {
+                restartEsp: "Restart"
             }
+        }
+    };
+
+        const OTA_STATE_KEYS = {
+            0: 'idle',
+            1: 'receiving',
+            2: 'writing',
+            3: 'success',
+            4: 'error'
         };
+
+        function getOtaStateKey(state) {
+            if (state === undefined || state === null) {
+                return 'idle';
+            }
+            const numericState = Number(state);
+            return OTA_STATE_KEYS.hasOwnProperty(numericState) ? OTA_STATE_KEYS[numericState] : 'idle';
+        }
 
         const simulationSections = [
             {
@@ -2555,6 +2592,14 @@
 
         // OTA Functions
         let otaReloadScheduled = false;
+        let otaManualUploadRunning = false;
+        function scheduleOtaReload(delayMs) {
+            if (otaReloadScheduled) {
+                return;
+            }
+            otaReloadScheduled = true;
+            setTimeout(() => window.location.reload(), delayMs);
+        }
 
         async function loadOTAInfo() {
             try {
@@ -2562,22 +2607,81 @@
                 const data = await response.json();
                 document.getElementById('ota-version').textContent = 'v' + data.version;
 
+                const progressContainer = document.getElementById('ota-progress-container');
+                const progressBar = document.getElementById('ota-progress-bar');
+                const progressPercent = document.getElementById('ota-progress-percent');
+                const statusMessage = document.getElementById('ota-status-message');
+                const uploadBtn = document.getElementById('ota-upload-btn');
+                const restartBtn = document.getElementById('ota-restart-btn');
+                const fileInputEl = document.getElementById('firmware-file');
+
+                const backendStateKey = getOtaStateKey(data.state);
+                if (otaManualUploadRunning && backendStateKey !== 'idle') {
+                    otaManualUploadRunning = false;
+                }
+                const stateKey = otaManualUploadRunning ? 'receiving' : backendStateKey;
+                const showProgress = otaManualUploadRunning || (typeof data.state === 'number' && data.state !== 0);
+
+                if (progressContainer && progressBar && progressPercent && statusMessage) {
+                    const progressValue = Math.max(0, Math.min(100, Number(data.progress) || 0));
+                    if (showProgress || stateKey === 'success' || stateKey === 'error') {
+                        progressContainer.style.display = 'block';
+                        progressBar.style.width = progressValue + '%';
+                        progressPercent.textContent = progressValue + '%';
+                    } else {
+                        progressContainer.style.display = 'none';
+                        progressBar.style.width = '0%';
+                        progressPercent.textContent = '0%';
+                    }
+
+                    let statusText = t('ota.states.' + stateKey);
+                    if (stateKey === 'error' && data.error) {
+                        statusText += ' - ' + data.error;
+                    }
+
+                    statusMessage.textContent = statusText;
+                    if (stateKey === 'success') {
+                        statusMessage.style.color = '#10b981';
+                    } else if (stateKey === 'error') {
+                        statusMessage.style.color = '#f87171';
+                    } else {
+                        statusMessage.style.color = '#999999';
+                    }
+                }
+
+                const busy = stateKey === 'receiving' || stateKey === 'writing';
+
+                if (uploadBtn) {
+                    const effectiveBusy = busy || otaManualUploadRunning;
+                    uploadBtn.disabled = effectiveBusy;
+                    uploadBtn.style.display = effectiveBusy ? 'none' : 'inline-block';
+                }
+
+                if (fileInputEl) {
+                    const effectiveBusy = busy || otaManualUploadRunning;
+                    fileInputEl.disabled = effectiveBusy;
+                    fileInputEl.style.display = effectiveBusy ? 'none' : 'block';
+                }
+
+                if (restartBtn) {
+                    restartBtn.style.display = stateKey === 'success' ? 'inline-block' : 'none';
+                }
+
                 const rebootCountdownEl = document.getElementById('ota-reboot-countdown');
                 if (rebootCountdownEl) {
                     if (typeof data.reboot_countdown === 'number' && data.reboot_countdown >= 0) {
-                        const progressContainer = document.getElementById('ota-progress-container');
                         if (progressContainer) {
                             progressContainer.style.display = 'block';
                         }
                         rebootCountdownEl.style.display = 'block';
                         if (data.reboot_countdown === 0) {
                             rebootCountdownEl.textContent = t('ota.restarting');
-                            if (!otaReloadScheduled) {
-                                otaReloadScheduled = true;
-                                setTimeout(() => window.location.reload(), 5000);
-                            }
+                            scheduleOtaReload(5000);
                         } else {
                             rebootCountdownEl.textContent = t('ota.autoRestartIn') + ' ' + data.reboot_countdown + 's';
+                            if (data.reboot_countdown <= 5) {
+                                scheduleOtaReload((data.reboot_countdown + 2) * 1000);
+                            }
                         }
                     } else {
                         rebootCountdownEl.style.display = 'none';
@@ -2594,8 +2698,8 @@
         }
 
         async function uploadFirmware() {
-            const fileInput = document.getElementById('firmware-file');
-            const file = fileInput.files[0];
+            const fileInputEl = document.getElementById('firmware-file');
+            const file = fileInputEl.files[0];
 
             if (!file) {
                 showNotification('ota-notification', t('ota.selectFile'), 'error');
@@ -2618,9 +2722,16 @@
             const uploadBtn = document.getElementById('ota-upload-btn');
             const restartBtn = document.getElementById('ota-restart-btn');
 
+            otaManualUploadRunning = true;
             progressContainer.style.display = 'block';
             uploadBtn.disabled = true;
-            statusMessage.textContent = t('ota.uploading');
+            uploadBtn.style.display = 'none';
+            if (fileInputEl) {
+                fileInputEl.disabled = true;
+                fileInputEl.style.display = 'none';
+            }
+            statusMessage.textContent = t('ota.states.receiving');
+            statusMessage.style.color = '#999999';
 
             try {
                 const xhr = new XMLHttpRequest();
@@ -2630,6 +2741,7 @@
                         const percent = Math.round((e.loaded / e.total) * 100);
                         progressBar.style.width = percent + '%';
                         progressPercent.textContent = percent + '%';
+                        statusMessage.textContent = t('ota.states.receiving') + ' (' + percent + '%)';
                     }
                 });
 
@@ -2637,21 +2749,34 @@
                     if (xhr.status === 200) {
                         progressBar.style.width = '100%';
                         progressPercent.textContent = '100%';
-                        statusMessage.textContent = t('ota.success');
-                        statusMessage.style.color = '#10b981';
+                        statusMessage.textContent = t('ota.states.writing');
+                        statusMessage.style.color = '#999999';
                         restartBtn.style.display = 'inline-block';
                         uploadBtn.style.display = 'none';
+                        setTimeout(() => loadOTAInfo(), 200);
                     } else {
-                        statusMessage.textContent = t('ota.error');
-                        statusMessage.style.color = '#E82127';
+                        statusMessage.textContent = t('ota.states.error');
+                        statusMessage.style.color = '#f87171';
                         uploadBtn.disabled = false;
+                        uploadBtn.style.display = 'inline-block';
+                        if (fileInputEl) {
+                            fileInputEl.disabled = false;
+                            fileInputEl.style.display = 'block';
+                        }
+                        loadOTAInfo();
                     }
                 });
 
-                xhr.addEventListener('error', () => {
-                    statusMessage.textContent = t('ota.error');
-                    statusMessage.style.color = '#E82127';
+                xhr.addEventListener('error', (e) => {
+                    statusMessage.textContent = t('ota.states.error') + (e.message ? ': ' + e.message : '');
+                    statusMessage.style.color = '#f87171';
                     uploadBtn.disabled = false;
+                    uploadBtn.style.display = 'inline-block';
+                    if (fileInputEl) {
+                        fileInputEl.disabled = false;
+                        fileInputEl.style.display = 'block';
+                    }
+                    loadOTAInfo();
                 });
 
                 xhr.open('POST', API_BASE + '/api/ota/upload');
@@ -2662,6 +2787,11 @@
                 statusMessage.textContent = t('ota.error') + ': ' + e.message;
                 statusMessage.style.color = '#E82127';
                 uploadBtn.disabled = false;
+                uploadBtn.style.display = 'inline-block';
+                if (fileInputEl) {
+                    fileInputEl.disabled = false;
+                    fileInputEl.style.display = 'block';
+            }
             }
         }
 

@@ -34,6 +34,9 @@ static bool ota_progress_mode = false;
 static bool ota_ready_mode = false;
 static bool ota_error_mode = false;
 static uint8_t ota_progress_percent = 0;
+static uint8_t ota_displayed_percent = 255;
+static TickType_t ota_last_progress_refresh = 0;
+static const TickType_t OTA_PROGRESS_REFRESH_LIMIT = pdMS_TO_TICKS(500);
 
 // Accumulateur flottant pour animation de charge fluide
 static float charge_anim_position = 0.0f;
@@ -1022,8 +1025,22 @@ void led_effects_update(void) {
     }
 
     if (ota_progress_mode) {
-        render_progress_display();
-        led_strip_show();
+        TickType_t now = xTaskGetTickCount();
+        bool needs_refresh = false;
+
+        if (ota_progress_percent != ota_displayed_percent) {
+            ota_displayed_percent = ota_progress_percent;
+            needs_refresh = true;
+        } else if ((now - ota_last_progress_refresh) > OTA_PROGRESS_REFRESH_LIMIT) {
+            needs_refresh = true;
+        }
+
+        if (needs_refresh) {
+            render_progress_display();
+            led_strip_show();
+            ota_last_progress_refresh = now;
+        }
+
         effect_counter++;
         return;
     }
@@ -1155,6 +1172,8 @@ void led_effects_start_progress_display(void) {
     ota_error_mode = false;
     ota_progress_mode = true;
     ota_progress_percent = 0;
+    ota_displayed_percent = 255;
+    ota_last_progress_refresh = 0;
     dual_directional_mode = false;
 }
 
@@ -1170,6 +1189,8 @@ void led_effects_stop_progress_display(void) {
     ota_progress_percent = 0;
     ota_ready_mode = false;
     ota_error_mode = false;
+    ota_displayed_percent = 255;
+    ota_last_progress_refresh = 0;
 }
 
 void led_effects_show_upgrade_ready(void) {
@@ -1177,12 +1198,14 @@ void led_effects_show_upgrade_ready(void) {
     ota_progress_percent = 100;
     ota_error_mode = false;
     ota_ready_mode = true;
+    ota_displayed_percent = 255;
 }
 
 void led_effects_show_upgrade_error(void) {
     ota_progress_mode = false;
     ota_ready_mode = false;
     ota_error_mode = true;
+    ota_displayed_percent = 255;
 }
 
 const char* led_effects_get_name(led_effect_t effect) {
