@@ -370,11 +370,16 @@
         }
 
         /* Events Configuration Table */
-        .events-table-container {
-            overflow-x: auto;
+        .events-table-wrapper {
             margin-top: 20px;
             border: 1px solid #222222;
             border-radius: 4px;
+            background: #1A1A1A;
+        }
+        .events-table-container {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 60vh;
         }
         .events-table {
             width: 100%;
@@ -390,6 +395,20 @@
             font-weight: 500;
             font-size: 13px;
             border-bottom: 2px solid #E82127;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .events-table th:first-child,
+        .events-table td:first-child {
+            position: sticky;
+            left: 0;
+            background: #1A1A1A;
+            z-index: 6;
+        }
+        .events-table th:first-child {
+            background: #222222;
+            z-index: 7;
         }
         .events-table td {
             padding: 10px 8px;
@@ -748,26 +767,28 @@
                     Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
                 </p>
 
-                <div class="events-table-container">
-                    <table class="events-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="eventsConfig.eventName">Événement</th>
-                                <th data-i18n="eventsConfig.action">Action</th>
-                                <th data-i18n="eventsConfig.profile">Profil</th>
-                                <th data-i18n="eventsConfig.effect">Effet</th>
-                                <th data-i18n="eventsConfig.brightness">Luminosité</th>
-                                <th data-i18n="eventsConfig.speed">Vitesse</th>
-                                <th data-i18n="eventsConfig.color">Couleur</th>
-                                <th data-i18n="eventsConfig.duration">Durée (ms)</th>
-                                <th data-i18n="eventsConfig.priority">Priorité</th>
-                                <th data-i18n="eventsConfig.enabled">Activé</th>
-                            </tr>
-                        </thead>
-                        <tbody id="events-table-body">
-                            <!-- Will be populated dynamically -->
-                        </tbody>
-                    </table>
+                <div class="events-table-wrapper">
+                    <div class="events-table-container">
+                        <table class="events-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="eventsConfig.eventName">Événement</th>
+                                    <th data-i18n="eventsConfig.action">Action</th>
+                                    <th data-i18n="eventsConfig.profile">Profil</th>
+                                    <th data-i18n="eventsConfig.effect">Effet</th>
+                                    <th data-i18n="eventsConfig.brightness">Luminosité</th>
+                                    <th data-i18n="eventsConfig.speed">Vitesse</th>
+                                    <th data-i18n="eventsConfig.color">Couleur</th>
+                                    <th data-i18n="eventsConfig.duration">Durée (ms)</th>
+                                    <th data-i18n="eventsConfig.priority">Priorité</th>
+                                    <th data-i18n="eventsConfig.enabled">Activé</th>
+                                </tr>
+                            </thead>
+                            <tbody id="events-table-body">
+                                <!-- Will be populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <button class="btn-primary" onclick="saveEventsConfig()" style="margin-top: 20px;" data-i18n="eventsConfig.save">Sauvegarder la Configuration</button>
@@ -2747,7 +2768,7 @@
             statusMessage.textContent = t('ota.states.receiving');
             statusMessage.style.color = '#999999';
 
-            setInterval(loadOTAInfo, 200);
+            setInterval(loadOTAInfo, 1000);
 
             try {
                 const xhr = new XMLHttpRequest();
