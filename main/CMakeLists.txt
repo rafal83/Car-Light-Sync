@@ -15,6 +15,7 @@ idf_component_register(
         "../include"
     EMBED_FILES
         "../data/index.html.gz"
+        "../data/icon.svg"
     REQUIRES
         esp_wifi
         esp_http_server

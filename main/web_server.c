@@ -24,6 +24,8 @@ static vehicle_state_t current_vehicle_state = {0};
 // HTML de la page principale (embarqué, version compressée GZIP)
 extern const uint8_t index_html_gz_start[] asm("_binary_index_html_gz_start");
 extern const uint8_t index_html_gz_end[]   asm("_binary_index_html_gz_end");
+extern const uint8_t icon_svg_start[] asm("_binary_icon_svg_start");
+extern const uint8_t icon_svg_end[]   asm("_binary_icon_svg_end");
 
 // Handler pour la page principale
 static esp_err_t index_handler(httpd_req_t *req) {
@@ -45,6 +47,18 @@ static esp_err_t index_handler(httpd_req_t *req) {
         ESP_LOGE(TAG, "Erreur envoi HTML: %s", esp_err_to_name(err));
     }
 
+    return err;
+}
+
+static esp_err_t icon_handler(httpd_req_t *req) {
+    const size_t icon_size = (icon_svg_end - icon_svg_start);
+    httpd_resp_set_type(req, "image/svg+xml");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000");
+
+    esp_err_t err = httpd_resp_send(req, (const char *)icon_svg_start, icon_size);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Erreur envoi favicon: %s", esp_err_to_name(err));
+    }
     return err;
 }
 
@@ -1429,6 +1443,14 @@ esp_err_t web_server_start(void) {
             .user_ctx = NULL
         };
         httpd_register_uri_handler(server, &index_uri);
+
+        httpd_uri_t icon_uri = {
+            .uri = "/icon.svg",
+            .method = HTTP_GET,
+            .handler = icon_handler,
+            .user_ctx = NULL
+        };
+        httpd_register_uri_handler(server, &icon_uri);
         
         httpd_uri_t status_uri = {
             .uri = "/api/status",
