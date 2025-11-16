@@ -74,6 +74,7 @@ typedef struct {
     // Détection angle mort
     bool blindspot_left;        // Détection angle mort gauche
     bool blindspot_right;       // Détection angle mort droite
+    bool blindspot_warning;     // Détection angle mort warning
     
     // Mode nuit
     bool night_mode;            // Mode nuit actif (via capteur lumière)

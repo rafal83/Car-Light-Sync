@@ -490,7 +490,7 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
     profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].profile_id = -1;
     profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.effect = EFFECT_BLINDSPOT_FLASH;
     profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.brightness = 255;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.speed = 250;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.speed = 255;
     profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.color1 = 0xFF0000;
     profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.reverse = true; // Animation depuis centre vers gauche
     profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].duration_ms = 0;
@@ -503,6 +503,18 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
            sizeof(can_event_effect_t));
     profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT].event = CAN_EVENT_BLINDSPOT_RIGHT;
     profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT].effect_config.reverse = false; // Animation depuis centre vers droite
+
+    // Blind spot warning
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].event = CAN_EVENT_BLINDSPOT_WARNING;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].action_type = EVENT_ACTION_APPLY_EFFECT;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].profile_id = -1;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.effect = EFFECT_HAZARD;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.brightness = 255;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.speed = 100;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.color1 = 0xFF0000;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].duration_ms = 0;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].priority = 220;
+    profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].enabled = false;
 
     // Hazard/Warning (clignotants de détresse)
     profile->event_effects[CAN_EVENT_TURN_HAZARD].event = CAN_EVENT_TURN_HAZARD;
@@ -534,6 +546,7 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
            sizeof(can_event_effect_t));    
     profile->event_effects[CAN_EVENT_CHARGING_STARTED].event = CAN_EVENT_CHARGING_STARTED;
     profile->event_effects[CAN_EVENT_CHARGING_STARTED].enabled = false;
+    profile->event_effects[CAN_EVENT_CHARGING_STARTED].duration_ms = 500;
 
     memcpy(&profile->event_effects[CAN_EVENT_CHARGING_STOPPED],
            &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
@@ -667,24 +680,25 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
            &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
            sizeof(can_event_effect_t));
     profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED].event = CAN_EVENT_AUTOPILOT_ENGAGED;
+    profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED].duration_ms = 500;
 
     memcpy(&profile->event_effects[CAN_EVENT_AUTOPILOT_DISENGAGED],
-           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED],
            sizeof(can_event_effect_t));   
     profile->event_effects[CAN_EVENT_AUTOPILOT_DISENGAGED].event = CAN_EVENT_AUTOPILOT_DISENGAGED;
 
     memcpy(&profile->event_effects[CAN_EVENT_GEAR_DRIVE],
-           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED],
            sizeof(can_event_effect_t));   
     profile->event_effects[CAN_EVENT_GEAR_DRIVE].event = CAN_EVENT_GEAR_DRIVE;
 
     memcpy(&profile->event_effects[CAN_EVENT_GEAR_REVERSE],
-           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED],
            sizeof(can_event_effect_t));   
     profile->event_effects[CAN_EVENT_GEAR_REVERSE].event = CAN_EVENT_GEAR_REVERSE;
 
     memcpy(&profile->event_effects[CAN_EVENT_GEAR_PARK],
-           &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD],
+           &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED],
            sizeof(can_event_effect_t));   
     profile->event_effects[CAN_EVENT_GEAR_PARK].event = CAN_EVENT_GEAR_PARK;
 
@@ -738,16 +752,12 @@ bool config_manager_process_can_event(can_event_type_t event) {
 
     // Gérer le changement de profil si configuré (indépendant du flag enabled)
     if (event_effect->action_type != EVENT_ACTION_APPLY_EFFECT) {
-        // EVENT_ACTION_SWITCH_PROFILE ou EVENT_ACTION_BOTH
+        // EVENT_ACTION_SWITCH_PROFILE
         if (event_effect->profile_id >= 0 && event_effect->profile_id < MAX_PROFILES) {
             ESP_LOGI(TAG, "Event %d: Switching to profile %d", event, event_effect->profile_id);
             config_manager_activate_profile(event_effect->profile_id);
 
-            // Si c'est uniquement un changement de profil, on s'arrête ici
-            if (event_effect->action_type == EVENT_ACTION_SWITCH_PROFILE) {
-                return true;
-            }
-            // Sinon (EVENT_ACTION_BOTH), on continue pour appliquer l'effet
+            return true;
         }
     }
 
@@ -775,7 +785,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
                 }
                 break;
         }
-    } else {
+    } else {/*
         // Sinon, créer un effet par défaut basé sur le type d'événement
         memset(&effect_to_apply, 0, sizeof(effect_config_t));
         duration_ms = 5000; // 5 secondes par défaut
@@ -930,8 +940,10 @@ bool config_manager_process_can_event(can_event_type_t event) {
 
         ESP_LOGI(TAG, "Utilisation effet par défaut pour '%s'",
                 config_manager_get_event_name(event));
+                */
     }
 
+    if(event_effect->enabled) {
     // Trouver un slot libre pour l'événement
     int free_slot = -1;
     int existing_slot = -1;
@@ -995,6 +1007,10 @@ bool config_manager_process_can_event(can_event_type_t event) {
                 config_manager_get_event_name(event),
                 priority);
     }
+  } else {
+    ESP_LOGW(TAG, "Effet par défaut ignoré pour '%s'",
+            config_manager_get_event_name(event));
+  }
 
     return true;
 }
@@ -1139,6 +1155,7 @@ const char* config_manager_enum_to_id(can_event_type_t event) {
         case CAN_EVENT_BRAKE_OFF:           return EVENT_ID_BRAKE_OFF;
         case CAN_EVENT_BLINDSPOT_LEFT:      return EVENT_ID_BLINDSPOT_LEFT;
         case CAN_EVENT_BLINDSPOT_RIGHT:     return EVENT_ID_BLINDSPOT_RIGHT;
+        case CAN_EVENT_BLINDSPOT_WARNING:     return EVENT_ID_BLINDSPOT_WARNING;
         case CAN_EVENT_NIGHT_MODE_ON:       return EVENT_ID_NIGHT_MODE_ON;
         case CAN_EVENT_NIGHT_MODE_OFF:      return EVENT_ID_NIGHT_MODE_OFF;
         case CAN_EVENT_SPEED_THRESHOLD:     return EVENT_ID_SPEED_THRESHOLD;
@@ -1174,6 +1191,7 @@ can_event_type_t config_manager_id_to_enum(const char* id) {
     if (strcmp(id, EVENT_ID_BRAKE_OFF) == 0)            return CAN_EVENT_BRAKE_OFF;
     if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT) == 0)       return CAN_EVENT_BLINDSPOT_LEFT;
     if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)      return CAN_EVENT_BLINDSPOT_RIGHT;
+    if (strcmp(id, EVENT_ID_BLINDSPOT_WARNING) == 0)      return CAN_EVENT_BLINDSPOT_WARNING;
     if (strcmp(id, EVENT_ID_NIGHT_MODE_ON) == 0)        return CAN_EVENT_NIGHT_MODE_ON;
     if (strcmp(id, EVENT_ID_NIGHT_MODE_OFF) == 0)       return CAN_EVENT_NIGHT_MODE_OFF;
     if (strcmp(id, EVENT_ID_SPEED_THRESHOLD) == 0)      return CAN_EVENT_SPEED_THRESHOLD;
@@ -1190,6 +1208,8 @@ can_event_type_t config_manager_id_to_enum(const char* id) {
 // Vérifie si un événement peut déclencher un changement de profil
 bool config_manager_event_can_switch_profile(can_event_type_t event) {
     switch (event) {
+        case CAN_EVENT_DOOR_OPEN:
+        case CAN_EVENT_DOOR_CLOSE:
         case CAN_EVENT_NIGHT_MODE_ON:
         case CAN_EVENT_NIGHT_MODE_OFF:
         case CAN_EVENT_CHARGING:

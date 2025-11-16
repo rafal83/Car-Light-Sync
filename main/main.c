@@ -140,6 +140,18 @@ static void can_event_task(void *pvParameters) {
                 }
             }
         }
+        if (current_state.blindspot_warning != previous_state.blindspot_warning) {
+            if (current_state.blindspot_warning) {
+                config_manager_process_can_event(CAN_EVENT_BLINDSPOT_WARNING);
+            } else {
+                // Angle mort warning - retour à l'effet par défaut
+                config_profile_t profile;
+                if (config_manager_get_active_profile(&profile)) {
+                    led_effects_set_config(&profile.default_effect);
+                    ESP_LOGI(TAG, "Angle mort warning désactivé, retour à l'effet par défaut");
+                }
+            }
+        }
         
         // Mode nuit
         if (current_state.night_mode != previous_state.night_mode) {

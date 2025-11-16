@@ -813,13 +813,58 @@ static const effect_func_t effect_functions[] = {
     [EFFECT_BLINDSPOT_FLASH] = effect_blindspot_flash,
 };
 
-// Noms des effets
-static const char* effect_names[] = {
-    "Off", "Solid", "Breathing", "Rainbow", "Rainbow Cycle",
-    "Theater Chase", "Running Lights", "Twinkle", "Fire", "Scan",
-    "Knight Rider", "Fade", "Strobe", "Vehicle Sync", "Turn Signal", "Hazard",
-    "Brake Light", "Charge Status", "Blindspot Flash"
+typedef struct {
+    led_effect_t effect;
+    const char *id;
+    const char *name;
+    bool requires_can;
+} led_effect_descriptor_t;
+
+static const led_effect_descriptor_t effect_descriptors[] = {
+    { EFFECT_OFF,            EFFECT_ID_OFF,            "Off",              false },
+    { EFFECT_SOLID,          EFFECT_ID_SOLID,          "Solid",            false },
+    { EFFECT_BREATHING,      EFFECT_ID_BREATHING,      "Breathing",        false },
+    { EFFECT_RAINBOW,        EFFECT_ID_RAINBOW,        "Rainbow",          false },
+    { EFFECT_RAINBOW_CYCLE,  EFFECT_ID_RAINBOW_CYCLE,  "Rainbow Cycle",    false },
+    { EFFECT_THEATER_CHASE,  EFFECT_ID_THEATER_CHASE,  "Theater Chase",    false },
+    { EFFECT_RUNNING_LIGHTS, EFFECT_ID_RUNNING_LIGHTS, "Running Lights",   false },
+    { EFFECT_TWINKLE,        EFFECT_ID_TWINKLE,        "Twinkle",          false },
+    { EFFECT_FIRE,           EFFECT_ID_FIRE,           "Fire",             false },
+    { EFFECT_SCAN,           EFFECT_ID_SCAN,           "Scan",             false },
+    { EFFECT_KNIGHT_RIDER,   EFFECT_ID_KNIGHT_RIDER,   "Knight Rider",     false },
+    { EFFECT_FADE,           EFFECT_ID_FADE,           "Fade",             false },
+    { EFFECT_STROBE,         EFFECT_ID_STROBE,         "Strobe",           false },
+    { EFFECT_VEHICLE_SYNC,   EFFECT_ID_VEHICLE_SYNC,   "Vehicle Sync",     true  },
+    { EFFECT_TURN_SIGNAL,    EFFECT_ID_TURN_SIGNAL,    "Turn Signal",      true  },
+    { EFFECT_BRAKE_LIGHT,    EFFECT_ID_BRAKE_LIGHT,    "Brake Light",      true  },
+    { EFFECT_CHARGE_STATUS,  EFFECT_ID_CHARGE_STATUS,  "Charge Status",    true  },
+    { EFFECT_HAZARD,         EFFECT_ID_HAZARD,         "Hazard",           true  },
+    { EFFECT_BLINDSPOT_FLASH,EFFECT_ID_BLINDSPOT_FLASH,"Blindspot Flash",  true  },
 };
+
+#define EFFECT_DESCRIPTOR_COUNT (sizeof(effect_descriptors) / sizeof(effect_descriptors[0]))
+typedef char effect_descriptor_size_mismatch[(EFFECT_MAX == EFFECT_DESCRIPTOR_COUNT) ? 1 : -1];
+
+static const led_effect_descriptor_t* find_effect_descriptor(led_effect_t effect) {
+    for (size_t i = 0; i < EFFECT_DESCRIPTOR_COUNT; ++i) {
+        if (effect_descriptors[i].effect == effect) {
+            return &effect_descriptors[i];
+        }
+    }
+    return NULL;
+}
+
+static const led_effect_descriptor_t* find_effect_descriptor_by_id(const char *id) {
+    if (id == NULL) {
+        return NULL;
+    }
+    for (size_t i = 0; i < EFFECT_DESCRIPTOR_COUNT; ++i) {
+        if (strcmp(effect_descriptors[i].id, id) == 0) {
+            return &effect_descriptors[i];
+        }
+    }
+    return NULL;
+}
 
 bool led_effects_init(void) {
     esp_err_t ret;
@@ -1037,79 +1082,30 @@ void led_effects_set_solid_color(uint32_t color) {
 }
 
 const char* led_effects_get_name(led_effect_t effect) {
-    if (effect >= 0 && effect < EFFECT_MAX) {
-        return effect_names[effect];
-    }
-    return "Unknown";
+    const led_effect_descriptor_t *desc = find_effect_descriptor(effect);
+    return desc ? desc->name : "Unknown";
 }
 
 // Table de correspondance enum -> ID alphanumérique
 const char* led_effects_enum_to_id(led_effect_t effect) {
-    switch (effect) {
-        case EFFECT_OFF:            return EFFECT_ID_OFF;
-        case EFFECT_SOLID:          return EFFECT_ID_SOLID;
-        case EFFECT_BREATHING:      return EFFECT_ID_BREATHING;
-        case EFFECT_RAINBOW:        return EFFECT_ID_RAINBOW;
-        case EFFECT_RAINBOW_CYCLE:  return EFFECT_ID_RAINBOW_CYCLE;
-        case EFFECT_THEATER_CHASE:  return EFFECT_ID_THEATER_CHASE;
-        case EFFECT_RUNNING_LIGHTS: return EFFECT_ID_RUNNING_LIGHTS;
-        case EFFECT_TWINKLE:        return EFFECT_ID_TWINKLE;
-        case EFFECT_FIRE:           return EFFECT_ID_FIRE;
-        case EFFECT_SCAN:           return EFFECT_ID_SCAN;
-        case EFFECT_KNIGHT_RIDER:   return EFFECT_ID_KNIGHT_RIDER;
-        case EFFECT_FADE:           return EFFECT_ID_FADE;
-        case EFFECT_STROBE:         return EFFECT_ID_STROBE;
-        case EFFECT_VEHICLE_SYNC:   return EFFECT_ID_VEHICLE_SYNC;
-        case EFFECT_TURN_SIGNAL:    return EFFECT_ID_TURN_SIGNAL;
-        case EFFECT_BRAKE_LIGHT:    return EFFECT_ID_BRAKE_LIGHT;
-        case EFFECT_CHARGE_STATUS:  return EFFECT_ID_CHARGE_STATUS;
-        case EFFECT_HAZARD:         return EFFECT_ID_HAZARD;
-        case EFFECT_BLINDSPOT_FLASH: return EFFECT_ID_BLINDSPOT_FLASH;
-        default:                    return EFFECT_ID_OFF;
-    }
+    const led_effect_descriptor_t *desc = find_effect_descriptor(effect);
+    return desc ? desc->id : EFFECT_ID_OFF;
 }
 
 // Table de correspondance ID alphanumérique -> enum
 led_effect_t led_effects_id_to_enum(const char* id) {
-    if (id == NULL) return EFFECT_OFF;
-
-    if (strcmp(id, EFFECT_ID_OFF) == 0)            return EFFECT_OFF;
-    if (strcmp(id, EFFECT_ID_SOLID) == 0)          return EFFECT_SOLID;
-    if (strcmp(id, EFFECT_ID_BREATHING) == 0)      return EFFECT_BREATHING;
-    if (strcmp(id, EFFECT_ID_RAINBOW) == 0)        return EFFECT_RAINBOW;
-    if (strcmp(id, EFFECT_ID_RAINBOW_CYCLE) == 0)  return EFFECT_RAINBOW_CYCLE;
-    if (strcmp(id, EFFECT_ID_THEATER_CHASE) == 0)  return EFFECT_THEATER_CHASE;
-    if (strcmp(id, EFFECT_ID_RUNNING_LIGHTS) == 0) return EFFECT_RUNNING_LIGHTS;
-    if (strcmp(id, EFFECT_ID_TWINKLE) == 0)        return EFFECT_TWINKLE;
-    if (strcmp(id, EFFECT_ID_FIRE) == 0)           return EFFECT_FIRE;
-    if (strcmp(id, EFFECT_ID_SCAN) == 0)           return EFFECT_SCAN;
-    if (strcmp(id, EFFECT_ID_KNIGHT_RIDER) == 0)   return EFFECT_KNIGHT_RIDER;
-    if (strcmp(id, EFFECT_ID_FADE) == 0)           return EFFECT_FADE;
-    if (strcmp(id, EFFECT_ID_STROBE) == 0)         return EFFECT_STROBE;
-    if (strcmp(id, EFFECT_ID_VEHICLE_SYNC) == 0)   return EFFECT_VEHICLE_SYNC;
-    if (strcmp(id, EFFECT_ID_TURN_SIGNAL) == 0)    return EFFECT_TURN_SIGNAL;
-    if (strcmp(id, EFFECT_ID_BRAKE_LIGHT) == 0)    return EFFECT_BRAKE_LIGHT;
-    if (strcmp(id, EFFECT_ID_CHARGE_STATUS) == 0)  return EFFECT_CHARGE_STATUS;
-    if (strcmp(id, EFFECT_ID_HAZARD) == 0)         return EFFECT_HAZARD;
-    if (strcmp(id, EFFECT_ID_BLINDSPOT_FLASH) == 0) return EFFECT_BLINDSPOT_FLASH;
-
-    ESP_LOGW(TAG, "ID d'effet inconnu: %s", id);
+    const led_effect_descriptor_t *desc = find_effect_descriptor_by_id(id);
+    if (desc) {
+        return desc->effect;
+    }
+    ESP_LOGW(TAG, "ID d'effet inconnu: %s", id ? id : "NULL");
     return EFFECT_OFF;
 }
 
 // Vérifie si un effet nécessite des données CAN pour fonctionner
 bool led_effects_requires_can(led_effect_t effect) {
-    switch (effect) {
-        case EFFECT_VEHICLE_SYNC:
-        case EFFECT_TURN_SIGNAL:
-        case EFFECT_BRAKE_LIGHT:
-        case EFFECT_CHARGE_STATUS:
-        case EFFECT_HAZARD:
-        case EFFECT_BLINDSPOT_FLASH:
-            return true;
-        default:
-            return false;
-    }
+    const led_effect_descriptor_t *desc = find_effect_descriptor(effect);
+    return desc ? desc->requires_can : false;
 }
 
 bool led_effects_save_config(void) {

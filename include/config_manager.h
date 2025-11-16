@@ -77,8 +77,7 @@ typedef enum {
 // Type d'action pour un événement CAN
 typedef enum {
     EVENT_ACTION_APPLY_EFFECT = 0,  // Applique un effet LED
-    EVENT_ACTION_SWITCH_PROFILE,    // Change de profil
-    EVENT_ACTION_BOTH               // Change de profil ET applique un effet
+    EVENT_ACTION_SWITCH_PROFILE     // Change de profil
 } event_action_type_t;
 
 // Configuration d'un effet pour un événement CAN spécifique

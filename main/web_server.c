@@ -127,12 +127,13 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON *safety = cJSON_CreateObject();
     cJSON_AddBoolToObject(safety, "blindspot_left", current_vehicle_state.blindspot_left);
     cJSON_AddBoolToObject(safety, "blindspot_right", current_vehicle_state.blindspot_right);
+    cJSON_AddBoolToObject(safety, "blindspot_warning", current_vehicle_state.blindspot_warning);
     cJSON_AddBoolToObject(safety, "night_mode", current_vehicle_state.night_mode);
     cJSON_AddItemToObject(vehicle, "safety", safety);
 
     cJSON_AddItemToObject(root, "vehicle", vehicle);
 
-    // Profil actuellement appliqu�� (peut changer temporairement via ��v��nements)
+    // Profil actuellement appliqué (peut changer temporairement via évènements)
     int active_profile_id = config_manager_get_active_profile_id();
     cJSON_AddNumberToObject(root, "active_profile_id", active_profile_id);
     config_profile_t *active_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
@@ -1328,14 +1329,12 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
             continue;
         }
 
-        // Créer la configuration d'effet
-        effect_config_t effect_config;
+        // Partir de la configuration existante pour préserver les champs non exposés (zone, couleurs secondaires, etc.)
+        effect_config_t effect_config = profile->event_effects[event_type].effect_config;
         effect_config.effect = led_effects_id_to_enum(effect_json->valuestring);
-        effect_config.brightness = brightness_json ? brightness_json->valueint : 128;
-        effect_config.speed = speed_json ? speed_json->valueint : 50;
-        effect_config.color1 = color_json ? color_json->valueint : 0xFF0000;
-        effect_config.color2 = 0;
-        effect_config.color3 = 0;
+        effect_config.brightness = brightness_json ? brightness_json->valueint : effect_config.brightness;
+        effect_config.speed = speed_json ? speed_json->valueint : effect_config.speed;
+        effect_config.color1 = color_json ? color_json->valueint : effect_config.color1;
         effect_config.sync_mode = SYNC_OFF;
 
         // Définir le flag reverse en fonction du type d'événement
@@ -1344,24 +1343,28 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
         effect_config.reverse = (event_type == CAN_EVENT_TURN_LEFT ||
                                  event_type == CAN_EVENT_BLINDSPOT_LEFT);
 
-        uint16_t duration = duration_json ? duration_json->valueint : 0;
-        uint8_t priority = priority_json ? priority_json->valueint : 100;
+        uint16_t duration = duration_json ? duration_json->valueint : profile->event_effects[event_type].duration_ms;
+        uint8_t priority = priority_json ? priority_json->valueint : profile->event_effects[event_type].priority;
+        bool enabled = enabled_json ? cJSON_IsTrue(enabled_json) : profile->event_effects[event_type].enabled;
 
         // Mettre à jour l'événement
         if (config_manager_set_event_effect(profile_id, event_type, &effect_config,
                                            duration, priority)) {
+            config_manager_set_event_enabled(profile_id, event_type, enabled);
             updated_count++;
         }
 
-        // Mettre à jour le flag enabled directement dans le profil
-        if (enabled_json != NULL) {
-            profile->event_effects[event_type].enabled = cJSON_IsTrue(enabled_json);
-        }
+        // Mettre à jour le profil chargé pour qu'il reflète exactement ce qui sera sauvegardé
+        profile->event_effects[event_type].event = event_type;
+        memcpy(&profile->event_effects[event_type].effect_config, &effect_config, sizeof(effect_config_t));
+        profile->event_effects[event_type].duration_ms = duration;
+        profile->event_effects[event_type].priority = priority;
+        profile->event_effects[event_type].enabled = enabled;
 
         // Mettre à jour action_type et profile_id
         if (action_type_json != NULL) {
             int action_type = action_type_json->valueint;
-            if (action_type >= EVENT_ACTION_APPLY_EFFECT && action_type <= EVENT_ACTION_BOTH) {
+            if (action_type >= EVENT_ACTION_APPLY_EFFECT && action_type <= EVENT_ACTION_SWITCH_PROFILE) {
                 profile->event_effects[event_type].action_type = (event_action_type_t)action_type;
             }
         }

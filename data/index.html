@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -233,6 +233,11 @@
         }
 
         /* Toggle Switch for Event Simulation */
+        .simulation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
         .event-toggle-container {
             display: flex;
             align-items: center;
@@ -256,6 +261,13 @@
         .event-toggle-container.active .event-toggle-label {
             color: #FFFFFF;
             font-weight: 500;
+        }
+        .event-toggle-container.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .event-toggle-container.disabled .event-toggle-label {
+            cursor: not-allowed;
         }
         .toggle-switch {
             position: relative;
@@ -780,139 +792,7 @@
                 Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule.
             </p>
 
-            <div class="section">
-                <div class="section-title" style="font-size: 16px;" data-i18n="simulation.turnSignals">Clignotants</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-TURN_LEFT">
-                        <label class="event-toggle-label" for="toggle-TURN_LEFT" data-i18n="simulation.left">Gauche</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-TURN_LEFT" onchange="toggleEvent('TURN_LEFT', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-TURN_RIGHT">
-                        <label class="event-toggle-label" for="toggle-TURN_RIGHT" data-i18n="simulation.right">Droite</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-TURN_RIGHT" onchange="toggleEvent('TURN_RIGHT', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-TURN_HAZARD">
-                        <label class="event-toggle-label" for="toggle-TURN_HAZARD" data-i18n="simulation.hazard">Warning</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-TURN_HAZARD" onchange="toggleEvent('TURN_HAZARD', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title" style="font-size: 16px;" data-i18n="simulation.charging">Charge</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-CHARGING">
-                        <label class="event-toggle-label" for="toggle-CHARGING" data-i18n="simulation.chargingNow">En charge</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-CHARGING" onchange="toggleEvent('CHARGING', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-CHARGE_COMPLETE">
-                        <label class="event-toggle-label" for="toggle-CHARGE_COMPLETE" data-i18n="simulation.chargeComplete">Charge complète</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-CHARGE_COMPLETE" onchange="toggleEvent('CHARGE_COMPLETE', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title" style="font-size: 16px;" data-i18n="simulation.doors">Portes</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-DOOR_OPEN">
-                        <label class="event-toggle-label" for="toggle-DOOR_OPEN" data-i18n="simulation.doorOpen">Porte ouverte</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-DOOR_OPEN" onchange="toggleEvent('DOOR_OPEN', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-DOOR_CLOSE">
-                        <label class="event-toggle-label" for="toggle-DOOR_CLOSE" data-i18n="simulation.doorClose">Porte fermée</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-DOOR_CLOSE" onchange="toggleEvent('DOOR_CLOSE', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title" style="font-size: 16px;" data-i18n="simulation.lock">Verrouillage</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-LOCKED">
-                        <label class="event-toggle-label" for="toggle-LOCKED" data-i18n="simulation.locked">Verrouillé</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-LOCKED" onchange="toggleEvent('LOCKED', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-UNLOCKED">
-                        <label class="event-toggle-label" for="toggle-UNLOCKED" data-i18n="simulation.unlocked">Déverrouillé</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-UNLOCKED" onchange="toggleEvent('UNLOCKED', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title" style="font-size: 16px;" data-i18n="simulation.driving">Conduite</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-BRAKE_ON">
-                        <label class="event-toggle-label" for="toggle-BRAKE_ON" data-i18n="simulation.brakeOn">Frein ON</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-BRAKE_ON" onchange="toggleEvent('BRAKE_ON', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-BRAKE_OFF">
-                        <label class="event-toggle-label" for="toggle-BRAKE_OFF" data-i18n="simulation.brakeOff">Frein OFF</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-BRAKE_OFF" onchange="toggleEvent('BRAKE_OFF', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-SPEED_THRESHOLD">
-                        <label class="event-toggle-label" for="toggle-SPEED_THRESHOLD" data-i18n="simulation.speedThreshold">Seuil Vitesse</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-SPEED_THRESHOLD" onchange="toggleEvent('SPEED_THRESHOLD', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-title" style="font-size: 16px;" data-i18n="simulation.blindspot">Angle Mort</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-BLINDSPOT_LEFT">
-                        <label class="event-toggle-label" for="toggle-BLINDSPOT_LEFT" data-i18n="simulation.blindspotLeft">Gauche</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-BLINDSPOT_LEFT" onchange="toggleEvent('BLINDSPOT_LEFT', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="event-toggle-container" id="event-toggle-BLINDSPOT_RIGHT">
-                        <label class="event-toggle-label" for="toggle-BLINDSPOT_RIGHT" data-i18n="simulation.blindspotRight">Droite</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-BLINDSPOT_RIGHT" onchange="toggleEvent('BLINDSPOT_RIGHT', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
+            <div id="simulation-sections"></div>
 
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.nightMode">Mode Nuit</div>
@@ -1104,7 +984,6 @@
                     profile: "Profil",
                     applyEffect: "Appliquer Effet",
                     switchProfile: "Changer Profil",
-                    both: "Les Deux",
                     effect: "Effet",
                     brightness: "Luminosité",
                     speed: "Vitesse",
@@ -1212,7 +1091,7 @@
                     none: "Aucun"
                 },
                 simulation: {
-                    title: "Simulation d'Événements CAN",
+                    title: "Simulation d'événements CAN",
                     description: "Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule.",
                     turnSignals: "Clignotants",
                     left: "Gauche",
@@ -1222,6 +1101,12 @@
                     charging: "Charge",
                     chargingNow: "En charge",
                     chargeComplete: "Charge complète",
+                    chargingStarted: "Charge démarrée",
+                    chargingStopped: "Charge arrêtée",
+                    chargingHardware: "Connectique de charge",
+                    cableConnected: "Câble connecté",
+                    cableDisconnected: "Câble déconnecté",
+                    portOpened: "Port de charge ouvert",
                     doors: "Portes",
                     doorOpen: "Porte ouverte",
                     doorClose: "Porte fermée",
@@ -1232,9 +1117,17 @@
                     brakeOn: "Frein ON",
                     brakeOff: "Frein OFF",
                     speedThreshold: "Seuil Vitesse",
-                    blindspot: "Angle Mort",
+                    autopilot: "Autopilot",
+                    autopilotEngaged: "Autopilot activé",
+                    autopilotDisengaged: "Autopilot désactivé",
+                    gear: "Transmission",
+                    gearDrive: "Drive",
+                    gearReverse: "Marche arrière",
+                    gearPark: "Park",
+                    blindspot: "Angle mort",
                     blindspotLeft: "Gauche",
                     blindspotRight: "Droite",
+                    blindspotWarning: "Alerte angle mort",
                     nightMode: "Mode Nuit",
                     nightModeToggle: "Mode Nuit",
                     nightModeOn: "Activer",
@@ -1244,7 +1137,8 @@
                     error: "Erreur lors de la simulation",
                     stopping: "Arrêt de l'événement",
                     stopped: "Effet arrêté",
-                    active: "actif"
+                    active: "actif",
+                    disabledEvent: "Événement désactivé dans la configuration"
                 },
                 ota: {
                     title: "Mise à Jour OTA",
@@ -1351,7 +1245,6 @@
                     profile: "Profile",
                     applyEffect: "Apply Effect",
                     switchProfile: "Switch Profile",
-                    both: "Both",
                     effect: "Effect",
                     brightness: "Brightness",
                     speed: "Speed",
@@ -1459,7 +1352,7 @@
                     none: "None"
                 },
                 simulation: {
-                    title: "CAN Events Simulation",
+                    title: "CAN Event Simulation",
                     description: "Test light effects by simulating CAN events without vehicle connection.",
                     turnSignals: "Turn Signals",
                     left: "Left",
@@ -1469,6 +1362,12 @@
                     charging: "Charging",
                     chargingNow: "Charging",
                     chargeComplete: "Charge complete",
+                    chargingStarted: "Charging started",
+                    chargingStopped: "Charging stopped",
+                    chargingHardware: "Charging hardware",
+                    cableConnected: "Cable connected",
+                    cableDisconnected: "Cable disconnected",
+                    portOpened: "Charge port opened",
                     doors: "Doors",
                     doorOpen: "Door open",
                     doorClose: "Door close",
@@ -1479,9 +1378,17 @@
                     brakeOn: "Brake ON",
                     brakeOff: "Brake OFF",
                     speedThreshold: "Speed Threshold",
+                    autopilot: "Autopilot",
+                    autopilotEngaged: "Autopilot engaged",
+                    autopilotDisengaged: "Autopilot disengaged",
+                    gear: "Transmission",
+                    gearDrive: "Drive",
+                    gearReverse: "Reverse",
+                    gearPark: "Park",
                     blindspot: "Blindspot",
                     blindspotLeft: "Left",
                     blindspotRight: "Right",
+                    blindspotWarning: "Blindspot warning",
                     nightMode: "Night Mode",
                     nightModeToggle: "Night Mode",
                     nightModeOn: "Activate",
@@ -1491,7 +1398,8 @@
                     error: "Simulation error",
                     stopping: "Stopping event",
                     stopped: "Effect stopped",
-                    active: "active"
+                    active: "active",
+                    disabledEvent: "Event disabled in configuration"
                 },
                 ota: {
                     title: "OTA Update",
@@ -1512,6 +1420,79 @@
                 }
             }
         };
+
+        const simulationSections = [
+            {
+                titleKey: 'simulation.turnSignals',
+                events: [
+                    { id: 'TURN_LEFT', labelKey: 'simulation.left' },
+                    { id: 'TURN_RIGHT', labelKey: 'simulation.right' },
+                    { id: 'TURN_HAZARD', labelKey: 'simulation.hazard' }
+                ]
+            },
+            {
+                titleKey: 'simulation.charging',
+                events: [
+                    { id: 'CHARGING', labelKey: 'simulation.chargingNow' },
+                    { id: 'CHARGE_COMPLETE', labelKey: 'simulation.chargeComplete' },
+                    { id: 'CHARGING_STARTED', labelKey: 'simulation.chargingStarted' },
+                    { id: 'CHARGING_STOPPED', labelKey: 'simulation.chargingStopped' }
+                ]
+            },
+            {
+                titleKey: 'simulation.chargingHardware',
+                events: [
+                    { id: 'CHARGING_CABLE_CONNECTED', labelKey: 'simulation.cableConnected' },
+                    { id: 'CHARGING_CABLE_DISCONNECTED', labelKey: 'simulation.cableDisconnected' },
+                    { id: 'CHARGING_PORT_OPENED', labelKey: 'simulation.portOpened' }
+                ]
+            },
+            {
+                titleKey: 'simulation.doors',
+                events: [
+                    { id: 'DOOR_OPEN', labelKey: 'simulation.doorOpen' },
+                    { id: 'DOOR_CLOSE', labelKey: 'simulation.doorClose' }
+                ]
+            },
+            {
+                titleKey: 'simulation.lock',
+                events: [
+                    { id: 'LOCKED', labelKey: 'simulation.locked' },
+                    { id: 'UNLOCKED', labelKey: 'simulation.unlocked' }
+                ]
+            },
+            {
+                titleKey: 'simulation.driving',
+                events: [
+                    { id: 'BRAKE_ON', labelKey: 'simulation.brakeOn' },
+                    { id: 'BRAKE_OFF', labelKey: 'simulation.brakeOff' },
+                    { id: 'SPEED_THRESHOLD', labelKey: 'simulation.speedThreshold' }
+                ]
+            },
+            {
+                titleKey: 'simulation.autopilot',
+                events: [
+                    { id: 'AUTOPILOT_ENGAGED', labelKey: 'simulation.autopilotEngaged' },
+                    { id: 'AUTOPILOT_DISENGAGED', labelKey: 'simulation.autopilotDisengaged' }
+                ]
+            },
+            {
+                titleKey: 'simulation.gear',
+                events: [
+                    { id: 'GEAR_DRIVE', labelKey: 'simulation.gearDrive' },
+                    { id: 'GEAR_REVERSE', labelKey: 'simulation.gearReverse' },
+                    { id: 'GEAR_PARK', labelKey: 'simulation.gearPark' }
+                ]
+            },
+            {
+                titleKey: 'simulation.blindspot',
+                events: [
+                    { id: 'BLINDSPOT_LEFT', labelKey: 'simulation.blindspotLeft' },
+                    { id: 'BLINDSPOT_RIGHT', labelKey: 'simulation.blindspotRight' },
+                    { id: 'BLINDSPOT_WARNING', labelKey: 'simulation.blindspotWarning' }
+                ]
+            }
+        ];
 
         // Language management
         let currentLang = localStorage.getItem('language') || 'en';
@@ -1582,6 +1563,14 @@
         // Gestion des tabs
         // État des toggles de simulation (persiste entre les changements d'onglets)
         let simulationTogglesState = {};
+        let simulationAutoStopTimers = {};
+        function isSimulationEventEnabled(eventType) {
+            const config = getSimulationEventConfig(eventType);
+            if (!config) {
+                return true;
+            }
+            return config.enabled !== false;
+        }
 
         function switchTab(tabName) {
             // Désactiver tous les tabs
@@ -1610,6 +1599,7 @@
                 if (checkbox) {
                     checkbox.checked = simulationTogglesState[eventId];
                 }
+                setToggleContainerState(eventId, simulationTogglesState[eventId]);
             });
 
             // Restaurer le toggle du mode nuit
@@ -1619,6 +1609,123 @@
             }
         }
 
+        function getSimulationEventConfig(eventType) {
+            if (!eventsConfigData || eventsConfigData.length === 0) {
+                return null;
+            }
+            const normalized = typeof eventType === 'string' ? eventType : String(eventType);
+            return eventsConfigData.find(evt => evt.event === normalized) || null;
+        }
+
+        function cancelSimulationAutoStop(eventType) {
+            if (simulationAutoStopTimers[eventType]) {
+                clearTimeout(simulationAutoStopTimers[eventType]);
+                delete simulationAutoStopTimers[eventType];
+            }
+        }
+
+        function scheduleSimulationAutoStop(eventType, durationMs) {
+            if (!durationMs || durationMs <= 0) {
+                return;
+            }
+            cancelSimulationAutoStop(eventType);
+            simulationAutoStopTimers[eventType] = setTimeout(() => {
+                autoStopSimulationEvent(eventType);
+            }, durationMs);
+        }
+
+        async function autoStopSimulationEvent(eventType) {
+            cancelSimulationAutoStop(eventType);
+            const checkbox = document.getElementById('toggle-' + eventType);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+            await toggleEvent(eventType, false);
+        }
+
+        async function getSimulationEventDuration(eventType) {
+            try {
+                await ensureEventsConfigData();
+            } catch (error) {
+                return 0;
+            }
+            const config = getSimulationEventConfig(eventType);
+            return config && typeof config.duration === 'number' ? config.duration : 0;
+        }
+
+        function renderSimulationSections() {
+            const container = document.getElementById('simulation-sections');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            simulationSections.forEach(section => {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'section';
+
+                const title = document.createElement('div');
+                title.className = 'section-title';
+                title.style.fontSize = '16px';
+                title.setAttribute('data-i18n', section.titleKey);
+                title.textContent = t(section.titleKey);
+                sectionDiv.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'simulation-grid';
+
+                section.events.forEach(event => {
+                    const toggleContainer = document.createElement('div');
+                    toggleContainer.className = 'event-toggle-container';
+                    toggleContainer.id = 'event-toggle-' + event.id;
+                    const eventConfig = getSimulationEventConfig(event.id);
+                    const eventEnabledInConfig = isSimulationEventEnabled(event.id);
+                    if (eventConfig && !eventEnabledInConfig) {
+                        simulationTogglesState[event.id] = false;
+                    }
+
+                    const label = document.createElement('label');
+                    label.className = 'event-toggle-label';
+                    label.htmlFor = 'toggle-' + event.id;
+                    label.setAttribute('data-i18n', event.labelKey);
+                    label.textContent = t(event.labelKey);
+
+                    const toggle = document.createElement('label');
+                    toggle.className = 'toggle-switch';
+
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.id = 'toggle-' + event.id;
+                    input.checked = eventEnabledInConfig && !!simulationTogglesState[event.id];
+                    input.disabled = !eventEnabledInConfig;
+                    input.addEventListener('change', (e) => toggleEvent(event.id, e.target.checked));
+
+                    const slider = document.createElement('span');
+                    slider.className = 'toggle-slider';
+
+                    toggle.appendChild(input);
+                    toggle.appendChild(slider);
+
+                    if (simulationTogglesState[event.id]) {
+                        toggleContainer.classList.add('active');
+                    }
+                    toggleContainer.classList.toggle('disabled', !eventEnabledInConfig);
+
+                    toggleContainer.appendChild(label);
+                    toggleContainer.appendChild(toggle);
+                    grid.appendChild(toggleContainer);
+                });
+
+                sectionDiv.appendChild(grid);
+                container.appendChild(sectionDiv);
+            });
+        }
+
+        function setToggleContainerState(eventType, isActive) {
+            const container = document.getElementById('event-toggle-' + eventType);
+            if (container) {
+                container.classList.toggle('active', !!isActive);
+            }
+        }
         // Conversion pourcentage <-> 0-255
         function percentTo255(percent) {
             return Math.round((percent * 255) / 100);
@@ -1677,6 +1784,55 @@
 
         // Events Configuration
         let eventsConfigData = [];
+        let eventsConfigLoadingPromise = null;
+        function getDefaultEffectId() {
+            if (effectsList.length === 0) {
+                return 'OFF';
+            }
+            const offEffect = effectsList.find(effect => effect.id === 'OFF');
+            if (offEffect) {
+                return offEffect.id;
+            }
+            const nonCan = effectsList.find(effect => !effect.can_required);
+            if (nonCan) {
+                return nonCan.id;
+            }
+            return effectsList[0].id;
+        }
+
+        async function ensureEventsConfigData(forceRefresh = false) {
+            if (!forceRefresh && eventsConfigData.length > 0) {
+                return eventsConfigData;
+            }
+
+            if (!forceRefresh && eventsConfigLoadingPromise) {
+                return eventsConfigLoadingPromise;
+            }
+
+            const fetchPromise = (async () => {
+                try {
+                    const response = await fetch(API_BASE + '/api/events');
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const data = await response.json();
+                    eventsConfigData = data.events || [];
+                    return eventsConfigData;
+                } catch (error) {
+                    console.error('Failed to load events config:', error);
+                    throw error;
+                }
+            })();
+
+            if (!forceRefresh) {
+                eventsConfigLoadingPromise = fetchPromise.finally(() => {
+                    eventsConfigLoadingPromise = null;
+                });
+                return eventsConfigLoadingPromise;
+            }
+
+            return fetchPromise;
+        }
 
         async function loadEventsConfig() {
             const loading = document.getElementById('events-loading');
@@ -1686,11 +1842,9 @@
             content.style.display = 'none';
 
             try {
-                const response = await fetch(API_BASE + '/api/events');
-                const data = await response.json();
-
-                eventsConfigData = data.events || [];
+                await ensureEventsConfigData(true);
                 renderEventsTable();
+                renderSimulationSections();
 
                 loading.style.display = 'none';
                 content.style.display = 'block';
@@ -1752,7 +1906,6 @@
                 actionOptions += `<option value="0" ${actionType === 0 ? 'selected' : ''}>${t('eventsConfig.applyEffect')}</option>`;
                 if (canSwitchProfile) {
                     actionOptions += `<option value="1" ${actionType === 1 ? 'selected' : ''}>${t('eventsConfig.switchProfile')}</option>`;
-                    actionOptions += `<option value="2" ${actionType === 2 ? 'selected' : ''}>${t('eventsConfig.both')}</option>`;
                 }
 
                 // Générer les options de profil
@@ -1816,6 +1969,22 @@
 
         function updateEventConfig(index, field, value) {
             eventsConfigData[index][field] = value;
+
+            if (field === 'action_type') {
+                const event = eventsConfigData[index];
+                if (value === 0) {
+                    event.profile_id = -1;
+                } else if (value === 1) {
+                    event.effect = getDefaultEffectId();
+                } else if (value === 2) {
+                    if (event.profile_id === undefined || event.profile_id === null) {
+                        event.profile_id = -1;
+                    }
+                    if (!event.effect) {
+                        event.effect = getDefaultEffectId();
+                    }
+                }
+            }
         }
 
         async function saveEventsConfig() {
@@ -1827,6 +1996,8 @@
                 });
 
                 if (response.ok) {
+                    await ensureEventsConfigData(true);
+                    renderSimulationSections();
                     showNotification('events-notification', t('eventsConfig.saveSuccess'), 'success');
                 } else {
                     showNotification('events-notification', t('eventsConfig.saveError'), 'error');
@@ -2528,11 +2699,25 @@
 
         // Toggle event on/off
         async function toggleEvent(eventType, isEnabled) {
-            const toggleContainer = document.getElementById('event-toggle-' + eventType);
-
             try {
                 if (isEnabled) {
-                    toggleContainer.classList.add('active');
+                    try {
+                        await ensureEventsConfigData();
+                    } catch (error) {
+                        console.error('Failed to refresh events config for simulation:', error);
+                    }
+                    if (!isSimulationEventEnabled(eventType)) {
+                        const checkbox = document.getElementById('toggle-' + eventType);
+                        if (checkbox) {
+                            checkbox.checked = false;
+                        }
+                        setToggleContainerState(eventType, false);
+                        simulationTogglesState[eventType] = false;
+                        showNotification('simulation-notification', t('simulation.disabledEvent'), 'error');
+                        return;
+                    }
+                    cancelSimulationAutoStop(eventType);
+                    setToggleContainerState(eventType, true);
                     showNotification('simulation-notification', t('simulation.sending') + ': ' + getEventName(eventType) + '...', 'info');
 
                     const response = await fetch(API_BASE + '/api/simulate/event', {
@@ -2546,13 +2731,18 @@
                     if (result.status === 'ok') {
                         showNotification('simulation-notification', 'OK - ' + getEventName(eventType) + ' ' + t('simulation.active'), 'success');
                         simulationTogglesState[eventType] = true;
+                        const durationMs = await getSimulationEventDuration(eventType);
+                        if (durationMs > 0) {
+                            scheduleSimulationAutoStop(eventType, durationMs);
+                        }
                     } else {
                         document.getElementById('toggle-' + eventType).checked = false;
-                        toggleContainer.classList.remove('active');
+                        setToggleContainerState(eventType, false);
                         showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
                         simulationTogglesState[eventType] = false;
                     }
                 } else {
+                    cancelSimulationAutoStop(eventType);
                     showNotification('simulation-notification', t('simulation.stopping') + ': ' + getEventName(eventType) + '...', 'info');
 
                     const response = await fetch(API_BASE + '/api/stop/event', {
@@ -2564,12 +2754,13 @@
                     const result = await response.json();
 
                     if (result.status === 'ok') {
-                        toggleContainer.classList.remove('active');
+                        setToggleContainerState(eventType, false);
                         showNotification('simulation-notification', 'Stop - ' + getEventName(eventType) + ' ' + t('simulation.stopped'), 'success');
                         simulationTogglesState[eventType] = false;
+                        cancelSimulationAutoStop(eventType);
                     } else {
                         document.getElementById('toggle-' + eventType).checked = true;
-                        toggleContainer.classList.add('active');
+                        setToggleContainerState(eventType, true);
                         showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
                         simulationTogglesState[eventType] = true;
                     }
@@ -2577,7 +2768,7 @@
             } catch (e) {
                 console.error('Erreur:', e);
                 document.getElementById('toggle-' + eventType).checked = true;
-                toggleContainer.classList.add('active');
+                setToggleContainerState(eventType, true);
                 showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
@@ -2726,10 +2917,16 @@
 
         // Init
         document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'FR' : 'EN';
+        renderSimulationSections();
         applyTranslations();
 
         // Charger d'abord les effets et événements, puis le reste
-        Promise.all([loadEffects(), loadEventTypes()]).then(() => {
+        Promise.all([
+            loadEffects(),
+            loadEventTypes(),
+            ensureEventsConfigData().catch(() => null)
+        ]).then(() => {
+            renderSimulationSections();
             loadProfiles();
             loadConfig();
             updateStatus();
