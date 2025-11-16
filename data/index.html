@@ -6,26 +6,62 @@
     <title>Tesla Strip Controller</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <style>
+        :root {
+            --color-bg: #050505;
+            --color-surface: #0f0f0f;
+            --color-panel: #181818;
+            --color-border: #2b2b2b;
+            --color-text: #f5f5f5;
+            --color-muted: #b3b3b3;
+            --color-input-bg: #161616;
+            --color-input-border: #363636;
+            --color-tab-inactive: #9b9b9b;
+            --color-tab-hover: #242424;
+            --color-table-header: #202020;
+            --color-table-row: #161616;
+            --color-table-text: #e0e0e0;
+            --color-button-bg: #1f1f1f;
+            --color-button-border: #3d3d3d;
+            --color-shadow: rgba(0, 0, 0, 0.35);
+        }
+        body.light-theme {
+            --color-bg: #f2f2f2;
+            --color-surface: #ffffff;
+            --color-panel: #f9f9f9;
+            --color-border: #d7d7d7;
+            --color-text: #181818;
+            --color-muted: #5a5a5a;
+            --color-input-bg: #ffffff;
+            --color-input-border: #c9c9c9;
+            --color-tab-inactive: #5f5f5f;
+            --color-tab-hover: #e6e6e6;
+            --color-table-header: #ececec;
+            --color-table-row: #ffffff;
+            --color-table-text: #383838;
+            --color-button-bg: #ffffff;
+            --color-button-border: #c9c9c9;
+            --color-shadow: rgba(0, 0, 0, 0.12);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: #000000;
+            background: var(--color-bg);
             min-height: 100vh;
             padding: 20px;
-            color: #FFFFFF;
+            color: var(--color-text);
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: #0C0C0C;
+            background: var(--color-surface);
             border-radius: 4px;
-            box-shadow: 0 4px 20px rgba(232, 33, 39, 0.1);
+            box-shadow: 0 4px 20px var(--color-shadow);
             overflow: visible;
-            border: 1px solid #222222;
+            border: 1px solid var(--color-border);
         }
         .header {
-            background: #1A1A1A;
-            color: white;
+            background: var(--color-panel);
+            color: var(--color-text);
             padding: 30px;
             text-align: center;
             border-bottom: 2px solid #E82127;
@@ -59,9 +95,9 @@
         }
         .lang-toggle {
             padding: 8px 16px;
-            background: #222222;
-            border: 1px solid #333333;
-            color: #FFFFFF;
+            background: var(--color-border);
+            border: 1px solid var(--color-input-border);
+            color: var(--color-text);
             cursor: pointer;
             border-radius: 4px;
             font-size: 14px;
@@ -69,15 +105,15 @@
             transition: all 0.3s;
         }
         .lang-toggle:hover {
-            background: #333333;
+            background: var(--color-input-border);
             border-color: #E82127;
         }
         .status-bar {
             display: flex;
             justify-content: space-around;
             padding: 15px;
-            background: #1A1A1A;
-            border-bottom: 1px solid #222222;
+            background: var(--color-panel);
+            border-bottom: 1px solid var(--color-border);
             position: sticky;
             top: 0;
             z-index: 100;
@@ -89,8 +125,8 @@
         /* Tabs */
         .tabs {
             display: flex;
-            background: #1A1A1A;
-            border-bottom: 2px solid #222222;
+            background: var(--color-panel);
+            border-bottom: 2px solid var(--color-border);
             overflow-x: auto;
             position: sticky;
             top: 62px;
@@ -103,17 +139,18 @@
             background: transparent;
             font-size: 14px;
             font-weight: 400;
-            color: #999999;
+            color: var(--color-muted);
             transition: all 0.3s;
             white-space: nowrap;
             border-bottom: 3px solid transparent;
+            flex: 0 0 auto;
         }
         .tab:hover {
-            background: #222222;
-            color: #FFFFFF;
+            background: var(--color-border);
+            color: var(--color-text);
         }
         .tab.active {
-            color: #FFFFFF;
+            color: var(--color-text);
             border-bottom: 3px solid #E82127;
             font-weight: 500;
         }
@@ -122,14 +159,14 @@
         .section {
             margin-bottom: 30px;
             padding-bottom: 30px;
-            border-bottom: 1px solid #222222;
+            border-bottom: 1px solid var(--color-border);
         }
         .section:last-child { border-bottom: none; }
         .section-title {
             font-size: 18px;
             font-weight: 400;
             margin-bottom: 15px;
-            color: #FFFFFF;
+            color: var(--color-text);
             letter-spacing: 1px;
         }
         .section-subtitle {
@@ -146,7 +183,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 400;
-            color: #CCCCCC;
+            color: var(--color-text);
             font-size: 14px;
         }
         .slider-container {
@@ -158,7 +195,7 @@
             flex: 1;
             height: 4px;
             border-radius: 2px;
-            background: #333333;
+            background: var(--color-input-border);
             outline: none;
             -webkit-appearance: none;
         }
@@ -179,12 +216,12 @@
         select, input[type="text"], input[type="password"], input[type="number"], input[type="file"] {
             width: 100%;
             padding: 12px;
-            border: 1px solid #333333;
+            border: 1px solid var(--color-input-border);
             border-radius: 4px;
             font-size: 14px;
             transition: border-color 0.3s;
-            background: #1A1A1A;
-            color: #FFFFFF;
+            background: var(--color-panel);
+            color: var(--color-text);
         }
         select:focus, input:focus {
             outline: none;
@@ -198,10 +235,10 @@
         input[type="color"] {
             width: 50px;
             height: 50px;
-            border: 1px solid #333333;
+            border: 1px solid var(--color-input-border);
             border-radius: 4px;
             cursor: pointer;
-            background: #1A1A1A;
+            background: var(--color-panel);
         }
         button {
             padding: 12px 24px;
@@ -217,7 +254,7 @@
         }
         .btn-primary {
             background: #E82127;
-            color: white;
+            color: var(--color-text);
             border: 1px solid #E82127;
         }
         .btn-primary:hover {
@@ -225,16 +262,16 @@
             transform: translateY(-1px);
         }
         .btn-secondary {
-            background: #222222;
-            color: #FFFFFF;
-            border: 1px solid #333333;
+            background: var(--color-border);
+            color: var(--color-text);
+            border: 1px solid var(--color-input-border);
         }
         .btn-secondary:hover {
-            background: #333333;
+            background: var(--color-input-border);
         }
         .btn-danger {
             background: #E82127;
-            color: white;
+            color: var(--color-text);
         }
         .btn-danger:hover {
             background: #CC1D23;
@@ -250,9 +287,9 @@
             align-items: center;
             gap: 12px;
             padding: 10px;
-            background: #1A1A1A;
+            background: var(--color-panel);
             border-radius: 4px;
-            border: 1px solid #333333;
+            border: 1px solid var(--color-input-border);
             transition: all 0.3s;
         }
         .event-toggle-container.active {
@@ -262,11 +299,11 @@
         .event-toggle-label {
             flex: 1;
             font-size: 14px;
-            color: #CCCCCC;
+            color: var(--color-table-text);
             cursor: pointer;
         }
         .event-toggle-container.active .event-toggle-label {
-            color: #FFFFFF;
+            color: var(--color-text);
             font-weight: 500;
         }
         .event-toggle-container.disabled {
@@ -294,7 +331,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #333333;
+            background-color: var(--color-input-border);
             transition: 0.3s;
             border-radius: 26px;
         }
@@ -305,7 +342,7 @@
             width: 18px;
             left: 4px;
             bottom: 4px;
-            background-color: #FFFFFF;
+            background-color: var(--color-text);
             transition: 0.3s;
             border-radius: 50%;
         }
@@ -322,12 +359,12 @@
         }
         .vehicle-item {
             padding: 15px;
-            background: #1A1A1A;
+            background: var(--color-panel);
             border-radius: 4px;
             border-left: 3px solid #E82127;
         }
-        .vehicle-label { font-size: 12px; color: #999999; margin-bottom: 5px; }
-        .vehicle-value { font-size: 16px; font-weight: 500; color: #FFFFFF; }
+        .vehicle-label { font-size: 12px; color: var(--color-muted); margin-bottom: 5px; }
+        .vehicle-value { font-size: 16px; font-weight: 500; color: var(--color-text); }
         .modal {
             display: none;
             position: fixed;
@@ -342,15 +379,15 @@
         }
         .modal.active { display: flex; }
         .modal-content {
-            background: #1A1A1A;
+            background: var(--color-panel);
             padding: 30px;
             border-radius: 4px;
             max-width: 400px;
             width: 90%;
-            border: 1px solid #333333;
+            border: 1px solid var(--color-input-border);
         }
         .modal-content h3 {
-            color: #FFFFFF;
+            color: var(--color-text);
             font-weight: 400;
             letter-spacing: 1px;
         }
@@ -366,9 +403,9 @@
         /* Events Configuration Table */
         .events-table-wrapper {
             margin-top: 20px;
-            border: 1px solid #222222;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
-            background: #1A1A1A;
+            background: var(--color-panel);
         }
         .events-table-container {
             overflow-x: auto;
@@ -378,14 +415,14 @@
         .events-table {
             width: 100%;
             border-collapse: collapse;
-            background: #1A1A1A;
+            background: var(--color-panel);
             min-width: 900px;
         }
         .events-table th {
             padding: 12px 8px;
             text-align: left;
-            background: #222222;
-            color: #FFFFFF;
+            background: var(--color-border);
+            color: var(--color-text);
             font-weight: 500;
             font-size: 13px;
             border-bottom: 2px solid #E82127;
@@ -397,20 +434,20 @@
         .events-table td:first-child {
             position: sticky;
             left: 0;
-            background: #1A1A1A;
+            background: var(--color-panel);
             z-index: 6;
         }
         .events-table th:first-child {
-            background: #222222;
+            background: var(--color-border);
             z-index: 7;
         }
         .events-table td {
             padding: 10px 8px;
-            border-bottom: 1px solid #222222;
-            color: #CCCCCC;
+            border-bottom: 1px solid var(--color-border);
+            color: var(--color-table-text);
         }
         .events-table tr:hover {
-            background: #222222;
+            background: var(--color-border);
         }
         .events-table input[type="number"],
         .events-table select,
@@ -418,9 +455,9 @@
             padding: 6px 8px;
             font-size: 13px;
             width: 100%;
-            background: #0C0C0C;
-            border: 1px solid #333333;
-            color: #FFFFFF;
+            background: var(--color-surface);
+            border: 1px solid var(--color-input-border);
+            color: var(--color-text);
         }
         .events-table input[type="color"] {
             padding: 2px;
@@ -434,13 +471,13 @@
         }
         .event-name-cell {
             font-weight: 500;
-            color: #FFFFFF;
+            color: var(--color-text);
         }
         /* Loading and notifications */
         .loading {
             text-align: center;
             padding: 20px;
-            color: #999999;
+            color: var(--color-muted);
         }
         .notification {
             position: fixed;
@@ -450,8 +487,8 @@
             padding: 12px 20px;
             border-radius: 6px;
             border-left: 3px solid;
-            background: #1A1A1A;
-            color: #FFFFFF;
+            background: var(--color-panel);
+            color: var(--color-text);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
             opacity: 0;
             transform: translateY(-10px);
@@ -500,7 +537,6 @@
                 <h1 data-i18n="app.title">TESLA STRIP CONTROLLER</h1>
                 <p data-i18n="app.subtitle">Contrôle RGB synchronisé avec votre Tesla</p>
             </div>
-            <button class="lang-toggle" onclick="toggleLanguage()" id="lang-btn">EN</button>
         </div>
         <div class="status-bar">
             <div class="status-item">
@@ -694,7 +730,7 @@
             </div>
             <div class="section" style="margin-top: 30px;">
                 <div class="section-title" style="font-size: 16px;" data-i18n="profiles.defaultEffect">Effet par Défaut</div>
-                <p style="margin-bottom: 15px; color: #999999; font-size: 14px;" data-i18n="profiles.defaultEffectDesc">
+                <p style="margin-bottom: 15px; color: var(--color-muted); font-size: 14px;" data-i18n="profiles.defaultEffectDesc">
                     Configurez l'effet affiché lorsqu'aucun événement CAN n'est actif.
                 </p>
                 <div class="control-group">
@@ -730,7 +766,7 @@
             <div id="events-notification" class="notification"></div>
             <div id="events-loading" class="loading" data-i18n="eventsConfig.loading">Chargement de la configuration...</div>
             <div id="events-content" style="display: none;">
-                <p style="margin-bottom: 20px; color: #999999; font-size: 14px;" data-i18n="eventsConfig.description">
+                <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="eventsConfig.description">
                     Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
                 </p>
                 <div class="events-table-wrapper">
@@ -764,7 +800,7 @@
         <div id="commander-tab" class="tab-content">
             <div class="section-title" data-i18n="commander.title">Connexion Commander</div>
             <div id="commander-notification" class="notification"></div>
-            <p style="margin-bottom: 20px; color: #999999;" data-i18n="commander.description">
+            <p style="margin-bottom: 20px; color: var(--color-muted);" data-i18n="commander.description">
                 Connectez-vous au Tesla Commander pour recevoir les données CAN du véhicule.
             </p>
             <button class="btn-primary" onclick="connectCommander()" data-i18n="commander.connect">Connecter</button>
@@ -780,7 +816,7 @@
         <div id="simulation-tab" class="tab-content">
             <div class="section-title" data-i18n="simulation.title">Simulation d'Événements CAN</div>
             <div id="simulation-notification" class="notification"></div>
-            <p style="margin-bottom: 20px; color: #999999; font-size: 14px;" data-i18n="simulation.description">
+            <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="simulation.description">
                 Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule.
             </p>
             <div id="simulation-sections"></div>
@@ -801,7 +837,7 @@
         <div id="config-tab" class="tab-content">
             <div class="section-title" data-i18n="config.title">Configuration Matérielle</div>
             <div id="config-notification" class="notification"></div>
-            <p style="margin-bottom: 20px; color: #999999; font-size: 14px;" data-i18n="config.description">
+            <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="config.description">
                 Configurez les paramètres matériels du contrôleur LED.
             </p>
             <div class="control-group">
@@ -816,12 +852,26 @@
                 <input type="checkbox" id="strip-reverse">
                 <label for="strip-reverse" data-i18n="config.stripReverse">Inverser le sens de la strip LED</label>
             </div>
+            <div class="control-group">
+                <label class="control-label" data-i18n="config.language">Langue</label>
+                <select id="language-select" onchange="setLanguage(this.value)">
+                    <option value="fr" data-i18n="config.languageFrench">Français</option>
+                    <option value="en" data-i18n="config.languageEnglish">English</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label class="control-label" data-i18n="config.theme">Thème</label>
+                <select id="theme-select" onchange="setTheme(this.value)">
+                    <option value="dark" data-i18n="config.themeDark">Mode sombre</option>
+                    <option value="light" data-i18n="config.themeLight">Mode clair</option>
+                </select>
+            </div>
             <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
             <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
             <button class="btn-danger" style="margin-left: 10px;" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
             <div class="section" style="margin-top: 40px; border-top: 2px solid #E82127; padding-top: 20px;">
                 <div class="section-title" style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</div>
-                <p style="margin-bottom: 15px; color: #999999; font-size: 14px;" data-i18n="config.factoryResetWarning">
+                <p style="margin-bottom: 15px; color: var(--color-muted); font-size: 14px;" data-i18n="config.factoryResetWarning">
                     La réinitialisation usine supprimera TOUS les profils et configurations. Cette action est irréversible !
                 </p>
                 <button class="btn-danger" onclick="confirmFactoryReset()" data-i18n="config.factoryReset">Réinitialisation Usine</button>
@@ -833,7 +883,7 @@
             <div id="ota-notification" class="notification"></div>
             <div class="control-group">
                 <label class="control-label" data-i18n="ota.currentVersion">Version Actuelle</label>
-                <div style="padding: 12px; background: #1A1A1A; border-radius: 4px; font-weight: bold; border: 1px solid #333333;" id="ota-version">
+                <div style="padding: 12px; background: var(--color-panel); border-radius: 4px; font-weight: bold; border: 1px solid var(--color-input-border);" id="ota-version">
                     <span data-i18n="ota.loading">Chargement...</span>
                 </div>
             </div>
@@ -842,15 +892,15 @@
                 <input type="file" id="firmware-file" accept=".bin">
             </div>
             <div id="ota-progress-container" style="display: none; margin-top: 15px;">
-                <div style="background: #1A1A1A; border-radius: 4px; padding: 15px; border: 1px solid #333333;">
+                <div style="background: var(--color-panel); border-radius: 4px; padding: 15px; border: 1px solid var(--color-input-border);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                         <span data-i18n="ota.progress">Progression</span>
                         <span id="ota-progress-percent" style="font-weight: bold;">0%</span>
                     </div>
-                    <div style="background: #333333; height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div style="background: var(--color-input-border); height: 8px; border-radius: 4px; overflow: hidden;">
                         <div id="ota-progress-bar" style="background: #E82127; height: 100%; width: 0%; transition: width 0.3s;"></div>
                     </div>
-                    <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: #999999;"></div>
+                    <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: var(--color-muted);"></div>
                     <div id="ota-reboot-countdown" style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
                 </div>
             </div>
@@ -1002,6 +1052,12 @@
                     ledCount: "Nombre de LEDs",
                     dataPin: "Pin de Données",
                     stripReverse: "Inverser le sens de la strip LED",
+                    language: "Langue",
+                    languageFrench: "Français",
+                    languageEnglish: "Anglais",
+                    theme: "Thème",
+                    themeDark: "Mode sombre",
+                    themeLight: "Mode clair",
                     save: "Sauvegarder",
                     reload: "Recharger",
                     saveSuccess: "Configuration sauvegardée",
@@ -1113,6 +1169,56 @@
                     stopped: "Effet arrêté",
                     active: "actif",
                     disabledEvent: "Événement désactivé dans la configuration"
+                },
+                eventNames: {
+                    TURN_LEFT: "Clignotant gauche",
+                    TURN_RIGHT: "Clignotant droit",
+                    TURN_HAZARD: "Feux de détresse",
+                    CHARGING: "Charge en cours",
+                    CHARGE_COMPLETE: "Charge terminée",
+                    CHARGING_STARTED: "Charge démarrée",
+                    CHARGING_STOPPED: "Charge arrêtée",
+                    CHARGING_CABLE_CONNECTED: "Câble connecté",
+                    CHARGING_CABLE_DISCONNECTED: "Câble déconnecté",
+                    CHARGING_PORT_OPENED: "Port de charge ouvert",
+                    DOOR_OPEN: "Porte ouverte",
+                    DOOR_CLOSE: "Porte fermée",
+                    LOCKED: "Véhicule verrouillé",
+                    UNLOCKED: "Véhicule déverrouillé",
+                    BRAKE_ON: "Frein activé",
+                    BRAKE_OFF: "Frein relâché",
+                    BLINDSPOT_LEFT: "Angle mort gauche",
+                    BLINDSPOT_RIGHT: "Angle mort droit",
+                    BLINDSPOT_WARNING: "Alerte angle mort",
+                    NIGHT_MODE_ON: "Mode nuit activé",
+                    NIGHT_MODE_OFF: "Mode nuit désactivé",
+                    SPEED_THRESHOLD: "Seuil de vitesse atteint",
+                    AUTOPILOT_ENGAGED: "Autopilot activé",
+                    AUTOPILOT_DISENGAGED: "Autopilot désactivé",
+                    GEAR_DRIVE: "Passage en Drive",
+                    GEAR_REVERSE: "Marche arrière",
+                    GEAR_PARK: "Mode Park"
+                },
+                effectNames: {
+                    OFF: "Aucun",
+                    SOLID: "Couleur fixe",
+                    BREATHING: "Respiration",
+                    RAINBOW: "Arc-en-ciel",
+                    RAINBOW_CYCLE: "Arc-en-ciel cyclique",
+                    THEATER_CHASE: "Théâtre",
+                    RUNNING_LIGHTS: "Lumières glissantes",
+                    TWINKLE: "Scintillement",
+                    FIRE: "Feu",
+                    SCAN: "Balayage",
+                    KNIGHT_RIDER: "Knight Rider",
+                    FADE: "Fondu",
+                    STROBE: "Stroboscope",
+                    VEHICLE_SYNC: "Synchro véhicule",
+                    TURN_SIGNAL: "Clignotant",
+                    BRAKE_LIGHT: "Feu stop",
+                    CHARGE_STATUS: "Statut de charge",
+                    HAZARD: "Avertisseur",
+                    BLINDSPOT_FLASH: "Flash angle mort"
                 },
                 ota: {
                     title: "Mise à Jour OTA",
@@ -1274,6 +1380,12 @@
                     ledCount: "LED Count",
                     dataPin: "Data Pin",
                     stripReverse: "Reverse LED strip direction",
+                    language: "Language",
+                    languageFrench: "French",
+                    languageEnglish: "English",
+                    theme: "Theme",
+                    themeDark: "Dark mode",
+                    themeLight: "Light mode",
                     save: "Save",
                     reload: "Reload",
                     saveSuccess: "Configuration saved",
@@ -1385,6 +1497,56 @@
                     stopped: "Effect stopped",
                     active: "active",
                     disabledEvent: "Event disabled in configuration"
+                },
+                eventNames: {
+                    TURN_LEFT: "Turn signal left",
+                    TURN_RIGHT: "Turn signal right",
+                    TURN_HAZARD: "Hazard lights",
+                    CHARGING: "Charging",
+                    CHARGE_COMPLETE: "Charge complete",
+                    CHARGING_STARTED: "Charging started",
+                    CHARGING_STOPPED: "Charging stopped",
+                    CHARGING_CABLE_CONNECTED: "Cable connected",
+                    CHARGING_CABLE_DISCONNECTED: "Cable disconnected",
+                    CHARGING_PORT_OPENED: "Charge port opened",
+                    DOOR_OPEN: "Door open",
+                    DOOR_CLOSE: "Door close",
+                    LOCKED: "Vehicle locked",
+                    UNLOCKED: "Vehicle unlocked",
+                    BRAKE_ON: "Brake pressed",
+                    BRAKE_OFF: "Brake released",
+                    BLINDSPOT_LEFT: "Left blindspot",
+                    BLINDSPOT_RIGHT: "Right blindspot",
+                    BLINDSPOT_WARNING: "Blindspot warning",
+                    NIGHT_MODE_ON: "Night mode on",
+                    NIGHT_MODE_OFF: "Night mode off",
+                    SPEED_THRESHOLD: "Speed threshold reached",
+                    AUTOPILOT_ENGAGED: "Autopilot engaged",
+                    AUTOPILOT_DISENGAGED: "Autopilot disengaged",
+                    GEAR_DRIVE: "Gear Drive",
+                    GEAR_REVERSE: "Gear Reverse",
+                    GEAR_PARK: "Gear Park"
+                },
+                effectNames: {
+                    OFF: "Off",
+                    SOLID: "Solid color",
+                    BREATHING: "Breathing",
+                    RAINBOW: "Rainbow",
+                    RAINBOW_CYCLE: "Rainbow cycle",
+                    THEATER_CHASE: "Theater chase",
+                    RUNNING_LIGHTS: "Running lights",
+                    TWINKLE: "Twinkle",
+                    FIRE: "Fire",
+                    SCAN: "Scanner",
+                    KNIGHT_RIDER: "Knight Rider",
+                    FADE: "Fade",
+                    STROBE: "Strobe",
+                    VEHICLE_SYNC: "Vehicle sync",
+                    TURN_SIGNAL: "Turn signal",
+                    BRAKE_LIGHT: "Brake light",
+                    CHARGE_STATUS: "Charge status",
+                    HAZARD: "Hazard",
+                    BLINDSPOT_FLASH: "Blindspot flash"
                 },
                 ota: {
                     title: "OTA Update",
@@ -1502,13 +1664,42 @@
                 ]
             }
         ];
-        // Language management
+        // Language & theme management
         let currentLang = localStorage.getItem('language') || 'en';
-        function toggleLanguage() {
-            currentLang = currentLang === 'fr' ? 'en' : 'fr';
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        function setLanguage(lang) {
+            if (!lang || lang === currentLang) {
+                updateLanguageSelector();
+                return;
+            }
+            currentLang = lang;
             localStorage.setItem('language', currentLang);
             applyTranslations();
-            document.getElementById('lang-btn').textContent = currentLang === 'fr' ? 'EN' : 'FR';
+            renderSimulationSections();
+            renderEventsTable();
+            refreshEffectOptionLabels();
+        }
+        function toggleLanguage() {
+            setLanguage(currentLang === 'fr' ? 'en' : 'fr');
+        }
+        function updateLanguageSelector() {
+            const select = document.getElementById('language-select');
+            if (select) {
+                select.value = currentLang;
+            }
+        }
+        function applyTheme() {
+            document.body.classList.toggle('light-theme', currentTheme === 'light');
+            const select = document.getElementById('theme-select');
+            if (select) {
+                select.value = currentTheme;
+            }
+        }
+        function setTheme(theme) {
+            if (!theme) return;
+            currentTheme = theme;
+            localStorage.setItem('theme', currentTheme);
+            applyTheme();
         }
         function applyTranslations() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -1535,6 +1726,11 @@
             });
             // Update select options
             updateSelectOptions();
+            updateLanguageSelector();
+            const themeSelect = document.getElementById('theme-select');
+            if (themeSelect) {
+                themeSelect.value = currentTheme;
+            }
         }
         function updateSelectOptions() {
             const effectSelect = document.getElementById('effect-select');
@@ -2481,7 +2677,7 @@
                     } else if (stateKey === 'error') {
                         statusMessage.style.color = '#f87171';
                     } else {
-                        statusMessage.style.color = '#999999';
+                        statusMessage.style.color = 'var(--color-muted)';
                     }
                 }
                 const busy = stateKey === 'receiving' || stateKey === 'writing';
@@ -2556,7 +2752,7 @@
                 fileInputEl.style.display = 'none';
             }
             statusMessage.textContent = t('ota.states.receiving');
-            statusMessage.style.color = '#999999';
+            statusMessage.style.color = 'var(--color-muted)';
             setInterval(loadOTAInfo, 1000);
             try {
                 const xhr = new XMLHttpRequest();
@@ -2573,7 +2769,7 @@
                         progressBar.style.width = '100%';
                         progressPercent.textContent = '100%';
                         statusMessage.textContent = t('ota.states.writing');
-                        statusMessage.style.color = '#999999';
+                        statusMessage.style.color = 'var(--color-muted)';
                         restartBtn.style.display = 'inline-block';
                         uploadBtn.style.display = 'none';
                     } else {
@@ -2764,10 +2960,29 @@
                 showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
+        function translateEventId(eventId) {
+            if (!eventId) return null;
+            const map = translations[currentLang] && translations[currentLang].eventNames;
+            if (map && map[eventId]) {
+                return map[eventId];
+            }
+            return null;
+        }
+        function translateEffectId(effectId) {
+            if (!effectId) return null;
+            const map = translations[currentLang] && translations[currentLang].effectNames;
+            if (map && map[effectId]) {
+                return map[effectId];
+            }
+            return null;
+        }
         // Helper pour obtenir le nom d'un événement (depuis API uniquement)
         function getEventName(eventId) {
+            const translated = translateEventId(typeof eventId === 'string' ? eventId : String(eventId));
+            if (translated) {
+                return translated;
+            }
             if (eventTypesList.length > 0) {
-                // API renvoie un ID string mais certaines parties du code utilisent l'index numérique
                 const stringId = typeof eventId === 'string' ? eventId : String(eventId);
                 const eventById = eventTypesList.find(e => e.id === stringId);
                 if (eventById) {
@@ -2782,9 +2997,13 @@
         }
         // Helper pour obtenir le nom d'un effet (depuis API uniquement)
         function getEffectName(effectId) {
+            const translated = translateEffectId(effectId);
+            if (translated) {
+                return translated;
+            }
             if (effectsList.length > 0) {
                 const effect = effectsList.find(e => e.id === effectId);
-                return effect ? effect.name : `Effect ${effectId}`;
+                return effect ? translateEffectId(effect.id) || effect.name : `Effect ${effectId}`;
             }
             return `Effect ${effectId}`;
         }
@@ -2855,9 +3074,10 @@
             }
         }
         // Init
-        document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'FR' : 'EN';
         renderSimulationSections();
         applyTranslations();
+        applyTheme();
+        updateLanguageSelector();
         // Charger d'abord les effets et événements, puis le reste
         Promise.all([
             loadEffects(),
@@ -2874,3 +3094,9 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
