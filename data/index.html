@@ -771,7 +771,7 @@
                 </p>
                 <div class="control-group">
                     <label class="control-label" data-i18n="effects.effect">Effet</label>
-                    <select id="default-effect-select">
+                    <select id="default-effect-select" data-effect-options="true">
                             <!-- Will be populated dynamically -->
                     </select>
                 </div>
@@ -1699,7 +1699,6 @@
             applyTranslations();
             renderSimulationSections();
             renderEventsTable();
-            refreshEffectOptionLabels();
         }
         function toggleLanguage() {
             setLanguage(currentLang === 'fr' ? 'en' : 'fr');
@@ -1748,6 +1747,7 @@
             });
             // Update select options
             updateSelectOptions();
+            refreshEffectOptionLabels();
             updateLanguageSelector();
             const themeSelect = document.getElementById('theme-select');
             if (themeSelect) {
@@ -1769,6 +1769,24 @@
                     }
                 });
             }
+        }
+        function refreshEffectOptionLabels() {
+            const selects = document.querySelectorAll('select[data-effect-options]');
+            selects.forEach(select => {
+                Array.from(select.options).forEach(opt => {
+                    const effectId = opt.value;
+                    if (!effectId) return;
+                    const translated = translateEffectId(effectId);
+                    if (translated) {
+                        opt.textContent = translated;
+                    } else {
+                        const fallback = opt.getAttribute('data-effect-name');
+                        if (fallback) {
+                            opt.textContent = fallback;
+                        }
+                    }
+                });
+            });
         }
         function t(key) {
             const keys = key.split('.');
@@ -2098,9 +2116,9 @@
                         </select>
                     </td>
                     <td>
-                        <select onchange="updateEventConfig(${index}, 'effect', this.value)" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
+                        <select data-effect-options="true" onchange="updateEventConfig(${index}, 'effect', this.value)" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
                             ${effectsList.map(effect =>
-                                `<option value="${effect.id}" ${event.effect == effect.id ? 'selected' : ''}>${effect.name}</option>`
+                                `<option value="${effect.id}" data-effect-name="${effect.name}" ${event.effect == effect.id ? 'selected' : ''}>${getEffectName(effect.id)}</option>`
                             ).join('')}
                         </select>
                     </td>
@@ -3056,6 +3074,7 @@
                 ];
                 effectSelects.forEach(select => {
                     if (select) {
+                        select.setAttribute('data-effect-options', 'true');
                         const currentValue = select.value;
                         select.innerHTML = '';
                         // Pour les sélecteurs d'effet par défaut et d'effet manuel,
@@ -3068,7 +3087,7 @@
                             }
                             const option = document.createElement('option');
                             option.value = effect.id;
-                            option.textContent = effect.name;
+                            option.textContent = translateEffectId(effect.id) || effect.name;
                             option.setAttribute('data-effect-name', effect.name);
                             select.appendChild(option);
                         });
@@ -3078,6 +3097,7 @@
                         }
                     }
                 });
+                refreshEffectOptionLabels();
                 console.log('Loaded', effectsList.length, 'effects from API');
             } catch (error) {
                 console.error('Failed to load effects:', error);
