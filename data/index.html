@@ -86,7 +86,6 @@
         .status-value { font-weight: bold; font-size: 16px; margin-top: 5px; }
         .status-online { color: #10b981; }
         .status-offline { color: #E82127; }
-
         /* Tabs */
         .tabs {
             display: flex;
@@ -118,10 +117,8 @@
             border-bottom: 3px solid #E82127;
             font-weight: 500;
         }
-
         .tab-content { display: none; padding: 30px; }
         .tab-content.active { display: block; }
-
         .section {
             margin-bottom: 30px;
             padding-bottom: 30px;
@@ -242,7 +239,6 @@
         .btn-danger:hover {
             background: #CC1D23;
         }
-
         /* Toggle Switch for Event Simulation */
         .simulation-grid {
             display: grid;
@@ -319,7 +315,6 @@
         .toggle-switch input:checked + .toggle-slider:before {
             transform: translateX(24px);
         }
-
         .vehicle-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -368,7 +363,6 @@
             width: auto;
             height: 20px;
         }
-
         /* Events Configuration Table */
         .events-table-wrapper {
             margin-top: 20px;
@@ -442,7 +436,6 @@
             font-weight: 500;
             color: #FFFFFF;
         }
-
         /* Loading and notifications */
         .loading {
             text-align: center;
@@ -485,7 +478,6 @@
             border-color: #3b82f6;
             color: #3b82f6;
         }
-
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .header {
@@ -510,7 +502,6 @@
             </div>
             <button class="lang-toggle" onclick="toggleLanguage()" id="lang-btn">EN</button>
         </div>
-
         <div class="status-bar">
             <div class="status-item">
                 <div data-i18n="status.wifi">WiFi</div>
@@ -529,7 +520,6 @@
                 <div class="status-value" id="profile-status">...</div>
             </div>
         </div>
-
         <!-- Tabs -->
         <div class="tabs">
           <button class="tab active" onclick="switchTab('vehicle')" data-i18n="tabs.vehicle">Véhicule</button>
@@ -540,11 +530,9 @@
           <button class="tab" onclick="switchTab('config')" data-i18n="tabs.config">Configuration</button>
           <button class="tab" onclick="switchTab('ota')" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
-
         <!-- Tab: Véhicule -->
         <div id="vehicle-tab" class="tab-content active">
             <div class="section-title" data-i18n="vehicle.title">Données Véhicule</div>
-
             <!-- Section: État général -->
             <div class="section-subtitle" data-i18n="vehicle.generalState">État Général</div>
             <div class="vehicle-grid">
@@ -569,7 +557,6 @@
                     <div class="vehicle-value" id="v-locked">--</div>
                 </div>
             </div>
-
             <!-- Section: Portes -->
             <div class="section-subtitle" data-i18n="vehicle.doorsTitle">Portes</div>
             <div class="vehicle-grid">
@@ -598,7 +585,6 @@
                     <div class="vehicle-value" id="v-frunk">--</div>
                 </div>
             </div>
-
             <!-- Section: Fenêtres -->
             <div class="section-subtitle" data-i18n="vehicle.windowsTitle">Fenêtres</div>
             <div class="vehicle-grid">
@@ -619,7 +605,6 @@
                     <div class="vehicle-value" id="v-window-rr">--%</div>
                 </div>
             </div>
-
             <!-- Section: Charge -->
             <div class="section-subtitle" data-i18n="vehicle.chargeTitle">Charge</div>
             <div class="vehicle-grid">
@@ -636,7 +621,6 @@
                     <div class="vehicle-value" id="v-charge-power">-- kW</div>
                 </div>
             </div>
-
             <!-- Section: Lumières -->
             <div class="section-subtitle" data-i18n="vehicle.lightsTitle">Lumières</div>
             <div class="vehicle-grid">
@@ -657,7 +641,6 @@
                     <div class="vehicle-value" id="v-turn-signal">--</div>
                 </div>
             </div>
-
             <!-- Section: Autres -->
             <div class="section-subtitle" data-i18n="vehicle.othersTitle">Autres</div>
             <div class="vehicle-grid">
@@ -683,31 +666,25 @@
                 </div>
             </div>
         </div>
-
         <!-- Tab: Profils -->
         <div id="profiles-tab" class="tab-content">
             <div class="section-title" data-i18n="profiles.title">Gestion des Profils</div>
-
             <div id="profiles-notification" class="notification"></div>
-
             <div class="control-group">
                 <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
                 <select id="profile-select">
                     <option value="-1" data-i18n="profiles.loading">Chargement...</option>
                 </select>
             </div>
-
             <button class="btn-primary" onclick="activateProfile()" data-i18n="profiles.activate">Activer</button>
             <button class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
             <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
             <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
             <button class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
-
             <div class="checkbox-container" style="margin-top: 20px;">
                 <input type="checkbox" id="auto-night-mode" onchange="saveProfileSettings()">
                 <label for="auto-night-mode" data-i18n="profiles.autoNightMode">Mode nuit automatique (basé sur CAN)</label>
             </div>
-
             <div class="control-group" style="margin-top: 10px;">
                 <label class="control-label" data-i18n="profiles.nightBrightness">Luminosité Mode Nuit</label>
                 <div class="slider-container">
@@ -715,20 +692,17 @@
                     <span class="slider-value" id="night-brightness-value">12%</span>
                 </div>
             </div>
-
             <div class="section" style="margin-top: 30px;">
                 <div class="section-title" style="font-size: 16px;" data-i18n="profiles.defaultEffect">Effet par Défaut</div>
                 <p style="margin-bottom: 15px; color: #999999; font-size: 14px;" data-i18n="profiles.defaultEffectDesc">
                     Configurez l'effet affiché lorsqu'aucun événement CAN n'est actif.
                 </p>
-
                 <div class="control-group">
                     <label class="control-label" data-i18n="effects.effect">Effet</label>
                     <select id="default-effect-select">
                             <!-- Will be populated dynamically -->
                     </select>
                 </div>
-
                 <div class="control-group">
                     <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
                     <div class="slider-container">
@@ -736,7 +710,6 @@
                         <span class="slider-value" id="default-brightness-value">50%</span>
                     </div>
                 </div>
-
                 <div class="control-group">
                     <label class="control-label" data-i18n="effects.speed">Vitesse</label>
                     <div class="slider-container">
@@ -744,29 +717,22 @@
                         <span class="slider-value" id="default-speed-value">50%</span>
                     </div>
                 </div>
-
                 <div class="control-group">
                     <label class="control-label" data-i18n="effects.color">Couleur</label>
                     <input type="color" id="default-color1" value="#ff0000">
                 </div>
-
                 <button class="btn-primary" onclick="saveDefaultEffect()" data-i18n="profiles.saveDefault">Sauvegarder Effet par Défaut</button>
             </div>
         </div>
-
         <!-- Tab: Events Configuration -->
         <div id="events-config-tab" class="tab-content">
             <div class="section-title" data-i18n="eventsConfig.title">Configuration des Événements</div>
-
             <div id="events-notification" class="notification"></div>
-
             <div id="events-loading" class="loading" data-i18n="eventsConfig.loading">Chargement de la configuration...</div>
-
             <div id="events-content" style="display: none;">
                 <p style="margin-bottom: 20px; color: #999999; font-size: 14px;" data-i18n="eventsConfig.description">
                     Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
                 </p>
-
                 <div class="events-table-wrapper">
                     <div class="events-table-container">
                         <table class="events-table">
@@ -790,25 +756,19 @@
                         </table>
                     </div>
                 </div>
-
                 <button class="btn-primary" onclick="saveEventsConfig()" style="margin-top: 20px;" data-i18n="eventsConfig.save">Sauvegarder la Configuration</button>
                 <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>
             </div>
         </div>
-
         <!-- Tab: Commander -->
         <div id="commander-tab" class="tab-content">
             <div class="section-title" data-i18n="commander.title">Connexion Commander</div>
-
             <div id="commander-notification" class="notification"></div>
-
             <p style="margin-bottom: 20px; color: #999999;" data-i18n="commander.description">
                 Connectez-vous au Tesla Commander pour recevoir les données CAN du véhicule.
             </p>
-
             <button class="btn-primary" onclick="connectCommander()" data-i18n="commander.connect">Connecter</button>
             <button class="btn-danger" onclick="disconnectCommander()" data-i18n="commander.disconnect">Déconnecter</button>
-
             <div class="section" style="margin-top: 30px;">
                 <div class="section-title" data-i18n="commander.info">Informations</div>
                 <p><strong>SSID Commander:</strong> S3XY_OBD</p>
@@ -816,19 +776,14 @@
                 <p><strong>Port:</strong> 1338</p>
             </div>
         </div>
-
         <!-- Tab: Simulation -->
         <div id="simulation-tab" class="tab-content">
             <div class="section-title" data-i18n="simulation.title">Simulation d'Événements CAN</div>
-
             <div id="simulation-notification" class="notification"></div>
-
             <p style="margin-bottom: 20px; color: #999999; font-size: 14px;" data-i18n="simulation.description">
                 Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule.
             </p>
-
             <div id="simulation-sections"></div>
-
             <div class="section">
                 <div class="section-title" style="font-size: 16px;" data-i18n="simulation.nightMode">Mode Nuit</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
@@ -841,38 +796,29 @@
                     </div>
                 </div>
             </div>
-
         </div>
-
         <!-- Tab: Configuration -->
         <div id="config-tab" class="tab-content">
             <div class="section-title" data-i18n="config.title">Configuration Matérielle</div>
-
             <div id="config-notification" class="notification"></div>
-
             <p style="margin-bottom: 20px; color: #999999; font-size: 14px;" data-i18n="config.description">
                 Configurez les paramètres matériels du contrôleur LED.
             </p>
-
             <div class="control-group">
                 <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
                 <input type="number" id="led-count" value="" min="1" max="1000">
             </div>
-
             <div class="control-group">
                 <label class="control-label" data-i18n="config.dataPin">Pin de Données</label>
                 <input type="number" id="data-pin" value="" min="0" max="39">
             </div>
-
             <div class="checkbox-container" style="margin-top: 20px;">
                 <input type="checkbox" id="strip-reverse">
                 <label for="strip-reverse" data-i18n="config.stripReverse">Inverser le sens de la strip LED</label>
             </div>
-
             <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
             <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
             <button class="btn-danger" style="margin-left: 10px;" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
-
             <div class="section" style="margin-top: 40px; border-top: 2px solid #E82127; padding-top: 20px;">
                 <div class="section-title" style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</div>
                 <p style="margin-bottom: 15px; color: #999999; font-size: 14px;" data-i18n="config.factoryResetWarning">
@@ -881,25 +827,20 @@
                 <button class="btn-danger" onclick="confirmFactoryReset()" data-i18n="config.factoryReset">Réinitialisation Usine</button>
             </div>
         </div>
-
         <!-- Tab: OTA -->
         <div id="ota-tab" class="tab-content">
             <div class="section-title" data-i18n="ota.title">Mise à Jour OTA</div>
-
             <div id="ota-notification" class="notification"></div>
-
             <div class="control-group">
                 <label class="control-label" data-i18n="ota.currentVersion">Version Actuelle</label>
                 <div style="padding: 12px; background: #1A1A1A; border-radius: 4px; font-weight: bold; border: 1px solid #333333;" id="ota-version">
                     <span data-i18n="ota.loading">Chargement...</span>
                 </div>
             </div>
-
             <div class="control-group">
                 <label class="control-label" data-i18n="ota.firmwareFile">Fichier Firmware (.bin)</label>
                 <input type="file" id="firmware-file" accept=".bin">
             </div>
-
             <div id="ota-progress-container" style="display: none; margin-top: 15px;">
                 <div style="background: #1A1A1A; border-radius: 4px; padding: 15px; border: 1px solid #333333;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
@@ -913,12 +854,10 @@
                     <div id="ota-reboot-countdown" style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
                 </div>
             </div>
-
             <button class="btn-primary" onclick="uploadFirmware()" id="ota-upload-btn" data-i18n="ota.upload">Téléverser</button>
             <button class="btn-secondary" onclick="restartDevice()" id="ota-restart-btn" style="display: none;" data-i18n="ota.restart">Redémarrer</button>
         </div>
     </div>
-
     <!-- Modal pour nouveau profil -->
     <div id="newProfileModal" class="modal">
         <div class="modal-content">
@@ -928,10 +867,8 @@
             <button class="btn-secondary" onclick="hideNewProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
         </div>
     </div>
-
     <script>
         const API_BASE = '';
-
         // Translations
         const translations = {
             fr: {
@@ -1479,7 +1416,6 @@
             }
         }
     };
-
         const OTA_STATE_KEYS = {
             0: 'idle',
             1: 'receiving',
@@ -1487,7 +1423,6 @@
             3: 'success',
             4: 'error'
         };
-
         function getOtaStateKey(state) {
             if (state === undefined || state === null) {
                 return 'idle';
@@ -1495,7 +1430,6 @@
             const numericState = Number(state);
             return OTA_STATE_KEYS.hasOwnProperty(numericState) ? OTA_STATE_KEYS[numericState] : 'idle';
         }
-
         const simulationSections = [
             {
                 titleKey: 'simulation.turnSignals',
@@ -1568,17 +1502,14 @@
                 ]
             }
         ];
-
         // Language management
         let currentLang = localStorage.getItem('language') || 'en';
-
         function toggleLanguage() {
             currentLang = currentLang === 'fr' ? 'en' : 'fr';
             localStorage.setItem('language', currentLang);
             applyTranslations();
             document.getElementById('lang-btn').textContent = currentLang === 'fr' ? 'EN' : 'FR';
         }
-
         function applyTranslations() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -1591,7 +1522,6 @@
                     el.textContent = value;
                 }
             });
-
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
                 const key = el.getAttribute('data-i18n-placeholder');
                 const keys = key.split('.');
@@ -1603,11 +1533,9 @@
                     el.placeholder = value;
                 }
             });
-
             // Update select options
             updateSelectOptions();
         }
-
         function updateSelectOptions() {
             const effectSelect = document.getElementById('effect-select');
             if (effectSelect) {
@@ -1623,9 +1551,7 @@
                     }
                 });
             }
-
         }
-
         function t(key) {
             const keys = key.split('.');
             let value = translations[currentLang];
@@ -1634,7 +1560,6 @@
             }
             return value || key;
         }
-
         // Gestion des tabs
         // État des toggles de simulation (persiste entre les changements d'onglets)
         let simulationTogglesState = {};
@@ -1646,16 +1571,13 @@
             }
             return config.enabled !== false;
         }
-
         function switchTab(tabName) {
             // Désactiver tous les tabs
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
             // Activer le tab sélectionné
             event.target.classList.add('active');
             document.getElementById(tabName + '-tab').classList.add('active');
-
             // Load data for specific tabs
             if (tabName === 'events-config') {
                 loadEventsConfig();
@@ -1666,7 +1588,6 @@
                 restoreSimulationToggles();
             }
         }
-
         function restoreSimulationToggles() {
             // Restaurer l'état de tous les toggles
             Object.keys(simulationTogglesState).forEach(eventId => {
@@ -1676,14 +1597,12 @@
                 }
                 setToggleContainerState(eventId, simulationTogglesState[eventId]);
             });
-
             // Restaurer le toggle du mode nuit
             const nightModeCheckbox = document.getElementById('toggle-nightmode');
             if (nightModeCheckbox && simulationTogglesState['nightmode'] !== undefined) {
                 nightModeCheckbox.checked = simulationTogglesState['nightmode'];
             }
         }
-
         function getSimulationEventConfig(eventType) {
             if (!eventsConfigData || eventsConfigData.length === 0) {
                 return null;
@@ -1691,14 +1610,12 @@
             const normalized = typeof eventType === 'string' ? eventType : String(eventType);
             return eventsConfigData.find(evt => evt.event === normalized) || null;
         }
-
         function cancelSimulationAutoStop(eventType) {
             if (simulationAutoStopTimers[eventType]) {
                 clearTimeout(simulationAutoStopTimers[eventType]);
                 delete simulationAutoStopTimers[eventType];
             }
         }
-
         function scheduleSimulationAutoStop(eventType, durationMs) {
             if (!durationMs || durationMs <= 0) {
                 return;
@@ -1708,7 +1625,6 @@
                 autoStopSimulationEvent(eventType);
             }, durationMs);
         }
-
         async function autoStopSimulationEvent(eventType) {
             cancelSimulationAutoStop(eventType);
             const checkbox = document.getElementById('toggle-' + eventType);
@@ -1717,7 +1633,6 @@
             }
             await toggleEvent(eventType, false);
         }
-
         async function getSimulationEventDuration(eventType) {
             try {
                 await ensureEventsConfigData();
@@ -1727,27 +1642,21 @@
             const config = getSimulationEventConfig(eventType);
             return config && typeof config.duration === 'number' ? config.duration : 0;
         }
-
         function renderSimulationSections() {
             const container = document.getElementById('simulation-sections');
             if (!container) return;
-
             container.innerHTML = '';
-
             simulationSections.forEach(section => {
                 const sectionDiv = document.createElement('div');
                 sectionDiv.className = 'section';
-
                 const title = document.createElement('div');
                 title.className = 'section-title';
                 title.style.fontSize = '16px';
                 title.setAttribute('data-i18n', section.titleKey);
                 title.textContent = t(section.titleKey);
                 sectionDiv.appendChild(title);
-
                 const grid = document.createElement('div');
                 grid.className = 'simulation-grid';
-
                 section.events.forEach(event => {
                     const toggleContainer = document.createElement('div');
                     toggleContainer.className = 'event-toggle-container';
@@ -1757,44 +1666,35 @@
                     if (eventConfig && !eventEnabledInConfig) {
                         simulationTogglesState[event.id] = false;
                     }
-
                     const label = document.createElement('label');
                     label.className = 'event-toggle-label';
                     label.htmlFor = 'toggle-' + event.id;
                     label.setAttribute('data-i18n', event.labelKey);
                     label.textContent = t(event.labelKey);
-
                     const toggle = document.createElement('label');
                     toggle.className = 'toggle-switch';
-
                     const input = document.createElement('input');
                     input.type = 'checkbox';
                     input.id = 'toggle-' + event.id;
                     input.checked = eventEnabledInConfig && !!simulationTogglesState[event.id];
                     input.disabled = !eventEnabledInConfig;
                     input.addEventListener('change', (e) => toggleEvent(event.id, e.target.checked));
-
                     const slider = document.createElement('span');
                     slider.className = 'toggle-slider';
-
                     toggle.appendChild(input);
                     toggle.appendChild(slider);
-
                     if (simulationTogglesState[event.id]) {
                         toggleContainer.classList.add('active');
                     }
                     toggleContainer.classList.toggle('disabled', !eventEnabledInConfig);
-
                     toggleContainer.appendChild(label);
                     toggleContainer.appendChild(toggle);
                     grid.appendChild(toggleContainer);
                 });
-
                 sectionDiv.appendChild(grid);
                 container.appendChild(sectionDiv);
             });
         }
-
         function setToggleContainerState(eventType, isActive) {
             const container = document.getElementById('event-toggle-' + eventType);
             if (container) {
@@ -1805,11 +1705,9 @@
         function percentTo255(percent) {
             return Math.round((percent * 255) / 100);
         }
-
         function to255ToPercent(value) {
             return Math.round((value * 100) / 255);
         }
-
         // Mise à jour des sliders avec pourcentage (seulement ceux qui existent)
         const nightBrightnessSlider = document.getElementById('night-brightness-slider');
         if (nightBrightnessSlider) {
@@ -1817,21 +1715,18 @@
                 document.getElementById('night-brightness-value').textContent = this.value + '%';
             };
         }
-
         const defaultBrightnessSlider = document.getElementById('default-brightness-slider');
         if (defaultBrightnessSlider) {
             defaultBrightnessSlider.oninput = function() {
                 document.getElementById('default-brightness-value').textContent = this.value + '%';
             };
         }
-
         const defaultSpeedSlider = document.getElementById('default-speed-slider');
         if (defaultSpeedSlider) {
             defaultSpeedSlider.oninput = function() {
                 document.getElementById('default-speed-value').textContent = this.value + '%';
             };
         }
-
         // Notification helper
         function showNotification(elementId, message, type) {
             const notification = document.getElementById(elementId);
@@ -1841,7 +1736,6 @@
                 notification.classList.remove('show');
             }, 2000);
         }
-
         async function parseApiResponse(response) {
             const rawText = await response.text();
             let data = null;
@@ -1856,7 +1750,6 @@
             const success = response.ok && (status === null || status === 'ok');
             return { success, data, raw: rawText };
         }
-
         // Events Configuration
         let eventsConfigData = [];
         let eventsConfigLoadingPromise = null;
@@ -1874,16 +1767,13 @@
             }
             return effectsList[0].id;
         }
-
         async function ensureEventsConfigData(forceRefresh = false) {
             if (!forceRefresh && eventsConfigData.length > 0) {
                 return eventsConfigData;
             }
-
             if (!forceRefresh && eventsConfigLoadingPromise) {
                 return eventsConfigLoadingPromise;
             }
-
             const fetchPromise = (async () => {
                 try {
                     const response = await fetch(API_BASE + '/api/events');
@@ -1898,29 +1788,23 @@
                     throw error;
                 }
             })();
-
             if (!forceRefresh) {
                 eventsConfigLoadingPromise = fetchPromise.finally(() => {
                     eventsConfigLoadingPromise = null;
                 });
                 return eventsConfigLoadingPromise;
             }
-
             return fetchPromise;
         }
-
         async function loadEventsConfig() {
             const loading = document.getElementById('events-loading');
             const content = document.getElementById('events-content');
-
             loading.style.display = 'block';
             content.style.display = 'none';
-
             try {
                 await ensureEventsConfigData(true);
                 renderEventsTable();
                 renderSimulationSections();
-
                 loading.style.display = 'none';
                 content.style.display = 'block';
             } catch (e) {
@@ -1929,18 +1813,15 @@
                 loading.style.display = 'none';
             }
         }
-
         function renderEventsTable() {
             const tbody = document.getElementById('events-table-body');
             tbody.innerHTML = '';
-
             // If no data from API, create default rows for all events
             if (eventsConfigData.length === 0) {
                 const defaultEffectId =
                     effectsList.find(effect => !effect.can_required)?.id ||
                     effectsList[0]?.id ||
                     'OFF';
-
                 if (eventTypesList.length > 0) {
                     eventTypesList
                         .filter(evt => evt.id !== 'NONE')
@@ -1961,28 +1842,22 @@
                         });
                 }
             }
-
             eventsConfigData.forEach((event, index) => {
                 // Skip CAN_EVENT_NONE only
                 if (event.event === 'NONE') {
                     return;
                 }
-
                 const row = document.createElement('tr');
-
                 const eventName = getEventName(event.event);
-
                 const actionType = event.action_type !== undefined ? event.action_type : 0;
                 const canSwitchProfile = event.can_switch_profile || false;
                 const profileId = event.profile_id !== undefined ? event.profile_id : -1;
-
                 // Générer les options d'action
                 let actionOptions = '';
                 actionOptions += `<option value="0" ${actionType === 0 ? 'selected' : ''}>${t('eventsConfig.applyEffect')}</option>`;
                 if (canSwitchProfile) {
                     actionOptions += `<option value="1" ${actionType === 1 ? 'selected' : ''}>${t('eventsConfig.switchProfile')}</option>`;
                 }
-
                 // Générer les options de profil
                 const profileSelect = document.getElementById('profile-select');
                 let profileOptions = '<option value="-1">--</option>';
@@ -1992,7 +1867,6 @@
                         profileOptions += `<option value="${opt.value}" ${profileId == opt.value ? 'selected' : ''}>${opt.text}</option>`;
                     }
                 }
-
                 row.innerHTML = `
                     <td class="event-name-cell">${eventName}</td>
                     <td>
@@ -2037,14 +1911,11 @@
                             onchange="updateEventConfig(${index}, 'enabled', this.checked)">
                     </td>
                 `;
-
                 tbody.appendChild(row);
             });
         }
-
         function updateEventConfig(index, field, value) {
             eventsConfigData[index][field] = value;
-
             if (field === 'action_type') {
                 const event = eventsConfigData[index];
                 if (value === 0) {
@@ -2061,7 +1932,6 @@
                 }
             }
         }
-
         async function saveEventsConfig() {
             try {
                 const response = await fetch(API_BASE + '/api/events', {
@@ -2069,7 +1939,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ events: eventsConfigData })
                 });
-
                 if (response.ok) {
                     await ensureEventsConfigData(true);
                     renderSimulationSections();
@@ -2082,13 +1951,11 @@
                 showNotification('events-notification', t('eventsConfig.saveError'), 'error');
             }
         }
-
         // Hardware Configuration
         async function loadHardwareConfig() {
             try {
                 const response = await fetch(API_BASE + '/api/config');
                 const config = await response.json();
-
                 if (config.led_count !== undefined) {
                     document.getElementById('led-count').value = config.led_count;
                 }
@@ -2103,21 +1970,18 @@
                 showNotification('config-notification', t('config.loadError'), 'error');
             }
         }
-
         async function saveHardwareConfig() {
             const config = {
                 led_count: parseInt(document.getElementById('led-count').value),
                 data_pin: parseInt(document.getElementById('data-pin').value),
                 strip_reverse: document.getElementById('strip-reverse').checked
             };
-
             try {
                 const response = await fetch(API_BASE + '/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
-
                 if (response.ok) {
                     showNotification('config-notification', t('config.saveSuccess'), 'success');
                 } else {
@@ -2128,25 +1992,20 @@
                 showNotification('config-notification', t('config.saveError'), 'error');
             }
         }
-
         // Factory Reset
         function confirmFactoryReset() {
             if (confirm(t('config.factoryResetConfirm'))) {
                 performFactoryReset();
             }
         }
-
         async function performFactoryReset() {
             try {
                 showNotification('config-notification', t('config.factoryResetInProgress'), 'info');
-
                 const response = await fetch(API_BASE + '/api/factory-reset', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
-
                 const data = await response.json();
-
                 if (response.ok && data.status === 'ok') {
                     showNotification('config-notification', t('config.factoryResetSuccess'), 'success');
                     // L'ESP32 va redémarrer, afficher un message
@@ -2162,16 +2021,13 @@
                 showNotification('config-notification', t('config.factoryResetError'), 'error');
             }
         }
-
         // Gestion des profils
         async function loadProfiles() {
             try {
                 const response = await fetch(API_BASE + '/api/profiles');
                 const data = await response.json();
-
                 const select = document.getElementById('profile-select');
                 select.innerHTML = '';
-
                 data.profiles.forEach(profile => {
                     const option = document.createElement('option');
                     option.value = profile.id;
@@ -2179,13 +2035,11 @@
                     if (profile.active) option.selected = true;
                     select.appendChild(option);
                 });
-
                 document.getElementById('profile-status').textContent = data.active_name;
             } catch (e) {
                 console.error('Erreur:', e);
             }
         }
-
         async function activateProfile() {
             const profileId = parseInt(document.getElementById('profile-select').value);
             try {
@@ -2200,19 +2054,15 @@
                 console.error('Erreur:', e);
             }
         }
-
         function showNewProfileDialog() {
             document.getElementById('newProfileModal').classList.add('active');
         }
-
         function hideNewProfileDialog() {
             document.getElementById('newProfileModal').classList.remove('active');
         }
-
         async function createProfile() {
             const name = document.getElementById('new-profile-name').value;
             if (!name) return;
-
             try {
                 const response = await fetch(API_BASE + '/api/profile/create', {
                     method: 'POST',
@@ -2234,11 +2084,9 @@
                 showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
-
         async function deleteProfile() {
             const profileId = parseInt(document.getElementById('profile-select').value);
             if (!confirm(t('profiles.deleteConfirm'))) return;
-
             try {
                 const response = await fetch(API_BASE + '/api/profile/delete', {
                     method: 'POST',
@@ -2258,14 +2106,12 @@
                 showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
-
         async function exportProfile() {
             const profileId = parseInt(document.getElementById('profile-select').value);
             if (profileId < 0) {
                 showNotification('profiles-notification', t('profiles.selectProfile'), 'error');
                 return;
             }
-
             try {
                 const response = await fetch(API_BASE + '/api/profile/export?profile_id=' + profileId);
                 if (response.ok) {
@@ -2288,21 +2134,18 @@
                 showNotification('profiles-notification', t('profiles.exportError'), 'error');
             }
         }
-
         function showImportDialog() {
             const profileId = parseInt(document.getElementById('profile-select').value);
             if (profileId < 0) {
                 showNotification('profiles-notification', t('profiles.selectProfile'), 'error');
                 return;
             }
-
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     try {
@@ -2315,7 +2158,6 @@
                                 profile_data: profileData
                             })
                         });
-
                         const result = await response.json();
                         if (result.status === 'ok') {
                             showNotification('profiles-notification', t('profiles.importSuccess'), 'success');
@@ -2332,12 +2174,10 @@
             };
             input.click();
         }
-
         async function saveProfileSettings() {
             const profileId = parseInt(document.getElementById('profile-select').value);
             const autoNightMode = document.getElementById('auto-night-mode').checked;
             const nightBrightness = percentTo255(parseInt(document.getElementById('night-brightness-slider').value));
-
             try {
                 const response = await fetch(API_BASE + '/api/profile/update', {
                     method: 'POST',
@@ -2348,7 +2188,6 @@
                         night_brightness: nightBrightness
                     })
                 });
-
                 const apiResult = await parseApiResponse(response);
                 if (apiResult.success) {
                     showNotification('profiles-notification', t('config.saveSuccess'), 'success');
@@ -2361,7 +2200,6 @@
                 showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
-
         async function saveDefaultEffect() {
             const profileId = parseInt(document.getElementById('profile-select').value);
             const effectId = document.getElementById('default-effect-select').value;
@@ -2369,7 +2207,6 @@
             const brightness = percentTo255(parseInt(document.getElementById('default-brightness-slider').value));
             const speed = percentTo255(parseInt(document.getElementById('default-speed-slider').value));
             const color1 = parseInt(document.getElementById('default-color1').value.substring(1), 16);
-
             try {
                 const response = await fetch(API_BASE + '/api/profile/update/default', {
                     method: 'POST',
@@ -2382,7 +2219,6 @@
                         color1: color1
                     })
                 });
-
                 const apiResult = await parseApiResponse(response);
                 if (apiResult.success) {
                     showNotification('profiles-notification', t('profiles.saveDefault') + ' ' + t('config.saveSuccess'), 'success');
@@ -2395,7 +2231,6 @@
                 showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
-
         // Appliquer l'effet
         async function applyEffect() {
             const config = {
@@ -2406,7 +2241,6 @@
                 color2: 0,
                 color3: 0
             };
-
             try {
                 await fetch(API_BASE + '/api/effect', {
                     method: 'POST',
@@ -2417,7 +2251,6 @@
                 console.error('Erreur:', e);
             }
         }
-
         // Sauvegarder la configuration
         async function saveConfig() {
             try {
@@ -2428,7 +2261,6 @@
                 showNotification('profiles-notification', t('config.saveError'), 'error');
             }
         }
-
         // Assigner un effet à un événement
         async function assignEventEffect() {
             const data = {
@@ -2440,7 +2272,6 @@
                 speed: percentTo255(parseInt(document.getElementById('speed-slider').value)),
                 color1: parseInt(document.getElementById('color1').value.substring(1), 16)
             };
-
             try {
                 await fetch(API_BASE + '/api/event-effect', {
                     method: 'POST',
@@ -2453,7 +2284,6 @@
                 showNotification('events-notification', t('config.saveError'), 'error');
             }
         }
-
         // Commander
         async function connectCommander() {
             try {
@@ -2464,7 +2294,6 @@
                 console.error('Erreur:', e);
             }
         }
-
         async function disconnectCommander() {
             try {
                 await fetch(API_BASE + '/api/commander/disconnect', { method: 'POST' });
@@ -2473,36 +2302,29 @@
                 console.error('Erreur:', e);
             }
         }
-
         // Mise à jour du statut
         async function updateStatus() {
             try {
                 const response = await fetch(API_BASE + '/api/status');
                 const data = await response.json();
-
                 document.getElementById('wifi-status').textContent = data.wifi_connected ? t('status.connected') : t('status.ap');
                 document.getElementById('wifi-status').className = 'status-value ' + (data.wifi_connected ? 'status-online' : 'status-offline');
-
                 document.getElementById('commander-status').textContent = data.commander_connected ? t('status.connected') : t('status.disconnected');
                 document.getElementById('commander-status').className = 'status-value ' + (data.commander_connected ? 'status-online' : 'status-offline');
-
                 document.getElementById('vehicle-status').textContent = data.vehicle_active ? t('status.active') : t('status.inactive');
                 document.getElementById('vehicle-status').className = 'status-value ' + (data.vehicle_active ? 'status-online' : 'status-offline');
-
                 if (data.active_profile_name) {
                     document.getElementById('profile-status').textContent = data.active_profile_name;
                 }
                 // Données véhicule complètes
                 if (data.vehicle && data.vehicle_active) {
                     const v = data.vehicle;
-
                     // État général
                     document.getElementById('v-ignition').textContent = v.ignition_on ? t('status.active') : t('status.inactive');
                     document.getElementById('v-speed').textContent = v.speed.toFixed(1) + ' km/h';
                     document.getElementById('v-gear').textContent = ['P', 'R', 'N', 'D'][v.gear] || '--';
                     document.getElementById('v-brake').textContent = v.brake_pressed ? t('status.active') : t('status.inactive');
                     document.getElementById('v-locked').textContent = v.locked ? t('vehicle.locked') : t('vehicle.unlocked');
-
                     // Portes
                     if (v.doors) {
                         document.getElementById('v-door-fl').textContent = v.doors.front_left ? t('vehicle.open') : t('vehicle.closed');
@@ -2512,7 +2334,6 @@
                         document.getElementById('v-trunk').textContent = v.doors.trunk ? t('vehicle.open') : t('vehicle.closed');
                         document.getElementById('v-frunk').textContent = v.doors.frunk ? t('vehicle.open') : t('vehicle.closed');
                     }
-
                     // Fenêtres (%)
                     if (v.windows) {
                         document.getElementById('v-window-fl').textContent = v.windows.front_left + '%';
@@ -2520,14 +2341,12 @@
                         document.getElementById('v-window-rl').textContent = v.windows.rear_left + '%';
                         document.getElementById('v-window-rr').textContent = v.windows.rear_right + '%';
                     }
-
                     // Charge
                     if (v.charge) {
                         document.getElementById('v-charging').textContent = v.charge.charging ? t('status.active') : t('status.inactive');
                         document.getElementById('v-charge').textContent = v.charge.percent + '%';
                         document.getElementById('v-charge-power').textContent = v.charge.power_kw.toFixed(1) + ' kW';
                     }
-
                     // Lumières
                     if (v.lights) {
                         document.getElementById('v-headlights').textContent = v.lights.headlights ? t('status.active') : t('status.inactive');
@@ -2536,11 +2355,9 @@
                         const turnSignal = ['Off', t('simulation.left'), t('simulation.right'), 'Warning'][v.lights.turn_signal] || 'Off';
                         document.getElementById('v-turn-signal').textContent = turnSignal;
                     }
-
                     // Batterie et autres
                     document.getElementById('v-battery').textContent = v.battery_12v.toFixed(2) + ' V';
                     document.getElementById('v-odometer').textContent = v.odometer_km.toLocaleString() + ' km';
-
                     // Sécurité
                     if (v.safety) {
                         document.getElementById('v-night').textContent = v.safety.night_mode ? t('status.active') : t('status.inactive');
@@ -2566,46 +2383,38 @@
                 console.error('Erreur:', e);
             }
         }
-
         // Chargement de la config
         async function loadConfig() {
             try {
                 const response = await fetch(API_BASE + '/api/config');
                 const config = await response.json();
-
                 // Convertir 0-255 en pourcentage
                 const nightBrightnessPercent = to255ToPercent(config.night_brightness);
-
                 // Charger uniquement les éléments qui existent encore
                 const autoNightMode = document.getElementById('auto-night-mode');
                 if (autoNightMode) {
                     autoNightMode.checked = config.auto_night_mode;
                 }
-
                 const nightBrightnessSlider = document.getElementById('night-brightness-slider');
                 if (nightBrightnessSlider) {
                     nightBrightnessSlider.value = nightBrightnessPercent;
                 }
-
                 const nightBrightnessValue = document.getElementById('night-brightness-value');
                 if (nightBrightnessValue) {
                     nightBrightnessValue.textContent = nightBrightnessPercent + '%';
                 }
-
                 // Charger aussi l'effet par défaut du profil actif
                 loadActiveProfileDefaultEffect();
             } catch (e) {
                 console.error('Erreur:', e);
             }
         }
-
         // Charger l'effet par défaut du profil actif
         async function loadActiveProfileDefaultEffect() {
             try {
                 const response = await fetch(API_BASE + '/api/profiles');
                 const data = await response.json();
                 const activeProfile = data.profiles.find(p => p.active);
-
                 if (activeProfile && activeProfile.default_effect) {
                     const defaultEffect = activeProfile.default_effect;
                     // Convert numeric enum to string ID for the dropdown
@@ -2613,7 +2422,6 @@
                     document.getElementById('default-effect-select').value = effectId;
                     const defBrightnessPercent = to255ToPercent(defaultEffect.brightness);
                     const defSpeedPercent = to255ToPercent(defaultEffect.speed);
-
                     document.getElementById('default-brightness-slider').value = defBrightnessPercent;
                     document.getElementById('default-brightness-value').textContent = defBrightnessPercent + '%';
                     document.getElementById('default-speed-slider').value = defSpeedPercent;
@@ -2624,7 +2432,6 @@
                 console.error('Error loading default effect:', e);
             }
         }
-
         // OTA Functions
         let otaReloadScheduled = false;
         let otaManualUploadRunning = false;
@@ -2635,13 +2442,11 @@
             otaReloadScheduled = true;
             setTimeout(() => window.location.reload(), delayMs);
         }
-
         async function loadOTAInfo() {
             try {
                 const response = await fetch(API_BASE + '/api/ota/info');
                 const data = await response.json();
                 document.getElementById('ota-version').textContent = 'v' + data.version;
-
                 const progressContainer = document.getElementById('ota-progress-container');
                 const progressBar = document.getElementById('ota-progress-bar');
                 const progressPercent = document.getElementById('ota-progress-percent');
@@ -2649,14 +2454,12 @@
                 const uploadBtn = document.getElementById('ota-upload-btn');
                 const restartBtn = document.getElementById('ota-restart-btn');
                 const fileInputEl = document.getElementById('firmware-file');
-
                 const backendStateKey = getOtaStateKey(data.state);
                 if (otaManualUploadRunning && backendStateKey !== 'idle') {
                     otaManualUploadRunning = false;
                 }
                 const stateKey = otaManualUploadRunning ? 'receiving' : backendStateKey;
                 const showProgress = otaManualUploadRunning || (typeof data.state === 'number' && data.state !== 0);
-
                 if (progressContainer && progressBar && progressPercent && statusMessage) {
                     const progressValue = Math.max(0, Math.min(100, Number(data.progress) || 0));
                     if (showProgress || stateKey === 'success' || stateKey === 'error') {
@@ -2668,12 +2471,10 @@
                         progressBar.style.width = '0%';
                         progressPercent.textContent = '0%';
                     }
-
                     let statusText = t('ota.states.' + stateKey);
                     if (stateKey === 'error' && data.error) {
                         statusText += ' - ' + data.error;
                     }
-
                     statusMessage.textContent = statusText;
                     if (stateKey === 'success') {
                         statusMessage.style.color = '#10b981';
@@ -2683,25 +2484,20 @@
                         statusMessage.style.color = '#999999';
                     }
                 }
-
                 const busy = stateKey === 'receiving' || stateKey === 'writing';
-
                 if (uploadBtn) {
                     const effectiveBusy = busy || otaManualUploadRunning;
                     uploadBtn.disabled = effectiveBusy;
                     uploadBtn.style.display = effectiveBusy ? 'none' : 'inline-block';
                 }
-
                 if (fileInputEl) {
                     const effectiveBusy = busy || otaManualUploadRunning;
                     fileInputEl.disabled = effectiveBusy;
                     fileInputEl.style.display = effectiveBusy ? 'none' : 'block';
                 }
-
                 if (restartBtn) {
                     restartBtn.style.display = stateKey === 'success' ? 'inline-block' : 'none';
                 }
-
                 const rebootCountdownEl = document.getElementById('ota-reboot-countdown');
                 if (rebootCountdownEl) {
                     if (typeof data.reboot_countdown === 'number' && data.reboot_countdown >= 0) {
@@ -2731,32 +2527,26 @@
                 }
             }
         }
-
         async function uploadFirmware() {
             const fileInputEl = document.getElementById('firmware-file');
             const file = fileInputEl.files[0];
-
             if (!file) {
                 showNotification('ota-notification', t('ota.selectFile'), 'error');
                 return;
             }
-
             if (!file.name.endsWith('.bin')) {
                 showNotification('ota-notification', t('ota.wrongExtension'), 'error');
                 return;
             }
-
             if (!confirm(t('ota.confirmUpdate'))) {
                 return;
             }
-
             const progressContainer = document.getElementById('ota-progress-container');
             const progressBar = document.getElementById('ota-progress-bar');
             const progressPercent = document.getElementById('ota-progress-percent');
             const statusMessage = document.getElementById('ota-status-message');
             const uploadBtn = document.getElementById('ota-upload-btn');
             const restartBtn = document.getElementById('ota-restart-btn');
-
             otaManualUploadRunning = true;
             progressContainer.style.display = 'block';
             uploadBtn.disabled = true;
@@ -2767,12 +2557,9 @@
             }
             statusMessage.textContent = t('ota.states.receiving');
             statusMessage.style.color = '#999999';
-
             setInterval(loadOTAInfo, 1000);
-
             try {
                 const xhr = new XMLHttpRequest();
-
                 xhr.upload.addEventListener('progress', (e) => {
                     if (e.lengthComputable) {
                         const percent = Math.round((e.loaded / e.total) * 100);
@@ -2781,7 +2568,6 @@
                         statusMessage.textContent = t('ota.states.receiving') + ' (' + percent + '%)';
                     }
                 });
-
                 xhr.addEventListener('load', () => {
                     if (xhr.status === 200) {
                         progressBar.style.width = '100%';
@@ -2801,7 +2587,6 @@
                         }
                     }
                 });
-
                 xhr.addEventListener('error', (e) => {
                     statusMessage.textContent = t('ota.states.error') + (e.message ? ': ' + e.message : '');
                     statusMessage.style.color = '#f87171';
@@ -2812,10 +2597,8 @@
                         fileInputEl.style.display = 'block';
                     }
                 });
-
                 xhr.open('POST', API_BASE + '/api/ota/upload');
                 xhr.send(file);
-
             } catch (e) {
                 console.error('Erreur:', e);
                 statusMessage.textContent = t('ota.error') + ': ' + e.message;
@@ -2828,16 +2611,13 @@
             }
             }
         }
-
         async function restartDevice() {
             if (!confirm(t('ota.confirmRestart'))) {
                 return;
             }
-
             try {
                 await fetch(API_BASE + '/api/ota/restart', { method: 'POST' });
                 document.getElementById('ota-status-message').textContent = t('ota.restarting');
-
                 setTimeout(() => {
                     location.reload();
                 }, 10000);
@@ -2845,20 +2625,16 @@
                 console.error('Erreur:', e);
             }
         }
-
         // Simulation des événements CAN
         async function simulateEvent(eventType) {
             try {
                 showNotification('simulation-notification', t('simulation.sending') + ': ' + getEventName(eventType) + '...', 'info');
-
                 const response = await fetch(API_BASE + '/api/simulate/event', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event: eventType })
                 });
-
                 const result = await response.json();
-
                 if (result.status === 'ok') {
                     showNotification('simulation-notification', 'OK - ' + t('simulation.simulated') + ': ' + getEventName(eventType), 'success');
                 } else {
@@ -2869,7 +2645,6 @@
                 showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
-
         // Arrêter l'effet en cours
         async function stopEffect() {
             try {
@@ -2891,7 +2666,6 @@
                 showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
-
         // Toggle event on/off
         async function toggleEvent(eventType, isEnabled) {
             try {
@@ -2914,15 +2688,12 @@
                     cancelSimulationAutoStop(eventType);
                     setToggleContainerState(eventType, true);
                     showNotification('simulation-notification', t('simulation.sending') + ': ' + getEventName(eventType) + '...', 'info');
-
                     const response = await fetch(API_BASE + '/api/simulate/event', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ event: eventType })
                     });
-
                     const result = await response.json();
-
                     if (result.status === 'ok') {
                         showNotification('simulation-notification', 'OK - ' + getEventName(eventType) + ' ' + t('simulation.active'), 'success');
                         simulationTogglesState[eventType] = true;
@@ -2939,15 +2710,12 @@
                 } else {
                     cancelSimulationAutoStop(eventType);
                     showNotification('simulation-notification', t('simulation.stopping') + ': ' + getEventName(eventType) + '...', 'info');
-
                     const response = await fetch(API_BASE + '/api/stop/event', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ event: eventType })
                     });
-
                     const result = await response.json();
-
                     if (result.status === 'ok') {
                         setToggleContainerState(eventType, false);
                         showNotification('simulation-notification', 'Stop - ' + getEventName(eventType) + ' ' + t('simulation.stopped'), 'success');
@@ -2967,25 +2735,19 @@
                 showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
-
         // Toggle night mode simulation (single switch for ON/OFF)
         async function toggleNightMode(isEnabled) {
             const toggleContainer = document.getElementById('event-toggle-nightmode');
-
             const eventType = isEnabled ? 'NIGHT_MODE_ON' : 'NIGHT_MODE_OFF';
             const eventName = isEnabled ? t('canEvents.nightModeOn') : t('canEvents.nightModeOff');
-
             try {
                 showNotification('simulation-notification', t('simulation.sending') + ': ' + eventName + '...', 'info');
-
                 const response = await fetch(API_BASE + '/api/simulate/event', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event: eventType })
                 });
-
                 const result = await response.json();
-
                 if (result.status === 'ok') {
                     toggleContainer.classList.toggle('active', isEnabled);
                     showNotification('simulation-notification', 'OK - ' + eventName, 'success');
@@ -2995,7 +2757,6 @@
                     simulationTogglesState['nightmode'] = !isEnabled;
                     showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
                 }
-
             } catch (e) {
                 console.error('Erreur:', e);
                 document.getElementById('toggle-nightmode').checked = !isEnabled;
@@ -3003,7 +2764,6 @@
                 showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
             }
         }
-
         // Helper pour obtenir le nom d'un événement (depuis API uniquement)
         function getEventName(eventId) {
             if (eventTypesList.length > 0) {
@@ -3013,7 +2773,6 @@
                 if (eventById) {
                     return eventById.name;
                 }
-
                 const numericIndex = typeof eventId === 'number' ? eventId : parseInt(eventId, 10);
                 if (!Number.isNaN(numericIndex) && eventTypesList[numericIndex]) {
                     return eventTypesList[numericIndex].name;
@@ -3021,7 +2780,6 @@
             }
             return `Event ${eventId}`;
         }
-
         // Helper pour obtenir le nom d'un effet (depuis API uniquement)
         function getEffectName(effectId) {
             if (effectsList.length > 0) {
@@ -3030,10 +2788,8 @@
             }
             return `Effect ${effectId}`;
         }
-
         // Charger la liste des effets depuis l'API
         let effectsList = [];
-
         // Helper: Convertir enum numérique en ID string
         function effectEnumToId(enumValue) {
             if (effectsList[enumValue]) {
@@ -3041,61 +2797,51 @@
             }
             return effectsList[0]?.id || 'OFF';
         }
-
         // Helper: Convertir ID string en enum numérique
         function effectIdToEnum(id) {
             const index = effectsList.findIndex(e => e.id === id);
             return index >= 0 ? index : 0;
         }
-
         async function loadEffects() {
             try {
                 const response = await fetch('/api/effects');
                 const data = await response.json();
                 effectsList = data.effects;
-
                 // Mettre à jour tous les dropdowns d'effets
                 const effectSelects = [
                     document.getElementById('default-effect-select'),
                     document.getElementById('effect-select'),
                     document.getElementById('event-effect-select')
                 ];
-
                 effectSelects.forEach(select => {
                     if (select) {
                         const currentValue = select.value;
                         select.innerHTML = '';
-
                         // Pour les sélecteurs d'effet par défaut et d'effet manuel,
                         // filtrer les effets qui nécessitent le CAN bus
                         const isEventSelector = select.id === 'event-effect-select';
-
                         effectsList.forEach(effect => {
                             // Filtrer les effets CAN si ce n'est pas le sélecteur d'événement
                             if (!isEventSelector && effect.can_required) {
                                 return; // Skip cet effet
                             }
-
                             const option = document.createElement('option');
                             option.value = effect.id;
                             option.textContent = effect.name;
                             option.setAttribute('data-effect-name', effect.name);
                             select.appendChild(option);
                         });
-
                         // Restaurer la valeur sélectionnée si elle existe encore
                         if (currentValue !== undefined && currentValue !== '') {
                             select.value = currentValue;
                         }
                     }
                 });
-
                 console.log('Loaded', effectsList.length, 'effects from API');
             } catch (error) {
                 console.error('Failed to load effects:', error);
             }
         }
-
         // Charger la liste des types d'événements depuis l'API
         let eventTypesList = [];
         async function loadEventTypes() {
@@ -3103,18 +2849,15 @@
                 const response = await fetch('/api/event-types');
                 const data = await response.json();
                 eventTypesList = data.event_types;
-
                 console.log('Loaded', eventTypesList.length, 'event types from API');
             } catch (error) {
                 console.error('Failed to load event types:', error);
             }
         }
-
         // Init
         document.getElementById('lang-btn').textContent = currentLang === 'en' ? 'FR' : 'EN';
         renderSimulationSections();
         applyTranslations();
-
         // Charger d'abord les effets et événements, puis le reste
         Promise.all([
             loadEffects(),
