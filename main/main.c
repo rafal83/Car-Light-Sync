@@ -15,6 +15,7 @@
 #include "tesla_can.h"
 #include "config_manager.h"
 #include "ota_update.h"
+#include "version_info.h"
 
 #ifdef CONFIG_HAS_PSRAM
 #include "cJSON.h"
@@ -280,7 +281,7 @@ void app_main(void) {
 
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "    Tesla Strip Controller      ");
-    ESP_LOGI(TAG, "       Version 2.1.0            ");
+    ESP_LOGI(TAG, "       Version %s            ", APP_VERSION_STRING);
     ESP_LOGI(TAG, "=================================");
     
     // Initialiser NVS

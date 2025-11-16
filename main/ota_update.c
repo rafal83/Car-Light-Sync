@@ -3,14 +3,12 @@
 #include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "esp_app_format.h"
+#include "version_info.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
 
 static const char *TAG = "OTA";
-
-// Version du firmware (à mettre à jour à chaque version)
-#define FIRMWARE_VERSION "2.1.0"
 
 static ota_progress_t current_progress = {0};
 static esp_ota_handle_t ota_handle = 0;
@@ -21,7 +19,7 @@ esp_err_t ota_init(void) {
     memset(&current_progress, 0, sizeof(ota_progress_t));
     current_progress.state = OTA_STATE_IDLE;
 
-    ESP_LOGI(TAG, "OTA initialisé, version: %s", FIRMWARE_VERSION);
+    ESP_LOGI(TAG, "OTA initialisé, version: %s", APP_VERSION_STRING);
     return ESP_OK;
 }
 
@@ -151,7 +149,7 @@ void ota_get_progress(ota_progress_t *progress) {
 }
 
 const char* ota_get_current_version(void) {
-    return FIRMWARE_VERSION;
+    return APP_VERSION_STRING;
 }
 
 void ota_restart(void) {

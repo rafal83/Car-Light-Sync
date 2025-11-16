@@ -7,11 +7,34 @@ pour l'installation et la mise à jour OTA
 import os
 import shutil
 import datetime
+import subprocess
 
 # Configuration
-BUILD_DIR = ".pio/build/esp32dev"
+BUILD_DIR = ".pio/build/esp32s2"
 RELEASE_DIR = "build"
 PROJECT_NAME = "tesla-strip"
+
+
+def get_version_string():
+    try:
+        commit_count = subprocess.check_output(
+            ["git", "rev-list", "--count", "HEAD"],
+            stderr=subprocess.STDOUT,
+            encoding="utf-8"
+        ).strip()
+    except Exception:
+        commit_count = "0"
+
+    today = datetime.datetime.utcnow().isocalendar()
+    year = today[0]
+    week = today[1]
+
+    version = f"{year}.{week:02d}.{int(commit_count):d}"
+
+    return version
+
+
+FIRMWARE_VERSION = get_version_string()
 
 def create_release_package():
     """Crée le package de release avec tous les fichiers nécessaires"""
@@ -49,6 +72,7 @@ def create_release_package():
     os.makedirs(ota_dir)
 
     firmware_src = os.path.join(BUILD_DIR, "firmware.bin")
+    size_mb = None
     if os.path.exists(firmware_src):
         firmware_dst = os.path.join(ota_dir, f"{PROJECT_NAME}-ota.bin")
         shutil.copy2(firmware_src, firmware_dst)
@@ -100,6 +124,8 @@ Remplacez `COM_PORT` par votre port série (ex: COM3, /dev/ttyUSB0)
 Généré le: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
 
+    firmware_size_display = f"{size_mb:.2f}" if size_mb is not None else "N/A"
+
     readme_ota = f"""# Mise à Jour OTA (Over-The-Air)
 
 Ce dossier contient le fichier firmware pour une mise à jour sans fil.
@@ -125,7 +151,7 @@ curl -X POST http://192.168.4.1/api/ota/restart
 ```
 
 ## Notes:
-- Taille du firmware: ~{size_mb:.2f} MB
+- Taille du firmware: ~{firmware_size_display} MB
 - Durée estimée de l'upload: 30-60 secondes
 - L'ESP32 redémarrera automatiquement après la mise à jour
 - En cas d'échec, l'ESP32 reviendra automatiquement à la version précédente (rollback)
@@ -234,7 +260,7 @@ fi
     version_info = f"""Tesla Strip Controller - Package de Release
 =============================================
 
-Version: 1.0.0
+Version: {FIRMWARE_VERSION}
 Date: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 Contenu:

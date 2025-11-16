@@ -43,3 +43,6 @@ env/
 
 # Windows/Linux device files
 nul
+
+# Generated version header
+include/version_auto.h
