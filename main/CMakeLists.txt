@@ -1,3 +1,18 @@
+set(component_requires
+    esp_wifi
+    esp_http_server
+    nvs_flash
+    driver
+    esp_netif
+    json
+    app_update
+    esp_http_client
+)
+
+if(CONFIG_BT_ENABLED)
+    list(APPEND component_requires bt)
+endif()
+
 idf_component_register(
     SRCS
         "main.c"
@@ -10,6 +25,7 @@ idf_component_register(
         "web_server.c"
         "config_manager.c"
         "ota_update.c"
+        "ble_api_service.c"
     INCLUDE_DIRS
         "."
         "../include"
@@ -17,11 +33,5 @@ idf_component_register(
         "../data/index.html.gz"
         "../data/icon.svg"
     REQUIRES
-        esp_wifi
-        esp_http_server
-        nvs_flash
-        driver
-        esp_netif
-        json
-        app_update
+        ${component_requires}
 )

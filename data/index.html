@@ -112,6 +112,49 @@
             align-items: flex-end;
             text-align: left;
         }
+        .ble-transport-control {
+            min-width: 200px;
+        }
+        .ble-transport-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .ble-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--color-input-border);
+            background: var(--color-panel);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-muted);
+            transition: border-color 0.3s, color 0.3s;
+        }
+        .ble-status-pill::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #E82127;
+            transition: background 0.3s;
+        }
+        .ble-status-pill.connected {
+            color: #6ae0a6;
+            border-color: rgba(106, 224, 166, 0.4);
+        }
+        .ble-status-pill.connected::before {
+            background: #2ecc71;
+        }
+        .ble-helper-text {
+            font-size: 12px;
+            color: var(--color-muted);
+            margin-top: 4px;
+        }
         .header-control {
             display: flex;
             flex-direction: column;
@@ -534,9 +577,9 @@
             color: #10b981;
         }
         .notification.error {
-            background: rgba(232, 33, 39, 0.1);
+            background: rgba(232, 33, 39, 0.5);
             border-color: #E82127;
-            color: #E82127;
+            color: #FFFFFF;
         }
         .notification.info {
             background: rgba(59, 130, 246, 0.1);
@@ -594,8 +637,17 @@
                         <option value="light" data-i18n="config.themeLight">Mode clair</option>
                     </select>
                 </div>
+                <div class="header-control ble-transport-control">
+                    <label data-i18n="ble.title">Connexion BLE</label>
+                    <div class="ble-transport-actions">
+                        <button id="ble-connect-button" class="btn-secondary" onclick="toggleBleConnection()" data-i18n="ble.connect">Connexion</button>
+                        <div id="ble-status-pill" class="ble-status-pill" data-i18n="ble.disconnected">Déconnecté</div>
+                    </div>
+                    <div id="ble-helper-text" class="ble-helper-text" hidden data-i18n="ble.notSupported">Web Bluetooth non supporté sur ce navigateur.</div>
+                </div>
             </div>
         </div>
+        <div id="ble-notification" class="notification"></div>
         <div class="status-bar">
             <div class="status-item">
                 <div data-i18n="status.wifi">WiFi</div>
@@ -830,7 +882,6 @@
                     <label class="control-label" data-i18n="effects.color">Couleur</label>
                     <input type="color" id="default-color1" value="#ff0000">
                 </div>
-                <button class="btn-primary" onclick="saveDefaultEffect()" data-i18n="profiles.saveDefault">Sauvegarder Effet par Défaut</button>
             </div>
         </div>
         <!-- Tab: Events Configuration -->
@@ -865,7 +916,6 @@
                         </table>
                     </div>
                 </div>
-                <button class="btn-primary" onclick="saveEventsConfig()" style="margin-top: 20px;" data-i18n="eventsConfig.save">Sauvegarder la Configuration</button>
                 <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>
             </div>
         </div>
@@ -995,6 +1045,21 @@
                     active: "Actif",
                     inactive: "Inactif",
                     ap: "AP"
+                },
+                ble: {
+                    title: "Connexion BLE",
+                    connect: "Connexion",
+                    connecting: "Connexion...",
+                    disconnect: "Déconnexion",
+                    connected: "Connecté",
+                    disconnected: "Déconnecté",
+                    statusUnsupported: "Non supporté",
+                    notSupported: "Web Bluetooth non supporté sur ce navigateur.",
+                    toastConnected: "Connexion BLE établie",
+                    toastDisconnected: "Connexion BLE fermée",
+                    toastError: "Erreur de communication BLE",
+                    requestRejected: "Commande BLE refusée",
+                    timeout: "Délai d'attente BLE dépassé"
                 },
                 tabs: {
                     effects: "Effets LED",
@@ -1337,6 +1402,21 @@
                     inactive: "Inactive",
                     ap: "AP"
                 },
+                ble: {
+                    title: "BLE Link",
+                    connect: "Connect",
+                    connecting: "Connecting...",
+                    disconnect: "Disconnect",
+                    connected: "Connected",
+                    disconnected: "Disconnected",
+                    statusUnsupported: "Unsupported",
+                    notSupported: "Web Bluetooth is not supported on this browser.",
+                    toastConnected: "BLE connected",
+                    toastDisconnected: "BLE disconnected",
+                    toastError: "BLE communication error",
+                    requestRejected: "BLE request rejected",
+                    timeout: "BLE request timed out"
+                },
                 tabs: {
                     effects: "LED Effects",
                     profiles: "Profiles",
@@ -1677,6 +1757,438 @@
             const numericState = Number(state);
             return OTA_STATE_KEYS.hasOwnProperty(numericState) ? OTA_STATE_KEYS[numericState] : 'idle';
         }
+        const BLE_CONFIG = {
+            serviceUuid: '4fafc201-1fb5-459e-8fcc-c5c9c331914b',
+            commandCharacteristicUuid: 'beb5483e-36e1-4688-b7f5-ea07361b26a8',
+            responseCharacteristicUuid: '64a0990c-52eb-4c1b-aa30-ea826f4ba9dc',
+            maxChunkSize: 180,
+            responseTimeoutMs: 8000,
+            deviceName: 'TESLA-STRIP'
+        };
+        const usingFileProtocol = window.location.protocol === 'file:';
+        const FALLBACK_ORIGIN = (!usingFileProtocol && window.location.origin && window.location.origin !== 'null')
+            ? window.location.origin
+            : 'http://localhost';
+        let bleTransportInstance = null;
+        let wifiOnline = !usingFileProtocol && navigator.onLine;
+        let apiConnectionReady = wifiOnline;
+        let apiConnectionResolvers = [];
+        let initialDataLoaded = false;
+        let initialDataLoadPromise = null;
+        let statusIntervalHandle = null;
+        function isApiConnectionReady() {
+            return wifiOnline || (bleTransportInstance && bleTransportInstance.isConnected());
+        }
+        function updateApiConnectionState() {
+            const ready = isApiConnectionReady();
+            if (ready && !apiConnectionReady) {
+                apiConnectionReady = true;
+                const resolvers = [...apiConnectionResolvers];
+                apiConnectionResolvers = [];
+                resolvers.forEach(resolve => resolve());
+                if (!initialDataLoaded) {
+                    scheduleInitialDataLoad();
+                }
+            } else if (!ready) {
+                apiConnectionReady = false;
+            }
+        }
+        function waitForApiConnection() {
+            if (isApiConnectionReady()) {
+                apiConnectionReady = true;
+                return Promise.resolve();
+            }
+            return new Promise(resolve => {
+                apiConnectionResolvers.push(resolve);
+            });
+        }
+        function scheduleInitialDataLoad() {
+            if (initialDataLoaded || initialDataLoadPromise) {
+                return;
+            }
+            initialDataLoadPromise = (async () => {
+                try {
+                    await waitForApiConnection();
+                    await loadInitialData();
+                    initialDataLoaded = true;
+                } catch (error) {
+                    console.error('Initial data load failed:', error);
+                    initialDataLoadPromise = null;
+                }
+            })();
+        }
+        window.addEventListener('online', () => {
+            wifiOnline = !usingFileProtocol && navigator.onLine;
+            updateApiConnectionState();
+        });
+        window.addEventListener('offline', () => {
+            wifiOnline = false;
+            updateApiConnectionState();
+        });
+        const bleTextEncoder = new TextEncoder();
+        const bleTextDecoder = new TextDecoder();
+        function normalizeUrl(url) {
+            if (url instanceof URL) {
+                return url;
+            }
+            try {
+                if (typeof url === 'string' && !url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:/)) {
+                    const trimmed = url.trim();
+                    const withoutScheme = trimmed.replace(/^[a-zA-Z]+:\/*/i, '');
+                    const withoutDrive = withoutScheme.replace(/^([a-zA-Z]:)/, '');
+                    const normalized = withoutDrive.replace(/\\/g, '/');
+                    const ensured = normalized.startsWith('/') ? normalized : '/' + normalized;
+                    const finalUrl = new URL(FALLBACK_ORIGIN + ensured);
+                    return finalUrl;
+                }
+                const parsed = new URL(url);
+                const sanitizedPath = parsed.pathname.replace(/^\/?[a-zA-Z]:/, '').replace(/\\/g, '/');
+                parsed.pathname = sanitizedPath.startsWith('/') ? sanitizedPath : '/' + sanitizedPath;
+                const fallbackUrl = new URL(parsed.pathname + parsed.search, FALLBACK_ORIGIN);
+                return fallbackUrl;
+            } catch (e) {
+                console.warn('[BLE] normalizeUrl failed for', url, e);
+                return null;
+            }
+        }
+        function pathLooksLikeApi(pathname) {
+            if (!pathname) return false;
+            const normalized = pathname.replace(/\\/g, '/');
+            if (normalized === '/api' || normalized === 'api') return true;
+            if (normalized.startsWith('/api/') || normalized.startsWith('api/')) return true;
+            return normalized.includes('/api/');
+        }
+        function isApiRequestFromInput(input) {
+            if (typeof input === 'string') {
+                const normalized = normalizeUrl(input);
+                return normalized ? pathLooksLikeApi(normalized.pathname) : false;
+            } else if (input && typeof Request !== 'undefined' && input instanceof Request) {
+                const normalized = normalizeUrl(input.url);
+                return normalized ? pathLooksLikeApi(normalized.pathname) : false;
+            }
+            return false;
+        }
+        function isApiRequest(url, originalInput) {
+            if (typeof originalInput !== 'undefined' && isApiRequestFromInput(originalInput)) {
+                return true;
+            }
+            return isApiRequestFromInput(url);
+        }
+        class BleTransport {
+            constructor() {
+                this.device = null;
+                this.server = null;
+                this.commandCharacteristic = null;
+                this.responseCharacteristic = null;
+                this.responseBuffer = '';
+                this.pending = null;
+                this.listeners = new Set();
+                this.status = this.isSupported() ? 'disconnected' : 'unsupported';
+                this.boundDeviceDisconnect = this.handleDeviceDisconnected.bind(this);
+                this.boundNotificationHandler = this.handleNotification.bind(this);
+                this.requestQueue = Promise.resolve();
+            }
+            async requestDevice(forceNew = false) {
+                if (!forceNew && this.device) {
+                    return this.device;
+                }
+                const filters = [{ services: [BLE_CONFIG.serviceUuid] }];
+                if (BLE_CONFIG.deviceName) {
+                    filters.push({ name: BLE_CONFIG.deviceName });
+                    filters.push({ namePrefix: BLE_CONFIG.deviceName });
+                }
+                const device = await navigator.bluetooth.requestDevice({
+                    filters,
+                    optionalServices: [BLE_CONFIG.serviceUuid]
+                });
+                if (this.device && this.device !== device) {
+                    try {
+                        this.device.removeEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                    } catch (e) {}
+                }
+                this.device = device;
+                this.device.addEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                return device;
+            }
+            async ensureGattConnection(device, forceReconnect = false) {
+                if (!device || !device.gatt) {
+                    throw new Error('GATT server unavailable');
+                }
+                let server = device.gatt;
+                if (forceReconnect && typeof server.disconnect === 'function' && server.connected) {
+                    try {
+                        server.disconnect();
+                    } catch (e) {}
+                }
+                if (!server.connected) {
+                    server = await server.connect();
+                }
+                this.server = server;
+                return server;
+            }
+            isSupported() {
+                return !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+            }
+            getStatus() {
+                return this.status;
+            }
+            setStatus(status) {
+                if (this.status === status) {
+                    return;
+                }
+                this.status = status;
+                this.listeners.forEach(listener => {
+                    try {
+                        listener(status);
+                    } catch (e) {
+                        console.warn('BLE status listener error', e);
+                    }
+                });
+            }
+            onStatusChange(cb) {
+                if (typeof cb === 'function') {
+                    this.listeners.add(cb);
+                }
+            }
+            offStatusChange(cb) {
+                if (cb && this.listeners.has(cb)) {
+                    this.listeners.delete(cb);
+                }
+            }
+            isConnected() {
+                return this.status === 'connected';
+            }
+            shouldUseBle() {
+                return this.isConnected();
+            }
+            async connect() {
+                if (!this.isSupported()) {
+                    throw new Error(t('ble.notSupported'));
+                }
+                if (this.isConnected() || this.status === 'connecting') {
+                    return;
+                }
+                this.setStatus('connecting');
+                try {
+                    const device = await this.requestDevice();
+                    let server = await this.ensureGattConnection(device);
+                    let service;
+                    try {
+                        service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
+                    } catch (error) {
+                        if (error && error.name === 'NetworkError') {
+                            server = await this.ensureGattConnection(device, true);
+                            service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
+                        } else {
+                            throw error;
+                        }
+                    }
+                    this.commandCharacteristic = await service.getCharacteristic(BLE_CONFIG.commandCharacteristicUuid);
+                    this.responseCharacteristic = await service.getCharacteristic(BLE_CONFIG.responseCharacteristicUuid);
+                    await this.responseCharacteristic.startNotifications();
+                    this.responseCharacteristic.addEventListener('characteristicvaluechanged', this.boundNotificationHandler);
+                    this.setStatus('connected');
+                } catch (error) {
+                    console.error('BLE connect error', error);
+                    this.teardown();
+                    this.setStatus(this.isSupported() ? 'disconnected' : 'unsupported');
+                    throw error;
+                }
+            }
+            async disconnect() {
+                if (this.device) {
+                    try {
+                        this.device.removeEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                    } catch (e) {}
+                }
+                if (this.device && this.device.gatt && this.device.gatt.connected) {
+                    try {
+                        this.device.gatt.disconnect();
+                    } catch (e) {}
+                }
+                this.teardown();
+                this.setStatus(this.isSupported() ? 'disconnected' : 'unsupported');
+            }
+            handleDeviceDisconnected() {
+                this.teardown();
+                this.setStatus(this.isSupported() ? 'disconnected' : 'unsupported');
+            }
+            teardown() {
+                if (this.responseCharacteristic) {
+                    try {
+                        this.responseCharacteristic.removeEventListener('characteristicvaluechanged', this.boundNotificationHandler);
+                    } catch (e) {}
+                }
+                if (this.device) {
+                    try {
+                        this.device.removeEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                    } catch (e) {}
+                }
+                this.server = null;
+                this.commandCharacteristic = null;
+                this.responseCharacteristic = null;
+                this.responseBuffer = '';
+                this.device = null;
+                if (this.pending && this.pending.reject) {
+                    this.pending.reject(new Error(t('ble.disconnected')));
+                }
+                this.pending = null;
+            }
+            async sendRequest(message) {
+                if (!this.commandCharacteristic) {
+                    throw new Error(t('ble.disconnected'));
+                }
+                if (this.pending) {
+                    throw new Error(t('ble.requestRejected'));
+                }
+                const framed = JSON.stringify(message) + '\n';
+                const encoded = bleTextEncoder.encode(framed);
+                return new Promise((resolve, reject) => {
+                    const timeoutId = setTimeout(() => {
+                        if (this.pending && this.pending.reject) {
+                            this.pending.reject(new Error(t('ble.timeout')));
+                        }
+                    }, BLE_CONFIG.responseTimeoutMs);
+                    this.pending = {
+                        resolve: (response) => {
+                            clearTimeout(timeoutId);
+                            this.pending = null;
+                            resolve(response);
+                        },
+                        reject: (err) => {
+                            clearTimeout(timeoutId);
+                            this.pending = null;
+                            reject(err);
+                        }
+                    };
+                    this.writeChunks(encoded).catch(error => {
+                        if (this.pending && this.pending.reject) {
+                            this.pending.reject(error);
+                        } else {
+                            reject(error);
+                        }
+                    });
+                });
+            }
+            async writeChunks(encoded) {
+                const chunkSize = BLE_CONFIG.maxChunkSize;
+                for (let offset = 0; offset < encoded.length; offset += chunkSize) {
+                    const chunk = encoded.slice(offset, Math.min(offset + chunkSize, encoded.length));
+                    await this.commandCharacteristic.writeValueWithResponse(chunk);
+                }
+            }
+            handleNotification(event) {
+                const value = event.target.value;
+                this.responseBuffer += bleTextDecoder.decode(value);
+                let newlineIndex;
+                while ((newlineIndex = this.responseBuffer.indexOf('\n')) !== -1) {
+                    const message = this.responseBuffer.slice(0, newlineIndex).trim();
+                    this.responseBuffer = this.responseBuffer.slice(newlineIndex + 1);
+                    if (!message) {
+                        continue;
+                    }
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(message);
+                    } catch (e) {
+                        console.warn('Invalid BLE payload', message);
+                        continue;
+                    }
+                    if (this.pending && this.pending.resolve) {
+                        this.pending.resolve(parsed);
+                    }
+                }
+            }
+            enqueueRequest(taskFn) {
+                const next = this.requestQueue.then(() => taskFn()).then(async (result) => {
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    return result;
+                });
+                this.requestQueue = next.catch(() => {});
+                return next;
+            }
+        }
+        const bleTransport = new BleTransport();
+        bleTransportInstance = bleTransport;
+        updateApiConnectionState();
+        const nativeFetch = window.fetch.bind(window);
+        function shouldUseBleForRequest(url, isApiCallOverride) {
+            if (!bleTransport.shouldUseBle()) {
+                return false;
+            }
+            if (typeof isApiCallOverride === 'boolean') {
+                return isApiCallOverride;
+            }
+            return isApiRequest(url);
+        }
+        window.fetch = async function(input, init = {}) {
+            const request = new Request(input, init);
+            const isApiCall = isApiRequest(request.url, input);
+            if (isApiCall) {
+                await waitForApiConnection();
+            }
+            if (!shouldUseBleForRequest(request.url, isApiCall)) {
+                return nativeFetch(request);
+            }
+            const headers = {};
+            request.headers.forEach((value, key) => {
+                headers[key] = value;
+            });
+            let bodyText = undefined;
+            const method = (request.method || 'GET').toUpperCase();
+            if (method !== 'GET' && method !== 'HEAD') {
+                try {
+                    bodyText = await request.clone().text();
+                } catch (e) {
+                    bodyText = undefined;
+                }
+            }
+            const urlObj = normalizeUrl(request.url);
+            let requestPath;
+            if (urlObj) {
+                const normalizedPath = urlObj.pathname.replace(/\\/g, '/');
+                requestPath = normalizedPath + urlObj.search;
+            } else if (typeof request.url === 'string') {
+                const trimmed = request.url.trim();
+                const withoutScheme = trimmed.replace(/^[a-zA-Z]+:\/*/i, '');
+                const withoutDrive = withoutScheme.replace(/^([a-zA-Z]:)/, '');
+                const sanitized = withoutDrive.replace(/\\/g, '/');
+                requestPath = sanitized.startsWith('/') ? sanitized : '/' + sanitized;
+            } else {
+                requestPath = '/';
+            }
+            try {
+                const bleResponse = await bleTransport.enqueueRequest(() => bleTransport.sendRequest({
+                    method,
+                    path: requestPath,
+                    headers,
+                    body: bodyText
+                }));
+                const responseHeaders = new Headers(bleResponse.headers || { 'Content-Type': 'application/json' });
+                return new Response(bleResponse.body || '', {
+                    status: bleResponse.status || 200,
+                    statusText: bleResponse.statusText || 'OK',
+                    headers: responseHeaders
+                });
+            } catch (error) {
+                console.error('BLE fetch error', error);
+                throw error;
+            }
+        };
+        let lastBleStatus = bleTransport.getStatus();
+        bleTransport.onStatusChange((status) => {
+            updateBleUiState();
+            if (status === 'connected') {
+                showNotification('ble-notification', t('ble.toastConnected'), 'success');
+                updateApiConnectionState();
+            } else if (status === 'disconnected' && lastBleStatus === 'connected') {
+                showNotification('ble-notification', t('ble.toastDisconnected'), 'info');
+                updateApiConnectionState();
+            } else if (status === 'connecting') {
+                updateApiConnectionState();
+            }
+            lastBleStatus = status;
+        });
         const simulationSections = [
             {
                 titleKey: 'simulation.turnSignals',
@@ -1760,6 +2272,73 @@
         // Language & theme management
         let currentLang = localStorage.getItem('language') || 'en';
         let currentTheme = localStorage.getItem('theme') || 'dark';
+        function updateBleUiState() {
+            const button = document.getElementById('ble-connect-button');
+            const statusPill = document.getElementById('ble-status-pill');
+            const helper = document.getElementById('ble-helper-text');
+            if (!button || !statusPill || !helper) {
+                return;
+            }
+            const supported = bleTransport.isSupported();
+            if (!supported) {
+                button.hidden = true;
+                button.disabled = true;
+                button.dataset.i18n = 'ble.connect';
+                button.textContent = t('ble.connect');
+                statusPill.classList.remove('connected');
+                statusPill.dataset.i18n = 'ble.statusUnsupported';
+                statusPill.textContent = t('ble.statusUnsupported');
+                helper.hidden = false;
+                return;
+            }
+            helper.hidden = true;
+            const status = bleTransport.getStatus();
+            if (status === 'connected') {
+                button.disabled = false;
+                button.dataset.i18n = 'ble.disconnect';
+                button.textContent = t('ble.disconnect');
+                statusPill.classList.add('connected');
+                statusPill.dataset.i18n = 'ble.connected';
+                statusPill.textContent = t('ble.connected');
+            } else if (status === 'connecting') {
+                button.disabled = true;
+                button.dataset.i18n = 'ble.connecting';
+                button.textContent = t('ble.connecting');
+                statusPill.classList.remove('connected');
+                statusPill.dataset.i18n = 'ble.connecting';
+                statusPill.textContent = t('ble.connecting');
+            } else {
+                button.disabled = false;
+                button.dataset.i18n = 'ble.connect';
+                button.textContent = t('ble.connect');
+                statusPill.classList.remove('connected');
+                statusPill.dataset.i18n = 'ble.disconnected';
+                statusPill.textContent = t('ble.disconnected');
+            }
+        }
+        async function toggleBleConnection() {
+            if (!bleTransport.isSupported()) {
+                showNotification('ble-notification', t('ble.notSupported'), 'error');
+                return;
+            }
+            const status = bleTransport.getStatus();
+            if (status === 'connecting') {
+                return;
+            }
+            try {
+                if (bleTransport.isConnected()) {
+                    await bleTransport.disconnect();
+                } else {
+                    await bleTransport.connect();
+                }
+            } catch (error) {
+                console.error('BLE toggle error', error);
+                const message = t('ble.toastError') + (error && error.message ? ' - ' + error.message : '');
+                showNotification('ble-notification', message, 'error');
+            } finally {
+                updateBleUiState();
+            }
+        }
         function setLanguage(lang) {
             if (!lang || lang === currentLang) {
                 updateLanguageSelector();
@@ -1824,6 +2403,7 @@
             if (themeSelect) {
                 themeSelect.value = currentTheme;
             }
+            updateBleUiState();
         }
         function updateSelectOptions() {
             const effectSelect = document.getElementById('effect-select');
@@ -2026,13 +2606,23 @@
         if (defaultBrightnessSlider) {
             defaultBrightnessSlider.oninput = function() {
                 document.getElementById('default-brightness-value').textContent = this.value + '%';
+                scheduleDefaultEffectSave();
             };
         }
         const defaultSpeedSlider = document.getElementById('default-speed-slider');
         if (defaultSpeedSlider) {
             defaultSpeedSlider.oninput = function() {
                 document.getElementById('default-speed-value').textContent = this.value + '%';
+                scheduleDefaultEffectSave();
             };
+        }
+        const defaultColorInput = document.getElementById('default-color1');
+        if (defaultColorInput) {
+            defaultColorInput.addEventListener('change', scheduleDefaultEffectSave);
+        }
+        const defaultEffectSelect = document.getElementById('default-effect-select');
+        if (defaultEffectSelect) {
+            defaultEffectSelect.addEventListener('change', scheduleDefaultEffectSave);
         }
         // Notification helper
         function showNotification(elementId, message, type, timeout = 2000) {
@@ -2059,6 +2649,10 @@
         }
         // Events Configuration
         let eventsConfigData = [];
+        const EVENT_SAVE_DEBOUNCE_MS = 700;
+        const DEFAULT_EFFECT_DEBOUNCE_MS = 700;
+        const eventAutoSaveTimers = new Map();
+        let defaultEffectSaveTimer = null;
         let eventsConfigLoadingPromise = null;
         function getDefaultEffectId() {
             if (effectsList.length === 0) {
@@ -2238,25 +2832,64 @@
                     }
                 }
             }
+            scheduleEventAutoSave(index);
         }
-        async function saveEventsConfig() {
+        function scheduleEventAutoSave(index) {
+            if (!eventsConfigData[index]) {
+                return;
+            }
+            if (eventAutoSaveTimers.has(index)) {
+                clearTimeout(eventAutoSaveTimers.get(index));
+            }
+            const timer = setTimeout(() => {
+                eventAutoSaveTimers.delete(index);
+                autoSaveEvent(index);
+            }, EVENT_SAVE_DEBOUNCE_MS);
+            eventAutoSaveTimers.set(index, timer);
+        }
+        function buildEventPayload(event) {
+            if (!event) {
+                return null;
+            }
+            const allowedKeys = [
+                'event', 'effect', 'brightness', 'speed', 'color',
+                'duration', 'priority', 'enabled', 'action_type', 'profile_id'
+            ];
+            const payload = {};
+            allowedKeys.forEach(key => {
+                if (event[key] !== undefined) {
+                    payload[key] = event[key];
+                }
+            });
+            return payload;
+        }
+        async function autoSaveEvent(index) {
+            const payload = buildEventPayload(eventsConfigData[index]);
+            if (!payload) {
+                return;
+            }
             try {
-                const response = await fetch(API_BASE + '/api/events', {
+                const response = await fetch(API_BASE + '/api/events/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ events: eventsConfigData })
+                    body: JSON.stringify({ event: payload })
                 });
-                if (response.ok) {
-                    await ensureEventsConfigData(true);
-                    renderSimulationSections();
-                    showNotification('events-notification', t('eventsConfig.saveSuccess'), 'success');
-                } else {
-                    showNotification('events-notification', t('eventsConfig.saveError'), 'error');
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
                 }
-            } catch (e) {
-                console.error('Error:', e);
+            } catch (error) {
+                console.error('Event auto-save failed', error);
                 showNotification('events-notification', t('eventsConfig.saveError'), 'error');
             }
+        }
+        function scheduleDefaultEffectSave() {
+            if (defaultEffectSaveTimer) {
+                clearTimeout(defaultEffectSaveTimer);
+            }
+            defaultEffectSaveTimer = setTimeout(() => {
+                defaultEffectSaveTimer = null;
+                saveDefaultEffect(true);
+            }, DEFAULT_EFFECT_DEBOUNCE_MS);
         }
         // Hardware Configuration
         async function loadHardwareConfig() {
@@ -2507,7 +3140,7 @@
                 showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
             }
         }
-        async function saveDefaultEffect() {
+        async function saveDefaultEffect(silent = false) {
             const profileId = parseInt(document.getElementById('profile-select').value);
             const effectId = document.getElementById('default-effect-select').value;
             const effect = effectIdToEnum(effectId); // Convert string ID to numeric enum
@@ -2528,7 +3161,9 @@
                 });
                 const apiResult = await parseApiResponse(response);
                 if (apiResult.success) {
-                    showNotification('profiles-notification', t('profiles.saveDefault') + ' ' + t('config.saveSuccess'), 'success');
+                    if (!silent) {
+                        showNotification('profiles-notification', t('profiles.saveDefault') + ' ' + t('config.saveSuccess'), 'success');
+                    }
                 } else {
                     const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
                     showNotification('profiles-notification', message, 'error');
@@ -2896,6 +3531,7 @@
             statusMessage.style.color = 'var(--color-muted)';
             setInterval(loadOTAInfo, 1000);
             try {
+                await waitForApiConnection();
                 const xhr = new XMLHttpRequest();
                 xhr.upload.addEventListener('progress', (e) => {
                     if (e.lengthComputable) {
@@ -3224,24 +3860,27 @@
                 console.error('Failed to load event types:', error);
             }
         }
-        // Init
-        renderSimulationSections();
-        applyTranslations();
-        applyTheme();
-        updateLanguageSelector();
-        // Charger d'abord les effets et événements, puis le reste
-        Promise.all([
-            loadEffects(),
-            loadEventTypes(),
-            ensureEventsConfigData().catch(() => null)
-        ]).then(() => {
+        async function loadInitialData() {
+            await Promise.all([
+                loadEffects(),
+                loadEventTypes(),
+                ensureEventsConfigData().catch(() => null)
+            ]);
             renderSimulationSections();
             loadProfiles();
             loadConfig();
             updateStatus();
             loadOTAInfo();
-            setInterval(updateStatus, 2000);
-        });
+            if (!statusIntervalHandle) {
+                statusIntervalHandle = setInterval(updateStatus, 2000);
+            }
+        }
+        // Init
+        renderSimulationSections();
+        applyTranslations();
+        applyTheme();
+        updateLanguageSelector();
+        scheduleInitialDataLoad();
     </script>
 </body>
 </html>

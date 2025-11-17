@@ -20,6 +20,7 @@ static const char *TAG = "WebServer";
 
 static httpd_handle_t server = NULL;
 static vehicle_state_t current_vehicle_state = {0};
+static esp_err_t event_single_post_handler(httpd_req_t *req);
 
 // HTML de la page principale (embarqué, version compressée GZIP)
 extern const uint8_t index_html_gz_start[] asm("_binary_index_html_gz_start");
@@ -1204,6 +1205,82 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
 }
 
 // Handler pour obtenir tous les événements CAN (GET)
+static bool apply_event_update_from_json(config_profile_t *profile, int profile_id, cJSON *event_obj) {
+    if (profile == NULL || event_obj == NULL) {
+        return false;
+    }
+
+    cJSON *event_json = cJSON_GetObjectItem(event_obj, "event");
+    cJSON *effect_json = cJSON_GetObjectItem(event_obj, "effect");
+    cJSON *brightness_json = cJSON_GetObjectItem(event_obj, "brightness");
+    cJSON *speed_json = cJSON_GetObjectItem(event_obj, "speed");
+    cJSON *color_json = cJSON_GetObjectItem(event_obj, "color");
+    cJSON *duration_json = cJSON_GetObjectItem(event_obj, "duration");
+    cJSON *priority_json = cJSON_GetObjectItem(event_obj, "priority");
+    cJSON *enabled_json = cJSON_GetObjectItem(event_obj, "enabled");
+    cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "action_type");
+    cJSON *profile_id_json = cJSON_GetObjectItem(event_obj, "profile_id");
+
+    if (event_json == NULL || effect_json == NULL ||
+        !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
+        ESP_LOGW(TAG, "Payload d'evenement invalide");
+        return false;
+    }
+
+    can_event_type_t event_type = config_manager_id_to_enum(event_json->valuestring);
+    if (event_type <= CAN_EVENT_NONE || event_type >= CAN_EVENT_MAX) {
+        ESP_LOGW(TAG, "Evenement inconnu: %s", event_json->valuestring);
+        return false;
+    }
+
+    effect_config_t effect_config = profile->event_effects[event_type].effect_config;
+    effect_config.effect = led_effects_id_to_enum(effect_json->valuestring);
+    if (brightness_json && cJSON_IsNumber(brightness_json)) {
+        effect_config.brightness = brightness_json->valueint;
+    }
+    if (speed_json && cJSON_IsNumber(speed_json)) {
+        effect_config.speed = speed_json->valueint;
+    }
+    if (color_json && cJSON_IsNumber(color_json)) {
+        effect_config.color1 = color_json->valueint;
+    }
+    effect_config.sync_mode = SYNC_OFF;
+    effect_config.reverse = (event_type == CAN_EVENT_TURN_LEFT ||
+                             event_type == CAN_EVENT_BLINDSPOT_LEFT);
+
+    uint16_t duration = duration_json && cJSON_IsNumber(duration_json)
+                        ? duration_json->valueint
+                        : profile->event_effects[event_type].duration_ms;
+    uint8_t priority = priority_json && cJSON_IsNumber(priority_json)
+                        ? priority_json->valueint
+                        : profile->event_effects[event_type].priority;
+    bool enabled = enabled_json ? cJSON_IsTrue(enabled_json)
+                                : profile->event_effects[event_type].enabled;
+
+    if (!config_manager_set_event_effect(profile_id, event_type, &effect_config, duration, priority)) {
+        return false;
+    }
+    config_manager_set_event_enabled(profile_id, event_type, enabled);
+
+    profile->event_effects[event_type].event = event_type;
+    memcpy(&profile->event_effects[event_type].effect_config, &effect_config, sizeof(effect_config_t));
+    profile->event_effects[event_type].duration_ms = duration;
+    profile->event_effects[event_type].priority = priority;
+    profile->event_effects[event_type].enabled = enabled;
+
+    if (action_type_json && cJSON_IsNumber(action_type_json)) {
+        int action_type = action_type_json->valueint;
+        if (action_type >= EVENT_ACTION_APPLY_EFFECT && action_type <= EVENT_ACTION_SWITCH_PROFILE) {
+            profile->event_effects[event_type].action_type = (event_action_type_t)action_type;
+        }
+    }
+    if (profile_id_json && cJSON_IsNumber(profile_id_json)) {
+        profile->event_effects[event_type].profile_id = profile_id_json->valueint;
+    }
+
+    return true;
+}
+
 static esp_err_t events_get_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
     cJSON *events_array = cJSON_CreateArray();
@@ -1253,7 +1330,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
     size_t content_len = req->content_len;
 
     // Allouer de la mémoire pour le contenu (peut être grand)
-    if (content_len > 8192) {
+    if (content_len > 16384) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request too large");
         return ESP_FAIL;
     }
@@ -1317,74 +1394,8 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
     int updated_count = 0;
     cJSON *event_obj = NULL;
     cJSON_ArrayForEach(event_obj, events_array) {
-        cJSON *event_json = cJSON_GetObjectItem(event_obj, "event");
-        cJSON *effect_json = cJSON_GetObjectItem(event_obj, "effect");
-        cJSON *brightness_json = cJSON_GetObjectItem(event_obj, "brightness");
-        cJSON *speed_json = cJSON_GetObjectItem(event_obj, "speed");
-        cJSON *color_json = cJSON_GetObjectItem(event_obj, "color");
-        cJSON *duration_json = cJSON_GetObjectItem(event_obj, "duration");
-        cJSON *priority_json = cJSON_GetObjectItem(event_obj, "priority");
-        cJSON *enabled_json = cJSON_GetObjectItem(event_obj, "enabled");
-        cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "action_type");
-        cJSON *profile_id_json = cJSON_GetObjectItem(event_obj, "profile_id");
-
-        if (event_json == NULL || effect_json == NULL) {
-            continue; // Skip invalid entries
-        }
-
-        // Les IDs sont maintenant des strings uniquement
-        if (!cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
-            ESP_LOGW(TAG, "Format invalide: event et effect doivent être des strings");
-            continue;
-        }
-
-        can_event_type_t event_type = config_manager_id_to_enum(event_json->valuestring);
-        if (event_type <= CAN_EVENT_NONE || event_type >= CAN_EVENT_MAX) {
-            ESP_LOGW(TAG, "Type d'événement invalide: %s", event_json->valuestring);
-            continue;
-        }
-
-        // Partir de la configuration existante pour préserver les champs non exposés (zone, couleurs secondaires, etc.)
-        effect_config_t effect_config = profile->event_effects[event_type].effect_config;
-        effect_config.effect = led_effects_id_to_enum(effect_json->valuestring);
-        effect_config.brightness = brightness_json ? brightness_json->valueint : effect_config.brightness;
-        effect_config.speed = speed_json ? speed_json->valueint : effect_config.speed;
-        effect_config.color1 = color_json ? color_json->valueint : effect_config.color1;
-        effect_config.sync_mode = SYNC_OFF;
-
-        // Définir le flag reverse en fonction du type d'événement
-        // LEFT events = reverse true (animation centre -> gauche)
-        // RIGHT events = reverse false (animation centre -> droite)
-        effect_config.reverse = (event_type == CAN_EVENT_TURN_LEFT ||
-                                 event_type == CAN_EVENT_BLINDSPOT_LEFT);
-
-        uint16_t duration = duration_json ? duration_json->valueint : profile->event_effects[event_type].duration_ms;
-        uint8_t priority = priority_json ? priority_json->valueint : profile->event_effects[event_type].priority;
-        bool enabled = enabled_json ? cJSON_IsTrue(enabled_json) : profile->event_effects[event_type].enabled;
-
-        // Mettre à jour l'événement
-        if (config_manager_set_event_effect(profile_id, event_type, &effect_config,
-                                           duration, priority)) {
-            config_manager_set_event_enabled(profile_id, event_type, enabled);
+        if (apply_event_update_from_json(profile, profile_id, event_obj)) {
             updated_count++;
-        }
-
-        // Mettre à jour le profil chargé pour qu'il reflète exactement ce qui sera sauvegardé
-        profile->event_effects[event_type].event = event_type;
-        memcpy(&profile->event_effects[event_type].effect_config, &effect_config, sizeof(effect_config_t));
-        profile->event_effects[event_type].duration_ms = duration;
-        profile->event_effects[event_type].priority = priority;
-        profile->event_effects[event_type].enabled = enabled;
-
-        // Mettre à jour action_type et profile_id
-        if (action_type_json != NULL) {
-            int action_type = action_type_json->valueint;
-            if (action_type >= EVENT_ACTION_APPLY_EFFECT && action_type <= EVENT_ACTION_SWITCH_PROFILE) {
-                profile->event_effects[event_type].action_type = (event_action_type_t)action_type;
-            }
-        }
-        if (profile_id_json != NULL) {
-            profile->event_effects[event_type].profile_id = profile_id_json->valueint;
         }
     }
 
@@ -1412,54 +1423,27 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 }
 
 esp_err_t web_server_init(void) {
-    // Enregistrer le callback CAN
     commander_register_callback(can_frame_callback, NULL);
-    
-    ESP_LOGI(TAG, "Serveur web initialisé");
+    ESP_LOGI(TAG, "Serveur web initialise");
     return ESP_OK;
 }
 
 esp_err_t web_server_start(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = WEB_SERVER_PORT;
-    config.max_uri_handlers = 30; // Augmenté pour supporter toutes les routes (actuellement 26)
+    config.max_uri_handlers = 30; // Augmenté pour supporter toutes les routes
     config.lru_purge_enable = true;
-    #ifndef CONFIG_HAS_PSRAM
-    config.stack_size = 24576; // Augmenter la stack pour la version sans PSRAM
+#ifndef CONFIG_HAS_PSRAM
+    config.stack_size = 24576;
 #else
-    config.stack_size = 16384; // Stack par défaut pour la version PSRAM
+    config.stack_size = 16384;
 #endif
-    config.recv_wait_timeout = 30; // Timeout de réception (30s au lieu de 10s)
-    config.send_wait_timeout = 30; // Timeout d'envoi (30s au lieu de 10s)
+    config.recv_wait_timeout = 30;
+    config.send_wait_timeout = 30;
 
-    ESP_LOGI(TAG, "Démarrage du serveur web sur port %d", config.server_port);
-    
+    ESP_LOGI(TAG, "Demarrage du serveur web sur port %d", config.server_port);
+
     if (httpd_start(&server, &config) == ESP_OK) {
-        // Routes
-        httpd_uri_t index_uri = {
-            .uri = "/",
-            .method = HTTP_GET,
-            .handler = index_handler,
-            .user_ctx = NULL
-        };
-        httpd_register_uri_handler(server, &index_uri);
-
-        httpd_uri_t icon_uri = {
-            .uri = "/icon.svg",
-            .method = HTTP_GET,
-            .handler = icon_handler,
-            .user_ctx = NULL
-        };
-        httpd_register_uri_handler(server, &icon_uri);
-        
-        httpd_uri_t status_uri = {
-            .uri = "/api/status",
-            .method = HTTP_GET,
-            .handler = status_handler,
-            .user_ctx = NULL
-        };
-        httpd_register_uri_handler(server, &status_uri);
-        
         httpd_uri_t config_uri = {
             .uri = "/api/config",
             .method = HTTP_GET,
@@ -1467,6 +1451,14 @@ esp_err_t web_server_start(void) {
             .user_ctx = NULL
         };
         httpd_register_uri_handler(server, &config_uri);
+
+        httpd_uri_t status_uri = {
+            .uri = "/api/status",
+            .method = HTTP_GET,
+            .handler = status_handler,
+            .user_ctx = NULL
+        };
+        httpd_register_uri_handler(server, &status_uri);
         
         httpd_uri_t effect_uri = {
             .uri = "/api/effect",
@@ -1659,6 +1651,15 @@ esp_err_t web_server_start(void) {
         };
         httpd_register_uri_handler(server, &events_post_uri);
 
+        httpd_uri_t event_single_post_uri = {
+            .uri = "/api/events/update",
+            .method = HTTP_POST,
+            .handler = event_single_post_handler,
+            .user_ctx = NULL
+        };
+        httpd_register_uri_handler(server, &event_single_post_uri);
+
+
         // Route GET /api/events pour obtenir les événements CAN
         httpd_uri_t events_get_uri = {
             .uri = "/api/events",
@@ -1674,6 +1675,96 @@ esp_err_t web_server_start(void) {
     
     ESP_LOGE(TAG, "Erreur démarrage serveur web");
     return ESP_FAIL;
+}
+
+static esp_err_t event_single_post_handler(httpd_req_t *req) {
+    char *content = NULL;
+    int ret = 0;
+    size_t content_len = req->content_len;
+
+    if (content_len > 4096) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request too large");
+        return ESP_FAIL;
+    }
+
+    content = (char *)malloc(content_len + 1);
+    if (content == NULL) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
+        return ESP_FAIL;
+    }
+
+    ret = httpd_req_recv(req, content, content_len);
+    if (ret <= 0) {
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            httpd_resp_send_408(req);
+        }
+        free(content);
+        return ESP_FAIL;
+    }
+
+    content[ret] = '\0';
+
+    cJSON *root = cJSON_Parse(content);
+    free(content);
+
+    if (root == NULL) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *event_obj = cJSON_GetObjectItem(root, "event");
+    if (event_obj == NULL || !cJSON_IsObject(event_obj)) {
+        if (cJSON_IsObject(root)) {
+            event_obj = root;
+        } else {
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid event payload");
+            cJSON_Delete(root);
+            return ESP_FAIL;
+        }
+    }
+
+    int profile_id = config_manager_get_active_profile_id();
+    if (profile_id < 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "No active profile");
+        cJSON_Delete(root);
+        return ESP_FAIL;
+    }
+
+    config_profile_t *profile = (config_profile_t*)malloc(sizeof(config_profile_t));
+    if (profile == NULL) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
+        cJSON_Delete(root);
+        return ESP_FAIL;
+    }
+
+    if (!config_manager_load_profile(profile_id, profile)) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to load profile");
+        free(profile);
+        cJSON_Delete(root);
+        return ESP_FAIL;
+    }
+
+    bool updated = apply_event_update_from_json(profile, profile_id, event_obj);
+    if (updated) {
+        config_manager_save_profile(profile_id, profile);
+    }
+
+    free(profile);
+    cJSON_Delete(root);
+
+    if (!updated) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Event update failed");
+        return ESP_FAIL;
+    }
+
+    cJSON *response = cJSON_CreateObject();
+    cJSON_AddStringToObject(response, "status", "ok");
+    const char *json_string = cJSON_Print(response);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, json_string);
+    free((void *)json_string);
+    cJSON_Delete(response);
+    return ESP_OK;
 }
 
 esp_err_t web_server_stop(void) {

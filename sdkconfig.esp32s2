@@ -883,21 +883,6 @@ CONFIG_ESP_SPI_BUS_LOCK_ISR_FUNCS_IN_IRAM=y
 # end of Hardware Settings
 
 #
-# LCD and Touch Panel
-#
-
-#
-# LCD Touch Drivers are maintained in the IDF Component Registry
-#
-
-#
-# LCD Peripheral Configuration
-#
-# CONFIG_LCD_ENABLE_DEBUG_LOG is not set
-# end of LCD Peripheral Configuration
-# end of LCD and Touch Panel
-
-#
 # ESP NETIF Adapter
 #
 CONFIG_ESP_NETIF_IP_LOST_TIMER_INTERVAL=120

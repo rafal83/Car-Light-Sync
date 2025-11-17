@@ -6,6 +6,7 @@
 #include "esp_system.h"
 #include "nvs_flash.h"
 
+#include "sdkconfig.h"
 #include "config.h"
 #include "wifi_manager.h"
 #include "wifi_credentials.h"  // Configuration WiFi optionnelle
@@ -17,6 +18,7 @@
 #include "ota_update.h"
 #include "version_info.h"
 #include "task_core_utils.h"
+#include "ble_api_service.h"
 
 #ifdef CONFIG_HAS_PSRAM
 #include "cJSON.h"
@@ -352,6 +354,21 @@ void app_main(void) {
     ESP_LOGI(TAG, "  URL: http://%s", wifi_status.ap_ip);
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "");
+
+#if CONFIG_BT_ENABLED
+    esp_err_t ble_init_status = ble_api_service_init();
+    if (ble_init_status == ESP_OK) {
+        esp_err_t ble_start_status = ble_api_service_start();
+        if (ble_start_status != ESP_OK) {
+            ESP_LOGW(TAG, "Impossible de démarrer le service BLE: %s",
+                     esp_err_to_name(ble_start_status));
+        }
+    } else {
+        ESP_LOGW(TAG, "Service BLE non disponible: %s", esp_err_to_name(ble_init_status));
+    }
+#else
+    ESP_LOGW(TAG, "BLE désactivé dans la configuration, Web Bluetooth indisponible");
+#endif
     
     // Créer les tâches
     create_task_on_led_core(led_task, "led_task", 4096, NULL, 5, NULL);
