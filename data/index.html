@@ -1049,7 +1049,7 @@
                     <span data-i18n="ota.loading">Chargement...</span>
                 </div>
             </div>
-            <div class="control-group">
+            <div id="ota-progress-title" class="control-group" style="display: none;">
                 <label class="control-label" data-i18n="ota.firmwareFile">Fichier Firmware (.bin)</label>
                 <input type="file" id="firmware-file" accept=".bin">
             </div>
@@ -1068,6 +1068,9 @@
             </div>
             <button class="btn-primary" onclick="uploadFirmware()" id="ota-upload-btn" data-i18n="ota.upload">Téléverser</button>
             <button class="btn-secondary" onclick="restartDevice()" id="ota-restart-btn" style="display: none;" data-i18n="ota.restart">Redémarrer</button>
+            <div id="ota-ble-note" style="display: none; margin-top: 12px; font-size: 14px; color: #FACC15;" data-i18n="ota.bleNote">
+                Connectez-vous au Wi-Fi de l'appareil (AP) pour effectuer la mise à jour.
+            </div>
         </div>
     </div>
     <!-- Modal pour nouveau profil -->
@@ -1437,7 +1440,8 @@
                     writing: "Écriture du firmware...",
                     success: "Mise à jour terminée, redémarrage imminent",
                     error: "Erreur pendant la mise à jour"
-                }
+                },
+                bleNote: "Connectez-vous au Wi-Fi de l'appareil (AP) pour effectuer la mise à jour."
             },
             config: {
                 restartEsp: "Redémarrer"
@@ -1795,7 +1799,8 @@
                     writing: "Writing firmware to flash...",
                     success: "Update completed, restart pending",
                     error: "Update failed"
-                }
+                },
+                bleNote: "Connect to the device's Wi-Fi (AP) to perform the update."
             },
             config: {
                 restartEsp: "Restart"
@@ -1981,9 +1986,9 @@
         const bleTextDecoder = new TextDecoder();
         const BLE_BUTTON_ICONS = {
             connect: '🔗',
-            disconnect: '✕',
-            connecting: '…',
-            unsupported: '⚠'
+            disconnect: '⛓️‍💥',
+            connecting: '⏳',
+            unsupported: '⚠️'
         };
         function normalizeUrl(url) {
             if (url instanceof URL) {
@@ -2480,8 +2485,30 @@
                 statusValue.dataset.i18n = 'ble.disconnected';
                 statusValue.textContent = t('ble.disconnected');
             }
+            updateOtaBleNote();
             updateConnectionOverlay();
-        }        async function toggleBleConnection() {
+        }
+        function updateOtaBleNote() {
+            const note = document.getElementById('ota-ble-note');
+            if (!note) {
+                return;
+            }
+            const useBle = bleTransport && typeof bleTransport.shouldUseBle === 'function'
+                ? bleTransport.shouldUseBle()
+                : false;
+            note.style.display = useBle ? 'block' : 'none';
+            const fileInput = document.getElementById('firmware-file');
+            const uploadBtn = document.getElementById('ota-upload-btn');
+            if (fileInput) {
+                fileInput.style.display = useBle ? 'none' : 'block';
+                fileInput.disabled = useBle;
+            }
+            if (uploadBtn) {
+                uploadBtn.style.display = useBle ? 'none' : 'inline-block';
+                uploadBtn.disabled = useBle;
+            }
+        }
+        async function toggleBleConnection() {
             if (!bleTransport.isSupported()) {
                 showNotification('ble-notification', t('ble.notSupported'), 'error');
                 return;
@@ -3630,13 +3657,23 @@
                 const busy = stateKey === 'receiving' || stateKey === 'writing';
                 if (uploadBtn) {
                     const effectiveBusy = busy || otaManualUploadRunning;
-                    uploadBtn.disabled = effectiveBusy;
-                    uploadBtn.style.display = effectiveBusy ? 'none' : 'inline-block';
+                    if (effectiveBusy) {
+                        uploadBtn.disabled = true;
+                        uploadBtn.style.display = 'none';
+                    } else if (!bleTransport.shouldUseBle()) {
+                        uploadBtn.disabled = false;
+                        uploadBtn.style.display = 'inline-block';
+                    }
                 }
                 if (fileInputEl) {
                     const effectiveBusy = busy || otaManualUploadRunning;
-                    fileInputEl.disabled = effectiveBusy;
-                    fileInputEl.style.display = effectiveBusy ? 'none' : 'block';
+                    if (effectiveBusy) {
+                        fileInputEl.disabled = true;
+                        fileInputEl.style.display = 'none';
+                    } else if (!bleTransport.shouldUseBle()) {
+                        fileInputEl.disabled = false;
+                        fileInputEl.style.display = 'block';
+                    }
                 }
                 if (restartBtn) {
                     restartBtn.style.display = stateKey === 'success' ? 'inline-block' : 'none';
@@ -3684,6 +3721,7 @@
             if (!confirm(t('ota.confirmUpdate'))) {
                 return;
             }
+            const progressTitle = document.getElementById('ota-progress-title');
             const progressContainer = document.getElementById('ota-progress-container');
             const progressBar = document.getElementById('ota-progress-bar');
             const progressPercent = document.getElementById('ota-progress-percent');
@@ -3691,6 +3729,7 @@
             const uploadBtn = document.getElementById('ota-upload-btn');
             const restartBtn = document.getElementById('ota-restart-btn');
             otaManualUploadRunning = true;
+            progressTitle.style.display = 'block';
             progressContainer.style.display = 'block';
             uploadBtn.disabled = true;
             uploadBtn.style.display = 'none';
@@ -4061,13 +4100,6 @@
 </div>
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 
