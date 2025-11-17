@@ -2035,13 +2035,13 @@
             };
         }
         // Notification helper
-        function showNotification(elementId, message, type) {
+        function showNotification(elementId, message, type, timeout = 2000) {
             const notification = document.getElementById(elementId);
             notification.textContent = message;
             notification.className = 'notification ' + type + ' show';
             setTimeout(() => {
                 notification.classList.remove('show');
-            }, 2000);
+            }, timeout);
         }
         async function parseApiResponse(response) {
             const rawText = await response.text();
@@ -2954,7 +2954,15 @@
             }
             try {
                 await fetch(API_BASE + '/api/ota/restart', { method: 'POST' });
-                document.getElementById('ota-status-message').textContent = t('ota.restarting');
+                const restartMessage = t('ota.restarting');
+                const otaStatusEl = document.getElementById('ota-status-message');
+                if (otaStatusEl) {
+                    otaStatusEl.textContent = restartMessage;
+                }
+                const configNotificationEl = document.getElementById('config-notification');
+                if (configNotificationEl) {
+                    showNotification('config-notification', restartMessage, 'info', 10000);
+                }
                 setTimeout(() => {
                     location.reload();
                 }, 10000);
