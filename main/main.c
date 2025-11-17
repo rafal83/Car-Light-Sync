@@ -16,6 +16,7 @@
 #include "config_manager.h"
 #include "ota_update.h"
 #include "version_info.h"
+#include "task_core_utils.h"
 
 #ifdef CONFIG_HAS_PSRAM
 #include "cJSON.h"
@@ -353,10 +354,10 @@ void app_main(void) {
     ESP_LOGI(TAG, "");
     
     // Créer les tâches
-    xTaskCreate(led_task, "led_task", 4096, NULL, 5, NULL);
-    xTaskCreate(can_event_task, "can_event_task", 4096, NULL, 4, NULL);
-    xTaskCreate(heartbeat_task, "heartbeat_task", 2048, NULL, 3, NULL);
-    xTaskCreate(monitor_task, "monitor_task", 4096, NULL, 2, NULL);
+    create_task_on_led_core(led_task, "led_task", 4096, NULL, 5, NULL);
+    create_task_on_general_core(can_event_task, "can_event_task", 4096, NULL, 4, NULL);
+    create_task_on_general_core(heartbeat_task, "heartbeat_task", 2048, NULL, 3, NULL);
+    create_task_on_general_core(monitor_task, "monitor_task", 4096, NULL, 2, NULL);
     
     ESP_LOGI(TAG, "Système démarré avec succès !");
     

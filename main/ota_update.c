@@ -9,6 +9,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
+#include "task_core_utils.h"
 
 static const char *TAG = "OTA";
 static const uint32_t OTA_REBOOT_DELAY_MS = 30000;
@@ -33,7 +34,7 @@ static void ota_schedule_reboot(void) {
     }
     ota_reboot_scheduled = true;
     ota_reboot_deadline = xTaskGetTickCount() + pdMS_TO_TICKS(OTA_REBOOT_DELAY_MS);
-    if (xTaskCreate(ota_reboot_task, "ota_reboot", 2048, NULL, 5, NULL) != pdPASS) {
+    if (create_task_on_general_core(ota_reboot_task, "ota_reboot", 2048, NULL, 5, NULL) != pdPASS) {
         ota_reboot_scheduled = false;
         ota_reboot_deadline = 0;
         ESP_LOGE(TAG, "Impossible de lancer la tâche de rédémarrage OTA");

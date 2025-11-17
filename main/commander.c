@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
+#include "task_core_utils.h"
 
 static const char *TAG = "Commander";
 
@@ -182,7 +183,7 @@ esp_err_t commander_connect(const char* ip_address, uint16_t port) {
 
     // Démarrer la tâche de réception
     running = true;
-    xTaskCreate(receive_task, "commander_rx", 4096, NULL, 5, &receive_task_handle);
+    create_task_on_general_core(receive_task, "commander_rx", 4096, NULL, 5, &receive_task_handle);
 
     ESP_LOGI(TAG, "Connecté au Commander");
     return ESP_OK;
