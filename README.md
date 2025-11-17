@@ -20,7 +20,7 @@ Système de contrôle LED RGB WS2812 pour Tesla, similaire au S3XY Strip, avec c
 ## 📋 Prérequis
 
 ### Matériel
-- ESP32 DevKit (ou compatible)
+- ESP32 DevKit / ESP32-S2 Saola / ESP32-S3 DevKitC (ou compatible)
 - Ruban LED WS2812 (ou WS2812B)
 - Alimentation 5V appropriée pour les LEDs
 - Tesla avec Commander Panda

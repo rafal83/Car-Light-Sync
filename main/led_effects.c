@@ -9,6 +9,7 @@
 #include "led_strip_encoder.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "soc/soc_caps.h"
 #include <string.h>
 #include <math.h>
 
@@ -233,9 +234,13 @@ static void led_strip_show(void) {
     }
 
     // Attendre la fin de la transmission (sans section critique)
-    ret = rmt_tx_wait_all_done(led_chan, 100);
-    if (ret != ESP_OK) {
+    ret = rmt_tx_wait_all_done(led_chan, pdMS_TO_TICKS(200));
+    if (ret == ESP_ERR_TIMEOUT) {
         ESP_LOGE(TAG, "Timeout transmission RMT");
+        rmt_disable(led_chan);
+        rmt_enable(led_chan);
+    } else if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Erreur rmt_tx_wait_all_done: %s", esp_err_to_name(ret));
     }
 }
 
@@ -924,11 +929,15 @@ bool led_effects_init(void) {
     rmt_tx_channel_config_t tx_chan_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,      // Utilise l'horloge par défaut
         .gpio_num = LED_PIN,
-        .mem_block_symbols = 64,              // Taille du bloc mémoire
+        .mem_block_symbols = 256,              // Buffer plus large
         .resolution_hz = 10000000,            // 10MHz (résolution de 0.1us)
         .trans_queue_depth = 4,               // Profondeur de la queue de transmission
         .flags.invert_out = false,            // Pas d'inversion du signal
-        .flags.with_dma = false,              // Pas de DMA nécessaire pour les LEDs
+#if SOC_RMT_SUPPORT_DMA
+        .flags.with_dma = true,               // DMA pour fiabiliser l'ESP32-S3
+#else
+        .flags.with_dma = false,              // Fallback sans DMA
+#endif
     };
 
     ret = rmt_new_tx_channel(&tx_chan_config, &led_chan);

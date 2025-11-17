@@ -10,7 +10,8 @@ import datetime
 import subprocess
 
 # Configuration
-BUILD_DIR = ".pio/build/esp32s2"
+_requested_env = os.environ.get("PIOENV") or os.environ.get("TESLA_STRIP_BUILD_ENV")
+BUILD_DIR = os.path.join(".pio", "build", _requested_env) if _requested_env else ".pio/build/esp32s3"
 RELEASE_DIR = "build"
 PROJECT_NAME = "tesla-strip"
 
