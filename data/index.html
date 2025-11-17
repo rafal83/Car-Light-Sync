@@ -121,39 +121,60 @@
             align-items: center;
             flex-wrap: wrap;
         }
-        .ble-status-pill {
+        .ble-status-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .ble-inline-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 0;
+            flex-wrap: wrap;
+        }
+        .ble-icon-button {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            margin: 0;
+            border-radius: 50%;
+            border: 1px solid var(--color-border);
+            background: var(--color-panel);
+            color: var(--color-text);
+            font-size: 15px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 999px;
-            border: 1px solid var(--color-input-border);
-            background: var(--color-panel);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--color-muted);
-            transition: border-color 0.3s, color 0.3s;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
         }
-        .ble-status-pill::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #E82127;
-            transition: background 0.3s;
+        .ble-icon-button:hover:not(:disabled) {
+            background: var(--color-input-bg);
         }
-        .ble-status-pill.connected {
-            color: #6ae0a6;
-            border-color: rgba(106, 224, 166, 0.4);
+        .ble-icon-button:disabled {
+            opacity: 0.5;
+            cursor: default;
         }
-        .ble-status-pill.connected::before {
-            background: #2ecc71;
+        .app-wrapper {
+            position: relative;
         }
-        .ble-helper-text {
-            font-size: 12px;
-            color: var(--color-muted);
-            margin-top: 4px;
+        .app-content.disabled {
+            pointer-events: none;
+            filter: blur(2px);
+            opacity: 0.4;
+        }
+        .connection-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            color: var(--color-text);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 500;
         }
         .header-control {
             display: flex;
@@ -181,16 +202,43 @@
         }
         .status-bar {
             display: flex;
-            justify-content: space-around;
-            padding: 15px;
+            align-items: stretch;
+            gap: 24px;
+            padding: 15px 24px;
             background: var(--color-panel);
             border-bottom: 1px solid var(--color-border);
             position: sticky;
             top: 0;
             z-index: 100;
+            flex-wrap: wrap;
         }
-        .status-item { text-align: center; font-size: 12px; }
-        .status-value { font-weight: bold; font-size: 16px; margin-top: 5px; }
+        .status-item {
+            min-width: 130px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 12px;
+        }
+        .status-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--color-muted);
+        }
+        .status-value {
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 0;
+        }
+        .status-item-ble {
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            min-width: 200px;
+        }
+        .status-item-ble .status-label {
+            margin-bottom: 0;
+        }
         .status-online { color: #10b981; }
         .status-offline { color: #E82127; }
         /* Tabs */
@@ -637,44 +685,48 @@
                         <option value="light" data-i18n="config.themeLight">Mode clair</option>
                     </select>
                 </div>
-                <div class="header-control ble-transport-control">
-                    <label data-i18n="ble.title">Connexion BLE</label>
-                    <div class="ble-transport-actions">
-                        <button id="ble-connect-button" class="btn-secondary" onclick="toggleBleConnection()" data-i18n="ble.connect">Connexion</button>
-                        <div id="ble-status-pill" class="ble-status-pill" data-i18n="ble.disconnected">Déconnecté</div>
-                    </div>
-                    <div id="ble-helper-text" class="ble-helper-text" hidden data-i18n="ble.notSupported">Web Bluetooth non supporté sur ce navigateur.</div>
-                </div>
             </div>
         </div>
         <div id="ble-notification" class="notification"></div>
         <div class="status-bar">
+            <div id="ble-status-item" class="status-item status-item-ble" hidden>
+              <button id="ble-connect-button" class="btn-secondary ble-icon-button" onclick="toggleBleConnection()" title="BLE"></button>
+              <div class="status-item">
+                  <div class="status-label" data-i18n="ble.title">Connexion BLE</div>
+                  <div class="status-value" id="ble-status-text" data-i18n="ble.disconnected">D�connect�</div>
+                </div>
+            </div>
             <div class="status-item">
-                <div data-i18n="status.wifi">WiFi</div>
+                <div class="status-label" data-i18n="status.wifi">WiFi</div>
                 <div class="status-value" id="wifi-status">...</div>
             </div>
             <div class="status-item">
-                <div data-i18n="status.commander">Commander</div>
+                <div class="status-label" data-i18n="status.commander">Commander</div>
                 <div class="status-value" id="commander-status">...</div>
             </div>
             <div class="status-item">
-                <div data-i18n="status.vehicle">Véhicule</div>
+                <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
                 <div class="status-value" id="vehicle-status">...</div>
             </div>
             <div class="status-item">
-                <div data-i18n="status.profile">Profil</div>
+                <div class="status-label" data-i18n="status.profile">Profil</div>
                 <div class="status-value" id="profile-status">...</div>
             </div>
         </div>
+        <div id="app-wrapper" class="app-wrapper">
+            <div id="connection-overlay" class="connection-overlay">
+                <div id="connection-overlay-message" class="overlay-content" data-i18n="app.waitingConnection">Connectez-vous en WiFi ou BLE pour continuer.</div>
+            </div>
+            <div id="app-content" class="app-content disabled">
         <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" onclick="switchTab('vehicle')" data-i18n="tabs.vehicle">Véhicule</button>
-          <button class="tab" onclick="switchTab('profiles')" data-i18n="tabs.profiles">Profils</button>
-          <button class="tab" onclick="switchTab('events-config')" data-i18n="tabs.eventsConfig">Événements</button>
-          <button class="tab" onclick="switchTab('simulation')" data-i18n="tabs.simulation">Simulation</button>
-          <button class="tab" onclick="switchTab('commander')" data-i18n="tabs.commander">Commander</button>
-          <button class="tab" onclick="switchTab('config')" data-i18n="tabs.config">Configuration</button>
-          <button class="tab" onclick="switchTab('ota')" data-i18n="tabs.ota">Mise à Jour</button>
+          <button class="tab active" data-tab="vehicle" onclick="switchTab('vehicle', event)" data-i18n="tabs.vehicle">Véhicule</button>
+          <button class="tab" data-tab="profiles" onclick="switchTab('profiles', event)" data-i18n="tabs.profiles">Profils</button>
+          <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)" data-i18n="tabs.eventsConfig">Événements</button>
+          <button class="tab" data-tab="simulation" onclick="switchTab('simulation', event)" data-i18n="tabs.simulation">Simulation</button>
+          <button class="tab" data-tab="commander" onclick="switchTab('commander', event)" data-i18n="tabs.commander">Commander</button>
+          <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.config">Configuration</button>
+          <button class="tab" data-tab="ota" onclick="switchTab('ota', event)" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
         <!-- Tab: Véhicule -->
         <div id="vehicle-tab" class="tab-content active">
@@ -826,6 +878,7 @@
                     <div class="vehicle-value" id="v-sentry-alert">--</div>
                 </div>
             </div>
+        </div>
         </div>
         <!-- Tab: Profils -->
         <div id="profiles-tab" class="tab-content">
@@ -1029,11 +1082,14 @@
     <script>
         const API_BASE = '';
         // Translations
+        let currentLang = 'en';
+        let currentTheme = 'dark';
         const translations = {
             fr: {
                 app: {
                     title: "TESLA STRIP CONTROLLER",
-                    subtitle: "Contrôle RGB synchronisé avec votre Tesla"
+                    subtitle: "Contrôle RGB synchronisé avec votre Tesla",
+                    waitingConnection: "Connectez-vous en WiFi ou BLE pour continuer."
                 },
                 status: {
                     wifi: "WiFi",
@@ -1059,7 +1115,8 @@
                     toastDisconnected: "Connexion BLE fermée",
                     toastError: "Erreur de communication BLE",
                     requestRejected: "Commande BLE refusée",
-                    timeout: "Délai d'attente BLE dépassé"
+                    timeout: "Délai d'attente BLE dépassé",
+                    tapToAuthorize: "Touchez l'écran pour autoriser la connexion BLE."
                 },
                 tabs: {
                     effects: "Effets LED",
@@ -1389,7 +1446,8 @@
         en: {
                 app: {
                     title: "TESLA STRIP CONTROLLER",
-                    subtitle: "RGB Control Synchronized with your Tesla"
+                    subtitle: "RGB Control Synchronized with your Tesla",
+                    waitingConnection: "Connect via WiFi or BLE to continue."
                 },
                 status: {
                     wifi: "WiFi",
@@ -1415,7 +1473,8 @@
                     toastDisconnected: "BLE disconnected",
                     toastError: "BLE communication error",
                     requestRejected: "BLE request rejected",
-                    timeout: "BLE request timed out"
+                    timeout: "BLE request timed out",
+                    tapToAuthorize: "Tap anywhere to authorize the BLE connection."
                 },
                 tabs: {
                     effects: "LED Effects",
@@ -1770,11 +1829,16 @@
             ? window.location.origin
             : 'http://localhost';
         let bleTransportInstance = null;
+        let bleAutoConnectInProgress = false;
+        let bleAutoConnectGestureCaptured = false;
+        let bleAutoConnectGestureHandlerRegistered = false;
+        let bleAutoConnectAwaitingGesture = false;
         let wifiOnline = !usingFileProtocol && navigator.onLine;
         let apiConnectionReady = wifiOnline;
         let apiConnectionResolvers = [];
         let initialDataLoaded = false;
         let initialDataLoadPromise = null;
+        let activeTabName = 'vehicle';
         let statusIntervalHandle = null;
         function isApiConnectionReady() {
             return wifiOnline || (bleTransportInstance && bleTransportInstance.isConnected());
@@ -1792,6 +1856,10 @@
             } else if (!ready) {
                 apiConnectionReady = false;
             }
+            updateConnectionOverlay();
+            if (!ready) {
+                maybeAutoConnectBle();
+            }
         }
         function waitForApiConnection() {
             if (isApiConnectionReady()) {
@@ -1801,6 +1869,90 @@
             return new Promise(resolve => {
                 apiConnectionResolvers.push(resolve);
             });
+        }
+        function registerBleAutoConnectGestureHandler() {
+            if (bleAutoConnectGestureHandlerRegistered) {
+                return;
+            }
+            bleAutoConnectGestureHandlerRegistered = true;
+            const unlock = () => {
+                document.removeEventListener('pointerdown', unlock);
+                document.removeEventListener('keydown', unlock);
+                bleAutoConnectGestureHandlerRegistered = false;
+                bleAutoConnectGestureCaptured = true;
+                bleAutoConnectAwaitingGesture = false;
+                if (!wifiOnline) {
+                    maybeAutoConnectBle(true);
+                } else {
+                    updateConnectionOverlay();
+                }
+            };
+            document.addEventListener('pointerdown', unlock, { once: true });
+            document.addEventListener('keydown', unlock, { once: true });
+        }
+        function maybeAutoConnectBle(fromGesture = false) {
+            if (!bleTransport.isSupported()) {
+                bleAutoConnectAwaitingGesture = false;
+                return;
+            }
+            if (wifiOnline) {
+                bleAutoConnectAwaitingGesture = false;
+                return;
+            }
+            const status = bleTransport.getStatus();
+            if (status === 'connected' || status === 'connecting') {
+                bleAutoConnectAwaitingGesture = false;
+                return;
+            }
+            if (!fromGesture && !bleAutoConnectGestureCaptured) {
+                bleAutoConnectAwaitingGesture = true;
+                registerBleAutoConnectGestureHandler();
+                updateConnectionOverlay();
+                return;
+            }
+            if (bleAutoConnectInProgress) {
+                return;
+            }
+            bleAutoConnectAwaitingGesture = false;
+            bleAutoConnectInProgress = true;
+            bleTransport.connect().catch(error => {
+                if (error && (error.name === 'SecurityError' || /SecurityError/i.test(error.message || ''))) {
+                    console.warn('BLE auto-connect blocked by browser security, waiting for interaction');
+                    bleAutoConnectGestureCaptured = false;
+                    bleAutoConnectAwaitingGesture = true;
+                    registerBleAutoConnectGestureHandler();
+                    updateConnectionOverlay();
+                } else {
+                    console.warn('BLE auto-connect failed', error);
+                }
+            }).finally(() => {
+                bleAutoConnectInProgress = false;
+                updateConnectionOverlay();
+            });
+        }
+        function updateConnectionOverlay() {
+            const overlay = document.getElementById('connection-overlay');
+            const message = document.getElementById('connection-overlay-message');
+            const content = document.getElementById('app-content');
+            const ready = isApiConnectionReady();
+            if (overlay) {
+                overlay.style.display = ready ? 'none' : 'flex';
+            }
+            if (message) {
+                if (!ready && bleAutoConnectAwaitingGesture) {
+                    message.textContent = t('ble.tapToAuthorize');
+                    message.dataset.i18n = 'ble.tapToAuthorize';
+                } else {
+                    message.textContent = t('app.waitingConnection');
+                    message.dataset.i18n = 'app.waitingConnection';
+                }
+            }
+            if (content) {
+                content.classList.toggle('disabled', !ready);
+            }
+            if (!ready && activeTabName !== 'vehicle') {
+                switchTab('vehicle');
+            }
         }
         function scheduleInitialDataLoad() {
             if (initialDataLoaded || initialDataLoadPromise) {
@@ -1827,6 +1979,12 @@
         });
         const bleTextEncoder = new TextEncoder();
         const bleTextDecoder = new TextDecoder();
+        const BLE_BUTTON_ICONS = {
+            connect: '🔗',
+            disconnect: '✕',
+            connecting: '…',
+            unsupported: '⚠'
+        };
         function normalizeUrl(url) {
             if (url instanceof URL) {
                 return url;
@@ -2110,7 +2268,9 @@
         }
         const bleTransport = new BleTransport();
         bleTransportInstance = bleTransport;
-        updateApiConnectionState();
+        if (!wifiOnline) {
+            maybeAutoConnectBle();
+        }
         const nativeFetch = window.fetch.bind(window);
         function shouldUseBleForRequest(url, isApiCallOverride) {
             if (!bleTransport.shouldUseBle()) {
@@ -2270,53 +2430,58 @@
             }
         ];
         // Language & theme management
-        let currentLang = localStorage.getItem('language') || 'en';
-        let currentTheme = localStorage.getItem('theme') || 'dark';
+        currentLang = localStorage.getItem('language') || currentLang;
+        currentTheme = localStorage.getItem('theme') || currentTheme;
         function updateBleUiState() {
             const button = document.getElementById('ble-connect-button');
-            const statusPill = document.getElementById('ble-status-pill');
-            const helper = document.getElementById('ble-helper-text');
-            if (!button || !statusPill || !helper) {
+            const statusValue = document.getElementById('ble-status-text');
+            const statusItem = document.getElementById('ble-status-item');
+            if (!button || !statusValue) {
                 return;
             }
             const supported = bleTransport.isSupported();
+            if (statusItem) {
+                statusItem.hidden = !supported;
+            }
             if (!supported) {
-                button.hidden = true;
                 button.disabled = true;
-                button.dataset.i18n = 'ble.connect';
-                button.textContent = t('ble.connect');
-                statusPill.classList.remove('connected');
-                statusPill.dataset.i18n = 'ble.statusUnsupported';
-                statusPill.textContent = t('ble.statusUnsupported');
-                helper.hidden = false;
+                button.textContent = BLE_BUTTON_ICONS.unsupported;
+                button.title = t('ble.notSupported');
+                button.setAttribute('aria-label', button.title);
+                statusValue.className = 'status-value status-offline';
+                statusValue.dataset.i18n = 'ble.statusUnsupported';
+                statusValue.textContent = t('ble.statusUnsupported');
+                updateConnectionOverlay();
                 return;
             }
-            helper.hidden = true;
             const status = bleTransport.getStatus();
             if (status === 'connected') {
                 button.disabled = false;
-                button.dataset.i18n = 'ble.disconnect';
-                button.textContent = t('ble.disconnect');
-                statusPill.classList.add('connected');
-                statusPill.dataset.i18n = 'ble.connected';
-                statusPill.textContent = t('ble.connected');
+                button.textContent = BLE_BUTTON_ICONS.disconnect;
+                button.title = t('ble.disconnect');
+                button.setAttribute('aria-label', button.title);
+                statusValue.className = 'status-value status-online';
+                statusValue.dataset.i18n = 'ble.connected';
+                statusValue.textContent = t('ble.connected');
             } else if (status === 'connecting') {
                 button.disabled = true;
-                button.dataset.i18n = 'ble.connecting';
-                button.textContent = t('ble.connecting');
-                statusPill.classList.remove('connected');
-                statusPill.dataset.i18n = 'ble.connecting';
-                statusPill.textContent = t('ble.connecting');
+                button.textContent = BLE_BUTTON_ICONS.connecting;
+                button.title = t('ble.connecting');
+                button.setAttribute('aria-label', button.title);
+                statusValue.className = 'status-value';
+                statusValue.dataset.i18n = 'ble.connecting';
+                statusValue.textContent = t('ble.connecting');
             } else {
                 button.disabled = false;
-                button.dataset.i18n = 'ble.connect';
-                button.textContent = t('ble.connect');
-                statusPill.classList.remove('connected');
-                statusPill.dataset.i18n = 'ble.disconnected';
-                statusPill.textContent = t('ble.disconnected');
+                button.textContent = BLE_BUTTON_ICONS.connect;
+                button.title = t('ble.connect');
+                button.setAttribute('aria-label', button.title);
+                statusValue.className = 'status-value status-offline';
+                statusValue.dataset.i18n = 'ble.disconnected';
+                statusValue.textContent = t('ble.disconnected');
             }
-        }
-        async function toggleBleConnection() {
+            updateConnectionOverlay();
+        }        async function toggleBleConnection() {
             if (!bleTransport.isSupported()) {
                 showNotification('ble-notification', t('ble.notSupported'), 'error');
                 return;
@@ -2458,13 +2623,19 @@
             }
             return config.enabled !== false;
         }
-        function switchTab(tabName) {
-            // Désactiver tous les tabs
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        function switchTab(tabName, evt) {
+            const tabs = document.querySelectorAll('.tabs .tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            // Activer le tab sélectionné
-            event.target.classList.add('active');
-            document.getElementById(tabName + '-tab').classList.add('active');
+            const button = (evt && evt.currentTarget) || document.querySelector(`.tabs .tab[data-tab="${tabName}"]`);
+            if (button) {
+                button.classList.add('active');
+            }
+            const target = document.getElementById(tabName + '-tab');
+            if (target) {
+                target.classList.add('active');
+            }
+            activeTabName = tabName;
             // Load data for specific tabs
             if (tabName === 'events-config') {
                 loadEventsConfig();
@@ -3880,10 +4051,22 @@
         applyTranslations();
         applyTheme();
         updateLanguageSelector();
+        updateBleUiState();
+        updateConnectionOverlay();
+        updateApiConnectionState();
         scheduleInitialDataLoad();
     </script>
+    </div>
+    </div>
+</div>
 </body>
 </html>
+
+
+
+
+
+
 
 
 

@@ -32,22 +32,14 @@ extern const uint8_t icon_svg_end[]   asm("_binary_icon_svg_end");
 static esp_err_t index_handler(httpd_req_t *req) {
     const size_t index_html_gz_size = (index_html_gz_end - index_html_gz_start);
 
-    // Définir les en-têtes HTTP
     httpd_resp_set_type(req, "text/html");
-    httpd_resp_set_hdr(req, "Content-Encoding", "gzip"); // Indiquer que c'est compressé
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000"); // Cache 1 an
+    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000");
 
-    ESP_LOGI(TAG, "Envoi de la page HTML compressée (%d octets)", index_html_gz_size);
-
-    // Envoyer directement le contenu compressé (petit fichier, pas besoin de chunks)
     esp_err_t err = httpd_resp_send(req, (const char *)index_html_gz_start, index_html_gz_size);
-
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Page HTML envoyée avec succès");
-    } else {
+    if (err != ESP_OK) {
         ESP_LOGE(TAG, "Erreur envoi HTML: %s", esp_err_to_name(err));
     }
-
     return err;
 }
 
@@ -1444,6 +1436,22 @@ esp_err_t web_server_start(void) {
     ESP_LOGI(TAG, "Demarrage du serveur web sur port %d", config.server_port);
 
     if (httpd_start(&server, &config) == ESP_OK) {
+        httpd_uri_t root_uri = {
+            .uri = "/",
+            .method = HTTP_GET,
+            .handler = index_handler,
+            .user_ctx = NULL
+        };
+        httpd_register_uri_handler(server, &root_uri);
+
+        httpd_uri_t icon_uri = {
+            .uri = "/icon.svg",
+            .method = HTTP_GET,
+            .handler = icon_handler,
+            .user_ctx = NULL
+        };
+        httpd_register_uri_handler(server, &icon_uri);
+
         httpd_uri_t config_uri = {
             .uri = "/api/config",
             .method = HTTP_GET,
