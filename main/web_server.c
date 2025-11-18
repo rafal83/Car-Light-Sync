@@ -28,29 +28,31 @@ extern const uint8_t index_html_gz_end[]   asm("_binary_index_html_gz_end");
 extern const uint8_t icon_svg_start[] asm("_binary_icon_svg_start");
 extern const uint8_t icon_svg_end[]   asm("_binary_icon_svg_end");
 
-// Handler pour la page principale
-static esp_err_t index_handler(httpd_req_t *req) {
-    const size_t index_html_gz_size = (index_html_gz_end - index_html_gz_start);
+// Structure pour les handler des fichiers statiques
+typedef struct {
+    const char *uri;
+    const uint8_t *start;
+    const uint8_t *end;
+    const char *content_type;
+    const char *cache_control;
+    const char *content_encoding;
+} static_file_route_t;
 
-    httpd_resp_set_type(req, "text/html");
-    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000");
+static esp_err_t static_file_handler(httpd_req_t *req) {
+    static_file_route_t *route = (static_file_route_t *)req->user_ctx;
+    const size_t file_size = (route->end - route->start);
 
-    esp_err_t err = httpd_resp_send(req, (const char *)index_html_gz_start, index_html_gz_size);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur envoi HTML: %s", esp_err_to_name(err));
+    httpd_resp_set_type(req, route->content_type);
+    if (route->cache_control) {
+        httpd_resp_set_hdr(req, "Cache-Control", route->cache_control);
     }
-    return err;
-}
+    if (route->content_encoding) {
+        httpd_resp_set_hdr(req, "Content-Encoding", route->content_encoding);
+    }
 
-static esp_err_t icon_handler(httpd_req_t *req) {
-    const size_t icon_size = (icon_svg_end - icon_svg_start);
-    httpd_resp_set_type(req, "image/svg+xml");
-    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000");
-
-    esp_err_t err = httpd_resp_send(req, (const char *)icon_svg_start, icon_size);
+    esp_err_t err = httpd_resp_send(req, (const char *)route->start, file_size);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur envoi favicon: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "Erreur envoi fichier statique pour URI %s: %s", route->uri, esp_err_to_name(err));
     }
     return err;
 }
@@ -1423,7 +1425,7 @@ esp_err_t web_server_init(void) {
 esp_err_t web_server_start(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = WEB_SERVER_PORT;
-    config.max_uri_handlers = 30; // Augmenté pour supporter toutes les routes
+    config.max_uri_handlers = 35; // Augmenté pour supporter toutes les routes
     config.lru_purge_enable = true;
 #ifndef CONFIG_HAS_PSRAM
     config.stack_size = 24576;
@@ -1436,21 +1438,21 @@ esp_err_t web_server_start(void) {
     ESP_LOGI(TAG, "Demarrage du serveur web sur port %d", config.server_port);
 
     if (httpd_start(&server, &config) == ESP_OK) {
-        httpd_uri_t root_uri = {
-            .uri = "/",
-            .method = HTTP_GET,
-            .handler = index_handler,
-            .user_ctx = NULL
+        static static_file_route_t static_files[] = {
+            {"/", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
+            {"/icon.svg", icon_svg_start, icon_svg_end, "image/svg+xml", "public, max-age=31536000", NULL}
         };
-        httpd_register_uri_handler(server, &root_uri);
+        int num_static_files = sizeof(static_files) / sizeof(static_files[0]);
 
-        httpd_uri_t icon_uri = {
-            .uri = "/icon.svg",
-            .method = HTTP_GET,
-            .handler = icon_handler,
-            .user_ctx = NULL
-        };
-        httpd_register_uri_handler(server, &icon_uri);
+        for (int i = 0; i < num_static_files; i++) {
+            httpd_uri_t uri = {
+                .uri = static_files[i].uri,
+                .method = HTTP_GET,
+                .handler = static_file_handler,
+                .user_ctx = &static_files[i]
+            };
+            httpd_register_uri_handler(server, &uri);
+        }
 
         httpd_uri_t config_uri = {
             .uri = "/api/config",
