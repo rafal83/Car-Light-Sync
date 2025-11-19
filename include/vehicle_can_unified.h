@@ -20,7 +20,6 @@ typedef struct {
 typedef struct {
     // Dynamique de base
     float    speed_kph;
-    float    speed_kmh;
     int8_t   gear;              // P=0, D=1, R=2... (à mapper selon Tesla)
     uint8_t  brake_pressed;     // 0/1
 
@@ -47,7 +46,9 @@ typedef struct {
     float    soc_percent;       // niveau de batterie (%)
     uint8_t  charging_cable;          // 0/1
     uint8_t  charging;          // 0/1
+    uint8_t  charge_status;
     float    charge_power_kw;
+    uint8_t  charging_port;
 
     // Divers
     uint8_t  sentry_mode;       // 0/1

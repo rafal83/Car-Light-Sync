@@ -77,17 +77,17 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
     if (id == 0x145) {
         if (strcmp(name, "ESP_brakeLamp") == 0) {
             // 0=OFF, 1=ON, 2=INVALID
-            state->brake_pressed = value ; //((int8_t)(value + 0.5f) == 1) ? 1 : 0;
+            // state->brake_pressed = value ; //((int8_t)(value + 0.5f) == 1) ? 1 : 0;
             return;
         }
     } else
 
     // ---------------------------------------------------------------------
-    // Odomètre : ID3F3UI_odo / UI_odometer (km)
+    // Odomètre
     // ---------------------------------------------------------------------
-    if (id == 0x3F3) {
-      if(strcmp(name, "UI_odometer") == 0) {
-        state->odometer_km = value;
+    if (id == 0x36B) {
+      if(strcmp(name, "Odometer3B6") == 0) {
+        state->odometer_km = value * 0.001f;
         return;
       }
     } else
@@ -134,7 +134,9 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
     // ---------------------------------------------------------------------
     if (id == 0x2E1) {
       if(strcmp(name, "VCFRONT_frunkLatchStatus") == 0) {
-        state->frunk_open = is_latch_open(value) ? 1 : 0;
+        if((value > 0) && (value <= 5)) {
+          state->frunk_open = (value == 1 || value == 5) ? 1 : 0;
+        }
         return;
       }
     } else
@@ -214,7 +216,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
     // ---------------------------------------------------------------------
     if (id == 0x292) { 
       if(strcmp(name, "SOCUI292") == 0) {
-        state->soc_percent = value;
+        state->soc_percent = value / 1.023;
         return;
       }
     } else
@@ -309,6 +311,26 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
         } else if (v == 2) {
             state->charging_cable = 1;
         }
+        return;
+      }
+    }
+
+    if (id == 0x212) { 
+      // 2 "BMS_ABOUT_TO_CHARGE" 
+      // 4 "BMS_CHARGE_COMPLETE"
+      // 5 "BMS_CHARGE_STOPPED"
+      // 3 "BMS_CHARGING"
+      // 0 "BMS_DISCONNECTED"
+      // 1 "BMS_NO_POWER"
+      if (strcmp(name, "BMS_uiChargeStatus") == 0) {
+        state->charge_status = value;
+        return;
+      }
+    }
+
+    if (id == 0x25D) {
+      if (strcmp(name, "CP_chargeDoorOpen") == 0) {
+        state->charging_port = value;
         return;
       }
     }

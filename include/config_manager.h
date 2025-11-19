@@ -81,11 +81,7 @@ typedef enum {
     CAN_EVENT_SENTRY_MODE_ON,   // Mode sentry armé
     CAN_EVENT_SENTRY_MODE_OFF,  // Mode sentry désarmé
     CAN_EVENT_SENTRY_ALERT,     // Détection/alarme sentry
-    CAN_EVENT_MAX,
-    CAN_EVENT_TURN_LEFT_OFF,
-    CAN_EVENT_TURN_RIGHT_OFF,
-    CAN_EVENT_TURN_HAZARD_OFF
-
+    CAN_EVENT_MAX
 } can_event_type_t;
 
 // Type d'action pour un événement CAN

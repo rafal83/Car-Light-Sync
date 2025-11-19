@@ -570,6 +570,10 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
            &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
            sizeof(can_event_effect_t));    
     profile->event_effects[CAN_EVENT_CHARGING_CABLE_DISCONNECTED].event = CAN_EVENT_CHARGING_CABLE_DISCONNECTED;
+    memcpy(&profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED],
+           &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
+           sizeof(can_event_effect_t));    
+    profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED].event = CAN_EVENT_CHARGING_PORT_OPENED;
     
     memcpy(&profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED],
            &profile->event_effects[CAN_EVENT_CHARGING_STARTED],

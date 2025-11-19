@@ -93,7 +93,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
     // État général
     cJSON_AddNumberToObject(vehicle, "gear", current_vehicle_state.gear);
-    cJSON_AddNumberToObject(vehicle, "speed", current_vehicle_state.speed_kmh);
+    cJSON_AddNumberToObject(vehicle, "speed", current_vehicle_state.speed_kph);
     cJSON_AddNumberToObject(vehicle, "brake_pressed", current_vehicle_state.brake_pressed);
 
     // Portes

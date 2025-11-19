@@ -830,8 +830,8 @@ static void effect_vehicle_sync(void) {
         base_color = (rgb_t){0, 255, 0};
     }
     // En mouvement = bleu
-    else if (last_vehicle_state.speed_kmh > 5.0f) {
-        uint8_t intensity = (uint8_t)(last_vehicle_state.speed_kmh * 2);
+    else if (last_vehicle_state.speed_kph > 5.0f) {
+        uint8_t intensity = (uint8_t)(last_vehicle_state.speed_kph * 2);
         if (intensity > 255) intensity = 255;
         base_color = (rgb_t){0, 0, intensity};
     }

@@ -84,16 +84,7 @@ static void can_event_task(void *pvParameters) {
             config_manager_stop_event(CAN_EVENT_TURN_RIGHT);
           } 
         }        
-        
-        // Charge
-        if (current_state.charging != previous_state.charging) {
-            if (current_state.charging) {
-                config_manager_process_can_event(CAN_EVENT_CHARGING);
-            } else if (current_state.soc_percent >= 80) {
-                config_manager_process_can_event(CAN_EVENT_CHARGE_COMPLETE);
-            }
-        }
-        
+                
         // Portes
         bool doors_open_now = current_state.doors_open_count > 0;
         bool doors_open_before = previous_state.doors_open_count > 0;
@@ -198,11 +189,43 @@ static void can_event_task(void *pvParameters) {
           }
         }
         
+        // Charge
+        if (current_state.charging != previous_state.charging) {
+            if (current_state.charging) {
+                config_manager_process_can_event(CAN_EVENT_CHARGING);
+            } else {
+                config_manager_stop_event(CAN_EVENT_CHARGING);
+            }
+        }
         if (current_state.charging_cable != previous_state.charging_cable) {
             if (current_state.charging_cable) {
                 config_manager_process_can_event(CAN_EVENT_CHARGING_CABLE_CONNECTED);
             } else {
                 config_manager_process_can_event(CAN_EVENT_CHARGING_CABLE_DISCONNECTED);
+            }
+        }
+        if (current_state.charging_port != previous_state.charging_port) {
+            if (current_state.charging_port) {
+                config_manager_process_can_event(CAN_EVENT_CHARGING_PORT_OPENED);
+            } else {
+                config_manager_stop_event(CAN_EVENT_CHARGING_PORT_OPENED);
+            }
+        }
+
+        if (current_state.charge_status != previous_state.charge_status) {
+            if (current_state.charge_status == 3) {
+              // config_manager_process_can_event(CAN_EVENT_CHARGING);
+            } else if (current_state.charge_status == 4) {
+              config_manager_process_can_event(CAN_EVENT_CHARGE_COMPLETE);
+            } else if (current_state.charge_status == 5) {
+              config_manager_process_can_event(CAN_EVENT_CHARGING_STARTED);
+            } else if (current_state.charge_status == 1) {
+              config_manager_process_can_event(CAN_EVENT_CHARGING_STOPPED);
+            } else {
+              config_manager_stop_event(CAN_EVENT_CHARGING);
+              config_manager_stop_event(CAN_EVENT_CHARGE_COMPLETE);
+              config_manager_stop_event(CAN_EVENT_CHARGING_STARTED);
+              config_manager_stop_event(CAN_EVENT_CHARGING_STOPPED);
             }
         }
 
@@ -232,8 +255,8 @@ static void can_event_task(void *pvParameters) {
         // Seuil de vitesse
         config_profile_t profile;
         if (config_manager_get_active_profile(&profile)) {
-            bool above_threshold_now = current_state.speed_kmh > profile.speed_threshold;
-            bool above_threshold_before = previous_state.speed_kmh > profile.speed_threshold;
+            bool above_threshold_now = current_state.speed_kph > profile.speed_threshold;
+            bool above_threshold_before = previous_state.speed_kph > profile.speed_threshold;
             
             if (above_threshold_now && !above_threshold_before) {
                 config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
