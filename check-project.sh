@@ -38,8 +38,8 @@ echo ""
 echo "📄 Vérification des fichiers d'en-tête..."
 check_file "include/config.h"
 check_file "include/wifi_manager.h"
-check_file "include/commander.h"
-check_file "include/tesla_can.h"
+check_file "include/can_bus.h"
+check_file "include/vehicle_can_unified.h"
 check_file "include/led_effects.h"
 check_file "include/web_server.h"
 check_file "include/config_manager.h"
@@ -48,7 +48,7 @@ echo ""
 echo "💻 Vérification des fichiers source..."
 check_file "main/main.c"
 check_file "main/wifi_manager.c"
-check_file "main/commander.c"
+check_file "main/can_bus.c"
 check_file "main/tesla_can.c"
 check_file "main/led_effects.c"
 check_file "main/web_server.c"
@@ -94,23 +94,15 @@ else
     ((WARNINGS++))
 fi
 
-# Vérifier la configuration Commander
-if grep -q "S3XY_OBD" include/config.h; then
-    echo "✓ Configuration S3XY_OBD présente"
-else
-    echo "✗ ERREUR: Configuration S3XY_OBD manquante"
-    ((ERRORS++))
-fi
-
 # Vérifier les nouveaux messages CAN
-if grep -q "CAN_ID_BLINDSPOT" include/tesla_can.h; then
+if grep -q "CAN_ID_BLINDSPOT" include/vehicle_can_unified.h; then
     echo "✓ Message CAN blindspot présent"
 else
     echo "✗ ERREUR: Message CAN blindspot manquant"
     ((ERRORS++))
 fi
 
-if grep -q "CAN_ID_NIGHT_MODE" include/tesla_can.h; then
+if grep -q "CAN_ID_NIGHT_MODE" include/vehicle_can_unified.h; then
     echo "✓ Message CAN night_mode présent"
 else
     echo "✗ ERREUR: Message CAN night_mode manquant"

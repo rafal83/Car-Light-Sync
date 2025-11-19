@@ -352,7 +352,7 @@ GET /api/status
 # Réponse:
 {
   "wifi_connected": true,
-  "commander_connected": true,
+  "can_bus_running": true,
   "vehicle_active": true,
   "vehicle": {
     "speed": 45.2,

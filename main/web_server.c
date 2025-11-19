@@ -2,8 +2,8 @@
 #include "config.h"
 #include "led_effects.h"
 #include "wifi_manager.h"
-#include "commander.h"
-#include "tesla_can.h"
+#include "can_bus.h"
+#include "vehicle_can_unified.h"
 #include "config_manager.h"
 #include "ota_update.h"
 #include "esp_log.h"
@@ -38,6 +38,17 @@ typedef struct {
     const char *content_encoding;
 } static_file_route_t;
 
+void web_server_update_vehicle_state(const vehicle_state_t* state)
+{
+    if (!state) return;
+    // Option simple
+    memcpy(&current_vehicle_state, state, sizeof(vehicle_state_t));
+
+    // Si tu veux être un peu parano sur la concurrence :
+    // taskENTER_CRITICAL / taskEXIT_CRITICAL autour du memcpy.
+}
+
+
 static esp_err_t static_file_handler(httpd_req_t *req) {
     static_file_route_t *route = (static_file_route_t *)req->user_ctx;
     const size_t file_size = (route->end - route->start);
@@ -67,69 +78,57 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(root, "wifi_connected", wifi_status.sta_connected);
     cJSON_AddStringToObject(root, "wifi_ip", wifi_status.sta_ip);
     
-    // Statut Commander
-    commander_status_t cmd_status;
-    commander_get_status(&cmd_status);
-    cJSON_AddBoolToObject(root, "commander_connected", cmd_status.connected);
+    // Statut CAN Bus
+    can_bus_status_t can_status;
+    can_bus_get_status(&can_status);
+    cJSON_AddBoolToObject(root, "can_bus_running", can_status.running);
     
     // Statut véhicule
     uint32_t now = xTaskGetTickCount();
-    bool vehicle_active = (now - current_vehicle_state.last_update) < pdMS_TO_TICKS(5000);
+    bool vehicle_active = (now - current_vehicle_state.last_update_ms) < pdMS_TO_TICKS(5000);
     cJSON_AddBoolToObject(root, "vehicle_active", vehicle_active);
     
     // Données véhicule complètes
     cJSON *vehicle = cJSON_CreateObject();
 
     // État général
-    cJSON_AddBoolToObject(vehicle, "ignition_on", current_vehicle_state.ignition_on);
     cJSON_AddNumberToObject(vehicle, "gear", current_vehicle_state.gear);
     cJSON_AddNumberToObject(vehicle, "speed", current_vehicle_state.speed_kmh);
-    cJSON_AddBoolToObject(vehicle, "brake_pressed", current_vehicle_state.brake_pressed);
+    cJSON_AddNumberToObject(vehicle, "brake_pressed", current_vehicle_state.brake_pressed);
 
     // Portes
     cJSON *doors = cJSON_CreateObject();
-    cJSON_AddBoolToObject(doors, "front_left", current_vehicle_state.door_fl);
-    cJSON_AddBoolToObject(doors, "front_right", current_vehicle_state.door_fr);
-    cJSON_AddBoolToObject(doors, "rear_left", current_vehicle_state.door_rl);
-    cJSON_AddBoolToObject(doors, "rear_right", current_vehicle_state.door_rr);
+    cJSON_AddBoolToObject(doors, "front_left", current_vehicle_state.door_front_left_open);
+    cJSON_AddBoolToObject(doors, "front_right", current_vehicle_state.door_front_right_open);
+    cJSON_AddBoolToObject(doors, "rear_left", current_vehicle_state.door_rear_left_open);
+    cJSON_AddBoolToObject(doors, "rear_right", current_vehicle_state.door_rear_right_open);
     cJSON_AddBoolToObject(doors, "trunk", current_vehicle_state.trunk_open);
     cJSON_AddBoolToObject(doors, "frunk", current_vehicle_state.frunk_open);
-    int doors_open = 0;
-    if (current_vehicle_state.door_fl) doors_open++;
-    if (current_vehicle_state.door_fr) doors_open++;
-    if (current_vehicle_state.door_rl) doors_open++;
-    if (current_vehicle_state.door_rr) doors_open++;
-    cJSON_AddNumberToObject(doors, "count_open", doors_open);
+    cJSON_AddNumberToObject(doors, "count_open", current_vehicle_state.doors_open_count);
     cJSON_AddItemToObject(vehicle, "doors", doors);
 
     // Verrouillage
     cJSON_AddBoolToObject(vehicle, "locked", current_vehicle_state.locked);
 
-    // Fenêtres (0-100%)
-    cJSON *windows = cJSON_CreateObject();
-    cJSON_AddNumberToObject(windows, "front_left", current_vehicle_state.window_fl);
-    cJSON_AddNumberToObject(windows, "front_right", current_vehicle_state.window_fr);
-    cJSON_AddNumberToObject(windows, "rear_left", current_vehicle_state.window_rl);
-    cJSON_AddNumberToObject(windows, "rear_right", current_vehicle_state.window_rr);
-    cJSON_AddItemToObject(vehicle, "windows", windows);
-
     // Lumières
     cJSON *lights = cJSON_CreateObject();
-    cJSON_AddBoolToObject(lights, "headlights", current_vehicle_state.headlights_on);
-    cJSON_AddBoolToObject(lights, "high_beams", current_vehicle_state.high_beams_on);
-    cJSON_AddBoolToObject(lights, "fog_lights", current_vehicle_state.fog_lights_on);
-    cJSON_AddNumberToObject(lights, "turn_signal", current_vehicle_state.turn_signal);
+    cJSON_AddBoolToObject(lights, "headlights", current_vehicle_state.headlights);
+    cJSON_AddBoolToObject(lights, "high_beams", current_vehicle_state.high_beams);
+    cJSON_AddBoolToObject(lights, "fog_lights", current_vehicle_state.fog_lights);
+    cJSON_AddBoolToObject(lights, "turn_left", current_vehicle_state.turn_left);
+    cJSON_AddBoolToObject(lights, "turn_right", current_vehicle_state.turn_right);
     cJSON_AddItemToObject(vehicle, "lights", lights);
 
     // Charge
     cJSON *charge = cJSON_CreateObject();
     cJSON_AddBoolToObject(charge, "charging", current_vehicle_state.charging);
-    cJSON_AddNumberToObject(charge, "percent", current_vehicle_state.charge_percent);
+    cJSON_AddNumberToObject(charge, "percent", current_vehicle_state.soc_percent);
     cJSON_AddNumberToObject(charge, "power_kw", current_vehicle_state.charge_power_kw);
     cJSON_AddItemToObject(vehicle, "charge", charge);
 
     // Batterie et autres
-    cJSON_AddNumberToObject(vehicle, "battery_12v", current_vehicle_state.battery_voltage);
+    cJSON_AddNumberToObject(vehicle, "battery_lv", current_vehicle_state.battery_voltage_LV);
+    cJSON_AddNumberToObject(vehicle, "battery_hv", current_vehicle_state.battery_voltage_HV);
     cJSON_AddNumberToObject(vehicle, "odometer_km", current_vehicle_state.odometer_km);
 
     // Sécurité
@@ -138,6 +137,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(safety, "blindspot_right", current_vehicle_state.blindspot_right);
     cJSON_AddBoolToObject(safety, "blindspot_warning", current_vehicle_state.blindspot_warning);
     cJSON_AddBoolToObject(safety, "night_mode", current_vehicle_state.night_mode);
+    cJSON_AddNumberToObject(safety, "brightness", current_vehicle_state.brightness);
     cJSON_AddItemToObject(vehicle, "safety", safety);
 
     cJSON_AddItemToObject(root, "vehicle", vehicle);
@@ -888,49 +888,6 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-// Handler pour connecter au Commander
-static esp_err_t commander_connect_handler(httpd_req_t *req) {
-    // Se connecter au WiFi S3XY_OBD
-    esp_err_t ret = wifi_manager_connect_sta(PANDA_WIFI_SSID, PANDA_WIFI_PASSWORD);
-    
-    if (ret == ESP_OK) {
-        // Attendre la connexion WiFi
-        vTaskDelay(pdMS_TO_TICKS(3000));
-        
-        // Se connecter au Commander à l'adresse fixe
-        ret = commander_connect(COMMANDER_IP, COMMANDER_PORT);
-    }
-    
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "status", (ret == ESP_OK) ? "ok" : "error");
-    
-    const char *json_string = cJSON_Print(root);
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, json_string);
-    
-    free((void *)json_string);
-    cJSON_Delete(root);
-    
-    return ESP_OK;
-}
-
-// Handler pour déconnecter du Commander
-static esp_err_t commander_disconnect_handler(httpd_req_t *req) {
-    commander_disconnect();
-    wifi_manager_disconnect_sta();
-    
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
-    
-    return ESP_OK;
-}
-
-// Callback pour les frames CAN reçues
-static void can_frame_callback(const can_frame_t* frame, void* user_data) {
-    process_can_frame(frame, &current_vehicle_state);
-    led_effects_update_vehicle_state(&current_vehicle_state);
-}
-
 // Handler pour obtenir les informations OTA
 static esp_err_t ota_info_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
@@ -1417,7 +1374,6 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 }
 
 esp_err_t web_server_init(void) {
-    commander_register_callback(can_frame_callback, NULL);
     ESP_LOGI(TAG, "Serveur web initialise");
     return ESP_OK;
 }
@@ -1485,23 +1441,7 @@ esp_err_t web_server_start(void) {
             .user_ctx = NULL
         };
         httpd_register_uri_handler(server, &save_uri);
-        
-        httpd_uri_t cmd_connect_uri = {
-            .uri = "/api/commander/connect",
-            .method = HTTP_POST,
-            .handler = commander_connect_handler,
-            .user_ctx = NULL
-        };
-        httpd_register_uri_handler(server, &cmd_connect_uri);
-        
-        httpd_uri_t cmd_disconnect_uri = {
-            .uri = "/api/commander/disconnect",
-            .method = HTTP_POST,
-            .handler = commander_disconnect_handler,
-            .user_ctx = NULL
-        };
-        httpd_register_uri_handler(server, &cmd_disconnect_uri);
-        
+               
         // Routes pour les profils
         httpd_uri_t profiles_uri = {
             .uri = "/api/profiles",

@@ -50,12 +50,6 @@ esp_err_t wifi_manager_disconnect_sta(void);
 int wifi_manager_scan_networks(uint32_t scan_time);
 
 /**
- * @brief Recherche automatique d'un Commander Panda
- * @return ESP_OK si trouvé et connecté
- */
-esp_err_t wifi_manager_auto_connect_panda(void);
-
-/**
  * @brief Obtient l'état actuel du WiFi
  * @param status Pointeur vers la structure de statut
  * @return ESP_OK si succès
@@ -74,5 +68,7 @@ esp_err_t wifi_manager_stop(void);
  * @return ESP_OK si succès
  */
 esp_err_t wifi_manager_set_mode(wifi_mode_t mode);
+
+bool wifi_wait_for_sta(uint32_t timeout_ms);
 
 #endif // WIFI_MANAGER_H

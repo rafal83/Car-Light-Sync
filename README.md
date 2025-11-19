@@ -294,7 +294,7 @@ tesla-strip/
 │   ├── config.h              # Configuration principale
 │   ├── wifi_manager.h        # Gestion WiFi
 │   ├── commander.h           # Communication Commander
-│   ├── tesla_can.h           # Décodage CAN Tesla
+│   ├── vehicle_can_unified.h           # Décodage CAN Tesla
 │   ├── led_effects.h         # Effets LED
 │   └── web_server.h          # Serveur web
 ├── main/
@@ -403,7 +403,7 @@ if (vehicle_state.door_fl || vehicle_state.door_fr) {
 
 ### Alerte batterie faible
 ```c
-if (vehicle_state.battery_voltage < 11.5) {
+if (vehicle_state.battery_voltage_LV < 11.5) {
     led_effects_set_solid_color(0xFF0000); // Rouge
 }
 ```

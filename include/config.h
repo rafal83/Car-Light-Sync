@@ -12,11 +12,7 @@
 #define WIFI_AP_PASSWORD    "tesla123"
 #define WIFI_MAX_CLIENTS    4
 
-// Configuration Commander
-#define COMMANDER_PORT      1338
-#define PANDA_WIFI_SSID     "S3XY_OBD"
-#define PANDA_WIFI_PASSWORD "12345678"
-#define COMMANDER_IP        "192.168.4.1"
+// Configuration CAN
 #define CAN_UPDATE_RATE_MS  100
 
 // Configuration Web Server

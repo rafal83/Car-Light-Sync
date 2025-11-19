@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "tesla_can.h"
+#include "vehicle_can_unified.h"
 
 // IDs alphanumériques stables pour les effets (ne changent jamais)
 #define EFFECT_ID_OFF               "OFF"

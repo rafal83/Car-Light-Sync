@@ -1,3 +1,4 @@
+#include "lwip/ip4_addr.h"
 #include "wifi_manager.h"
 #include "config.h"
 #include "esp_log.h"
@@ -16,6 +17,19 @@ static esp_netif_t *sta_netif = NULL;
 static int sta_retry_count = 0;
 static const int STA_MAX_RETRY = 5;
 static bool sta_auto_reconnect = true;
+
+bool wifi_wait_for_sta(uint32_t timeout_ms) {
+    uint32_t start = esp_log_timestamp();
+    while ((esp_log_timestamp() - start) < timeout_ms) {
+        wifi_status_t st;
+        wifi_manager_get_status(&st);
+        if (st.sta_connected) {
+            return true;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    return false;
+}
 
 // Event handler pour les événements WiFi
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
@@ -89,6 +103,16 @@ esp_err_t wifi_manager_init(void) {
     // Créer les interfaces réseau
     ap_netif = esp_netif_create_default_wifi_ap();
     sta_netif = esp_netif_create_default_wifi_sta();
+
+    // 🔧 Changer l'IP de l’AP pour éviter le conflit avec le Commander
+    esp_netif_ip_info_t ip_info;
+    IP4_ADDR(&ip_info.ip,      192, 168, 10, 1);
+    IP4_ADDR(&ip_info.gw,      192, 168, 10, 1);
+    IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
+
+    ESP_ERROR_CHECK(esp_netif_dhcps_stop(ap_netif));
+    ESP_ERROR_CHECK(esp_netif_set_ip_info(ap_netif, &ip_info));
+    ESP_ERROR_CHECK(esp_netif_dhcps_start(ap_netif));
 
     // Configuration WiFi par défaut
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -213,63 +237,6 @@ int wifi_manager_scan_networks(uint32_t scan_time) {
     
     ESP_LOGI(TAG, "%d réseaux trouvés", ap_count);
     return ap_count;
-}
-
-esp_err_t wifi_manager_auto_connect_panda(void) {
-    ESP_LOGI(TAG, "Recherche automatique du Commander Panda...");
-    
-    wifi_scan_config_t scan_config = {
-        .ssid = NULL,
-        .bssid = NULL,
-        .channel = 0,
-        .show_hidden = false
-    };
-
-    esp_err_t ret = esp_wifi_scan_start(&scan_config, true);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur scan: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
-    uint16_t ap_count = 0;
-    esp_wifi_scan_get_ap_num(&ap_count);
-    
-    if (ap_count == 0) {
-        ESP_LOGW(TAG, "Aucun réseau trouvé");
-        return ESP_FAIL;
-    }
-
-    wifi_ap_record_t *ap_list = malloc(sizeof(wifi_ap_record_t) * ap_count);
-    if (ap_list == NULL) {
-        ESP_LOGE(TAG, "Erreur allocation mémoire");
-        return ESP_ERR_NO_MEM;
-    }
-
-    esp_wifi_scan_get_ap_records(&ap_count, ap_list);
-
-    // Chercher un SSID commençant par "panda-"
-    bool found = false;
-    for (int i = 0; i < ap_count; i++) {
-        char ssid[33];
-        strncpy(ssid, (char*)ap_list[i].ssid, 32);
-        ssid[32] = '\0';
-        
-        if (strncmp(ssid, PANDA_WIFI_SSID, strlen(PANDA_WIFI_SSID)) == 0) {
-            ESP_LOGI(TAG, "Commander Panda trouvé: %s", ssid);
-            ret = wifi_manager_connect_sta(ssid, PANDA_WIFI_PASSWORD);
-            found = true;
-            break;
-        }
-    }
-
-    free(ap_list);
-    
-    if (!found) {
-        ESP_LOGW(TAG, "Aucun Commander Panda trouvé");
-        return ESP_FAIL;
-    }
-
-    return ESP_OK;
 }
 
 esp_err_t wifi_manager_get_status(wifi_status_t* status) {

@@ -2,7 +2,10 @@
 #define WEB_SERVER_H
 
 #include "esp_err.h"
+#include "vehicle_can_unified.h"
 #include <stdbool.h>
+
+void web_server_update_vehicle_state(const vehicle_state_t* state);
 
 /**
  * @brief Initialise le serveur web
@@ -27,5 +30,6 @@ esp_err_t web_server_stop(void);
  * @return true si actif
  */
 bool web_server_is_running(void);
+
 
 #endif // WEB_SERVER_H

@@ -701,8 +701,8 @@
                 <div class="status-value" id="wifi-status">...</div>
             </div>
             <div class="status-item">
-                <div class="status-label" data-i18n="status.commander">Commander</div>
-                <div class="status-value" id="commander-status">...</div>
+                <div class="status-label" data-i18n="status.can-bus">CAN Bus</div>
+                <div class="status-value" id="can-bus-status">...</div>
             </div>
             <div class="status-item">
                 <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
@@ -724,7 +724,6 @@
           <button class="tab" data-tab="profiles" onclick="switchTab('profiles', event)" data-i18n="tabs.profiles">Profils</button>
           <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)" data-i18n="tabs.eventsConfig">Événements</button>
           <button class="tab" data-tab="simulation" onclick="switchTab('simulation', event)" data-i18n="tabs.simulation">Simulation</button>
-          <button class="tab" data-tab="commander" onclick="switchTab('commander', event)" data-i18n="tabs.commander">Commander</button>
           <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.config">Configuration</button>
           <button class="tab" data-tab="ota" onclick="switchTab('ota', event)" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
@@ -734,10 +733,6 @@
             <!-- Section: État général -->
             <div class="section-subtitle" data-i18n="vehicle.generalState">État Général</div>
             <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.ignition">Contact</div>
-                    <div class="vehicle-value" id="v-ignition">--</div>
-                </div>
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.speed">Vitesse</div>
                     <div class="vehicle-value" id="v-speed">-- km/h</div>
@@ -783,26 +778,6 @@
                     <div class="vehicle-value" id="v-frunk">--</div>
                 </div>
             </div>
-            <!-- Section: Fenêtres -->
-            <div class="section-subtitle" data-i18n="vehicle.windowsTitle">Fenêtres</div>
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.windowFL">AV Gauche</div>
-                    <div class="vehicle-value" id="v-window-fl">--%</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.windowFR">AV Droite</div>
-                    <div class="vehicle-value" id="v-window-fr">--%</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.windowRL">AR Gauche</div>
-                    <div class="vehicle-value" id="v-window-rl">--%</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.windowRR">AR Droite</div>
-                    <div class="vehicle-value" id="v-window-rr">--%</div>
-                </div>
-            </div>
             <!-- Section: Charge -->
             <div class="section-subtitle" data-i18n="vehicle.chargeTitle">Charge</div>
             <div class="vehicle-grid">
@@ -843,8 +818,12 @@
             <div class="section-subtitle" data-i18n="vehicle.othersTitle">Autres</div>
             <div class="vehicle-grid">
                 <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.battery12v">Batterie 12V</div>
-                    <div class="vehicle-value" id="v-battery">-- V</div>
+                    <div class="vehicle-label" data-i18n="vehicle.batterylv">Batterie LV</div>
+                    <div class="vehicle-value" id="v-battery-lv">-- V</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.batteryhv">Batterie HV</div>
+                    <div class="vehicle-value" id="v-battery-hv">-- V</div>
                 </div>
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.odometer">Odomètre</div>
@@ -853,6 +832,10 @@
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.nightMode">Mode Nuit</div>
                     <div class="vehicle-value" id="v-night">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.brightness">Luminosité</div>
+                    <div class="vehicle-value" id="v-brightness">--</div>
                 </div>
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.blindspotLeft">Angle Mort G</div>
@@ -972,22 +955,6 @@
                 <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>
             </div>
         </div>
-        <!-- Tab: Commander -->
-        <div id="commander-tab" class="tab-content">
-            <div class="section-title" data-i18n="commander.title">Connexion Commander</div>
-            <div id="commander-notification" class="notification"></div>
-            <p style="margin-bottom: 20px; color: var(--color-muted);" data-i18n="commander.description">
-                Connectez-vous au Tesla Commander pour recevoir les données CAN du véhicule.
-            </p>
-            <button class="btn-primary" onclick="connectCommander()" data-i18n="commander.connect">Connecter</button>
-            <button class="btn-danger" onclick="disconnectCommander()" data-i18n="commander.disconnect">Déconnecter</button>
-            <div class="section" style="margin-top: 30px;">
-                <div class="section-title" data-i18n="commander.info">Informations</div>
-                <p><strong>SSID Commander:</strong> S3XY_OBD</p>
-                <p><strong>IP Commander:</strong> 192.168.4.1</p>
-                <p><strong>Port:</strong> 1338</p>
-            </div>
-        </div>
         <!-- Tab: Simulation -->
         <div id="simulation-tab" class="tab-content">
             <div class="section-title" data-i18n="simulation.title">Simulation d'Événements CAN</div>
@@ -1096,7 +1063,7 @@
                 },
                 status: {
                     wifi: "WiFi",
-                    commander: "Commander",
+                    canBus: "CAN Bus",
                     vehicle: "Véhicule",
                     profile: "Profil",
                     connected: "Connecté",
@@ -1127,7 +1094,6 @@
                     eventsConfig: "Événements",
                     canEvents: "Événements CAN",
                     config: "Configuration",
-                    commander: "Commander",
                     vehicle: "Véhicule",
                     simulation: "Simulation",
                     ota: "Mise à Jour"
@@ -1256,18 +1222,9 @@
                     factoryResetError: "Erreur lors de la réinitialisation",
                     deviceRestarting: "L'appareil va redémarrer dans quelques secondes..."
                 },
-                commander: {
-                    title: "Connexion Commander",
-                    description: "Connectez-vous au Tesla Commander pour recevoir les données CAN du véhicule.",
-                    connect: "Connecter",
-                    disconnect: "Déconnecter",
-                    info: "Informations",
-                    connecting: "Connexion au Commander..."
-                },
                 vehicle: {
                     title: "Données Véhicule",
                     generalState: "État Général",
-                    ignition: "Contact",
                     speed: "Vitesse",
                     gear: "Position de transmission",
                     brake: "Frein",
@@ -1280,11 +1237,6 @@
                     doorRR: "AR Droite",
                     trunk: "Coffre",
                     frunk: "Frunk",
-                    windowsTitle: "Fenêtres",
-                    windowFL: "AV Gauche",
-                    windowFR: "AV Droite",
-                    windowRL: "AR Gauche",
-                    windowRR: "AR Droite",
                     chargeTitle: "Charge",
                     charging: "En Charge",
                     chargePercent: "Niveau",
@@ -1295,7 +1247,8 @@
                     fogLights: "Anti-brouillard",
                     turnSignal: "Clignotant",
                     othersTitle: "Autres",
-                    battery12v: "Batterie 12V",
+                    batterylv: "Batterie LV",
+                    batteryhv: "Batterie HV",
                     odometer: "Odomètre",
                     nightMode: "Mode Nuit",
                     blindspotLeft: "Angle Mort G",
@@ -1455,7 +1408,7 @@
                 },
                 status: {
                     wifi: "WiFi",
-                    commander: "Commander",
+                    canBus: "CAN Bus",
                     vehicle: "Vehicle",
                     profile: "Profile",
                     connected: "Connected",
@@ -1486,7 +1439,6 @@
                     eventsConfig: "Events",
                     canEvents: "CAN Events",
                     config: "Configuration",
-                    commander: "Commander",
                     vehicle: "Vehicle",
                     simulation: "Simulation",
                     ota: "Update"
@@ -1615,18 +1567,9 @@
                     factoryResetError: "Error during reset",
                     deviceRestarting: "The device will restart in a few seconds..."
                 },
-                commander: {
-                    title: "Commander Connection",
-                    description: "Connect to Tesla Commander to receive vehicle CAN data.",
-                    connect: "Connect",
-                    disconnect: "Disconnect",
-                    info: "Information",
-                    connecting: "Connecting to Commander..."
-                },
                 vehicle: {
                     title: "Vehicle Data",
                     generalState: "General State",
-                    ignition: "Ignition",
                     speed: "Speed",
                     gear: "Gear",
                     brake: "Brake",
@@ -1639,11 +1582,6 @@
                     doorRR: "Rear Right",
                     trunk: "Trunk",
                     frunk: "Frunk",
-                    windowsTitle: "Windows",
-                    windowFL: "Front Left",
-                    windowFR: "Front Right",
-                    windowRL: "Rear Left",
-                    windowRR: "Rear Right",
                     chargeTitle: "Charge",
                     charging: "Charging",
                     chargePercent: "Level",
@@ -1654,7 +1592,8 @@
                     fogLights: "Fog Lights",
                     turnSignal: "Turn Signal",
                     othersTitle: "Others",
-                    battery12v: "12V Battery",
+                    batterylv: "LV Battery",
+                    batteryhv: "HV Battery",
                     odometer: "Odometer",
                     nightMode: "Night Mode",
                     blindspotLeft: "Blindspot L",
@@ -3424,24 +3363,6 @@
                 showNotification('events-notification', t('config.saveError'), 'error');
             }
         }
-        // Commander
-        async function connectCommander() {
-            try {
-                await fetch(API_BASE + '/api/commander/connect', { method: 'POST' });
-                showNotification('commander-notification', t('commander.connecting'), 'success');
-                updateStatus();
-            } catch (e) {
-                console.error('Erreur:', e);
-            }
-        }
-        async function disconnectCommander() {
-            try {
-                await fetch(API_BASE + '/api/commander/disconnect', { method: 'POST' });
-                updateStatus();
-            } catch (e) {
-                console.error('Erreur:', e);
-            }
-        }
         // Mise à jour du statut
         async function updateStatus() {
             try {
@@ -3449,8 +3370,8 @@
                 const data = await response.json();
                 document.getElementById('wifi-status').textContent = data.wifi_connected ? t('status.connected') : t('status.ap');
                 document.getElementById('wifi-status').className = 'status-value ' + (data.wifi_connected ? 'status-online' : 'status-offline');
-                document.getElementById('commander-status').textContent = data.commander_connected ? t('status.connected') : t('status.disconnected');
-                document.getElementById('commander-status').className = 'status-value ' + (data.commander_connected ? 'status-online' : 'status-offline');
+                document.getElementById('can-bus-status').textContent = data.can_bus_running ? t('status.connected') : t('status.disconnected');
+                document.getElementById('can-bus-status').className = 'status-value ' + (data.can_bus_running ? 'status-online' : 'status-offline');
                 document.getElementById('vehicle-status').textContent = data.vehicle_active ? t('status.active') : t('status.inactive');
                 document.getElementById('vehicle-status').className = 'status-value ' + (data.vehicle_active ? 'status-online' : 'status-offline');
                 if (data.active_profile_name) {
@@ -3460,9 +3381,8 @@
                 if (data.vehicle && data.vehicle_active) {
                     const v = data.vehicle;
                     // État général
-                    document.getElementById('v-ignition').textContent = v.ignition_on ? t('status.active') : t('status.inactive');
                     document.getElementById('v-speed').textContent = v.speed.toFixed(1) + ' km/h';
-                    document.getElementById('v-gear').textContent = ['P', 'R', 'N', 'D'][v.gear] || '--';
+                    document.getElementById('v-gear').textContent = ['--', 'P', 'R', 'N', 'D'][v.gear] || '--';
                     document.getElementById('v-brake').textContent = v.brake_pressed ? t('status.active') : t('status.inactive');
                     document.getElementById('v-locked').textContent = v.locked ? t('vehicle.locked') : t('vehicle.unlocked');
                     // Portes
@@ -3474,33 +3394,27 @@
                         document.getElementById('v-trunk').textContent = v.doors.trunk ? t('vehicle.open') : t('vehicle.closed');
                         document.getElementById('v-frunk').textContent = v.doors.frunk ? t('vehicle.open') : t('vehicle.closed');
                     }
-                    // Fenêtres (%)
-                    if (v.windows) {
-                        document.getElementById('v-window-fl').textContent = v.windows.front_left + '%';
-                        document.getElementById('v-window-fr').textContent = v.windows.front_right + '%';
-                        document.getElementById('v-window-rl').textContent = v.windows.rear_left + '%';
-                        document.getElementById('v-window-rr').textContent = v.windows.rear_right + '%';
-                    }
                     // Charge
                     if (v.charge) {
                         document.getElementById('v-charging').textContent = v.charge.charging ? t('status.active') : t('status.inactive');
-                        document.getElementById('v-charge').textContent = v.charge.percent + '%';
-                        document.getElementById('v-charge-power').textContent = v.charge.power_kw.toFixed(1) + ' kW';
+                        document.getElementById('v-charge').textContent = v.charge.percent?.toFixed(1) + '%';
+                        document.getElementById('v-charge-power').textContent = v.charge.power_kw?.toFixed(1) + ' kW';
                     }
                     // Lumières
                     if (v.lights) {
                         document.getElementById('v-headlights').textContent = v.lights.headlights ? t('status.active') : t('status.inactive');
                         document.getElementById('v-high-beams').textContent = v.lights.high_beams ? t('status.active') : t('status.inactive');
                         document.getElementById('v-fog-lights').textContent = v.lights.fog_lights ? t('status.active') : t('status.inactive');
-                        const turnSignal = ['Off', t('simulation.left'), t('simulation.right'), 'Warning'][v.lights.turn_signal] || 'Off';
-                        document.getElementById('v-turn-signal').textContent = turnSignal;
+                        document.getElementById('v-turn-signal').textContent = v.lights.turn_left ? t('simulation.left'): v.lights.turn_right ? t('simulation.right'): 'Off'
                     }
                     // Batterie et autres
-                    document.getElementById('v-battery').textContent = v.battery_12v.toFixed(2) + ' V';
+                    document.getElementById('v-battery-lv').textContent = v.battery_lv?.toFixed(2) + ' V';
+                    document.getElementById('v-battery-hv').textContent = v.battery_hv?.toFixed(2) + ' V';
                     document.getElementById('v-odometer').textContent = v.odometer_km.toLocaleString() + ' km';
                     // Sécurité
                     if (v.safety) {
                         document.getElementById('v-night').textContent = v.safety.night_mode ? t('status.active') : t('status.inactive');
+                        document.getElementById('v-brightness').textContent = v.safety.brightness;
                         document.getElementById('v-blindspot-left').textContent = v.safety.blindspot_left ? t('status.active') : t('status.inactive');
                         document.getElementById('v-blindspot-right').textContent = v.safety.blindspot_right ? t('status.active') : t('status.inactive');
 
@@ -3536,12 +3450,11 @@
                 } else {
                     // Afficher des tirets quand il n'y a pas de données
                     const fields = [
-                        'v-ignition', 'v-speed', 'v-gear', 'v-brake', 'v-locked',
+                        'v-speed', 'v-gear', 'v-brake', 'v-locked',
                         'v-door-fl', 'v-door-fr', 'v-door-rl', 'v-door-rr', 'v-trunk', 'v-frunk',
-                        'v-window-fl', 'v-window-fr', 'v-window-rl', 'v-window-rr',
                         'v-charging', 'v-charge', 'v-charge-power',
                         'v-headlights', 'v-high-beams', 'v-fog-lights', 'v-turn-signal',
-                        'v-battery', 'v-odometer', 'v-night', 'v-blindspot-left', 'v-blindspot-right',
+                        'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness', 'v-blindspot-left', 'v-blindspot-right',
                         'v-sentry-mode', 'v-sentry-request', 'v-sentry-alert'
                     ];
                     fields.forEach(id => {

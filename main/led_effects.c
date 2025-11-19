@@ -708,7 +708,7 @@ static void effect_charge_status(void) {
 
     // Utiliser le niveau de charge simulé ou réel
     uint8_t charge_level = last_vehicle_state.charging ?
-                           last_vehicle_state.charge_percent : simulated_charge;
+                           last_vehicle_state.soc_percent : simulated_charge;
 
     int target_led = (NUM_LEDS * charge_level) / 100;
     if (target_led >= NUM_LEDS) target_led = NUM_LEDS - 1;
@@ -822,8 +822,7 @@ static void effect_vehicle_sync(void) {
     rgb_t base_color = {0, 0, 0};
     
     // Portes ouvertes = rouge
-    if (last_vehicle_state.door_fl || last_vehicle_state.door_fr ||
-        last_vehicle_state.door_rl || last_vehicle_state.door_rr) {
+    if (last_vehicle_state.doors_open_count > 0) {
         base_color = (rgb_t){255, 0, 0};
     }
     // En charge = vert

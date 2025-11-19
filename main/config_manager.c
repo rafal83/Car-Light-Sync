@@ -519,6 +519,11 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
     profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].priority = 220;
     profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].enabled = false;
 
+    memcpy(&profile->event_effects[CAN_EVENT_FORWARD_COLISSION],
+           &profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING],
+           sizeof(can_event_effect_t));
+    profile->event_effects[CAN_EVENT_FORWARD_COLISSION].event = CAN_EVENT_FORWARD_COLISSION;
+
     // Hazard/Warning (clignotants de détresse)
     profile->event_effects[CAN_EVENT_TURN_HAZARD].event = CAN_EVENT_TURN_HAZARD;
     profile->event_effects[CAN_EVENT_TURN_HAZARD].action_type = EVENT_ACTION_APPLY_EFFECT;
@@ -690,6 +695,11 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
            sizeof(can_event_effect_t));   
     profile->event_effects[CAN_EVENT_AUTOPILOT_DISENGAGED].event = CAN_EVENT_AUTOPILOT_DISENGAGED;
 
+    memcpy(&profile->event_effects[CAN_EVENT_AUTOPILOT_ABORTING],
+           &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED],
+           sizeof(can_event_effect_t));   
+    profile->event_effects[CAN_EVENT_AUTOPILOT_ABORTING].event = CAN_EVENT_AUTOPILOT_ABORTING;
+
     memcpy(&profile->event_effects[CAN_EVENT_GEAR_DRIVE],
            &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED],
            sizeof(can_event_effect_t));   
@@ -790,7 +800,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
             ESP_LOGI(TAG, "Event %d: Switching to profile %d", event, event_effect->profile_id);
             config_manager_activate_profile(event_effect->profile_id);
 
-            return true;
+            return false;
         }
     }
 
@@ -977,75 +987,77 @@ bool config_manager_process_can_event(can_event_type_t event) {
     }
 
     if(event_effect->enabled) {
-    // Trouver un slot libre pour l'événement
-    int free_slot = -1;
-    int existing_slot = -1;
+      // Trouver un slot libre pour l'événement
+      int free_slot = -1;
+      int existing_slot = -1;
 
-    // Chercher si l'événement est déjà actif ou trouver un slot libre
-    for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-        if (active_events[i].active && active_events[i].event == event) {
-            existing_slot = i;
-            break;
-        }
-        if (!active_events[i].active && free_slot == -1) {
-            free_slot = i;
-        }
-    }
+      // Chercher si l'événement est déjà actif ou trouver un slot libre
+      for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+          if (active_events[i].active && active_events[i].event == event) {
+              existing_slot = i;
+              break;
+          }
+          if (!active_events[i].active && free_slot == -1) {
+              free_slot = i;
+          }
+      }
 
-    // Si l'événement existe déjà, le mettre à jour
-    int slot = (existing_slot >= 0) ? existing_slot : free_slot;
+      // Si l'événement existe déjà, le mettre à jour
+      int slot = (existing_slot >= 0) ? existing_slot : free_slot;
 
-    if (slot < 0) {
-        // Pas de slot libre, vérifier si on peut écraser un événement de priorité inférieure
-        int lowest_priority_slot = -1;
-        uint8_t lowest_priority = 255;
+      if (slot < 0) {
+          // Pas de slot libre, vérifier si on peut écraser un événement de priorité inférieure
+          int lowest_priority_slot = -1;
+          uint8_t lowest_priority = 255;
 
-        for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-            if (active_events[i].active && active_events[i].priority < priority &&
-                active_events[i].priority < lowest_priority) {
-                lowest_priority = active_events[i].priority;
-                lowest_priority_slot = i;
-            }
-        }
+          for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+              if (active_events[i].active && active_events[i].priority < priority &&
+                  active_events[i].priority < lowest_priority) {
+                  lowest_priority = active_events[i].priority;
+                  lowest_priority_slot = i;
+              }
+          }
 
-        if (lowest_priority_slot >= 0) {
-            slot = lowest_priority_slot;
-            ESP_LOGI(TAG, "Écrasement événement priorité %d par priorité %d", lowest_priority, priority);
-        } else {
-            ESP_LOGW(TAG, "Événement '%s' ignoré (pas de slot disponible)",
-                    config_manager_get_event_name(event));
-            return false;
-        }
-    }
+          if (lowest_priority_slot >= 0) {
+              slot = lowest_priority_slot;
+              ESP_LOGI(TAG, "Écrasement événement priorité %d par priorité %d", lowest_priority, priority);
+          } else {
+              // ESP_LOGW(TAG, "Événement '%s' ignoré (pas de slot disponible)",
+                      // config_manager_get_event_name(event));
+              return false;
+          }
+      }
 
-    // Enregistrer l'événement actif
-    active_events[slot].event = event;
-    active_events[slot].effect_config = effect_to_apply;
-    active_events[slot].start_time = xTaskGetTickCount();
-    active_events[slot].duration_ms = duration_ms;
-    active_events[slot].priority = priority;
-    active_events[slot].active = true;
+      // Enregistrer l'événement actif
+      active_events[slot].event = event;
+      active_events[slot].effect_config = effect_to_apply;
+      active_events[slot].start_time = xTaskGetTickCount();
+      active_events[slot].duration_ms = duration_ms;
+      active_events[slot].priority = priority;
+      active_events[slot].active = true;
 
-    // Appliquer immédiatement l'effet de plus haute priorité actif
-    led_effects_set_config(&effect_to_apply);
-    effect_override_active = true;
+      // Appliquer immédiatement l'effet de plus haute priorité actif
+      led_effects_set_config(&effect_to_apply);
+      effect_override_active = true;
 
-    if (duration_ms > 0) {
-        ESP_LOGI(TAG, "Effet '%s' activé pour %dms (priorité %d)",
-                config_manager_get_event_name(event),
-                duration_ms,
-                priority);
+      if (duration_ms > 0) {
+          ESP_LOGI(TAG, "Effet '%s' activé pour %dms (priorité %d)",
+                  config_manager_get_event_name(event),
+                  duration_ms,
+                  priority);
+      } else {
+          ESP_LOGI(TAG, "Effet '%s' activé (permanent, priorité %d)",
+                  config_manager_get_event_name(event),
+                  priority);
+      }
+
+      return true;
     } else {
-        ESP_LOGI(TAG, "Effet '%s' activé (permanent, priorité %d)",
-                config_manager_get_event_name(event),
-                priority);
+      // ESP_LOGW(TAG, "Effet par défaut ignoré pour '%s'",
+      //         config_manager_get_event_name(event));
     }
-  } else {
-    ESP_LOGW(TAG, "Effet par défaut ignoré pour '%s'",
-            config_manager_get_event_name(event));
-  }
 
-    return true;
+    return false;
 }
 
 void config_manager_stop_event(can_event_type_t event) {
@@ -1198,11 +1210,13 @@ const char* config_manager_enum_to_id(can_event_type_t event) {
         case CAN_EVENT_BLINDSPOT_LEFT:      return EVENT_ID_BLINDSPOT_LEFT;
         case CAN_EVENT_BLINDSPOT_RIGHT:     return EVENT_ID_BLINDSPOT_RIGHT;
         case CAN_EVENT_BLINDSPOT_WARNING:     return EVENT_ID_BLINDSPOT_WARNING;
+        case CAN_EVENT_FORWARD_COLISSION:     return EVENT_ID_EVENT_FORWARD_COLISSION;
         case CAN_EVENT_NIGHT_MODE_ON:       return EVENT_ID_NIGHT_MODE_ON;
         case CAN_EVENT_NIGHT_MODE_OFF:      return EVENT_ID_NIGHT_MODE_OFF;
         case CAN_EVENT_SPEED_THRESHOLD:     return EVENT_ID_SPEED_THRESHOLD;
         case CAN_EVENT_AUTOPILOT_ENGAGED:   return EVENT_ID_AUTOPILOT_ENGAGED;
         case CAN_EVENT_AUTOPILOT_DISENGAGED: return EVENT_ID_AUTOPILOT_DISENGAGED;
+        case CAN_EVENT_AUTOPILOT_ABORTING:  return EVENT_ID_AUTOPILOT_ABORTING;
         case CAN_EVENT_GEAR_DRIVE:          return EVENT_ID_GEAR_DRIVE;
         case CAN_EVENT_GEAR_REVERSE:        return EVENT_ID_GEAR_REVERSE;
         case CAN_EVENT_GEAR_PARK:           return EVENT_ID_GEAR_PARK;
@@ -1237,11 +1251,13 @@ can_event_type_t config_manager_id_to_enum(const char* id) {
     if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT) == 0)       return CAN_EVENT_BLINDSPOT_LEFT;
     if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)      return CAN_EVENT_BLINDSPOT_RIGHT;
     if (strcmp(id, EVENT_ID_BLINDSPOT_WARNING) == 0)      return CAN_EVENT_BLINDSPOT_WARNING;
+    if (strcmp(id, EVENT_ID_EVENT_FORWARD_COLISSION) == 0)      return CAN_EVENT_FORWARD_COLISSION;
     if (strcmp(id, EVENT_ID_NIGHT_MODE_ON) == 0)        return CAN_EVENT_NIGHT_MODE_ON;
     if (strcmp(id, EVENT_ID_NIGHT_MODE_OFF) == 0)       return CAN_EVENT_NIGHT_MODE_OFF;
     if (strcmp(id, EVENT_ID_SPEED_THRESHOLD) == 0)      return CAN_EVENT_SPEED_THRESHOLD;
     if (strcmp(id, EVENT_ID_AUTOPILOT_ENGAGED) == 0)    return CAN_EVENT_AUTOPILOT_ENGAGED;
     if (strcmp(id, EVENT_ID_AUTOPILOT_DISENGAGED) == 0) return CAN_EVENT_AUTOPILOT_DISENGAGED;
+    if (strcmp(id, EVENT_ID_AUTOPILOT_ABORTING) == 0) return CAN_EVENT_AUTOPILOT_ABORTING;
     if (strcmp(id, EVENT_ID_GEAR_DRIVE) == 0)           return CAN_EVENT_GEAR_DRIVE;
     if (strcmp(id, EVENT_ID_GEAR_REVERSE) == 0)         return CAN_EVENT_GEAR_REVERSE;
     if (strcmp(id, EVENT_ID_GEAR_PARK) == 0)            return CAN_EVENT_GEAR_PARK;
@@ -1267,6 +1283,7 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
         case CAN_EVENT_UNLOCKED:
         case CAN_EVENT_AUTOPILOT_ENGAGED:
         case CAN_EVENT_AUTOPILOT_DISENGAGED:
+        case CAN_EVENT_AUTOPILOT_ABORTING:
         case CAN_EVENT_GEAR_DRIVE:
         case CAN_EVENT_GEAR_REVERSE:
         case CAN_EVENT_GEAR_PARK:
