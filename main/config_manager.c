@@ -16,7 +16,7 @@ static config_profile_t profiles[MAX_PROFILES];
 static int active_profile_id = -1;
 
 // Système d'événements multiples
-#define MAX_ACTIVE_EVENTS 4
+#define MAX_ACTIVE_EVENTS 5
 typedef struct {
     can_event_type_t event;
     effect_config_t effect_config;

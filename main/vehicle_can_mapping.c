@@ -2,6 +2,7 @@
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
 #include "config_manager.h"   // pour can_event_type_t + can_event_trigger
+#include "esp_log.h"
 
 // Helper latch -> ouvert/fermé
 static inline int is_latch_open(float raw)
@@ -75,11 +76,11 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
         }
     } else
     if (id == 0x145) {
-        if (strcmp(name, "ESP_brakeLamp") == 0) {
-            // 0=OFF, 1=ON, 2=INVALID
-            // state->brake_pressed = value ; //((int8_t)(value + 0.5f) == 1) ? 1 : 0;
-            return;
-        }
+        // if (strcmp(name, "ESP_brakeApply") == 0) {
+        //     // 0=OFF, 1=ON, 2=INVALID
+        //     state->brake_pressed = value ; //((int8_t)(value + 0.5f) == 1) ? 1 : 0;
+        //     return;
+        // }
     } else
 
     // ---------------------------------------------------------------------
@@ -135,7 +136,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
     if (id == 0x2E1) {
       if(strcmp(name, "VCFRONT_frunkLatchStatus") == 0) {
         if((value > 0) && (value <= 5)) {
-          state->frunk_open = (value == 1 || value == 5) ? 1 : 0;
+          state->frunk_open = (value == 1/* || value == 5*/) ? 1 : 0;
         }
         return;
       }
@@ -210,6 +211,12 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
             return;
         }
     } else
+    if (id == 0x334) { 
+      if(strcmp(name, "UI_speedLimit") == 0) {
+        state->speed_threshold = value;
+        return;
+      }
+    } else
 
     // ---------------------------------------------------------------------
     // SOC : ID292BMS_SOC / SOCUI292
@@ -270,7 +277,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
         return;
       }
       if (strcmp(name, "UI_alarmEnabled") == 0) {
-        state->sentry_alert = value;
+        // state->sentry_alert = value;
         return;
       }
       if (strcmp(name, "UI_intrusionSensorOn") == 0) {
@@ -294,15 +301,9 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
     // ---------------------------------------------------------------------
     if (id == 0x284) { 
       if(strcmp(name, "UIsentryMode284") == 0) {
-        state->sentry_mode = (value > 0.5f) ? 1 : 0;
+        // state->sentry_mode = (value > 0.5f) ? 1 : 0;
         return;
-      }
-    } else
-    
-    // ---------------------------------------------------------------------
-    // Présence câble : CP_chargeCablePresent
-    // ---------------------------------------------------------------------
-    if (id == 0x284) { 
+      } else
       if (strcmp(name, "CP_chargeCablePresent") == 0) {
         int v = (int)(value + 0.5f);
         // 1 = NOT_CONNECTED, 2 = CONNECTED (voir mapping dans JSON)
@@ -330,7 +331,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
 
     if (id == 0x25D) {
       if (strcmp(name, "CP_chargeDoorOpen") == 0) {
-        state->charging_port = value;
+        state->charging_port = (value > 0.5f) ? 1 : 0;
         return;
       }
     }

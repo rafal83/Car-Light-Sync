@@ -254,7 +254,6 @@ typedef struct {
     can_event_effect_t event_effects[22];   // 22 × 80 = 1760 bytes
     bool auto_night_mode;                   // 1 byte
     uint8_t night_brightness;               // 1 byte
-    uint16_t speed_threshold;               // 2 bytes
     uint8_t padding[4];                     // Alignement
 } config_profile_t;
 

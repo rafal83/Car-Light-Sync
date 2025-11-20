@@ -180,6 +180,6 @@ esp_err_t can_bus_get_status(can_bus_status_t* out)
     out->rx_count = s_rx_count;
     out->tx_count = s_tx_count;
     out->errors   = s_errors;
-    out->running  = s_running;
+    out->running  = s_rx_count > 0; // Il faut au moins recevoir quelque chose
     return ESP_OK;
 }

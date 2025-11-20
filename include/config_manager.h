@@ -112,7 +112,6 @@ typedef struct {
     // Paramètres généraux
     bool auto_night_mode;       // Active automatiquement le mode nuit
     uint8_t night_brightness;   // Luminosité en mode nuit (0-255)
-    uint16_t speed_threshold;   // Seuil de vitesse pour événement (km/h)
     
     // Métadonnées
     bool active;                // Profil actif

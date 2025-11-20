@@ -55,13 +55,18 @@ static void led_task(void *pvParameters) {
 // Tâche de traitement des événements CAN
 static void can_event_task(void *pvParameters) {
     ESP_LOGI(TAG, "Tâche événements CAN démarrée");
-    
-    vehicle_state_t current_state;
-    vehicle_state_t previous_state = {0};
-    
+
+    // Utiliser static pour éviter de surcharger la stack
+    static vehicle_state_t current_state;
+    static vehicle_state_t previous_state = {0};
+    // static config_profile_t profile;
+    // bool has_profile = false;
+
     while (1) {
         // Copier l'état actuel
         memcpy(&current_state, &last_vehicle_state, sizeof(vehicle_state_t));
+
+        // has_profile = config_manager_get_active_profile(&profile);
 
         // Détecter les changements d'état et générer des événements
         // Clignotants - IMPORTANT: if séparés pour détecter chaque changement indépendamment
@@ -259,15 +264,11 @@ static void can_event_task(void *pvParameters) {
         //     }
         // }
         
-        // Seuil de vitesse
-        config_profile_t profile;
-        if (config_manager_get_active_profile(&profile)) {
-            bool above_threshold_now = current_state.speed_kph > profile.speed_threshold;
-            bool above_threshold_before = previous_state.speed_kph > profile.speed_threshold;
-            
-            if (above_threshold_now && !above_threshold_before) {
-                config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
-            }
+        // Seuil de vitesse - Utiliser static pour éviter surcharge de la stack
+        if (current_state.speed_kph > current_state.speed_threshold) {
+          config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
+        } else {
+          config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
         }
         
         // Sauvegarder l'état précédent
@@ -343,13 +344,27 @@ static void psram_free(void* ptr) {
 void app_main(void) {
     // Désactivé temporairement : cJSON utilise la RAM normale au lieu de PSRAM
     // pour éviter les conflits avec la tâche LED/RMT
-    // #ifdef CONFIG_HAS_PSRAM
-    //     cJSON_Hooks hooks = {
-    //         .malloc_fn = psram_malloc,
-    //         .free_fn = psram_free
-    //     };
-    //     cJSON_InitHooks(&hooks);
-    // #endif
+    #ifdef CONFIG_HAS_PSRAM
+        cJSON_Hooks hooks = {
+            .malloc_fn = psram_malloc,
+            .free_fn = psram_free
+        };
+        cJSON_InitHooks(&hooks);
+    #endif
+
+    // Réduire le niveau de log de tous les composants ESP-IDF
+    esp_log_level_set("*", ESP_LOG_WARN);           // Par défaut : warnings seulement
+    esp_log_level_set("wifi", ESP_LOG_ERROR);       // WiFi : erreurs seulement
+    esp_log_level_set("esp_netif_handlers", ESP_LOG_ERROR);
+    
+    // Activer VOS logs
+    esp_log_level_set("Main", ESP_LOG_INFO);
+    esp_log_level_set("CAN_BUS", ESP_LOG_INFO);
+    esp_log_level_set("WiFi", ESP_LOG_INFO);        // Votre module WiFi
+    esp_log_level_set("WebServer", ESP_LOG_INFO);
+    esp_log_level_set("LEDStrip", ESP_LOG_INFO);
+    esp_log_level_set("ConfigMgr", ESP_LOG_INFO);
+    esp_log_level_set("OTA", ESP_LOG_INFO);
 
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "    Tesla Strip Controller      ");
@@ -373,20 +388,7 @@ void app_main(void) {
 
     // Initialiser les modules
     ESP_LOGI(TAG, "Initialisation des modules...");
-    
-    // WiFi
-    ESP_ERROR_CHECK(wifi_manager_init());
-    ESP_ERROR_CHECK(wifi_manager_start_ap());
-
-#ifdef WIFI_AUTO_CONNECT
-    // Connexion automatique au WiFi domestique si configuré
-    ESP_LOGI(TAG, "Tentative de connexion à %s...", WIFI_HOME_SSID);
-    wifi_manager_connect_sta(WIFI_HOME_SSID, WIFI_HOME_PASSWORD);
-    vTaskDelay(pdMS_TO_TICKS(5000)); // Attendre 5s pour la connexion
-#endif
-
-    ESP_LOGI(TAG, "✓ WiFi initialisé");
-    
+        
     // CAN direct
     ESP_ERROR_CHECK(can_bus_init());
     ESP_ERROR_CHECK(can_bus_register_callback(vehicle_can_callback, NULL));
@@ -406,24 +408,6 @@ void app_main(void) {
         return;
     }
     ESP_LOGI(TAG, "✓ Gestionnaire de configuration initialisé");
-    
-    // Serveur web
-    ESP_ERROR_CHECK(web_server_init());
-    ESP_ERROR_CHECK(web_server_start());
-    ESP_LOGI(TAG, "✓ Serveur web démarré");
-    
-    // Afficher les informations de connexion
-    wifi_status_t wifi_status;
-    wifi_manager_get_status(&wifi_status);
-    
-    ESP_LOGI(TAG, "");
-    ESP_LOGI(TAG, "=================================");
-    ESP_LOGI(TAG, "  Interface Web Disponible");
-    ESP_LOGI(TAG, "  SSID: %s", WIFI_AP_SSID);
-    ESP_LOGI(TAG, "  Password: %s", WIFI_AP_PASSWORD);
-    ESP_LOGI(TAG, "  URL: http://%s", wifi_status.ap_ip);
-    ESP_LOGI(TAG, "=================================");
-    ESP_LOGI(TAG, "");
 
 #if CONFIG_BT_ENABLED
     esp_err_t ble_init_status = ble_api_service_init();
@@ -442,9 +426,40 @@ void app_main(void) {
     
     // Créer les tâches
     create_task_on_led_core(led_task, "led_task", 4096, NULL, 5, NULL);
-    create_task_on_general_core(can_event_task, "can_event_task", 4096, NULL, 4, NULL);
+    create_task_on_general_core(can_event_task, "can_event_task", 8192, NULL, 4, NULL);  // Augmenté à 8KB à cause de config_profile_t
     create_task_on_general_core(monitor_task, "monitor_task", 4096, NULL, 2, NULL);
+        
+    // WiFi
+    ESP_ERROR_CHECK(wifi_manager_init());
+    ESP_ERROR_CHECK(wifi_manager_start_ap());
+
+#ifdef WIFI_AUTO_CONNECT
+    // Connexion automatique au WiFi domestique si configuré
+    ESP_LOGI(TAG, "Tentative de connexion à %s...", WIFI_HOME_SSID);
+    wifi_manager_connect_sta(WIFI_HOME_SSID, WIFI_HOME_PASSWORD);
+    vTaskDelay(pdMS_TO_TICKS(5000)); // Attendre 5s pour la connexion
+#endif
+
+    ESP_LOGI(TAG, "✓ WiFi initialisé");
+
+    // Serveur web
+    ESP_ERROR_CHECK(web_server_init());
+    ESP_ERROR_CHECK(web_server_start());
+    ESP_LOGI(TAG, "✓ Serveur web démarré");
     
+    // Afficher les informations de connexion
+    wifi_status_t wifi_status;
+    wifi_manager_get_status(&wifi_status);
+    
+    ESP_LOGI(TAG, "");
+    ESP_LOGI(TAG, "=================================");
+    ESP_LOGI(TAG, "  Interface Web Disponible");
+    ESP_LOGI(TAG, "  SSID: %s", WIFI_AP_SSID);
+    ESP_LOGI(TAG, "  Password: %s", WIFI_AP_PASSWORD);
+    ESP_LOGI(TAG, "  URL: http://%s", wifi_status.ap_ip);
+    ESP_LOGI(TAG, "=================================");
+    ESP_LOGI(TAG, "");
+
     ESP_LOGI(TAG, "Système démarré avec succès !");
 
     // Animation de démarrage désactivée pour éviter les conflits RMT
