@@ -29,9 +29,6 @@ static void can_rx_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "Tâche CAN RX démarrée");
 
-    // Log de démarrage avec compteur
-    uint32_t loop_count = 0;
-
     while (s_running) {
         twai_message_t msg;
         // Bloque jusqu'à réception
@@ -39,11 +36,6 @@ static void can_rx_task(void *pvParameters)
 
         if (ret == ESP_OK) {
             s_rx_count++;
-            // ESP_LOGI(TAG, "CAN RX: ID=0x%03lX, DLC=%d, Data=[%02X %02X %02X %02X %02X %02X %02X %02X]",
-            //          msg.identifier, msg.data_length_code,
-            //          msg.data[0], msg.data[1], msg.data[2], msg.data[3],
-            //          msg.data[4], msg.data[5], msg.data[6], msg.data[7]);
-
             if (s_callback) {
                 can_frame_t frame = {0};
                 frame.id  = msg.identifier;
@@ -58,11 +50,6 @@ static void can_rx_task(void *pvParameters)
             }
         } else if (ret == ESP_ERR_TIMEOUT) {
             // Log toutes les 10 secondes pour debug
-            loop_count++;
-            if (loop_count % 10 == 0) {
-                ESP_LOGW(TAG, "Aucune trame CAN reçue depuis %lu secondes (TX=%d, RX=%d)",
-                         loop_count, CONFIG_CAN_TX_GPIO, CONFIG_CAN_RX_GPIO);
-            }
             continue;
         } else {
             s_errors++;

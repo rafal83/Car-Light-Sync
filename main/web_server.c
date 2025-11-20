@@ -155,7 +155,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
         free(active_profile);
     }
     
-    const char *json_string = cJSON_Print(root);
+    const char *json_string = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
     
@@ -197,7 +197,7 @@ static esp_err_t config_handler(httpd_req_t *req) {
     // Ajouter la configuration du sens de la strip
     cJSON_AddBoolToObject(root, "strip_reverse", led_effects_get_reverse());
 
-    const char *json_string = cJSON_Print(root);
+    const char *json_string = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
 
@@ -336,7 +336,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
         cJSON_AddStringToObject(response, "message", "Configuration saved. Restart required to apply changes.");
         cJSON_AddBoolToObject(response, "restart_required", true);
 
-        const char *json_string = cJSON_Print(response);
+        const char *json_string = cJSON_PrintUnformatted(response);
         httpd_resp_set_type(req, "application/json");
         httpd_resp_sendstr(req, json_string);
 
@@ -388,7 +388,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(root, "active_name",
                             (active_id >= 0) ? profiles[active_id].name : "None");
 
-    const char *json_string = cJSON_Print(root);
+    const char *json_string = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
 
@@ -523,7 +523,7 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
         if (!success) {
             cJSON_AddStringToObject(response, "message", "Profile in use by an event or deletion failed");
         }
-        const char *json_string = cJSON_Print(response);
+        const char *json_string = cJSON_PrintUnformatted(response);
         httpd_resp_set_type(req, "application/json");
         httpd_resp_sendstr(req, json_string);
         free((void *)json_string);
@@ -548,7 +548,7 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
         cJSON_AddStringToObject(response, "message", "Factory reset failed");
     }
 
-    const char *json_string = cJSON_Print(response);
+    const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
     free((void *)json_string);
@@ -907,7 +907,7 @@ static esp_err_t ota_info_handler(httpd_req_t *req) {
         cJSON_AddStringToObject(root, "error", progress.error_msg);
     }
 
-    const char *json_string = cJSON_Print(root);
+    const char *json_string = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
 
@@ -1044,62 +1044,26 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
 
 // Handler pour obtenir la liste des effets disponibles
 static esp_err_t effects_list_handler(httpd_req_t *req) {
-    ESP_LOGI(TAG, "GET /api/effects - début");
-
     cJSON *root = cJSON_CreateObject();
-    if (!root) {
-        ESP_LOGE(TAG, "Erreur création JSON root");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
-        return ESP_FAIL;
-    }
-
     cJSON *effects = cJSON_CreateArray();
-    if (!effects) {
-        ESP_LOGE(TAG, "Erreur création JSON array");
-        cJSON_Delete(root);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
-        return ESP_FAIL;
-    }
 
     // Parcourir tous les effets disponibles
-    ESP_LOGI(TAG, "Parcours de %d effets", EFFECT_MAX);
     for (int i = 0; i < EFFECT_MAX; i++) {
         cJSON *effect = cJSON_CreateObject();
-        if (!effect) {
-            ESP_LOGE(TAG, "Erreur création objet effet %d", i);
-            cJSON_Delete(effects);
-            cJSON_Delete(root);
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
-            return ESP_FAIL;
-        }
-
-        const char *effect_id = led_effects_enum_to_id((led_effect_t)i);
-        const char *effect_name = led_effects_get_name((led_effect_t)i);
-        bool can_required = led_effects_requires_can((led_effect_t)i);
-
-        cJSON_AddStringToObject(effect, "id", effect_id);
-        cJSON_AddStringToObject(effect, "name", effect_name);
-        cJSON_AddBoolToObject(effect, "can_required", can_required);
+        cJSON_AddStringToObject(effect, "id", led_effects_enum_to_id((led_effect_t)i));
+        cJSON_AddStringToObject(effect, "name", led_effects_get_name((led_effect_t)i));
+        cJSON_AddBoolToObject(effect, "can_required", led_effects_requires_can((led_effect_t)i));
         cJSON_AddItemToArray(effects, effect);
     }
 
     cJSON_AddItemToObject(root, "effects", effects);
 
     char *json_str = cJSON_PrintUnformatted(root);
-    if (!json_str) {
-        ESP_LOGE(TAG, "Erreur génération JSON string");
-        cJSON_Delete(root);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON generation failed");
-        return ESP_FAIL;
-    }
-
-    ESP_LOGI(TAG, "JSON généré: %d octets", strlen(json_str));
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_str);
 
     free(json_str);
     cJSON_Delete(root);
-    ESP_LOGI(TAG, "GET /api/effects - terminé");
     return ESP_OK;
 }
 
@@ -1180,7 +1144,7 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(response, "status", success ? "ok" : "error");
     cJSON_AddStringToObject(response, "event", config_manager_get_event_name(event));
 
-    const char *json_string = cJSON_Print(response);
+    const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
 
@@ -1300,11 +1264,11 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
 
     cJSON_AddItemToObject(root, "events", events_array);
 
-    const char *json_string = cJSON_Print(root);
+    char *json_string = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
 
-    free((void *)json_string);
+    free(json_string);
     cJSON_Delete(root);
 
     return ESP_OK;
@@ -1397,7 +1361,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(response, "status", "ok");
     cJSON_AddNumberToObject(response, "updated", updated_count);
 
-    const char *json_string = cJSON_Print(response);
+    const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
 
@@ -1413,12 +1377,6 @@ esp_err_t web_server_init(void) {
     ESP_LOGI(TAG, "Serveur web initialise");
     return ESP_OK;
 }
-
-// Déclarer les routes statiques au niveau global pour éviter les problèmes de durée de vie
-static static_file_route_t static_files[] = {
-    {"/", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
-    {"/icon.svg", icon_svg_start, icon_svg_end, "image/svg+xml", "public, max-age=31536000", NULL}
-};
 
 esp_err_t web_server_start(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -1436,6 +1394,10 @@ esp_err_t web_server_start(void) {
     ESP_LOGI(TAG, "Demarrage du serveur web sur port %d", config.server_port);
 
     if (httpd_start(&server, &config) == ESP_OK) {
+        static static_file_route_t static_files[] = {
+            {"/", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
+            {"/icon.svg", icon_svg_start, icon_svg_end, "image/svg+xml", "public, max-age=31536000", NULL}
+        };
         int num_static_files = sizeof(static_files) / sizeof(static_files[0]);
 
         for (int i = 0; i < num_static_files; i++) {
@@ -1747,7 +1709,7 @@ static esp_err_t event_single_post_handler(httpd_req_t *req) {
 
     cJSON *response = cJSON_CreateObject();
     cJSON_AddStringToObject(response, "status", "ok");
-    const char *json_string = cJSON_Print(response);
+    const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, json_string);
     free((void *)json_string);
