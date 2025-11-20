@@ -62,27 +62,34 @@ static void can_event_task(void *pvParameters) {
     while (1) {
         // Copier l'état actuel
         memcpy(&current_state, &last_vehicle_state, sizeof(vehicle_state_t));
-        
+
         // Détecter les changements d'état et générer des événements
-        // Clignotants        
+        // Clignotants - IMPORTANT: if séparés pour détecter chaque changement indépendamment
         if (previous_state.hazard != current_state.hazard) {
+          ESP_LOGI(TAG, "Hazard changé: %d -> %d", previous_state.hazard, current_state.hazard);
           if(current_state.hazard) {
             config_manager_process_can_event(CAN_EVENT_TURN_HAZARD);
           } else {
             config_manager_stop_event(CAN_EVENT_TURN_HAZARD);
-          } 
-        } else if (previous_state.turn_left != current_state.turn_left) {
+          }
+        }
+
+        if (previous_state.turn_left != current_state.turn_left) {
+          ESP_LOGI(TAG, "Turn left changé: %d -> %d", previous_state.turn_left, current_state.turn_left);
           if(current_state.turn_left) {
             config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
           } else {
             config_manager_stop_event(CAN_EVENT_TURN_LEFT);
-          } 
-        } else if (previous_state.turn_right != current_state.turn_right) {
+          }
+        }
+
+        if (previous_state.turn_right != current_state.turn_right) {
+          ESP_LOGI(TAG, "Turn right changé: %d -> %d", previous_state.turn_right, current_state.turn_right);
           if(current_state.turn_right) {
             config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
           } else {
             config_manager_stop_event(CAN_EVENT_TURN_RIGHT);
-          } 
+          }
         }        
                 
         // Portes
@@ -334,14 +341,15 @@ static void psram_free(void* ptr) {
 #endif
 
 void app_main(void) {
-#ifdef CONFIG_HAS_PSRAM
-    // Configurer cJSON pour utiliser la PSRAM pour les allocations
-    cJSON_Hooks hooks = {
-        .malloc_fn = psram_malloc,
-        .free_fn = psram_free
-    };
-    cJSON_InitHooks(&hooks);
-#endif
+    // Désactivé temporairement : cJSON utilise la RAM normale au lieu de PSRAM
+    // pour éviter les conflits avec la tâche LED/RMT
+    // #ifdef CONFIG_HAS_PSRAM
+    //     cJSON_Hooks hooks = {
+    //         .malloc_fn = psram_malloc,
+    //         .free_fn = psram_free
+    //     };
+    //     cJSON_InitHooks(&hooks);
+    // #endif
 
     ESP_LOGI(TAG, "=================================");
     ESP_LOGI(TAG, "    Tesla Strip Controller      ");
@@ -438,25 +446,10 @@ void app_main(void) {
     create_task_on_general_core(monitor_task, "monitor_task", 4096, NULL, 2, NULL);
     
     ESP_LOGI(TAG, "Système démarré avec succès !");
-    
-    // Animation de démarrage
-    effect_config_t startup_effect;
-    led_effects_get_config(&startup_effect);
-    
-    // Flash rapide pour indiquer le démarrage
-    for (int i = 0; i < 3; i++) {
-        led_effects_set_solid_color(0x00FF00); // Vert
-        led_effects_update();
-        vTaskDelay(pdMS_TO_TICKS(100));
-        
-        led_effects_set_solid_color(0x000000); // Noir
-        led_effects_update();
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-    
-    // Restaurer la configuration
-    led_effects_set_config(&startup_effect);
-    
+
+    // Animation de démarrage désactivée pour éviter les conflits RMT
+    // L'animation sera gérée par la tâche LED
+
     // La boucle principale se termine, les tâches FreeRTOS continuent
     ESP_LOGI(TAG, "app_main terminé, tâches en cours d'exécution");
 }

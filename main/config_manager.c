@@ -84,10 +84,10 @@ bool config_manager_init(void) {
         config_manager_save_profile(0, default_profile);
         free(default_profile);
         config_manager_activate_profile(0);
-        ESP_LOGI(TAG, "Profil par défaut créé");
+        ESP_LOGI(TAG, "Profil par défaut créé et activé");
     } else {
-        // Appliquer le profil actif chargé depuis NVS
-        if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
+        // Vérifier si un profil actif valide a été chargé depuis NVS
+        if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES && profiles[active_profile_id].name[0] != '\0') {
             ESP_LOGI(TAG, "Application du profil actif %d: %s", active_profile_id, profiles[active_profile_id].name);
             led_effects_set_config(&profiles[active_profile_id].default_effect);
             // Ne pas activer le mode nuit au démarrage, il sera activé par l'événement CAN si auto_night_mode est activé
@@ -96,8 +96,13 @@ bool config_manager_init(void) {
                      profiles[active_profile_id].auto_night_mode ? "ENABLED" : "DISABLED");
             effect_override_active = false;
         } else {
-            ESP_LOGW(TAG, "Aucun profil actif trouvé, activation du profil 0");
-            config_manager_activate_profile(0);
+            // Aucun profil actif valide trouvé, activer le profil 0 par défaut
+            ESP_LOGW(TAG, "Aucun profil actif valide trouvé (active_profile_id=%d), activation du profil 0", active_profile_id);
+            if (!config_manager_activate_profile(0)) {
+                ESP_LOGE(TAG, "Impossible d'activer le profil 0");
+                return false;
+            }
+            ESP_LOGI(TAG, "Profil 0 activé par défaut");
         }
     }
 
@@ -389,13 +394,22 @@ bool config_manager_activate_profile(uint8_t profile_id) {
     active_profile_id = profile_id;
     profiles[profile_id].active = true;
 
-    // Sauvegarder l'ID actif
+    // Sauvegarder l'ID actif dans NVS
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK) {
-        nvs_set_i32(nvs_handle, "active_id", profile_id);
-        nvs_commit(nvs_handle);
+        err = nvs_set_i32(nvs_handle, "active_id", profile_id);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Erreur sauvegarde active_id: %s", esp_err_to_name(err));
+        }
+        err = nvs_commit(nvs_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Erreur commit NVS pour active_id: %s", esp_err_to_name(err));
+        }
         nvs_close(nvs_handle);
+        ESP_LOGI(TAG, "active_id=%d sauvegardé dans NVS", profile_id);
+    } else {
+        ESP_LOGE(TAG, "Erreur ouverture NVS pour sauvegarder active_id: %s", esp_err_to_name(err));
     }
 
     // Appliquer l'effet par défaut
@@ -759,7 +773,7 @@ bool config_manager_set_event_effect(uint8_t profile_id,
                                      const effect_config_t* effect_config,
                                      uint16_t duration_ms,
                                      uint8_t priority) {
-    if (profile_id >= MAX_PROFILES || event >= CAN_EVENT_MAX || effect_config == NULL) {
+    if (profile_id > MAX_PROFILES || event > CAN_EVENT_MAX || effect_config == NULL) {
         return false;
     }
     
@@ -783,7 +797,12 @@ bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event
 }
 
 bool config_manager_process_can_event(can_event_type_t event) {
-    if (active_profile_id < 0 || event > CAN_EVENT_MAX) {
+    if (active_profile_id < 0 || active_profile_id > MAX_PROFILES || event > CAN_EVENT_MAX) {
+        return false;
+    }
+
+    // Vérifier que le profil est valide et actif
+    if (!profiles[active_profile_id].active) {
         return false;
     }
 
@@ -905,7 +924,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
 
 void config_manager_stop_event(can_event_type_t event) {
     // Vérifier que l'événement est valide
-    if (event > CAN_EVENT_MAX) {
+    if (event >= CAN_EVENT_MAX) {
         return;
     }
 
@@ -1200,7 +1219,7 @@ bool config_manager_factory_reset(void) {
 }
 
 bool config_manager_export_profile(uint8_t profile_id, char* json_buffer, size_t buffer_size) {
-    if (profile_id >= MAX_PROFILES || json_buffer == NULL) {
+    if (profile_id > MAX_PROFILES || json_buffer == NULL) {
         return false;
     }
 
@@ -1300,7 +1319,7 @@ bool config_manager_export_profile(uint8_t profile_id, char* json_buffer, size_t
 }
 
 bool config_manager_import_profile(uint8_t profile_id, const char* json_string) {
-    if (profile_id >= MAX_PROFILES || json_string == NULL) {
+    if (profile_id > MAX_PROFILES || json_string == NULL) {
         return false;
     }
 
@@ -1466,7 +1485,7 @@ bool config_manager_import_profile(uint8_t profile_id, const char* json_string) 
 }
 
 bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t* event_effect) {
-    if (active_profile_id < 0 || active_profile_id >= MAX_PROFILES ||
+    if (active_profile_id < 0 || active_profile_id > MAX_PROFILES ||
         event >= CAN_EVENT_MAX || event_effect == NULL) {
         return false;
     }
