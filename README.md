@@ -1,113 +1,136 @@
 # Tesla Strip Controller
 
-Système de contrôle LED RGB WS2812 pour Tesla, similaire au S3XY Strip, avec connexion au Commander (protocole Panda).
+Système de contrôle LED RGB WS2812 pour Tesla avec connexion CAN Bus directe, intégration CAN unifiée et interface web moderne.
 
-## 🚀 Caractéristiques
+## 🚀 Caractéristiques Principales
 
-- **Contrôle LED WS2812** : Support de rubans LED RGB addressables
-- **Protocole Panda** : Communication avec le Commander S3XY_OBD pour lire les données CAN de la Tesla
-- **Interface Web** : Interface utilisateur moderne et responsive
-- **16 Effets LED** : Rainbow, breathing, fire, strobe, animations Tesla, etc.
-- **🆕 Système de Profils** : Jusqu'à 10 profils de configuration personnalisés
-- **🆕 Association Événements CAN** : Effets LED déclenchés par les messages CAN (clignotants, charge, blindspot, etc.)
-- **🆕 Mode Nuit Automatique** : Réduction automatique de luminosité basée sur capteur
-- **🆕 Blindspot Detection** : Alertes visuelles pour détection angle mort
-- **Synchronisation Véhicule** : Les LEDs réagissent à l'état du véhicule (portes, vitesse, charge, etc.)
-- **WiFi Dual Mode** : Point d'accès pour configuration + client pour connexion au Commander
-- **Sauvegarde Multiple** : Profils sauvegardés en mémoire non-volatile (NVS)
-- **API REST Complète** : Contrôle programmatique via HTTP
+### Système LED Avancé
+- **Support WS2812/WS2812B** : Rubans LED RGB addressables haute performance
+- **19 Effets LED Intégrés** : Rainbow, breathing, fire, strobe, animations Tesla, blindspot flash, etc.
+- **Système de Profils** : Jusqu'à 10 profils de configuration personnalisés sauvegardés en NVS
+- **Mode Nuit Automatique** : Réduction automatique de luminosité basée sur capteur véhicule
+- **Performances** : 50 FPS (20ms par frame), latence CAN < 100ms
+
+### Intégration CAN Unifiée
+- **Architecture Modulaire** : Système CAN unifié basé sur DBC avec décodage générique
+- **Support Multi-Véhicules** : Configuration par fichier pour Tesla Model 3, Model Y, Model S, etc.
+- **22+ Événements CAN** : Détection intelligente des événements véhicule (clignotants, portes, charge, blindspot, autopilot, etc.)
+- **Mapping Signal → État** : Mapping automatique des signaux CAN vers l'état du véhicule
+- **Gestion d'Événements** : Support des conditions RISING_EDGE, FALLING_EDGE, VALUE_EQUALS, THRESHOLD, etc.
+
+### Connectivité & Interface
+- **WiFi Dual Mode** : Point d'accès (configuration) + Client (connexion réseau)
+- **Interface Web Moderne** : Interface responsive avec gestion complète des profils et événements
+- **API REST Complète** : Contrôle programmatique via HTTP avec 30+ endpoints
+- **OTA Updates** : Mise à jour firmware over-the-air via interface web
+- **Support BLE** : API BLE pour configuration mobile (optionnel)
+
+### Fonctionnalités Avancées
+- **Association Événements CAN → Effets** : Chaque événement déclenche un effet LED personnalisé
+- **Système de Priorité** : Gestion intelligente des effets simultanés (0-255)
+- **Effets Temporaires** : Durée configurable avec retour automatique à l'effet par défaut
+- **Blindspot Detection** : Alertes visuelles pour détection angle mort (priorité maximale)
+- **Synchronisation Véhicule** : Les LEDs réagissent en temps réel à l'état du véhicule
 
 ## 📋 Prérequis
 
 ### Matériel
-- ESP32 DevKit / ESP32-S2 Saola / ESP32-S3 DevKitC (ou compatible)
-- Ruban LED WS2812 (ou WS2812B)
-- Alimentation 5V appropriée pour les LEDs
-- Tesla avec Commander Panda
+- **ESP32** : ESP32-DevKit, ESP32-S2-Saola, ou ESP32-S3-DevKitC (support PSRAM)
+- **Ruban LED** : WS2812 ou WS2812B (60-150 LEDs recommandé)
+- **Alimentation** : 5V 3-10A selon nombre de LEDs
+- **Module CAN** : Transceiver CAN (ex: SN65HVD230, MCP2551) connecté au bus CAN de la Tesla
+- **Véhicule** : Tesla Model 3, Model Y, Model S, ou Model X
 
 ### Logiciel
-- ESP-IDF v5.0 ou supérieur
-- PlatformIO (optionnel, mais recommandé)
-- Python 3.7+
+- **ESP-IDF** : v5.0 ou supérieur
+- **PlatformIO** : Recommandé pour compilation et flash
+- **Python 3.7+** : Pour scripts de build
 
 ## 🔧 Installation
 
-### Option 1: PlatformIO (Recommandé)
+### Méthode 1 : PlatformIO (Recommandé)
 
-1. Cloner le repository :
 ```bash
+# Cloner le repository
 git clone <repo-url>
-cd tesla-strip
-```
+cd esp32-tesla-strip
 
-2. Ouvrir le projet dans PlatformIO
+# Sélectionner l'environnement selon votre ESP32
+# esp32dev (ESP32 standard)
+# esp32s2 (ESP32-S2 avec PSRAM)
+# esp32s3 (ESP32-S3 avec PSRAM)
 
-3. Configurer le fichier `include/config.h` selon votre matériel
-
-4. Compiler et uploader :
-```bash
-pio run -t upload
+# Compiler et uploader
+pio run -e esp32s3 -t upload
 pio device monitor
 ```
 
-### Option 2: ESP-IDF
+### Méthode 2 : ESP-IDF
 
-1. Installer ESP-IDF :
 ```bash
+# Installer ESP-IDF (si pas déjà fait)
 mkdir -p ~/esp
 cd ~/esp
 git clone --recursive https://github.com/espressif/esp-idf.git
 cd esp-idf
-./install.sh esp32
+./install.sh esp32,esp32s2,esp32s3
 . ./export.sh
-```
 
-2. Cloner le projet :
-```bash
+# Cloner et compiler le projet
+cd ~/projects
 git clone <repo-url>
-cd tesla-strip
-```
+cd esp32-tesla-strip
 
-3. Configurer et compiler :
-```bash
-idf.py menuconfig  # Optionnel
+# Configurer (optionnel)
+idf.py menuconfig
+
+# Compiler et flash
 idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
-## ⚙️ Configuration
+### Configuration Initiale
 
-### Configuration GPIO
-
-Éditer `include/config.h` :
-
+1. **Configurer le matériel** dans [include/config.h](include/config.h) :
 ```c
-#define LED_PIN             5        // Pin GPIO pour les LEDs
-#define NUM_LEDS            60       // Nombre de LEDs
-#define LED_TYPE            WS2812B  // Type de LED
+#define LED_PIN             5        // GPIO pour signal LED
+#define NUM_LEDS            94       // Nombre de LEDs sur le ruban
+#define LED_TYPE            WS2812B
+#define COLOR_ORDER         GRB
 ```
 
-### Configuration WiFi
+2. **Configurer le WiFi** dans [include/wifi_credentials.h](include/wifi_credentials.h) (optionnel)
 
+3. **Configurer les GPIO CAN** dans [main/can_bus.c](main/can_bus.c) :
 ```c
-#define WIFI_AP_SSID        "Tesla-Strip"      // SSID du point d'accès
-#define WIFI_AP_PASSWORD    "tesla123"         // Mot de passe
-#define PANDA_WIFI_SSID     "panda-"          // Préfixe SSID du Commander
-#define PANDA_WIFI_PASSWORD "testing123"       // Mot de passe Commander
+#define CONFIG_CAN_TX_GPIO  GPIO_NUM_38  // TX du transceiver CAN
+#define CONFIG_CAN_RX_GPIO  GPIO_NUM_39  // RX du transceiver CAN
 ```
 
-### Configuration Commander
+## ⚙️ Configuration CAN Multi-Véhicules
 
-```c
-#define COMMANDER_PORT      1338             // Port du Commander
-#define PANDA_WIFI_SSID     "S3XY_OBD"      // SSID du Commander
-#define PANDA_WIFI_PASSWORD "12345678"       // Mot de passe
-#define COMMANDER_IP        "192.168.4.1"   // IP fixe du Commander
+Le système utilise une architecture CAN unifiée permettant de supporter plusieurs véhicules via des fichiers de configuration.
+
+### Fichiers de Configuration Générés
+
+Le projet génère automatiquement les fichiers de configuration CAN :
+- [main/vehicle_can_unified_config.generated.c](main/vehicle_can_unified_config.generated.c)
+- [include/vehicle_can_unified_config.generated.h](include/vehicle_can_unified_config.generated.h)
+
+Ces fichiers sont générés à partir de la définition DBC et contiennent :
+- Définitions des messages CAN (ID, DLC, signaux)
+- Définitions des signaux (start_bit, length, byte_order, factor, offset)
+- Mapping des événements CAN
+
+### Architecture CAN
+
+```
+vehicle_can_unified.c          → Pipeline de traitement CAN unifié
+vehicle_can_mapping.c          → Mapping signal → vehicle_state
+vehicle_can_unified_config.generated.c → Définitions messages/signaux (auto-généré)
 ```
 
 ## 🎨 Effets LED Disponibles
-
-Le système propose **19 effets LED** identifiés par des ID alphanumériques :
 
 | ID String | Nom | Description |
 |-----------|-----|-------------|
@@ -131,109 +154,216 @@ Le système propose **19 effets LED** identifiés par des ID alphanumériques :
 | `HAZARD` | Hazard | Warning animé |
 | `BLINDSPOT_FLASH` | Blindspot Flash | Flash angle mort |
 
-## 🚗 Messages CAN Supportés (Tesla Model 3 2021)
+## 🚗 Événements CAN Supportés
 
-Le système décode les messages CAN suivants :
+Le système détecte 22+ événements CAN du véhicule Tesla :
 
-| ID    | Description              | Données extraites                    |
-|-------|--------------------------|--------------------------------------|
-| 0x118 | État véhicule            | Contact, position vitesse (P/R/N/D) |
-| 0x257 | Vitesse                  | Vitesse en km/h                      |
-| 0x2B4 | État des portes          | 4 portes (ouvert/fermé)             |
-| 0x2B5 | Verrouillage            | État verrouillé/déverrouillé        |
-| 0x2C4 | État des fenêtres        | Position des 4 fenêtres (0-100%)    |
-| 0x2E5 | Coffre/Frunk            | État coffre et frunk                |
-| 0x3E5 | Lumières                | Phares, feux de route, brouillard   |
-| 0x2C3 | Freins                  | État pédale de frein                |
-| 0x3F5 | Clignotants             | Gauche/Droite/Warning               |
-| 0x3D2 | État de charge          | État, %, puissance                  |
-| 0x392 | Tension batterie 12V    | Voltage                             |
-| 0x2A5 | **Blindspot**           | **Détection angle mort L/R**        |
-| 0x3C8 | **Mode Nuit**           | **État capteur luminosité**         |
-| 0x118 | **Autopilot & Vitesses**| **Autopilot, P/R/N/D**             |
+| Événement | Déclencheur | Priorité Suggérée |
+|-----------|-------------|-------------------|
+| `TURN_LEFT` | Clignotant gauche actif | 200 |
+| `TURN_RIGHT` | Clignotant droit actif | 200 |
+| `TURN_HAZARD` | Warning activé | 220 |
+| `CHARGING` | Début de charge | 150 |
+| `CHARGE_COMPLETE` | Charge ≥ 80% terminée | 140 |
+| `DOOR_OPEN` | Ouverture d'une porte | 100 |
+| `DOOR_CLOSE` | Fermeture portes | 90 |
+| `LOCKED` | Véhicule verrouillé | 110 |
+| `UNLOCKED` | Véhicule déverrouillé | 110 |
+| `BRAKE_ON` | Frein appuyé | 180 |
+| `BRAKE_OFF` | Frein relâché | 170 |
+| `BLINDSPOT_LEFT` | Angle mort gauche détecté | 250 |
+| `BLINDSPOT_RIGHT` | Angle mort droit détecté | 250 |
+| `NIGHT_MODE_ON` | Mode nuit activé | 0 (auto) |
+| `NIGHT_MODE_OFF` | Mode nuit désactivé | 0 (auto) |
+| `AUTOPILOT_ENGAGED` | Autopilot activé | 120 |
+| `AUTOPILOT_DISENGAGED` | Autopilot désactivé | 120 |
+| `GEAR_DRIVE` | Passage en mode Drive (D) | 80 |
+| `GEAR_REVERSE` | Passage en marche arrière (R) | 80 |
+| `GEAR_PARK` | Passage en mode Park (P) | 80 |
+| `SPEED_THRESHOLD` | Vitesse > seuil configurable | 60 |
 
 ## 🌐 Interface Web
 
-### Accès à l'interface
+### Accès à l'Interface
 
-1. Connectez-vous au WiFi `Tesla-Strip` (mot de passe: `tesla123`)
-2. Ouvrez un navigateur à l'adresse : `http://192.168.4.1`
+1. Se connecter au WiFi **Tesla-Strip** (mot de passe : `tesla123`)
+2. Ouvrir un navigateur à l'adresse : `http://192.168.4.1`
 
-### Fonctionnalités
+### Fonctionnalités de l'Interface
 
-- **Contrôle des effets** : Sélection de l'effet, luminosité, vitesse, couleurs
-- **🆕 Gestion des Profils** : Création, activation, suppression de profils
-- **🆕 Association Événements** : Assigner des effets spécifiques aux événements CAN
-- **🆕 Mode Nuit Auto** : Configuration du mode nuit automatique
-- **Connexion Commander** : Connexion automatique au S3XY_OBD
-- **État du véhicule** : Affichage en temps réel des données CAN (incluant blindspot et mode nuit)
-- **Sauvegarde** : Persistance des profils et configurations
+- **Contrôle en Temps Réel** : Sélection effet, luminosité, vitesse, couleurs
+- **Gestion des Profils** : Création, activation, suppression de profils (max 10)
+- **Association Événements CAN** : Assigner des effets spécifiques aux événements CAN
+- **Mode Nuit Automatique** : Configuration du mode nuit avec luminosité réduite
+- **État du Véhicule** : Affichage en temps réel des données CAN (vitesse, charge, portes, blindspot, etc.)
+- **Connexion CAN** : Connexion directe au bus CAN du véhicule via transceiver
+- **OTA Updates** : Mise à jour firmware via upload de fichier
 
 ### API REST
 
-L'interface expose une API REST :
+L'interface expose une API REST complète. Voir section [API REST](#-api-rest) ci-dessous.
 
-#### GET `/api/status`
-Retourne l'état du système (WiFi, Commander, véhicule)
+## 🔌 Connexion CAN Directe
 
-#### GET `/api/config`
-Retourne la configuration actuelle des LEDs
+### Configuration du Module CAN
 
-#### POST `/api/effect`
-Configure un nouvel effet
-```json
+Le système utilise le driver TWAI (Two-Wire Automotive Interface) de l'ESP32 pour une connexion directe au bus CAN :
+
+- **Driver** : ESP-IDF TWAI (driver CAN intégré ESP32)
+- **Vitesse** : 500 kbit/s (bus Chassis Tesla)
+- **GPIO TX** : GPIO 38 (configurable)
+- **GPIO RX** : GPIO 39 (configurable)
+- **Mode** : Normal (réception + transmission)
+- **Transceiver** : SN65HVD230, MCP2551 ou compatible 3.3V
+
+### Câblage du Transceiver CAN
+
+```
+ESP32                    Transceiver CAN            Bus CAN Tesla
+┌─────────────┐         ┌─────────────┐           ┌──────────────┐
+│             │         │             │           │              │
+│  GPIO 38 TX │────────►│ TX          │           │              │
+│             │         │             │           │              │
+│  GPIO 39 RX │◄────────│ RX      CAN_H├──────────┤ CAN_H        │
+│             │         │         CAN_L├──────────┤ CAN_L        │
+│         3V3 │────────►│ VCC         │           │              │
+│         GND │────────►│ GND         │           │ GND          │
+│             │         │             │           │              │
+└─────────────┘         └─────────────┘           └──────────────┘
+```
+
+### Accès au Bus CAN Tesla
+
+**Emplacements d'accès au bus CAN Chassis (500 kbit/s) :**
+
+1. **Port OBD-II** (sous le volant) :
+   - Pin 6 : CAN_H
+   - Pin 14 : CAN_L
+   - Pin 4/5 : GND
+
+2. **Connecteur derrière le  centre média** (Model 3/Y)
+
+3. **Connecteur sous le siège conducteur** (Model S/X)
+
+⚠️ **Important** : Connexion en parallèle (non invasive), ne pas interrompre le bus CAN existant.
+
+## 📊 Architecture du Code
+
+```
+esp32-tesla-strip/
+├── include/                              # Headers
+│   ├── config.h                          # Configuration matérielle
+│   ├── vehicle_can_unified.h             # API CAN unifiée
+│   ├── vehicle_can_unified_config.h      # Structures CAN
+│   ├── vehicle_can_unified_config.generated.h  # Config auto-générée
+│   ├── vehicle_can_mapping.h             # Mapping signal → état
+│   ├── led_effects.h                     # Effets LED
+│   ├── web_server.h                      # Serveur web
+│   ├── wifi_manager.h                    # Gestion WiFi
+│   ├── config_manager.h                  # Gestion profils
+│   ├── can_bus.h                         # Bus CAN (TWAI driver)
+│   ├── ota_update.h                      # Mises à jour OTA
+│   └── ble_api_service.h                 # API BLE (optionnel)
+├── main/                                 # Sources
+│   ├── main.c                            # Programme principal
+│   ├── vehicle_can_unified.c             # Pipeline CAN unifié
+│   ├── vehicle_can_unified_config.generated.c  # Config CAN auto-générée
+│   ├── vehicle_can_mapping.c             # Implémentation mapping
+│   ├── led_effects.c                     # Implémentation effets LED
+│   ├── web_server.c                      # Implémentation serveur web
+│   ├── wifi_manager.c                    # Implémentation WiFi
+│   ├── config_manager.c                  # Implémentation profils
+│   ├── can_bus.c                         # Implémentation bus CAN
+│   ├── ota_update.c                      # Implémentation OTA
+│   └── ble_api_service.c                 # Implémentation BLE
+├── data/                                 # Ressources web
+│   ├── index.html                        # Interface web (compressée)
+│   └── icon.svg                          # Icône
+├── tools/                                # Scripts utilitaires
+├── docs/                                 # Documentation
+├── CMakeLists.txt                        # Configuration CMake
+├── platformio.ini                        # Configuration PlatformIO
+├── partitions.csv                        # Table de partitions
+├── sdkconfig.esp32dev                    # Config ESP32 standard
+├── sdkconfig.esp32s2                     # Config ESP32-S2
+├── sdkconfig.esp32s3                     # Config ESP32-S3
+└── README.md                             # Ce fichier
+```
+
+## 🎯 API REST
+
+### Statut et Configuration
+
+```bash
+# Obtenir l'état du système
+GET /api/status
+
+# Obtenir la configuration actuelle
+GET /api/config
+```
+
+### Contrôle des Effets
+
+```bash
+# Changer l'effet LED
+POST /api/effect
+Content-Type: application/json
 {
-  "effect": 3,
-  "brightness": 128,
-  "speed": 50,
-  "color1": 16711680,
+  "effect": "RAINBOW",
+  "brightness": 150,
+  "speed": 80,
+  "color1": 16711680,  # RGB en décimal (0xFF0000 = rouge)
   "color2": 65280,
   "color3": 255
 }
+
+# Sauvegarder la configuration
+POST /api/save
 ```
 
-#### POST `/api/save`
-Sauvegarde la configuration
+### Gestion des Profils
 
-#### POST `/api/commander/connect`
-Recherche et connexion au Commander
+```bash
+# Lister tous les profils
+GET /api/profiles
 
-#### POST `/api/commander/disconnect`
-Déconnexion du Commander
+# Créer un nouveau profil
+POST /api/profile/create
+{"name": "Mon Profil Sport"}
 
-#### 🆕 GET `/api/profiles`
-Liste tous les profils disponibles
-
-#### 🆕 POST `/api/profile/activate`
-Active un profil
-```json
+# Activer un profil
+POST /api/profile/activate
 {"profile_id": 1}
-```
 
-#### 🆕 POST `/api/profile/create`
-Crée un nouveau profil
-```json
-{"name": "Mon Profil"}
-```
-
-#### 🆕 POST `/api/profile/delete`
-Supprime un profil
-```json
+# Supprimer un profil
+POST /api/profile/delete
 {"profile_id": 2}
+
+# Mettre à jour l'effet par défaut d'un profil
+POST /api/profile/update/default
+{
+  "profile_id": 0,
+  "effect": "BREATHING",
+  "brightness": 150,
+  "speed": 80,
+  "color1": 16711680
+}
 ```
 
-#### 🆕 GET `/api/effects`
-Liste tous les effets disponibles avec leurs IDs et noms
+### Gestion des Événements CAN
 
-#### 🆕 GET `/api/event-types`
-Liste tous les types d'événements CAN disponibles
+```bash
+# Lister tous les effets disponibles
+GET /api/effects
 
-#### 🆕 GET `/api/events`
-Obtient la configuration de tous les événements du profil actif
+# Lister tous les types d'événements CAN
+GET /api/event-types
 
-#### 🆕 POST `/api/events`
-Met à jour la configuration des événements
-```json
+# Obtenir la configuration de tous les événements
+GET /api/events
+
+# Mettre à jour la configuration des événements
+POST /api/events
 {
   "events": [
     {
@@ -245,136 +375,94 @@ Met à jour la configuration des événements
       "duration": 0,
       "priority": 200,
       "enabled": true
+    },
+    {
+      "event": "BLINDSPOT_LEFT",
+      "effect": "BLINDSPOT_FLASH",
+      "brightness": 255,
+      "speed": 250,
+      "color": 16711680,
+      "duration": 0,
+      "priority": 250,
+      "enabled": true
     }
   ]
 }
 ```
 
-#### 🆕 POST `/api/profile/update/default`
-Met à jour l'effet par défaut d'un profil
-```json
-{
-  "profile_id": 0,
-  "effect": 2,
-  "brightness": 150,
-  "speed": 80,
-  "color1": 16711680
-}
-```
-
-## 🔌 Protocole Panda
-
-Le protocole Panda est utilisé pour communiquer avec le Commander :
-
-### Structure d'un message
-
-```
-[Type][Bus][Length_H][Length_L][CAN_ID][DLC][Data...]
-```
-
-- **Type** : Type de message (1=CAN_RECV, 2=CAN_SEND, 3=HEARTBEAT)
-- **Bus** : Bus CAN (0=Chassis, 1=Powertrain, 2=Body)
-- **Length** : Longueur des données (big-endian)
-- **CAN_ID** : Identifiant CAN (32 bits)
-- **DLC** : Data Length Code (0-8)
-- **Data** : Données CAN (0-8 bytes)
-
-### Exemple de connexion
-
-1. Connexion TCP au Commander sur le port 1338
-2. Envoi périodique de heartbeats (toutes les secondes)
-3. Réception des frames CAN du véhicule
-4. Décodage et mise à jour de l'état du véhicule
-
-## 📊 Architecture du Code
-
-```
-tesla-strip/
-├── include/
-│   ├── config.h              # Configuration principale
-│   ├── wifi_manager.h        # Gestion WiFi
-│   ├── commander.h           # Communication Commander
-│   ├── vehicle_can_unified.h           # Décodage CAN Tesla
-│   ├── led_effects.h         # Effets LED
-│   └── web_server.h          # Serveur web
-├── main/
-│   ├── main.c                # Programme principal
-│   ├── wifi_manager.c        # Implémentation WiFi
-│   ├── commander.c           # Implémentation Commander
-│   ├── tesla_can.c           # Implémentation décodage CAN
-│   ├── led_effects.c         # Implémentation effets LED
-│   └── web_server.c          # Implémentation serveur web
-├── data/
-│   └── index.html            # Interface web
-├── CMakeLists.txt            # Configuration CMake
-├── platformio.ini            # Configuration PlatformIO
-├── partitions.csv            # Table de partitions
-└── README.md                 # Ce fichier
-```
-
-## 🐛 Débogage
-
-### Moniteur série
+### CAN Bus & OTA
 
 ```bash
-# PlatformIO
-pio device monitor
+# Obtenir le statut du bus CAN
+GET /api/can/status
 
-# ESP-IDF
-idf.py monitor
+# Mise à jour OTA (upload binaire)
+POST /api/ota/update
+Content-Type: multipart/form-data
 ```
 
-### Niveaux de log
+## ⚡ Performances & Spécifications
 
-Éditer `sdkconfig.defaults` pour changer le niveau de log :
-```
-CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y
-```
-
-### Commandes utiles
-
-```bash
-# Effacer la mémoire flash
-idf.py erase-flash
-
-# Moniteur série avec filtre
-idf.py monitor --print-filter="WiFi:I LED:D"
-```
-
-## 🔒 Sécurité
-
-⚠️ **Important** :
-- Changez les mots de passe par défaut dans `config.h`
-- Le système n'utilise pas de chiffrement par défaut
-- Ne connectez pas le système à un réseau non sécurisé
-
-## 📝 Licence
-
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à :
-- Ouvrir une issue pour signaler un bug
-- Proposer de nouvelles fonctionnalités
-- Soumettre des pull requests
-
-## 📚 Références
-
-- [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/)
-- [WS2812 Datasheet](https://cdn-shop.adafruit.com/datasheets/WS2812.pdf)
-- [Tesla CAN Bus Reverse Engineering](https://github.com/joshwardell/model3dbc)
-- [Comma.ai Panda](https://github.com/commaai/panda)
-
-## ⚡ Performances
-
-- **Fréquence LED** : 50 FPS (20ms)
-- **Latence CAN** : < 100ms
+### Performances Système
+- **Fréquence LED** : 50 FPS (20ms par frame)
+- **Latence CAN** : < 100ms du message CAN à l'affichage LED
+- **Détection Événements** : 100ms entre chaque vérification
 - **Consommation RAM** : 14.5% (47KB / 320KB)
 - **Consommation Flash** : 49.6% (975KB / 1966KB)
+
+### Configuration Réseau
 - **Clients WiFi simultanés** : 4 maximum
-- **Stack HTTP** : 16KB (optimisé pour profils)
+- **Stack HTTP** : 16KB par connexion
 - **Timeout HTTP** : 30s (réception/envoi)
+- **Interface web compressée** : ~18KB gzip
+
+### Limites
+- **Profils maximum** : 10 profils sauvegardés
+- **Événements CAN** : 22+ types d'événements
+- **Effet temporaire max** : 60 secondes
+- **Priorité** : 0-255
+- **LEDs recommandé** : 60-150 LEDs (300+ possible avec injection de courant)
+
+## 🔧 Dépannage
+
+### Problème : LEDs ne s'allument pas
+- Vérifier la connexion GPIO5 (ou pin configuré)
+- Vérifier l'alimentation 5V des LEDs
+- Vérifier la masse commune ESP32 ↔ LEDs
+- Vérifier `LED_PIN` et `NUM_LEDS` dans [config.h](include/config.h)
+- Tester avec un effet simple (Solid blanc)
+
+### Problème : Pas de messages CAN reçus
+- Vérifier le câblage du transceiver CAN (CAN_H, CAN_L, GND)
+- Vérifier les GPIO TX (38) et RX (39) dans [can_bus.c](main/can_bus.c)
+- Vérifier que le transceiver est alimenté en 3.3V
+- Vérifier la résistance de terminaison (120Ω si nécessaire)
+- Vérifier les logs série : "Bus CAN démarré" et "CAN frame received"
+- Utiliser un outil de diagnostic CAN pour vérifier le bus
+
+### Problème : Interface web inaccessible
+- Vérifier connexion au WiFi `Tesla-Strip`
+- Essayer `http://192.168.4.1` (PAS https)
+- Vider le cache du navigateur (Ctrl+F5)
+- Vérifier logs série : "Page HTML envoyée avec succès"
+- Si erreur persistante, redémarrer l'ESP32
+
+### Problème : Profils ne se chargent pas
+- Vérifier compatibilité version (v2.1+ requis)
+- Factory reset si nécessaire : `POST /api/factory-reset`
+- Créer de nouveaux profils via l'interface web
+
+### Problème : Guru Meditation Error / Stack Overflow
+- ✅ Résolu en v2.1.0 grâce à l'allocation dynamique
+- Si le problème persiste, mettre à jour le firmware
+- Reflasher avec `pio run -t upload`
+
+## 🎓 Guides & Documentation
+
+- **[QUICKSTART.md](QUICKSTART.md)** : Guide de démarrage rapide en 5 minutes
+- **[TECHNICAL.md](TECHNICAL.md)** : Documentation technique approfondie (architecture CAN, mémoire, optimisations)
+- **[WIRING.md](WIRING.md)** : Guide de câblage détaillé avec schémas
+- **[CHANGELOG.md](CHANGELOG.md)** : Historique des versions et modifications
 
 ## 🎯 Roadmap
 
@@ -384,72 +472,67 @@ Les contributions sont les bienvenues ! N'hésitez pas à :
 - [x] ~~Import/Export de profils~~ ✅ v2.1
 - [x] ~~OTA Updates~~ ✅ v2.1
 - [x] ~~Optimisation mémoire HTTP~~ ✅ v2.1
-- [ ] Support de plusieurs rubans LED
+- [x] ~~Architecture CAN unifiée~~ ✅ v2.2
+- [x] ~~Support multi-véhicules~~ ✅ v2.2
+- [ ] Support de plusieurs rubans LED (multi-GPIO)
 - [ ] Intégration HomeAssistant/MQTT
 - [ ] Mode musique avec micro I2S
-- [ ] Support BLE pour la configuration
+- [ ] Support BLE pour configuration mobile
 - [ ] Application mobile iOS/Android
 - [ ] Synchronisation multi-véhicules
-- [ ] Enregistrement d'effets personnalisés
+- [ ] Enregistrement d'effets personnalisés via interface web
 
-## 💡 Exemples d'utilisation
+## 🔒 Sécurité
 
-### Animation à l'ouverture des portes
-```c
-if (vehicle_state.door_fl || vehicle_state.door_fr) {
-    led_effects_set_config(&door_open_effect);
-}
-```
+### Avertissements Importants
+- ⚠️ **Changez les mots de passe par défaut** dans [config.h](include/config.h) et [wifi_credentials.h](include/wifi_credentials.h)
+- ⚠️ Le système n'utilise pas de chiffrement par défaut sur le WiFi AP
+- ⚠️ Ne connectez pas le système à un réseau non sécurisé sans VPN
+- ⚠️ L'accès à l'interface web n'est pas protégé par mot de passe
 
-### Alerte batterie faible
-```c
-if (vehicle_state.battery_voltage_LV < 11.5) {
-    led_effects_set_solid_color(0xFF0000); // Rouge
-}
-```
+### Bonnes Pratiques
+- Utiliser un mot de passe WiFi fort (min 12 caractères)
+- Limiter l'accès physique à l'ESP32
+- Désactiver l'AP WiFi quand non utilisé
+- Surveiller les logs pour connexions suspectes
 
-### Indicateur de charge complet
-```c
-if (vehicle_state.charging && vehicle_state.charge_percent >= 80) {
-    led_effects_set_solid_color(0x00FF00); // Vert
-}
-```
+## 📝 Licence
 
-## 🔧 Dépannage
+Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
 
-### Problème : LEDs ne s'allument pas
-- Vérifier la connexion GPIO5
-- Vérifier l'alimentation 5V des LEDs
-- Vérifier la masse commune ESP32 ↔ LEDs
-- Vérifier `LED_PIN` et `NUM_LEDS` dans config.h
-- Tester avec un effet simple (Solid)
+## 🤝 Contribution
 
-### Problème : Pas de connexion au Commander
-- Vérifier que le Commander est allumé et en WiFi
-- SSID attendu : "S3XY_OBD" (configurable dans config.h)
-- Mot de passe : "12345678" (configurable)
-- IP fixe : 192.168.4.1:1338
-- Vérifier les logs série pour erreurs de connexion
-- Tester ping vers 192.168.4.1 après connexion WiFi
+Les contributions sont les bienvenues ! Pour contribuer :
 
-### Problème : Interface web inaccessible
-- Vérifier connexion au WiFi "Tesla-Strip"
-- Essayer http://192.168.4.1 (PAS https)
-- Vider le cache du navigateur (Ctrl+F5)
-- Vérifier dans les logs série : "Page HTML envoyée avec succès"
-- Si erreur "ESP_ERR_HTTPD_RESP_SEND", redémarrer l'ESP32
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit les changements (`git commit -m 'Add AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
 
-### Problème : Guru Meditation Error / Stack Overflow
-- ✅ **Résolu en v2.1.0** grâce à l'allocation dynamique
-- Si le problème persiste, vérifier version du firmware
-- Reflasher avec `pio run -t upload`
+### Zones de Contribution Prioritaires
+- Configurations CAN pour autres véhicules Tesla (Model Y, Model S, Model X)
+- Nouveaux effets LED créatifs
+- Optimisations de performance
+- Documentation et traductions
+- Tests et validation
 
-### Problème : Profils ne se chargent pas
-- Vérifier compatibilité version (v2.1+ requis)
-- Les anciens profils (<v2.1) sont automatiquement ignorés
-- Faire un factory reset si nécessaire : POST `/api/factory-reset`
-- Créer de nouveaux profils via l'interface web
+## 📚 Références
+
+- [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/)
+- [WS2812 Datasheet](https://cdn-shop.adafruit.com/datasheets/WS2812.pdf)
+- [Tesla CAN Bus Reverse Engineering](https://github.com/joshwardell/model3dbc)
+- [ESP32 TWAI (CAN) Driver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/twai.html)
+- [PlatformIO Documentation](https://docs.platformio.org/)
+
+## 💡 Support & Communauté
+
+- **Issues GitHub** : Pour signaler bugs et proposer fonctionnalités
+- **Discussions** : Pour questions et partage d'expériences
+- **Wiki** : Documentation communautaire et guides
 
 ---
 
 **Développé avec ❤️ pour la communauté Tesla**
+
+Version actuelle : **v2.2.0** | Dernière mise à jour : 2025-11-20

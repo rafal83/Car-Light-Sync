@@ -1,335 +1,424 @@
 # Guide de Câblage - Tesla Strip Controller
 
-## ⚡ Schéma de connexion
+## ⚡ Schéma de Connexion Complet
 
-### Configuration de base
-
-```
-ESP32 DevKit                    WS2812 LED Strip
-┌─────────────┐                ┌──────────────┐
-│             │                │              │
-│         3V3 │────────────────│ VCC (3.3V)   │ ⚠️ Pour tests uniquement
-│             │                │              │
-│        GPIO5│────────────────│ DIN          │ Signal de données
-│             │                │              │
-│         GND │────────────────│ GND          │ Masse commune
-│             │                │              │
-└─────────────┘                └──────────────┘
-
-⚠️ IMPORTANT: Pour un ruban complet, utilisez une alimentation 5V séparée!
-```
-
-### Configuration avec alimentation externe (RECOMMANDÉ)
+### Configuration Complète
 
 ```
-ESP32 DevKit                    WS2812 LED Strip
-┌─────────────┐                ┌──────────────┐
-│             │                │              │
-│        GPIO5│────────────────│ DIN          │
-│             │                │              │
-│         GND │────┐       ┌───│ GND          │
-│             │    │       │   │              │
-└─────────────┘    │       │   └──────────────┘
-                   │       │            ▲
-                   │       │            │
-                   │       │    ┌───────┴──────┐
-Alimentation 5V    │       │    │   5V / GND   │
-┌─────────────┐    │       │    └──────────────┘
-│      5V OUT │────┼───────┼────────────┘
-│             │    │       │
-│      GND    │────┴───────┘
-└─────────────┘
+ESP32 DevKit S3                WS2812 LED Strip           CAN Transceiver         Bus CAN Tesla
+┌──────────────────┐          ┌───────────────┐          ┌───────────────┐       ┌──────────┐
+│                  │          │               │          │               │       │          │
+│            GPIO5 │─────────►│ DIN           │          │               │       │          │
+│                  │          │               │          │               │       │          │
+│           GPIO38 │──────────┼───────────────┼─────────►│ TX            │       │          │
+│                  │          │               │          │               │       │          │
+│           GPIO39 │◄─────────┼───────────────┼──────────│ RX            │       │          │
+│                  │          │               │          │               │       │          │
+│             3V3  │──────┬───┼───────────────┼─────────►│ VCC           │       │          │
+│                  │      │   │               │          │               │       │          │
+│             GND  │──────┼───┼──────────┐    └──────────┤          CAN_H├──────►│ CAN_H    │
+│                  │      │   │          │    ┌──────────┤          CAN_L├──────►│ CAN_L    │
+└──────────────────┘      │   │          └────┘          │           GND │       │ GND      │
+                          │   │                           └───────────────┘       └──────────┘
+                          │   └──────────┐
+                          │              │
+     ┌────────────────────┴──────────────┴──────────┐
+     │        Alimentation 5V (2-10A)                │
+     │  ┌───────────┐                                │
+     │  │ 5V OUT    │───────────────────────────────►│ WS2812 VCC
+     │  │ GND       │───────────────────────────────►│ WS2812 GND + ESP32 GND
+     │  └───────────┘                                │
+     └───────────────────────────────────────────────┘
 
-Capacité recommandée: 1000µF sur l'alim 5V
-Résistance optionnelle: 470Ω entre GPIO5 et DIN
+Composants de protection:
+- Condensateur 1000µF sur 5V (entrée LED strip)
+- Résistance 470Ω entre GPIO5 et DIN (optionnel)
+- Résistance de terminaison 120Ω sur bus CAN (si nécessaire)
 ```
 
-## 🔌 Détails des connexions
+## 🔌 Détails des Connexions
 
-### Pin ESP32
+### 1. Connexion LED Strip (WS2812)
 
-| Pin ESP32 | Fonction          | Note                           |
-|-----------|-------------------|--------------------------------|
-| GPIO5     | LED Data (DIN)    | Pin par défaut (configurable dans config.h) |
-| 3V3       | Alimentation 3.3V | Max 500mA (pour tests courts uniquement) |
-| 5V        | Alimentation 5V   | Depuis USB uniquement (max 2.5W) |
-| GND       | Masse             | **Commune avec LED strip (obligatoire)** |
+| Pin ESP32 | Pin LED Strip | Note                           |
+|-----------|---------------|--------------------------------|
+| GPIO5     | DIN           | Signal de données LED (configurable dans [config.h](include/config.h)) |
+| GND       | GND           | **Masse commune obligatoire** |
 
-**Note:** Les autres GPIO sont réservés pour WiFi/Bluetooth et fonctionnalités futures.
+**Alimentation des LEDs :**
+- **VCC LED** → Alimentation 5V externe (PAS depuis ESP32)
+- **Capacité** : 1000µF entre VCC et GND (près de l'entrée du strip)
+- **Résistance** : 470Ω entre GPIO5 et DIN (optionnel, protection signal)
 
-### WS2812 LED Strip
+### 2. Connexion Module CAN
 
-| Pin LED   | Description       | Spécifications                 |
-|-----------|-------------------|--------------------------------|
-| VCC/5V    | Alimentation      | 5V DC, ~60mA par LED (blanc)   |
-| DIN       | Signal de données | 3.3V-5V logic compatible       |
-| GND       | Masse             | Commune avec ESP32             |
-| DOUT      | Sortie données    | Pour chaîner plusieurs strips  |
+| Pin ESP32 | Pin Transceiver | Description                    |
+|-----------|-----------------|--------------------------------|
+| GPIO38    | TX              | Transmission vers transceiver (configurable dans [can_bus.c](main/can_bus.c)) |
+| GPIO39    | RX              | Réception depuis transceiver (configurable) |
+| 3V3       | VCC             | Alimentation 3.3V              |
+| GND       | GND             | Masse commune                  |
 
-## ⚙️ Calcul de l'alimentation
+| Pin Transceiver | Bus CAN Tesla | Description                    |
+|-----------------|---------------|--------------------------------|
+| CAN_H           | Pin 6 OBD-II  | Signal CAN High                |
+| CAN_L           | Pin 14 OBD-II | Signal CAN Low                 |
+| GND             | Pin 4/5 OBD-II| Masse commune                  |
 
-### Formule de base
+**Transceivers CAN recommandés :**
+- **SN65HVD230** : 3.3V, faible consommation (~10mA)
+- **MCP2551** : 5V, plus robuste (nécessite un level shifter 5V↔3.3V si utilisé directement)
+- **TJA1050** : 5V, haute fiabilité industrielle
+
+⚠️ **Utiliser un transceiver 3.3V** (SN65HVD230) ou **ajouter un level shifter** pour les transceivers 5V.
+
+### 3. Alimentation
+
+#### Option A : Alimentation USB + Externe (Recommandée)
+
 ```
-Courant total = Nombre de LEDs × Courant par LED × Facteur d'utilisation
+USB 5V (ESP32) ────► ESP32 DevKit (alimentation uniquement)
 
-Exemple pour 60 LEDs:
-- Blanc maximum: 60 × 60mA × 1.0 = 3.6A
-- Effets colorés: 60 × 60mA × 0.6 = 2.16A (moyenne)
-- Luminosité 50%: 60 × 60mA × 0.5 = 1.8A
+Alimentation 5V ────► WS2812 Strip VCC (2-10A selon nb de LEDs)
+externe (DC)         + GND commun avec ESP32
 ```
 
-### Recommandations d'alimentation
+#### Option B : Alimentation Unique 5V
+
+```
+Alimentation 5V ────┬────► ESP32 VIN (via régulateur interne)
+(3-10A)             │
+                    └────► WS2812 Strip VCC
+                    └────► GND commun
+```
+
+### Calcul de l'Alimentation
 
 | Nombre de LEDs | Courant max | Alimentation recommandée    |
 |----------------|-------------|------------------------------|
 | 1-30           | 1.8A        | 5V 2A                        |
 | 31-60          | 3.6A        | 5V 4A                        |
-| 61-100         | 6.0A        | 5V 8A                        |
-| 101-150        | 9.0A        | 5V 10A                       |
-| 151-300        | 18A         | 5V 20A (injection multiple)  |
+| 61-94          | 5.6A        | 5V 6A                        |
+| 95-150         | 9.0A        | 5V 10A                       |
+
+**Formule :**
+```
+Courant max = Nombre de LEDs × 60mA × Facteur d'utilisation (0.6-1.0)
+```
 
 ⚠️ **Toujours prévoir 20% de marge de sécurité**
 
-## 🛡️ Protection et sécurité
+## 🚗 Connexion au Bus CAN Tesla
 
-### Composants recommandés
+### Accès via le Port OBD-II
 
-```
-Circuit de protection complet:
-
-ESP32 GPIO5 ────┬────[470Ω]────┬──── WS2812 DIN
-                │               │
-              [3.3V]          [TVS]
-              Zener           Diode
-                │               │
-                └───────┬───────┘
-                        │
-                       GND
-
-Alimentation 5V ────[1000µF]────┬──── VCC LED
-                                 │
-                    [10µF + 0.1µF] (près de chaque groupe de ~10 LEDs)
-                                 │
-                                GND
-```
-
-### Liste des composants de protection
-
-1. **Résistance 470Ω** (optionnelle mais recommandée)
-   - Rôle: Limiter le courant, protège contre les pics
-   - Placement: Entre GPIO5 et DIN
-
-2. **Condensateur 1000µF**
-   - Rôle: Stabilise l'alimentation 5V
-   - Placement: Au plus près de l'entrée d'alimentation
-   - Voltage rating: 16V minimum
-
-3. **Condensateurs de découplage (100nF + 10µF)**
-   - Rôle: Filtrage local
-   - Placement: Tous les 10-15 LEDs le long du strip
-
-4. **Diode TVS (optionnelle)**
-   - Rôle: Protection contre les surtensions
-   - Modèle: SMBJ5.0A ou équivalent
-   - Placement: Entre DIN et GND
-
-5. **Diode Schottky 1N5819** (si alimentation USB)
-   - Rôle: Protection contre retour de courant
-   - Placement: Entre 5V USB et VCC strip
-
-## 🔧 Installation physique
-
-### Montage dans un véhicule Tesla
-
-#### Emplacements recommandés
-
-1. **Coffre arrière**
-   ```
-   - Avantages: Facile d'accès, grande surface
-   - Connexion: Câblage via passage de roue
-   - Fixation: Ruban adhésif 3M VHB ou profilé aluminium
-   ```
-
-2. **Sous-caisse (footwell)**
-   ```
-   - Avantages: Effet d'éclairage ambiant
-   - Connexion: Passage sous les sièges
-   - Protection: Gaine thermorétractable conseillée
-   ```
-
-3. **Compartiment frunk**
-   ```
-   - Avantages: Visible lors de l'ouverture
-   - Connexion: Câblage le long du capot
-   - Attention: Températures plus élevées
-   ```
-
-#### Fixation du strip LED
-
-**Méthode 1: Adhésif double-face (par défaut)**
-- Nettoyer la surface (alcool isopropylique)
-- Chauffer légèrement l'adhésif (sèche-cheveux)
-- Appuyer fermement pendant 30 secondes
-- Laisser reposer 24h avant utilisation
-
-**Méthode 2: Profilé aluminium (recommandé)**
-- Avantages: Meilleure dissipation thermique, aspect professionnel
-- Fixation: Vis ou adhésif VHB
-- Diffuseur: Optionnel pour effet plus doux
-
-**Méthode 3: Clips de fixation**
-- Avantages: Amovible, pas de résidu
-- Inconvénients: Moins discret
-- Utilisation: Tests ou installation temporaire
-
-### Câblage du Commander Panda
+Le moyen le plus simple d'accéder au bus CAN est via le port OBD-II :
 
 ```
-Commander Panda
-┌─────────────────┐
-│                 │
-│   WiFi Module   │ ──── Connexion sans fil
-│                 │       SSID: panda-XXXXX
-│   CAN Interface │ ──── Vers bus CAN Tesla
-│                 │
-└─────────────────┘
+      Port OBD-II (16 pins)
+   ┌─────────────────────┐
+   │  8  7  6  5  4  3  2  1  │
+   │ 16 15 14 13 12 11 10 9  │
+   └─────────────────────┘
 
-ESP32 (Tesla Strip)
-┌─────────────────┐
-│                 │
-│   WiFi Client   │ ──── Se connecte au Panda
-│                 │       Port TCP: 1338
-└─────────────────┘
+Pins utilisés:
+- Pin 6  : CAN_H (Chassis, 500 kbit/s)
+- Pin 14 : CAN_L (Chassis, 500 kbit/s)
+- Pin 4  : GND Chassis
+- Pin 5  : GND Signal
 ```
 
-### Connexion à la batterie 12V (optionnel)
+### Câble OBD-II Custom
 
-⚠️ **Pour utilisateurs avancés uniquement**
+Vous pouvez créer un câble OBD-II custom :
 
+**Matériel nécessaire :**
+- Connecteur OBD-II mâle (16 pins)
+- Câble 4 conducteurs blindé
+- Connecteur Dupont ou JST pour connexion au transceiver
+
+**Connexions :**
 ```
-Batterie 12V Tesla ────[Fusible 5A]────[Buck Converter]──── ESP32 5V
-                                         (12V → 5V 3A)
-                                                │
-                                               GND
-```
-
-**Buck converter recommandé:**
-- LM2596 ou équivalent
-- Entrée: 7-35V DC
-- Sortie: 5V 3A
-- Protection: Court-circuit, surchauffe
-
-## 🧪 Tests et validation
-
-### Checklist de connexion
-
-- [ ] Masse commune entre ESP32 et LED strip
-- [ ] Tension d'alimentation LED = 5V ±5%
-- [ ] Signal de données connecté à GPIO5 (ou pin configuré)
-- [ ] Condensateur de filtrage installé
-- [ ] Pas de court-circuit visible
-- [ ] Polarité respectée (VCC/GND)
-
-### Procédure de test
-
-1. **Test de l'alimentation**
-   ```
-   - Mesurer tension 5V sans charge: 4.9-5.1V
-   - Vérifier masse commune
-   - Tester avec multimètre
-   ```
-
-2. **Test du signal**
-   ```
-   - Uploader le code avec effet de test
-   - Observer si première LED s'allume
-   - Vérifier propagation sur tout le strip
-   ```
-
-3. **Test de charge**
-   ```
-   - Activer blanc 100%
-   - Mesurer courant total
-   - Vérifier stabilité tension
-   - Surveiller température ESP32 et alim
-   ```
-
-### Diagnostic des problèmes courants
-
-| Problème | Cause probable | Solution |
-|----------|----------------|----------|
-| Aucune LED ne s'allume | Pas d'alimentation | Vérifier 5V et GND |
-| | Signal incorrect | Vérifier GPIO et câblage DIN |
-| Première LED OK, autres non | Strip défectueux | Tester continuité DOUT→DIN |
-| | Problème d'alimentation | Ajouter injection de courant |
-| Couleurs incorrectes | Ordre RGB/GRB | Modifier COLOR_ORDER config |
-| Scintillement | Alimentation insuffisante | Augmenter capacité alim |
-| | Câble signal trop long | Ajouter résistance 470Ω |
-| LEDs s'éteignent aléatoirement | Drop de tension | Réduire longueur ou ajouter injection |
-| | Surchauffe | Améliorer ventilation |
-
-## 📐 Configuration Avancée
-
-### ⚠️ Fonctionnalités Non Implémentées
-
-Les fonctionnalités suivantes ne sont **pas encore supportées** dans la version actuelle:
-
-❌ **Multi-strips** : Un seul strip LED supporté (GPIO5)
-❌ **Capteurs additionnels** : Pas de support DHT22/autres capteurs
-❌ **Multiples GPIO LED** : Seul GPIO5 est configuré
-
-Ces fonctionnalités sont prévues pour les versions futures. Consultez la [Roadmap](README.md#-roadmap) pour plus d'informations.
-
-## 🎨 Exemples de Montage (Single Strip)
-
-### Configuration Standard: Strip Unique
-
-```
-┌────────────────────────────────┐
-│                                 │
-│         Habitacle Tesla         │
-│                                 │
-│   [====== LED Strip 60-94 ======] │ ← Coffre arrière
-│                                 │
-└────────────────────────────────┘
+OBD-II Pin 6 (CAN_H)   → Fil Rouge    → Transceiver CAN_H
+OBD-II Pin 14 (CAN_L)  → Fil Jaune   → Transceiver CAN_L
+OBD-II Pin 4 ou 5 (GND) → Fil Noir    → Transceiver GND
 ```
 
-**Emplacements recommandés pour un strip unique:**
-1. **Coffre arrière** (recommandé) : Facile d'accès, grande surface
-2. **Sous-caisse (footwell)** : Éclairage ambiant
-3. **Contour plafond** : Éclairage indirect
+### Alternative : Connexion Interne
 
-**Longueur conseillée:** 60-94 LEDs (environ 1-1.5 mètres)
+Pour une installation permanente, vous pouvez vous connecter directement aux bus CAN internes :
 
-**Note:** La configuration multi-strips n'est pas encore supportée. Un seul strip LED peut être connecté à GPIO5.
+**Model 3 / Model Y :**
+- Derrière l'écran central : Connecteur du contrôleur de carrosserie
+- Sous le siège conducteur : Faisceau CAN Chassis
 
-## 📏 Longueurs de câble recommandées
+**Model S / Model X :**
+- Sous le siège conducteur : Faisceau CAN Gateway
+- Dans le coffre avant : Connecteur BCM (Body Control Module)
 
-| Connexion | Longueur max | Type de câble |
-|-----------|--------------|---------------|
-| ESP32 → 1ère LED | 2m | AWG22-24 blindé |
-| Entre groupes LEDs | 5m | AWG18-20 |
-| Alimentation | 1m par section | AWG14-16 |
-| Commander → ESP32 | N/A (WiFi) | - |
+⚠️ **Attention** : Intervention sur les connecteurs internes nécessite des connaissances avancées. Privilégier le port OBD-II pour une installation non invasive.
 
-## 🔐 Sécurité
+## 🛡️ Protection et Sécurité
 
-### ⚠️ Avertissements importants
+### Composants de Protection Recommandés
 
-1. **Ne jamais connecter/déconnecter** le strip LED lorsqu'il est alimenté
-2. **Respecter la polarité** - Inversion = destruction possible
-3. **Ne pas dépasser** la puissance de l'alimentation USB (2.5W)
-4. **Isoler les connexions** - Utiliser gaine thermorétractable
-5. **Tester à faible luminosité** d'abord avant montage final
-6. **Ne pas bloquer** la ventilation de l'ESP32
+**1. Protection Alimentation LED**
+```
+Alimentation 5V ─┬─[1000µF]─┬─► VCC LED Strip
+                 │           │
+                [Fusible 5A] │
+                 │           │
+                GND          └─► Condensateurs de découplage
+                                 (100nF + 10µF tous les 10-15 LEDs)
+```
 
-### Conformité véhicule
+**2. Protection Signal LED**
+```
+ESP32 GPIO5 ───[470Ω]───► WS2812 DIN
 
-- Vérifier la réglementation locale sur les LED dans les véhicules
-- Ne pas interférer avec les systèmes de sécurité
+Optionnel: Diode Zener 3.3V entre DIN et GND
+```
+
+**3. Protection Bus CAN**
+```
+Transceiver ───[120Ω]─┬─ CAN_H
+                       │
+                       └─ CAN_L
+
+Note: La résistance de terminaison 120Ω est déjà présente
+dans la plupart des véhicules. Ajouter seulement si nécessaire.
+```
+
+### Liste des Composants
+
+| Composant | Quantité | Spécifications | Rôle |
+|-----------|----------|----------------|------|
+| Condensateur électrolytique | 1 | 1000µF, 16V | Stabilisation alimentation 5V |
+| Condensateurs céramiques | 5-10 | 100nF | Découplage local |
+| Condensateurs électrolytiques | 5-10 | 10µF, 16V | Filtrage local |
+| Résistance | 1 | 470Ω, 1/4W | Protection signal LED |
+| Fusible | 1 | 5-10A selon LEDs | Protection surcharge |
+| Résistance de terminaison | 1* | 120Ω, 1/4W | Terminaison bus CAN (si nécessaire) |
+
+*Généralement pas nécessaire car déjà présente dans le véhicule
+
+## 🔧 Installation Physique dans le Véhicule
+
+### Emplacements Recommandés
+
+#### 1. Coffre Arrière (Recommandé)
+- **Avantages** : Facile d'accès, grande surface, bonne dissipation
+- **LED Strip** : Le long du rebord intérieur du coffre
+- **ESP32 + Alim** : Fixé sur le côté, protégé des chocs
+- **Accès CAN** : Câble vers port OBD-II (passage sous tapis)
+
+#### 2. Sous-Caisse (Footwell)
+- **Avantages** : Effet d'éclairage ambiant, discret
+- **LED Strip** : Sous les sièges avant et arrière
+- **ESP32 + Alim** : Sous le siège conducteur
+- **Accès CAN** : Accès direct au port OBD-II
+
+#### 3. Compartiment Frunk
+- **Avantages** : Visible lors de l'ouverture, effet spectaculaire
+- **LED Strip** : Pourtour du frunk
+- **Attention** : Températures plus élevées en été
+
+### Fixation du LED Strip
+
+**Méthode 1 : Adhésif 3M VHB (Par défaut)**
+1. Nettoyer la surface (alcool isopropylique)
+2. Chauffer légèrement l'adhésif (sèche-cheveux, 30 secondes)
+3. Appliquer le strip et presser fermement (30 secondes)
+4. Laisser reposer 24h avant utilisation
+
+**Méthode 2 : Profilé Aluminium (Recommandé pour >60 LEDs)**
+- **Avantages** : Meilleure dissipation thermique, aspect professionnel, diffusion homogène
+- **Fixation** : Vis ou adhésif VHB sur le profilé
+- **Diffuseur** : Couvercle translucide pour effet plus doux
+
+**Méthode 3 : Clips de Fixation**
+- **Avantages** : Amovible, pas de résidu, idéal pour tests
+- **Inconvénients** : Moins discret, peut vibrer
+
+### Protection de l'Installation
+
+**Gaine Thermorétractable :**
+- Protéger toutes les soudures et connexions
+- Diamètre adapté au câblage (2-5mm)
+
+**Boîtier pour ESP32 :**
+- Boîtier IP54 minimum pour protection contre poussière et humidité
+- Ventilation suffisante pour dissipation thermique
+- Accès USB pour programmation
+
+**Câblage :**
+- Câbles souples résistants à la température (-20°C à +85°C)
+- Gaine tressée pour protection mécanique
+- Serre-câbles pour organisation
+
+## 🧪 Procédure de Test
+
+### Étape 1 : Test Bench (Hors Véhicule)
+
+**1.1 Test Alimentation**
+```
+[ ] Mesurer tension 5V sans charge : 4.9-5.1V
+[ ] Vérifier masse commune ESP32 ↔ LEDs
+[ ] Vérifier tension 3.3V sur ESP32
+```
+
+**1.2 Test LED Strip**
+```
+[ ] Uploader code avec effet de test (Solid blanc)
+[ ] Vérifier que première LED s'allume
+[ ] Vérifier propagation sur tout le strip
+[ ] Tester plusieurs effets (Rainbow, Breathing)
+```
+
+**1.3 Test Transceiver CAN**
+```
+[ ] Vérifier alimentation 3.3V sur transceiver
+[ ] Vérifier connexions TX/RX GPIO38/39
+[ ] Brancher analyseur CAN ou loopback pour test
+```
+
+### Étape 2 : Test dans le Véhicule
+
+**2.1 Connexion au Bus CAN**
+```
+[ ] Véhicule à l'arrêt, contact OFF
+[ ] Brancher câble OBD-II avec transceiver
+[ ] Mettre le contact (accessoires ON, pas de démarrage)
+[ ] Vérifier logs série : "Bus CAN démarré"
+[ ] Vérifier logs : "CAN frame received: ID=0x..."
+```
+
+**2.2 Test des Événements**
+```
+[ ] Activer clignotant gauche → Animation orange
+[ ] Activer clignotant droit → Animation orange
+[ ] Ouvrir une porte → Effet défini
+[ ] Appuyer sur frein → Effet défini
+[ ] Brancher charge (si possible) → Animation de charge
+```
+
+**2.3 Test Interface Web**
+```
+[ ] Se connecter au WiFi "Tesla-Strip"
+[ ] Ouvrir http://192.168.4.1
+[ ] Vérifier affichage état véhicule en temps réel
+[ ] Tester changement d'effet
+[ ] Tester création/activation de profil
+```
+
+### Étape 3 : Test Longue Durée
+
+```
+[ ] Laisser tourner 1 heure → Vérifier température ESP32 (<70°C)
+[ ] Vérifier stabilité effets LED
+[ ] Vérifier pas de reboot ESP32 (logs série)
+[ ] Vérifier consommation courant dans spec
+```
+
+## 🐛 Diagnostic des Problèmes
+
+### Problème : LEDs ne s'allument pas
+
+| Cause possible | Vérification | Solution |
+|----------------|--------------|----------|
+| Pas d'alimentation 5V | Multimètre sur VCC/GND | Vérifier alimentation et connexions |
+| Signal incorrect | Oscilloscope sur DIN | Vérifier GPIO5 et résistance 470Ω |
+| LEDs défectueuses | Tester avec strip différent | Remplacer strip ou section défectueuse |
+| Mauvaise config | Vérifier NUM_LEDS, LED_PIN | Ajuster config.h et recompiler |
+
+### Problème : Messages CAN non reçus
+
+| Cause possible | Vérification | Solution |
+|----------------|--------------|----------|
+| Câblage CAN incorrect | Vérifier CAN_H/CAN_L | Inverser ou reconnecter |
+| GPIO incorrect | Vérifier GPIO38/39 | Ajuster dans can_bus.c |
+| Transceiver non alimenté | Mesurer 3.3V sur VCC | Vérifier connexion 3.3V |
+| Mauvaise vitesse CAN | 500 kbit/s | Vérifier config dans can_bus.c |
+| Bus CAN en erreur | Vérifier terminaison | Ajouter résistance 120Ω si nécessaire |
+
+### Problème : Scintillement des LEDs
+
+| Cause possible | Vérification | Solution |
+|----------------|--------------|----------|
+| Drop de tension | Mesurer tension sous charge | Augmenter capacité alimentation |
+| Câble signal trop long | Longueur GPIO5→DIN | Ajouter résistance 470Ω ou réduire longueur |
+| Alimentation insuffisante | Mesurer courant max | Utiliser alimentation plus puissante |
+| Interférences | Proximité moteurs/WiFi | Ajouter ferrite sur câble ou blindage |
+
+### Problème : ESP32 Redémarre
+
+| Cause possible | Vérification | Solution |
+|----------------|--------------|----------|
+| Drop de tension 3.3V | Mesurer tension 3.3V | Ajouter condensateur 100µF près ESP32 |
+| Surcharge WiFi | Désactiver temporairement | Réduire nombre de clients ou requêtes |
+| Stack overflow | Vérifier logs série | Mettre à jour firmware (v2.1+) |
+| Température excessive | Mesurer température | Améliorer ventilation boîtier |
+
+## 📐 Schémas Électriques Détaillés
+
+### Schéma Complet avec Protection
+
+```
+                                Protection & Filtrage
+                          ┌──────────────────────────┐
+                          │                          │
+USB 5V ───[Diode]─────┬───┤ ESP32-S3 DevKit         │
+                      │   │                          │
+Alim 5V ──[Fusible]───┼───┤ VIN         GPIO5  ├────[470Ω]───► WS2812 DIN
+          5-10A       │   │                          │
+                      │   │ 3V3         GPIO38 ├──────────────► CAN TX
+                   [1000µF]│                          │
+                      │   │ GND         GPIO39 ├◄─────────────  CAN RX
+                      │   │                          │
+                     GND  └──────────────────────────┘
+                      │                          │
+                      └──────┬───────────────────┘
+                             │
+                          Masse Commune
+
+LED Strip:
+VCC ──[1000µF]──┬─ Alimentation 5V
+                │
+GND ────────────┴─ Masse Commune
+```
+
+## 🔐 Sécurité et Conformité
+
+### Avertissements Importants
+
+⚠️ **Électrique :**
+- Ne jamais brancher/débrancher sous tension
+- Respecter les polarités (destruction possible)
+- Isoler toutes les connexions (gaine thermorétractable)
+- Fusible obligatoire sur alimentation principale
+
+⚠️ **Véhicule :**
 - Installation réversible recommandée
-- Pas d'obstruction de la visibilité
+- Ne pas obstruer airbags ou systèmes de sécurité
+- Ne pas surcharger le circuit 12V du véhicule
+- Vérifier réglementation locale sur LEDs dans véhicules
+
+⚠️ **Bus CAN :**
+- Connexion en parallèle uniquement (non invasive)
+- Ne jamais interrompre le bus CAN existant
+- Pas de modification des messages CAN (lecture seule)
+- Déconnecter lors de mises à jour véhicule (service Tesla)
+
+### Conformité Véhicule
+
+- **Réglementation** : Vérifier les lois locales sur éclairage véhicule
+- **Homologation** : Pas d'éclairage visible de l'extérieur pendant conduite
+- **Garantie** : Installation non invasive ne devrait pas affecter garantie
+- **Assurance** : Informer assureur si installation permanente
 
 ---
 
-Pour toute question sur le câblage, consultez le README principal ou ouvrez une issue sur GitHub.
+Pour toute question sur le câblage, consultez le [README principal](README.md) ou ouvrez une issue sur GitHub.
+
+**Version :** 2.2.0
+**Date :** 2025-11-20

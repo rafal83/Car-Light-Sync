@@ -3,11 +3,12 @@
 ## Installation en 5 Minutes
 
 ### 1. Matériel Requis ✅
-- [ ] ESP32 DevKit
-- [ ] Ruban LED WS2812 (60 LEDs recommandé)
-- [ ] Alimentation 5V 3A minimum
-- [ ] Câbles de connexion
-- [ ] Tesla avec Commander S3XY_OBD
+- [ ] ESP32 DevKit (ESP32-S3 recommandé)
+- [ ] Ruban LED WS2812 (60-94 LEDs recommandé)
+- [ ] Alimentation 5V 3-6A minimum
+- [ ] Transceiver CAN (SN65HVD230 ou MCP2551)
+- [ ] Câble OBD-II ou câbles de connexion
+- [ ] Tesla (Model 3, Y, S ou X)
 
 ### 2. Câblage Rapide ⚡
 
@@ -47,11 +48,12 @@ idf.py -p /dev/ttyUSB0 flash monitor
 2. Se connecter avec le mot de passe : **tesla123**
 3. Ouvrir http://192.168.4.1
 
-#### 4.2 Connexion au Commander
-1. Dans l'interface web, section "Commander S3XY_OBD"
-2. Cliquer sur "Connecter (192.168.4.1)"
-3. Attendre 3-5 secondes
-4. Vérifier que le statut passe à "Connecté" ✅
+#### 4.2 Vérification Bus CAN
+1. Brancher le câble OBD-II avec le transceiver CAN connecté à l'ESP32
+2. Mettre le contact du véhicule (accessoires ON)
+3. Ouvrir l'interface web, section "État CAN Bus"
+4. Vérifier que le statut affiche "Messages CAN reçus" ✅
+5. Vérifier que les données véhicule (vitesse, portes, etc.) sont affichées en temps réel
 
 ### 5. Premier Profil 🎨
 
@@ -160,17 +162,19 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 3. Vérifier masse commune
 4. Dans config.h, vérifier `LED_PIN` et `NUM_LEDS`
 
-### Problème: Pas de connexion au Commander
-1. Vérifier que le Commander est allumé
-2. Vérifier le SSID : doit être "S3XY_OBD"
-3. Vérifier dans les logs série si connexion WiFi OK
-4. Ping 192.168.4.1 pour tester la connectivité
+### Problème: Pas de messages CAN reçus
+1. Vérifier le câblage du transceiver CAN (CAN_H, CAN_L, GND)
+2. Vérifier les GPIO TX (38) et RX (39) dans can_bus.c
+3. Vérifier que le transceiver est alimenté en 3.3V
+4. Vérifier dans les logs série : "Bus CAN démarré" et "CAN frame received"
+5. Mettre le contact du véhicule (accessoires ON minimum)
 
 ### Problème: Événements CAN ne déclenchent pas
-1. Vérifier que le Commander envoie des données (logs série)
+1. Vérifier que des messages CAN sont reçus (logs série : "CAN frame received")
 2. Vérifier que le profil est bien activé
 3. Vérifier que l'événement est bien assigné avec un effet
 4. Vérifier la priorité de l'effet
+5. Tester un événement simple (clignotant) pour valider le système
 
 ### Problème: Interface web inaccessible
 1. Vérifier connexion au WiFi "Tesla-Strip"

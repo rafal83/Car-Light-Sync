@@ -29,7 +29,7 @@ esp_err_t wifi_manager_init(void);
 esp_err_t wifi_manager_start_ap(void);
 
 /**
- * @brief Se connecte à un réseau WiFi (Commander Panda)
+ * @brief Se connecte à un réseau WiFi
  * @param ssid SSID du réseau
  * @param password Mot de passe
  * @return ESP_OK si succès
