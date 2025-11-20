@@ -575,11 +575,6 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
            sizeof(can_event_effect_t));    
     profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED].event = CAN_EVENT_CHARGING_PORT_OPENED;
     
-    memcpy(&profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED],
-           &profile->event_effects[CAN_EVENT_CHARGING_STARTED],
-           sizeof(can_event_effect_t));    
-    profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED].event = CAN_EVENT_CHARGING_PORT_OPENED;
-
     // Porte ouverte
     profile->event_effects[CAN_EVENT_DOOR_OPEN].event = CAN_EVENT_DOOR_OPEN;
     profile->event_effects[CAN_EVENT_DOOR_OPEN].action_type = EVENT_ACTION_APPLY_EFFECT;
@@ -788,7 +783,7 @@ bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event
 }
 
 bool config_manager_process_can_event(can_event_type_t event) {
-    if (active_profile_id < 0 || event >= CAN_EVENT_MAX) {
+    if (active_profile_id < 0 || event > CAN_EVENT_MAX) {
         return false;
     }
 
@@ -832,164 +827,8 @@ bool config_manager_process_can_event(can_event_type_t event) {
                 }
                 break;
         }
-    } else {/*
-        // Sinon, créer un effet par défaut basé sur le type d'événement
-        memset(&effect_to_apply, 0, sizeof(effect_config_t));
-        duration_ms = 5000; // 5 secondes par défaut
-        priority = 100;
-
-        switch (event) {
-            case CAN_EVENT_TURN_LEFT:
-                effect_to_apply.effect = EFFECT_TURN_SIGNAL;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF8000; // Orange
-                effect_to_apply.reverse = true; // Côté gauche
-                effect_to_apply.zone = LED_ZONE_LEFT; // Zone gauche
-                priority = 200;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_TURN_RIGHT:
-                effect_to_apply.effect = EFFECT_TURN_SIGNAL;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF8000; // Orange
-                effect_to_apply.reverse = false; // Côté droit
-                effect_to_apply.zone = LED_ZONE_RIGHT; // Zone droite
-                priority = 200;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_TURN_HAZARD:
-                // Pour les warnings, on active les deux côtés simultanément
-                effect_to_apply.effect = EFFECT_HAZARD;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF8000; // Orange
-                effect_to_apply.reverse = false; // Non utilisé pour hazard
-                priority = 200;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_CHARGING:
-                effect_to_apply.effect = EFFECT_CHARGE_STATUS;
-                effect_to_apply.brightness = 150;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0x00FF00; // Vert
-                priority = 150;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_CHARGE_COMPLETE:
-                effect_to_apply.effect = EFFECT_SOLID;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0x00FF00; // Vert
-                priority = 150;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_DOOR_OPEN:
-            case CAN_EVENT_UNLOCKED:
-                effect_to_apply.effect = EFFECT_BREATHING;
-                effect_to_apply.brightness = 150;
-                effect_to_apply.speed = 80;
-                effect_to_apply.color1 = 0x0080FF; // Bleu clair
-                priority = 120;
-                break;
-
-            case CAN_EVENT_DOOR_CLOSE:
-            case CAN_EVENT_LOCKED:
-                effect_to_apply.effect = EFFECT_STROBE;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 150;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                priority = 120;
-                duration_ms = 2000; // 2 secondes
-                break;
-
-            case CAN_EVENT_BRAKE_ON:
-                effect_to_apply.effect = EFFECT_SOLID;
-                effect_to_apply.brightness = 255;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                priority = 180;
-                duration_ms = 0; // Permanent tant que frein activé
-                break;
-
-            case CAN_EVENT_BRAKE_OFF:
-                // Retour à l'effet par défaut
-                memcpy(&effect_to_apply, &profiles[active_profile_id].default_effect, sizeof(effect_config_t));
-                priority = 50;
-                duration_ms = 0;
-                break;
-
-            case CAN_EVENT_BLINDSPOT_LEFT:
-                effect_to_apply.effect = EFFECT_STROBE;
-                effect_to_apply.brightness = 255;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                effect_to_apply.reverse = true; // Côté gauche
-                effect_to_apply.zone = LED_ZONE_LEFT; // Zone gauche
-                priority = 250;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_BLINDSPOT_RIGHT:
-                effect_to_apply.effect = EFFECT_STROBE;
-                effect_to_apply.brightness = 255;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                effect_to_apply.reverse = false; // Côté droit
-                effect_to_apply.zone = LED_ZONE_RIGHT; // Zone droite
-                priority = 250;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_NIGHT_MODE_ON:
-                // Activer le mode nuit global seulement si auto_night_mode est activé
-                if (profiles[active_profile_id].auto_night_mode) {
-                    led_effects_set_night_mode(true, profiles[active_profile_id].night_brightness);
-                    ESP_LOGI(TAG, "Night mode ON: brightness=%d", profiles[active_profile_id].night_brightness);
-                } else {
-                    ESP_LOGI(TAG, "Night mode ON event ignored (auto_night_mode disabled)");
-                }
-                return true; // Ne pas ajouter d'événement actif
-
-            case CAN_EVENT_NIGHT_MODE_OFF:
-                // Désactiver le mode nuit global seulement si auto_night_mode est activé
-                if (profiles[active_profile_id].auto_night_mode) {
-                    led_effects_set_night_mode(false, 255);
-                    ESP_LOGI(TAG, "Night mode OFF");
-                } else {
-                    ESP_LOGI(TAG, "Night mode OFF event ignored (auto_night_mode disabled)");
-                }
-                return true; // Ne pas ajouter d'événement actif
-
-            case CAN_EVENT_SPEED_THRESHOLD:
-                effect_to_apply.effect = EFFECT_RAINBOW;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 120;
-                effect_to_apply.color1 = 0xFF0000;
-                priority = 110;
-                duration_ms = 0; // Permanent
-                break;
-
-            default:
-                // Effet par défaut générique
-                effect_to_apply.effect = EFFECT_SOLID;
-                effect_to_apply.brightness = 150;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0xFFFFFF; // Blanc
-                break;
-        }
-
-        ESP_LOGI(TAG, "Utilisation effet par défaut pour '%s'",
-                config_manager_get_event_name(event));
-                */
-    }
-
+    } 
+    
     if(event_effect->enabled) {
       // Trouver un slot libre pour l'événement
       int free_slot = -1;
@@ -1065,6 +904,11 @@ bool config_manager_process_can_event(can_event_type_t event) {
 }
 
 void config_manager_stop_event(can_event_type_t event) {
+    // Vérifier que l'événement est valide
+    if (event > CAN_EVENT_MAX) {
+        return;
+    }
+
     // Désactiver tous les slots qui correspondent à cet événement
     for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
         if (active_events[i].active && active_events[i].event == event) {

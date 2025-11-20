@@ -115,7 +115,6 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
         history_set(msg->id, i, now);
 
         vehicle_state_apply_signal(msg, sig, now, state);
-        // vehicle_can_handle_signal_events(msg, sig, prev, now, state);
     }
 
     state->last_update_ms = frame->timestamp_ms;

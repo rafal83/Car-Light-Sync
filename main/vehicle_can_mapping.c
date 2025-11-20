@@ -108,7 +108,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
             recompute_doors_open(state);
             return;
         }
-    }
+    } else
 
     if (id == 0x103) { // droite + trunk
         if (strcmp(name, "VCRIGHT_frontLatchStatus") == 0) {
@@ -127,7 +127,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
             state->trunk_open = is_latch_open(value) ? 1 : 0;
             return;
         }
-    }
+    } else
 
     // ---------------------------------------------------------------------
     // Frunk : ID2E1VCFRONT_status / VCFRONT_frunkLatchStatus
@@ -313,7 +313,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
         }
         return;
       }
-    }
+    } else
 
     if (id == 0x212) { 
       // 2 "BMS_ABOUT_TO_CHARGE" 
@@ -326,7 +326,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
         state->charge_status = value;
         return;
       }
-    }
+    } else
 
     if (id == 0x25D) {
       if (strcmp(name, "CP_chargeDoorOpen") == 0) {
@@ -336,140 +336,4 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
     }
 
     // Fallback : signaux non mappés -> ignorés au niveau état haut niveau
-}
-
-// ============================================================================
-// Gestion des events (rising/falling/value_equals) -> can_event_trigger(...)
-// ============================================================================
-
-void vehicle_can_handle_signal_events(const can_message_def_t *msg,
-                                      const can_signal_def_t  *sig,
-                                      float prev,
-                                      float now,
-                                      vehicle_state_t *state)
-{
-    if (!msg || !sig || !state) return;
-
-    // (void)msg; // pour l'instant on n'utilise que le nom du signal
-    // const char *name = sig->name ? sig->name : "";
-
-    // int prev_i = (int)(prev + 0.5f);
-    // int now_i  = (int)(now  + 0.5f);
-
-    // // ---------------------------------------------------------------------
-    // // Clignotant gauche : VCFRONT_indicatorLeftRequest -> TURN_LEFT
-    // // 0 = OFF, 1/2 = ON (active high / active low)
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "VCFRONT_indicatorLeftRequest") == 0) {
-    //     if (now_i == 1 || now_i == 2) {
-    //         can_event_trigger(CAN_EVENT_TURN_LEFT, state);
-    //     }
-    //     return;
-    // }
-
-    // // ---------------------------------------------------------------------
-    // // Clignotant droit : VCFRONT_indicatorRightRequest -> TURN_RIGHT
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "VCFRONT_indicatorRightRequest") == 0) {
-    //     if (now_i == 1 || now_i == 2) {
-    //         can_event_trigger(CAN_EVENT_TURN_RIGHT, state);
-    //     }
-    //     return;
-    // }
-
-    // // ---------------------------------------------------------------------
-    // // Night mode : UI_ambientLightingEnabled
-    // //  - rising_edge  -> NIGHT_MODE_ON
-    // //  - falling_edge -> NIGHT_MODE_OFF
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "UI_ambientLightingEnabled") == 0) {
-    //     if (prev_i == 0 && now_i == 1) {
-    //         can_event_trigger(CAN_EVENT_NIGHT_MODE_ON, state);
-    //     } else if (prev_i == 1 && now_i == 0) {
-    //         can_event_trigger(CAN_EVENT_NIGHT_MODE_OFF, state);
-    //     }
-    //     return;
-    // }
-
-    // // ---------------------------------------------------------------------
-    // // Lock / unlock : UI_lockRequest
-    // // 1 = LOCKED, 2 = UNLOCKED
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "UI_lockRequest") == 0) {
-    //     if (now_i == 1) {
-    //         can_event_trigger(CAN_EVENT_LOCKED, state);
-    //     } else if (now_i == 2) {
-    //         can_event_trigger(CAN_EVENT_UNLOCKED, state);
-    //     }
-    //     return;
-    // }
-
-    // // ---------------------------------------------------------------------
-    // // Sentry mode : UIsentryMode284
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "UIsentryMode284") == 0) {
-    //     if (prev_i == 0 && now_i == 1) {
-    //         can_event_trigger(CAN_EVENT_SENTRY_MODE_ON, state);
-    //     } else if (prev_i == 1 && now_i == 0) {
-    //         can_event_trigger(CAN_EVENT_SENTRY_MODE_OFF, state);
-    //     }
-    //     return;
-    // }
-
-    // // ---------------------------------------------------------------------
-    // // Blindspot : DAS_blindSpotRearLeft / Right
-    // // 0/3 = pas d'alerte, 1/2 = warning
-    // // On envoie BLINDSPOT_LEFT/RIGHT + BLINDSPOT_WARNING
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
-    //     int was_warning = (prev_i == 1 || prev_i == 2);
-    //     int now_warning = (now_i == 1 || now_i == 2);
-    //     if (!was_warning && now_warning) {
-    //         can_event_trigger(CAN_EVENT_BLINDSPOT_LEFT, state);
-    //         can_event_trigger(CAN_EVENT_BLINDSPOT_WARNING, state);
-    //     }
-    //     return;
-    // }
-
-    // if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
-    //     int was_warning = (prev_i == 1 || prev_i == 2);
-    //     int now_warning = (now_i == 1 || now_i == 2);
-    //     if (!was_warning && now_warning) {
-    //         can_event_trigger(CAN_EVENT_BLINDSPOT_RIGHT, state);
-    //         can_event_trigger(CAN_EVENT_BLINDSPOT_WARNING, state);
-    //     }
-    //     return;
-    // }
-
-    // // ---------------------------------------------------------------------
-    // // Câble de charge : CP_chargeCablePresent
-    // // 0 -> 1 : CHARGING_CABLE_CONNECTED
-    // // 1 -> 0 : CHARGING_CABLE_DISCONNECTED
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "CP_chargeCablePresent") == 0) {
-    //     if (prev_i == 0 && now_i == 1) {
-    //         can_event_trigger(CAN_EVENT_CHARGING_CABLE_CONNECTED, state);
-    //     } else if (prev_i == 1 && now_i == 0) {
-    //         can_event_trigger(CAN_EVENT_CHARGING_CABLE_DISCONNECTED, state);
-    //     }
-    //     return;
-    // }
-
-    // // ---------------------------------------------------------------------
-    // // Etat de charge : PCS_hvChargeStatus
-    // // 2 = charging, 0 = not charging
-    // // -> CHARGING_STARTED / CHARGING_STOPPED
-    // // ---------------------------------------------------------------------
-    // if (strcmp(name, "PCS_hvChargeStatus") == 0) {
-    //     if (prev_i != 2 && now_i == 2) {
-    //         can_event_trigger(CAN_EVENT_CHARGING_STARTED, state);
-    //     } else if (prev_i == 2 && now_i == 0) {
-    //         can_event_trigger(CAN_EVENT_CHARGING_STOPPED, state);
-    //     }
-    //     return;
-    // }
-
-    // ---------------------------------------------------------------------
-    // Pour le reste, pas d'events custom pour le moment.
-    // ---------------------------------------------------------------------
 }
