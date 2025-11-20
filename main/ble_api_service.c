@@ -1,17 +1,23 @@
 #include "ble_api_service.h"
 #include "sdkconfig.h"
 
-#if CONFIG_BT_ENABLED
+#if CONFIG_BT_ENABLED && CONFIG_BT_NIMBLE_ENABLED
 
 #include <string.h>
 #include <strings.h>
 #include <stdio.h>
 
-#include "esp_bt.h"
-#include "esp_bt_main.h"
-#include "esp_gap_ble_api.h"
-#include "esp_gatts_api.h"
-#include "esp_gatt_common_api.h"
+#include "host/ble_hs.h"
+#include "host/ble_uuid.h"
+#include "host/ble_att.h"
+#include "host/ble_gap.h"
+#include "host/ble_gatt.h"
+#include "host/util/util.h"
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
+#include "services/gap/ble_svc_gap.h"
+#include "services/gatt/ble_svc_gatt.h"
+
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -25,19 +31,25 @@
 #define BLE_HTTP_LOCAL_BASE_URL       "http://127.0.0.1"
 #define BLE_MAX_REQUEST_LEN           16384
 #define BLE_MAX_RESPONSE_BODY         8192
-#define BLE_NOTIFY_CHUNK_MAX          120
+#define BLE_NOTIFY_CHUNK_MAX          512
 #define BLE_REQUEST_QUEUE_LENGTH      3
 #define BLE_HTTP_TIMEOUT_MS           8000
 
-enum {
-    BLE_IDX_SERVICE,
-    BLE_IDX_CHAR_COMMAND,
-    BLE_IDX_CHAR_COMMAND_VAL,
-    BLE_IDX_CHAR_RESPONSE,
-    BLE_IDX_CHAR_RESPONSE_VAL,
-    BLE_IDX_CHAR_RESPONSE_CFG,
-    BLE_IDX_TOTAL,
-};
+// UUIDs (128-bit) - NimBLE attend les octets en ordre inversé
+// Service: 4fafc201-1fb5-459e-8fcc-c5c9c331914b
+static const ble_uuid128_t ble_service_uuid =
+    BLE_UUID128_INIT(0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f,
+                     0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
+
+// Command: beb5483e-36e1-4688-b7f5-ea07361b26a8
+static const ble_uuid128_t ble_command_uuid =
+    BLE_UUID128_INIT(0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
+                     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
+
+// Response: 64a0990c-52eb-4c1b-aa30-ea826f4ba9dc
+static const ble_uuid128_t ble_response_uuid =
+    BLE_UUID128_INIT(0xdc, 0xa9, 0x4b, 0x6f, 0x82, 0xea, 0x30, 0xaa,
+                     0x1b, 0x4c, 0xeb, 0x52, 0x0c, 0x99, 0xa0, 0x64);
 
 typedef struct {
     size_t length;
@@ -53,91 +65,9 @@ typedef struct {
     char content_type[64];
 } ble_http_response_t;
 
-static const uint8_t ble_service_uuid[ESP_UUID_LEN_128] = {
-    0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f,
-    0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f
-};
-
-static const uint8_t ble_command_uuid[ESP_UUID_LEN_128] = {
-    0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
-    0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe
-};
-
-static const uint8_t ble_response_uuid[ESP_UUID_LEN_128] = {
-    0xdc, 0xa9, 0x4b, 0x6f, 0x82, 0xea, 0x30, 0xaa,
-    0x1b, 0x4c, 0xeb, 0x52, 0x0c, 0x99, 0xa0, 0x64
-};
-
-static const uint16_t primary_service_uuid = ESP_GATT_UUID_PRI_SERVICE;
-static const uint16_t character_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
-static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
-
-static esp_gatts_attr_db_t ble_gatt_db[BLE_IDX_TOTAL] = {
-    [BLE_IDX_SERVICE] = {
-        {ESP_GATT_AUTO_RSP},
-        {ESP_UUID_LEN_16, (uint8_t *)&primary_service_uuid, ESP_GATT_PERM_READ,
-         sizeof(ble_service_uuid), sizeof(ble_service_uuid), (uint8_t *)ble_service_uuid}
-    },
-    [BLE_IDX_CHAR_COMMAND] = {
-        {ESP_GATT_AUTO_RSP},
-        {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
-         sizeof(uint8_t), sizeof(uint8_t),
-         (uint8_t *)&(uint8_t){ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_WRITE_NR}}
-    },
-    [BLE_IDX_CHAR_COMMAND_VAL] = {
-        {ESP_GATT_RSP_BY_APP},
-        {ESP_UUID_LEN_128, (uint8_t *)ble_command_uuid,
-         ESP_GATT_PERM_WRITE,
-         BLE_MAX_REQUEST_LEN, 0, NULL}
-    },
-    [BLE_IDX_CHAR_RESPONSE] = {
-        {ESP_GATT_AUTO_RSP},
-        {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
-         sizeof(uint8_t), sizeof(uint8_t),
-         (uint8_t *)&(uint8_t){ESP_GATT_CHAR_PROP_BIT_NOTIFY}}
-    },
-    [BLE_IDX_CHAR_RESPONSE_VAL] = {
-        {ESP_GATT_RSP_BY_APP},
-        {ESP_UUID_LEN_128, (uint8_t *)ble_response_uuid,
-         ESP_GATT_PERM_READ,
-         BLE_MAX_RESPONSE_BODY, 0, NULL}
-    },
-    [BLE_IDX_CHAR_RESPONSE_CFG] = {
-        {ESP_GATT_AUTO_RSP},
-        {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid,
-         ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
-         sizeof(uint16_t), sizeof(uint16_t), (uint8_t *)&(uint16_t){0}}
-    },
-};
-
-static esp_ble_adv_data_t ble_adv_data = {
-    .set_scan_rsp = false,
-    .include_name = true,
-    .include_txpower = true,
-    .min_interval = 0x20,
-    .max_interval = 0x40,
-    .appearance = 0x00,
-    .manufacturer_len = 0,
-    .p_manufacturer_data = NULL,
-    .service_data_len = 0,
-    .p_service_data = NULL,
-    .service_uuid_len = sizeof(ble_service_uuid),
-    .p_service_uuid = (uint8_t *)ble_service_uuid,
-    .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-};
-
-static esp_ble_adv_params_t ble_adv_params = {
-    .adv_int_min = 0x20,
-    .adv_int_max = 0x40,
-    .adv_type = ADV_TYPE_IND,
-    .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
-    .channel_map = ADV_CHNL_ALL,
-    .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
-};
-
-static esp_gatt_if_t ble_gatts_if = ESP_GATT_IF_NONE;
-static uint16_t ble_handle_table[BLE_IDX_TOTAL];
-static uint16_t ble_conn_id = 0xFFFF;
+static uint16_t ble_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+static uint16_t ble_command_val_handle;
+static uint16_t ble_response_val_handle;
 static bool ble_connected = false;
 static bool notifications_enabled = false;
 static uint16_t negotiated_mtu = 23;
@@ -147,20 +77,6 @@ static TaskHandle_t request_task_handle = NULL;
 static char incoming_buffer[BLE_MAX_REQUEST_LEN];
 static size_t incoming_length = 0;
 
-static void ble_wait_for_send_window(void) {
-    if (!ble_connected) {
-        return;
-    }
-    int attempts = 0;
-    while (esp_ble_get_cur_sendable_packets_num(ble_conn_id) == 0 && attempts < 200) {
-        vTaskDelay(pdMS_TO_TICKS(5));
-        attempts++;
-    }
-}
-
-static void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
-static void ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if,
-                                    esp_ble_gatts_cb_param_t *param);
 static void ble_request_task(void *arg);
 static void ble_handle_command_bytes(const uint8_t *data, size_t length);
 static void ble_dispatch_request(const char *payload, size_t len);
@@ -168,9 +84,7 @@ static void ble_process_request_message(const char *json);
 static void ble_send_json_response(cJSON *object);
 static void ble_send_text_response(const char *text);
 static void ble_send_error_response(int status, const char *status_text, const char *message);
-
 static bool ble_send_notification(const uint8_t *data, size_t len);
-static void ble_restart_advertising(void);
 static esp_err_t ble_perform_local_http_request(const char *method,
                                                 const char *path,
                                                 const char *body,
@@ -201,101 +115,126 @@ static esp_http_client_method_t ble_method_from_string(const char *method) {
     return HTTP_METHOD_GET;
 }
 
-static void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
-    switch (event) {
-        case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-            ble_restart_advertising();
-            break;
-        case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-            if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-                ESP_LOGE(BLE_API_TAG, "Echec demarrage advertising: %s",
-                         esp_err_to_name(param->adv_start_cmpl.status));
+static int ble_gap_event(struct ble_gap_event *event, void *arg);
+static int ble_gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
+                              struct ble_gatt_access_ctxt *ctxt, void *arg);
+
+static const struct ble_gatt_svc_def ble_gatt_svcs[] = {
+    {
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &ble_service_uuid.u,
+        .characteristics = (struct ble_gatt_chr_def[]){
+            {
+                .uuid = &ble_command_uuid.u,
+                .access_cb = ble_gatt_access_cb,
+                .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
+                .val_handle = &ble_command_val_handle,
+            },
+            {
+                .uuid = &ble_response_uuid.u,
+                .access_cb = ble_gatt_access_cb,
+                .flags = BLE_GATT_CHR_F_NOTIFY,
+                .val_handle = &ble_response_val_handle,
+            },
+            {0}
+        }
+    },
+    {0}
+};
+
+static int ble_gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
+                              struct ble_gatt_access_ctxt *ctxt, void *arg) {
+    if (attr_handle == ble_command_val_handle) {
+        if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+            uint16_t om_len;
+            om_len = OS_MBUF_PKTLEN(ctxt->om);
+            if (om_len > 0) {
+                uint8_t *data = malloc(om_len);
+                if (data) {
+                    ble_hs_mbuf_to_flat(ctxt->om, data, om_len, NULL);
+                    ble_handle_command_bytes(data, om_len);
+                    free(data);
+                }
             }
-            break;
-        case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
-            if (param->adv_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-                ESP_LOGE(BLE_API_TAG, "Echec arret advertising: %s",
-                         esp_err_to_name(param->adv_stop_cmpl.status));
-            }
-            break;
-        default:
-            break;
+            return 0;
+        }
     }
+    return BLE_ATT_ERR_UNLIKELY;
 }
 
-static void ble_restart_advertising(void) {
-    if (!ble_started) {
-        return;
-    }
-    esp_ble_gap_start_advertising(&ble_adv_params);
-}
-
-static void ble_handle_write_event(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param) {
-    if (param->write.handle == ble_handle_table[BLE_IDX_CHAR_COMMAND_VAL]) {
-        ble_handle_command_bytes(param->write.value, param->write.len);
-    } else if (param->write.handle == ble_handle_table[BLE_IDX_CHAR_RESPONSE_CFG]) {
-        uint16_t value = param->write.value[1] << 8 | param->write.value[0];
-        notifications_enabled = (value != 0);
-        ESP_LOGI(BLE_API_TAG, "Notifications BLE %s",
-                 notifications_enabled ? "activees" : "desactivees");
-    }
-
-    if (param->write.need_rsp) {
-        esp_gatt_rsp_t rsp = {0};
-        rsp.attr_value.handle = param->write.handle;
-        rsp.attr_value.len = 0;
-        esp_ble_gatts_send_response(gatts_if, param->write.conn_id,
-                                    param->write.trans_id, ESP_GATT_OK, &rsp);
-    }
-}
-
-static void ble_gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if,
-                                    esp_ble_gatts_cb_param_t *param) {
-    switch (event) {
-        case ESP_GATTS_REG_EVT:
-            ble_gatts_if = gatts_if;
-            esp_ble_gap_set_device_name(BLE_API_DEVICE_NAME);
-            esp_ble_gap_config_adv_data(&ble_adv_data);
-            esp_ble_gatts_create_attr_tab(ble_gatt_db, gatts_if, BLE_IDX_TOTAL, 0);
-            break;
-        case ESP_GATTS_CREAT_ATTR_TAB_EVT:
-            if (param->add_attr_tab.status != ESP_GATT_OK) {
-                ESP_LOGE(BLE_API_TAG, "Creation table GATT echouee, statut 0x%x",
-                         param->add_attr_tab.status);
+static int ble_gap_event(struct ble_gap_event *event, void *arg) {
+    switch (event->type) {
+        case BLE_GAP_EVENT_CONNECT:
+            if (event->connect.status == 0) {
+                ble_conn_handle = event->connect.conn_handle;
+                ble_connected = true;
+                notifications_enabled = false;
+                negotiated_mtu = 23;
+                incoming_length = 0;
+                ESP_LOGI(BLE_API_TAG, "Client BLE connecte");
             } else {
-                memcpy(ble_handle_table, param->add_attr_tab.handles,
-                       sizeof(ble_handle_table));
-                esp_ble_gatts_start_service(ble_handle_table[BLE_IDX_SERVICE]);
+                ESP_LOGW(BLE_API_TAG, "Connexion BLE echouee, statut=%d",
+                         event->connect.status);
+                struct ble_gap_adv_params adv = {
+                    .conn_mode = BLE_GAP_CONN_MODE_UND,
+                    .disc_mode = BLE_GAP_DISC_MODE_GEN,
+                    .itvl_min = 0,
+                    .itvl_max = 0,
+                };
+                ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER,
+                                 &adv, ble_gap_event, NULL);
             }
             break;
-        case ESP_GATTS_CONNECT_EVT:
-            ble_conn_id = param->connect.conn_id;
-            ble_connected = true;
-            notifications_enabled = false;
-            negotiated_mtu = 23;
-            ESP_LOGI(BLE_API_TAG, "Client BLE connecte");
-            break;
-        case ESP_GATTS_DISCONNECT_EVT:
-            ble_conn_id = 0xFFFF;
+
+        case BLE_GAP_EVENT_DISCONNECT:
+            ble_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             ble_connected = false;
             notifications_enabled = false;
             incoming_length = 0;
-            ESP_LOGI(BLE_API_TAG, "Client BLE deconnecte");
-            ble_restart_advertising();
+            ESP_LOGI(BLE_API_TAG, "Client BLE deconnecte, raison=%d",
+                     event->disconnect.reason);
+            {
+                struct ble_gap_adv_params adv = {
+                    .conn_mode = BLE_GAP_CONN_MODE_UND,
+                    .disc_mode = BLE_GAP_DISC_MODE_GEN,
+                    .itvl_min = 0,
+                    .itvl_max = 0,
+                };
+                ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER,
+                                 &adv, ble_gap_event, NULL);
+            }
             break;
-        case ESP_GATTS_WRITE_EVT:
-            ble_handle_write_event(gatts_if, param);
+
+        case BLE_GAP_EVENT_ADV_COMPLETE:
+            ESP_LOGI(BLE_API_TAG, "Advertising complete");
+            {
+                struct ble_gap_adv_params adv = {
+                    .conn_mode = BLE_GAP_CONN_MODE_UND,
+                    .disc_mode = BLE_GAP_DISC_MODE_GEN,
+                    .itvl_min = 0,
+                    .itvl_max = 0,
+                };
+                ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER,
+                                 &adv, ble_gap_event, NULL);
+            }
             break;
-        case ESP_GATTS_MTU_EVT:
-            negotiated_mtu = param->mtu.mtu;
+
+        case BLE_GAP_EVENT_MTU:
+            negotiated_mtu = event->mtu.value;
             ESP_LOGI(BLE_API_TAG, "MTU negocie: %u", negotiated_mtu);
             break;
-        default:
+
+        case BLE_GAP_EVENT_SUBSCRIBE:
+            notifications_enabled = event->subscribe.cur_notify;
+            ESP_LOGI(BLE_API_TAG, "Notifications BLE %s",
+                     notifications_enabled ? "activees" : "desactivees");
             break;
     }
+    return 0;
 }
 
 static void ble_handle_command_bytes(const uint8_t *data, size_t length) {
+    ESP_LOGI(BLE_API_TAG, "Recv %d bytes", length);
     for (size_t i = 0; i < length; ++i) {
         char c = (char)data[i];
         if (c == '\r') {
@@ -306,6 +245,7 @@ static void ble_handle_command_bytes(const uint8_t *data, size_t length) {
                 continue;
             }
             incoming_buffer[incoming_length] = '\0';
+            ESP_LOGI(BLE_API_TAG, "Complete request: %s", incoming_buffer);
             ble_dispatch_request(incoming_buffer, incoming_length);
             incoming_length = 0;
             continue;
@@ -467,6 +407,7 @@ static esp_err_t ble_perform_local_http_request(const char *method,
 }
 
 static void ble_process_request_message(const char *json) {
+    ESP_LOGI(BLE_API_TAG, "Processing request: %s", json);
     cJSON *root = cJSON_Parse(json);
     if (!root) {
         ESP_LOGW(BLE_API_TAG, "JSON BLE invalide: %s", json);
@@ -480,6 +421,8 @@ static void ble_process_request_message(const char *json) {
     size_t body_len = body ? strlen(body) : 0;
     cJSON *headers = cJSON_GetObjectItem(root, "headers");
 
+    ESP_LOGI(BLE_API_TAG, "HTTP %s %s", method ? method : "GET", path ? path : "/");
+
     ble_http_response_t *response = heap_caps_malloc(sizeof(ble_http_response_t), MALLOC_CAP_DEFAULT);
     if (response == NULL) {
         ESP_LOGE(BLE_API_TAG, "Impossible d'allouer la reponse HTTP");
@@ -489,6 +432,7 @@ static void ble_process_request_message(const char *json) {
     }
 
     esp_err_t err = ble_perform_local_http_request(method, path, body, body_len, headers, response);
+    ESP_LOGI(BLE_API_TAG, "HTTP response: status=%d, body_len=%d", response->status_code, response->body_length);
 
     cJSON *json_response = cJSON_CreateObject();
     cJSON_AddNumberToObject(json_response, "status", response->status_code);
@@ -506,6 +450,7 @@ static void ble_process_request_message(const char *json) {
         cJSON_AddStringToObject(json_response, "error", esp_err_to_name(err));
     }
 
+    ESP_LOGI(BLE_API_TAG, "Sending JSON response");
     ble_send_json_response(json_response);
     cJSON_Delete(root);
     heap_caps_free(response);
@@ -533,8 +478,8 @@ static void ble_send_error_response(int status, const char *status_text, const c
 }
 
 static bool ble_send_notification(const uint8_t *data, size_t len) {
-    if (!ble_connected || !notifications_enabled || ble_gatts_if == ESP_GATT_IF_NONE ||
-        ble_handle_table[BLE_IDX_CHAR_RESPONSE_VAL] == 0) {
+    if (!ble_connected || !notifications_enabled ||
+        ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
         ESP_LOGW(BLE_API_TAG, "Impossible d'envoyer notification (connexion inactive)");
         return false;
     }
@@ -542,52 +487,128 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
         return true;
     }
 
+    // Utiliser MTU - 3 pour l'overhead BLE, avec un maximum de 244 bytes
+    // (244 est une taille sûre qui évite les problèmes de fragmentation)
     size_t max_payload = negotiated_mtu > 3 ? (negotiated_mtu - 3) : 20;
-    if (max_payload > BLE_NOTIFY_CHUNK_MAX) {
-        max_payload = BLE_NOTIFY_CHUNK_MAX;
-    }
-    if (max_payload == 0) {
-        max_payload = 20;
+    if (max_payload > 244) {
+        max_payload = 244;
     }
 
+    struct os_mbuf *om;
     size_t offset = 0;
+    int chunk_count = 0;
+
     while (offset < len) {
         size_t chunk = (len - offset) > max_payload ? max_payload : (len - offset);
-        esp_err_t err;
-        int retries = 0;
-        do {
-            ble_wait_for_send_window();
-            err = esp_ble_gatts_send_indicate(
-                ble_gatts_if,
-                ble_conn_id,
-                ble_handle_table[BLE_IDX_CHAR_RESPONSE_VAL],
-                chunk,
-                (uint8_t *)(data + offset),
-                false);
-            if (err == ESP_GATT_CONGESTED || err == ESP_GATT_BUSY || err == ESP_GATT_ERROR) {
-                vTaskDelay(pdMS_TO_TICKS(20));
+
+        om = ble_hs_mbuf_from_flat(data + offset, chunk);
+        if (!om) {
+            ESP_LOGE(BLE_API_TAG, "Erreur allocation mbuf (chunk %d/%d, offset=%d)",
+                     chunk_count + 1, (len + max_payload - 1) / max_payload, offset);
+            // Attendre un peu plus et réessayer une fois
+            vTaskDelay(pdMS_TO_TICKS(50));
+            om = ble_hs_mbuf_from_flat(data + offset, chunk);
+            if (!om) {
+                ESP_LOGE(BLE_API_TAG, "Erreur allocation mbuf après retry");
+                return false;
             }
-        } while ((err == ESP_GATT_CONGESTED || err == ESP_GATT_BUSY || err == ESP_GATT_ERROR) && retries++ < 12);
-        if (err != ESP_OK) {
-            ESP_LOGE(BLE_API_TAG, "Erreur notification BLE: %s", esp_err_to_name(err));
+        }
+
+        int rc = ble_gattc_notify_custom(ble_conn_handle, ble_response_val_handle, om);
+        if (rc != 0) {
+            ESP_LOGE(BLE_API_TAG, "Erreur notification BLE: %d", rc);
             return false;
         }
+
+        chunk_count++;
         offset += chunk;
-        vTaskDelay(pdMS_TO_TICKS(20));
+
+        // Délai adaptatif : plus long pour les gros transferts
+        if (len > 1000) {
+            vTaskDelay(pdMS_TO_TICKS(20));  // 20ms pour les grosses réponses
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(10));  // 10ms pour les petites réponses
+        }
     }
+
+    ESP_LOGI(BLE_API_TAG, "Notification sent: %d bytes in %d chunks", len, chunk_count);
     return true;
 }
 
 static void ble_send_text_response(const char *text) {
     if (!text) {
+        ESP_LOGW(BLE_API_TAG, "Null text response");
         return;
     }
     size_t len = strlen(text);
+    ESP_LOGI(BLE_API_TAG, "Sending text response: %d bytes", len);
     if (len > 0) {
-        ble_send_notification((const uint8_t *)text, len);
+        bool sent = ble_send_notification((const uint8_t *)text, len);
+        if (!sent) {
+            ESP_LOGE(BLE_API_TAG, "Failed to send response body");
+        }
     }
     const uint8_t newline = '\n';
     ble_send_notification(&newline, 1);
+}
+
+static void ble_on_sync(void) {
+    int rc;
+
+    // Générer et configurer une adresse aléatoire statique
+    ble_addr_t addr;
+    rc = ble_hs_id_gen_rnd(1, &addr);
+    if (rc != 0) {
+        ESP_LOGE(BLE_API_TAG, "Erreur generation adresse aleatoire: %d", rc);
+        return;
+    }
+
+    rc = ble_hs_id_set_rnd(addr.val);
+    if (rc != 0) {
+        ESP_LOGE(BLE_API_TAG, "Erreur configuration adresse: %d", rc);
+        return;
+    }
+
+    ESP_LOGI(BLE_API_TAG, "Adresse BLE: %02x:%02x:%02x:%02x:%02x:%02x",
+             addr.val[5], addr.val[4], addr.val[3],
+             addr.val[2], addr.val[1], addr.val[0]);
+
+    struct ble_hs_adv_fields fields = {0};
+    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    fields.name = (uint8_t *)BLE_API_DEVICE_NAME;
+    fields.name_len = strlen(BLE_API_DEVICE_NAME);
+    fields.name_is_complete = 1;
+
+    rc = ble_gap_adv_set_fields(&fields);
+    if (rc != 0) {
+        ESP_LOGE(BLE_API_TAG, "Erreur config advertising: %d", rc);
+        return;
+    }
+
+    struct ble_gap_adv_params adv_params = {0};
+    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
+    adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
+    adv_params.itvl_min = 0;  // Use default min interval
+    adv_params.itvl_max = 0;  // Use default max interval
+
+    // Utiliser une adresse aléatoire statique (BLE_OWN_ADDR_RANDOM)
+    rc = ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER,
+                          &adv_params, ble_gap_event, NULL);
+    if (rc != 0) {
+        ESP_LOGE(BLE_API_TAG, "Erreur demarrage advertising: %d", rc);
+        return;
+    }
+
+    ESP_LOGI(BLE_API_TAG, "Advertising BLE demarre");
+}
+
+static void ble_on_reset(int reason) {
+    ESP_LOGE(BLE_API_TAG, "BLE reset, raison: %d", reason);
+}
+
+static void ble_host_task(void *param) {
+    nimble_port_run();
+    nimble_port_freertos_deinit();
 }
 
 esp_err_t ble_api_service_init(void) {
@@ -595,40 +616,9 @@ esp_err_t ble_api_service_init(void) {
         return ESP_OK;
     }
 
-    esp_err_t ret = esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGW(BLE_API_TAG, "Impossible de liberer la RAM BT classic: %s", esp_err_to_name(ret));
-    }
-
-    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    ret = esp_bt_controller_init(&bt_cfg);
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(BLE_API_TAG, "esp_bt_controller_init echoue: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
-    ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(BLE_API_TAG, "esp_bt_controller_enable echoue: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
-    ret = esp_bluedroid_init();
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(BLE_API_TAG, "esp_bluedroid_init echoue: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
-    ret = esp_bluedroid_enable();
-    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(BLE_API_TAG, "esp_bluedroid_enable echoue: %s", esp_err_to_name(ret));
-        return ret;
-    }
-
     request_queue = xQueueCreate(BLE_REQUEST_QUEUE_LENGTH, sizeof(ble_request_message_t));
     if (!request_queue) {
         ESP_LOGE(BLE_API_TAG, "Impossible de creer la file des requetes BLE");
-        ble_started = false;
         return ESP_ERR_NO_MEM;
     }
 
@@ -647,11 +637,37 @@ esp_err_t ble_api_service_init(void) {
         return ESP_FAIL;
     }
 
-    ESP_ERROR_CHECK(esp_ble_gap_register_callback(ble_gap_event_handler));
-    ESP_ERROR_CHECK(esp_ble_gatts_register_callback(ble_gatts_event_handler));
-    ESP_ERROR_CHECK(esp_ble_gatts_app_register(0));
+    esp_err_t ret;
+
+    ret = nimble_port_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(BLE_API_TAG, "nimble_port_init echoue: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ble_hs_cfg.sync_cb = ble_on_sync;
+    ble_hs_cfg.reset_cb = ble_on_reset;
+
+    ble_svc_gap_device_name_set(BLE_API_DEVICE_NAME);
+    ble_svc_gap_init();
+    ble_svc_gatt_init();
+
+    int rc = ble_gatts_count_cfg(ble_gatt_svcs);
+    if (rc != 0) {
+        ESP_LOGE(BLE_API_TAG, "ble_gatts_count_cfg echoue: %d", rc);
+        return ESP_FAIL;
+    }
+
+    rc = ble_gatts_add_svcs(ble_gatt_svcs);
+    if (rc != 0) {
+        ESP_LOGE(BLE_API_TAG, "ble_gatts_add_svcs echoue: %d", rc);
+        return ESP_FAIL;
+    }
+
+    nimble_port_freertos_init(ble_host_task);
 
     ble_started = true;
+    ESP_LOGI(BLE_API_TAG, "Service BLE NimBLE initialise");
     return ESP_OK;
 }
 
@@ -660,8 +676,6 @@ esp_err_t ble_api_service_start(void) {
         ESP_LOGW(BLE_API_TAG, "Service BLE non initialise");
         return ESP_ERR_INVALID_STATE;
     }
-    ble_restart_advertising();
-    ESP_LOGI(BLE_API_TAG, "Advertising BLE demarre");
     return ESP_OK;
 }
 
@@ -669,7 +683,12 @@ esp_err_t ble_api_service_stop(void) {
     if (!ble_started) {
         return ESP_OK;
     }
-    esp_ble_gap_stop_advertising();
+
+    if (ble_connected) {
+        ble_gap_terminate(ble_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+    }
+
+    ble_gap_adv_stop();
     return ESP_OK;
 }
 
