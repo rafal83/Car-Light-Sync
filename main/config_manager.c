@@ -748,7 +748,6 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
     // Paramètres généraux
     profile->auto_night_mode = false; // Désactivé par défaut, l'utilisateur peut l'activer manuellement
     profile->night_brightness = 30;
-    profile->speed_threshold = 50;  // 50 km/h
     
     profile->active = false;
     profile->created_timestamp = (uint32_t)time(NULL);
@@ -1225,7 +1224,6 @@ bool config_manager_export_profile(uint8_t profile_id, char* json_buffer, size_t
     // Paramètres généraux
     cJSON_AddBoolToObject(root, "auto_night_mode", profile->auto_night_mode);
     cJSON_AddNumberToObject(root, "night_brightness", profile->night_brightness);
-    cJSON_AddNumberToObject(root, "speed_threshold", profile->speed_threshold);
 
     // Effet par défaut
     cJSON *default_effect = cJSON_CreateObject();
@@ -1347,11 +1345,6 @@ bool config_manager_import_profile(uint8_t profile_id, const char* json_string) 
     cJSON *night_bright = cJSON_GetObjectItem(root, "night_brightness");
     if (night_bright && cJSON_IsNumber(night_bright)) {
         imported_profile->night_brightness = night_bright->valueint;
-    }
-
-    cJSON *speed_thresh = cJSON_GetObjectItem(root, "speed_threshold");
-    if (speed_thresh && cJSON_IsNumber(speed_thresh)) {
-        imported_profile->speed_threshold = speed_thresh->valueint;
     }
 
     // Effet par défaut
