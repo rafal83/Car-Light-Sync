@@ -57,6 +57,7 @@ static const char* event_names[] = {
     "Speed Threshold",
     "Autopilot Engaged",
     "Autopilot Disengaged",
+    "Autopilot Aborting",
     "Gear Drive",
     "Gear Reverse",
     "Gear Park",
@@ -754,17 +755,17 @@ void config_manager_create_default_profile(config_profile_t* profile, const char
     profile->modified_timestamp = profile->created_timestamp;
 }
 
-bool config_manager_set_event_effect(uint8_t profile_id, 
+bool config_manager_set_event_effect(uint8_t profile_id,
                                      can_event_type_t event,
                                      const effect_config_t* effect_config,
                                      uint16_t duration_ms,
                                      uint8_t priority) {
-    if (profile_id > MAX_PROFILES || event > CAN_EVENT_MAX || effect_config == NULL) {
+    if (profile_id >= MAX_PROFILES || event >= CAN_EVENT_MAX || effect_config == NULL) {
         return false;
     }
-    
+
     profiles[profile_id].event_effects[event].event = event;
-    memcpy(&profiles[profile_id].event_effects[event].effect_config, 
+    memcpy(&profiles[profile_id].event_effects[event].effect_config,
            effect_config, sizeof(effect_config_t));
     profiles[profile_id].event_effects[event].duration_ms = duration_ms;
     profiles[profile_id].event_effects[event].priority = priority;
@@ -1316,7 +1317,7 @@ bool config_manager_import_profile(uint8_t profile_id, const char* json_string) 
     memset(imported_profile, 0, sizeof(config_profile_t));
 
     // Métadonnées
-    cJSON *name = cJSON_GetObjectItem(root, "name");
+    const cJSON *name = cJSON_GetObjectItem(root, "name");
     if (name && cJSON_IsString(name)) {
         strncpy(imported_profile->name, name->valuestring, PROFILE_NAME_MAX_LEN - 1);
     } else {
@@ -1326,29 +1327,29 @@ bool config_manager_import_profile(uint8_t profile_id, const char* json_string) 
         return false;
     }
 
-    cJSON *created = cJSON_GetObjectItem(root, "created_timestamp");
+    const cJSON *created = cJSON_GetObjectItem(root, "created_timestamp");
     if (created && cJSON_IsNumber(created)) {
         imported_profile->created_timestamp = created->valueint;
     }
 
-    cJSON *modified = cJSON_GetObjectItem(root, "modified_timestamp");
+    const cJSON *modified = cJSON_GetObjectItem(root, "modified_timestamp");
     if (modified && cJSON_IsNumber(modified)) {
         imported_profile->modified_timestamp = modified->valueint;
     }
 
     // Paramètres généraux
-    cJSON *auto_night = cJSON_GetObjectItem(root, "auto_night_mode");
+    const cJSON *auto_night = cJSON_GetObjectItem(root, "auto_night_mode");
     if (auto_night && cJSON_IsBool(auto_night)) {
         imported_profile->auto_night_mode = cJSON_IsTrue(auto_night);
     }
 
-    cJSON *night_bright = cJSON_GetObjectItem(root, "night_brightness");
+    const cJSON *night_bright = cJSON_GetObjectItem(root, "night_brightness");
     if (night_bright && cJSON_IsNumber(night_bright)) {
         imported_profile->night_brightness = night_bright->valueint;
     }
 
     // Effet par défaut
-    cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
+    const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
     if (default_effect && cJSON_IsObject(default_effect)) {
         cJSON *item;
         if ((item = cJSON_GetObjectItem(default_effect, "effect")) && cJSON_IsNumber(item))
@@ -1370,7 +1371,7 @@ bool config_manager_import_profile(uint8_t profile_id, const char* json_string) 
     }
 
     // Effet mode nuit
-    cJSON *night_effect = cJSON_GetObjectItem(root, "night_mode_effect");
+    const cJSON *night_effect = cJSON_GetObjectItem(root, "night_mode_effect");
     if (night_effect && cJSON_IsObject(night_effect)) {
         cJSON *item;
         if ((item = cJSON_GetObjectItem(night_effect, "effect")) && cJSON_IsNumber(item))
@@ -1394,32 +1395,32 @@ bool config_manager_import_profile(uint8_t profile_id, const char* json_string) 
     // Événements CAN
     cJSON *events = cJSON_GetObjectItem(root, "event_effects");
     if (events && cJSON_IsArray(events)) {
-        cJSON *event = NULL;
+        const cJSON *event = NULL;
         cJSON_ArrayForEach(event, events) {
-            cJSON *event_type = cJSON_GetObjectItem(event, "event");
+            const cJSON *event_type = cJSON_GetObjectItem(event, "event");
             if (!event_type || !cJSON_IsNumber(event_type)) continue;
 
             int evt = event_type->valueint;
             if (evt < 0 || evt >= CAN_EVENT_MAX) continue;
 
-            cJSON *enabled = cJSON_GetObjectItem(event, "enabled");
+            const cJSON *enabled = cJSON_GetObjectItem(event, "enabled");
             if (enabled && cJSON_IsBool(enabled)) {
                 imported_profile->event_effects[evt].enabled = cJSON_IsTrue(enabled);
             }
 
-            cJSON *priority = cJSON_GetObjectItem(event, "priority");
+            const cJSON *priority = cJSON_GetObjectItem(event, "priority");
             if (priority && cJSON_IsNumber(priority)) {
                 imported_profile->event_effects[evt].priority = priority->valueint;
             }
 
-            cJSON *duration = cJSON_GetObjectItem(event, "duration_ms");
+            const cJSON *duration = cJSON_GetObjectItem(event, "duration_ms");
             if (duration && cJSON_IsNumber(duration)) {
                 imported_profile->event_effects[evt].duration_ms = duration->valueint;
             }
 
             imported_profile->event_effects[evt].event = evt;
 
-            cJSON *effect_config = cJSON_GetObjectItem(event, "effect_config");
+            const cJSON *effect_config = cJSON_GetObjectItem(event, "effect_config");
             if (effect_config && cJSON_IsObject(effect_config)) {
                 cJSON *item;
                 if ((item = cJSON_GetObjectItem(effect_config, "effect")) && cJSON_IsNumber(item))

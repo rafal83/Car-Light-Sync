@@ -229,23 +229,23 @@ static esp_err_t effect_handler(httpd_req_t *req) {
     
     effect_config_t config;
     led_effects_get_config(&config);
-    
-    cJSON *effect = cJSON_GetObjectItem(root, "effect");
+
+    const cJSON *effect = cJSON_GetObjectItem(root, "effect");
     if (effect) config.effect = effect->valueint;
-    
-    cJSON *brightness = cJSON_GetObjectItem(root, "brightness");
+
+    const cJSON *brightness = cJSON_GetObjectItem(root, "brightness");
     if (brightness) config.brightness = brightness->valueint;
-    
-    cJSON *speed = cJSON_GetObjectItem(root, "speed");
+
+    const cJSON *speed = cJSON_GetObjectItem(root, "speed");
     if (speed) config.speed = speed->valueint;
-    
-    cJSON *color1 = cJSON_GetObjectItem(root, "color1");
+
+    const cJSON *color1 = cJSON_GetObjectItem(root, "color1");
     if (color1) config.color1 = color1->valueint;
-    
-    cJSON *color2 = cJSON_GetObjectItem(root, "color2");
+
+    const cJSON *color2 = cJSON_GetObjectItem(root, "color2");
     if (color2) config.color2 = color2->valueint;
-    
-    cJSON *color3 = cJSON_GetObjectItem(root, "color3");
+
+    const cJSON *color3 = cJSON_GetObjectItem(root, "color3");
     if (color3) config.color3 = color3->valueint;
     
     led_effects_set_config(&config);
@@ -294,9 +294,9 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    cJSON *led_count_json = cJSON_GetObjectItem(root, "led_count");
-    cJSON *data_pin_json = cJSON_GetObjectItem(root, "data_pin");
-    cJSON *strip_reverse_json = cJSON_GetObjectItem(root, "strip_reverse");
+    const cJSON *led_count_json = cJSON_GetObjectItem(root, "led_count");
+    const cJSON *data_pin_json = cJSON_GetObjectItem(root, "data_pin");
+    const cJSON *strip_reverse_json = cJSON_GetObjectItem(root, "strip_reverse");
 
     if (led_count_json == NULL || data_pin_json == NULL) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing led_count or data_pin");
@@ -416,7 +416,7 @@ static esp_err_t profile_activate_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
     
-    cJSON *profile_id = cJSON_GetObjectItem(root, "profile_id");
+    const cJSON *profile_id = cJSON_GetObjectItem(root, "profile_id");
     if (profile_id) {
         bool success = config_manager_activate_profile(profile_id->valueint);
         httpd_resp_set_type(req, "application/json");
@@ -515,7 +515,7 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
     
-    cJSON *profile_id = cJSON_GetObjectItem(root, "profile_id");
+    const cJSON *profile_id = cJSON_GetObjectItem(root, "profile_id");
     if (profile_id) {
         bool success = config_manager_delete_profile(profile_id->valueint);
         cJSON *response = cJSON_CreateObject();
@@ -606,12 +606,12 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     }
 
     // Mettre à jour les paramètres si fournis
-    cJSON *auto_night_mode = cJSON_GetObjectItem(root, "auto_night_mode");
+    const cJSON *auto_night_mode = cJSON_GetObjectItem(root, "auto_night_mode");
     if (auto_night_mode) {
         profile->auto_night_mode = cJSON_IsTrue(auto_night_mode);
     }
 
-    cJSON *night_brightness = cJSON_GetObjectItem(root, "night_brightness");
+    const cJSON *night_brightness = cJSON_GetObjectItem(root, "night_brightness");
     if (night_brightness) {
         profile->night_brightness = (uint8_t)night_brightness->valueint;
     }
@@ -745,13 +745,13 @@ static esp_err_t event_effect_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
     
-    cJSON *event = cJSON_GetObjectItem(root, "event");
-    cJSON *effect = cJSON_GetObjectItem(root, "effect");
-    cJSON *duration = cJSON_GetObjectItem(root, "duration");
-    cJSON *priority = cJSON_GetObjectItem(root, "priority");
-    cJSON *brightness = cJSON_GetObjectItem(root, "brightness");
-    cJSON *speed = cJSON_GetObjectItem(root, "speed");
-    cJSON *color1 = cJSON_GetObjectItem(root, "color1");
+    const cJSON *event = cJSON_GetObjectItem(root, "event");
+    const cJSON *effect = cJSON_GetObjectItem(root, "effect");
+    const cJSON *duration = cJSON_GetObjectItem(root, "duration");
+    const cJSON *priority = cJSON_GetObjectItem(root, "priority");
+    const cJSON *brightness = cJSON_GetObjectItem(root, "brightness");
+    const cJSON *speed = cJSON_GetObjectItem(root, "speed");
+    const cJSON *color1 = cJSON_GetObjectItem(root, "color1");
     
     if (event && effect) {
         effect_config_t effect_config;
@@ -855,8 +855,8 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    cJSON *profile_id_json = cJSON_GetObjectItem(root, "profile_id");
-    cJSON *profile_data = cJSON_GetObjectItem(root, "profile_data");
+    const cJSON *profile_id_json = cJSON_GetObjectItem(root, "profile_id");
+    const cJSON *profile_data = cJSON_GetObjectItem(root, "profile_data");
 
     if (!profile_id_json || !profile_data) {
         cJSON_Delete(root);
@@ -1161,16 +1161,16 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
         return false;
     }
 
-    cJSON *event_json = cJSON_GetObjectItem(event_obj, "event");
-    cJSON *effect_json = cJSON_GetObjectItem(event_obj, "effect");
-    cJSON *brightness_json = cJSON_GetObjectItem(event_obj, "brightness");
-    cJSON *speed_json = cJSON_GetObjectItem(event_obj, "speed");
-    cJSON *color_json = cJSON_GetObjectItem(event_obj, "color");
-    cJSON *duration_json = cJSON_GetObjectItem(event_obj, "duration");
-    cJSON *priority_json = cJSON_GetObjectItem(event_obj, "priority");
-    cJSON *enabled_json = cJSON_GetObjectItem(event_obj, "enabled");
-    cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "action_type");
-    cJSON *profile_id_json = cJSON_GetObjectItem(event_obj, "profile_id");
+    const cJSON *event_json = cJSON_GetObjectItem(event_obj, "event");
+    const cJSON *effect_json = cJSON_GetObjectItem(event_obj, "effect");
+    const cJSON *brightness_json = cJSON_GetObjectItem(event_obj, "brightness");
+    const cJSON *speed_json = cJSON_GetObjectItem(event_obj, "speed");
+    const cJSON *color_json = cJSON_GetObjectItem(event_obj, "color");
+    const cJSON *duration_json = cJSON_GetObjectItem(event_obj, "duration");
+    const cJSON *priority_json = cJSON_GetObjectItem(event_obj, "priority");
+    const cJSON *enabled_json = cJSON_GetObjectItem(event_obj, "enabled");
+    const cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "action_type");
+    const cJSON *profile_id_json = cJSON_GetObjectItem(event_obj, "profile_id");
 
     if (event_json == NULL || effect_json == NULL ||
         !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
