@@ -1,0 +1,16 @@
+{
+  "appId": "com.teslastrip.controller",
+  "appName": "Tesla Strip",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "BluetoothLe": {
+      "displayStrings": {
+        "scanning": "Scanning for devices...",
+        "cancel": "Cancel",
+        "availableDevices": "Available devices",
+        "noDeviceFound": "No device found"
+      }
+    }
+  }
+}

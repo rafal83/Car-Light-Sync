@@ -1,0 +1,97 @@
+╔═══════════════════════════════════════════════════════════════════╗
+║                                                                   ║
+║              TESLA STRIP MOBILE - PREMIERS PAS                    ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+📱 Application mobile pour contrôler votre Tesla Strip via Bluetooth
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 INSTALLATION RAPIDE (5 minutes)
+
+1. Ouvrir un terminal dans le dossier mobile.app/
+
+2. Installer les dépendances :
+
+   npm install
+
+3. Initialiser le projet :
+
+   npm run init
+
+4. C'est fait ! 🎉
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 TESTER SUR ANDROID
+
+Option 1 - En ligne de commande (recommandé) :
+1. npm run run:android
+2. L'app est buildée et installée automatiquement ! 🚀
+
+Option 2 - Avec Android Studio :
+1. npm run sync:android
+2. npm run open:android
+3. Dans Android Studio, cliquer sur ▶️ Run
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🍎 TESTER SUR iOS (macOS uniquement)
+
+Option 1 - En ligne de commande (recommandé) :
+1. npm run run:ios
+2. L'app se lance sur le simulateur ! 🚀
+
+Option 2 - Avec Xcode :
+1. npm run sync:ios
+2. npm run open:ios
+3. Dans Xcode, cliquer sur ▶️ Run
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 APRÈS UNE MODIFICATION DU HTML
+
+Si vous modifiez ../data/index.html :
+
+1. npm run sync
+2. Relancer l'app sur Android/iOS
+
+C'est tout ! Le même fichier HTML fonctionne partout.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 DOCUMENTATION
+
+- QUICKSTART.md         → Guide de démarrage détaillé
+- README.md             → Documentation complète
+- PERMISSIONS.md        → Configuration Bluetooth
+- BLUETOOTH_ADAPTER.md  → Détails techniques
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ PROBLÈMES COURANTS
+
+Q: "Bluetooth ne fonctionne pas"
+A: Vérifiez les permissions dans PERMISSIONS.md
+
+Q: "Le fichier HTML n'est pas à jour"
+A: Lancez : npm run sync
+
+Q: "Erreur lors du build"
+A: Supprimez node_modules/, android/, ios/, www/
+   Puis relancez : npm run init
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 ASTUCE
+
+L'application mobile utilise EXACTEMENT le même fichier index.html
+que celui embarqué dans l'ESP32. Pas de duplication, pas de
+maintenance double !
+
+╔═══════════════════════════════════════════════════════════════════╗
+║                                                                   ║
+║  Besoin d'aide ? Consultez README.md ou QUICKSTART.md            ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝

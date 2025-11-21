@@ -1769,6 +1769,7 @@
             deviceName: 'TESLA-STRIP'
         };
         const usingFileProtocol = window.location.protocol === 'file:';
+        const usingCapacitor = window.Capacitor !== undefined;
         const FALLBACK_ORIGIN = (!usingFileProtocol && window.location.origin && window.location.origin !== 'null')
             ? window.location.origin
             : 'http://localhost';
@@ -1777,7 +1778,7 @@
         let bleAutoConnectGestureCaptured = false;
         let bleAutoConnectGestureHandlerRegistered = false;
         let bleAutoConnectAwaitingGesture = false;
-        let wifiOnline = !usingFileProtocol && navigator.onLine;
+        let wifiOnline = !usingFileProtocol && !usingCapacitor && navigator.onLine;
         let apiConnectionReady = wifiOnline;
         let apiConnectionResolvers = [];
         let initialDataLoaded = false;
@@ -1914,7 +1915,7 @@
             })();
         }
         window.addEventListener('online', () => {
-            wifiOnline = !usingFileProtocol && navigator.onLine;
+            wifiOnline = !usingFileProtocol && !usingCapacitor && navigator.onLine;
             updateApiConnectionState();
         });
         window.addEventListener('offline', () => {
@@ -2228,6 +2229,7 @@
         window.fetch = async function(input, init = {}) {
             const request = new Request(input, init);
             const isApiCall = isApiRequest(request.url, input);
+
             if (isApiCall) {
                 await waitForApiConnection();
             }
@@ -2610,6 +2612,8 @@
             } else if (tabName === 'simulation') {
                 // Restaurer l'état des toggles de simulation
                 restoreSimulationToggles();
+            } else if (tabName === 'profiles') {
+                loadProfiles();
             }
         }
         function restoreSimulationToggles() {

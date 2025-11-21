@@ -234,7 +234,6 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
 }
 
 static void ble_handle_command_bytes(const uint8_t *data, size_t length) {
-    ESP_LOGI(BLE_API_TAG, "Recv %d bytes", length);
     for (size_t i = 0; i < length; ++i) {
         char c = (char)data[i];
         if (c == '\r') {
@@ -531,7 +530,6 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
         }
     }
 
-    ESP_LOGI(BLE_API_TAG, "Notification sent: %d bytes in %d chunks", len, chunk_count);
     return true;
 }
 
