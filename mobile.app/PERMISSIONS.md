@@ -54,10 +54,10 @@ Les permissions suivantes doivent être ajoutées dans `ios/App/Info.plist` :
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>This app uses Bluetooth to connect to your Tesla Strip LED controller and control lighting effects.</string>
+<string>This app uses Bluetooth to connect to your Car Light Sync LED controller and control lighting effects.</string>
 
 <key>NSBluetoothPeripheralUsageDescription</key>
-<string>This app uses Bluetooth to connect to your Tesla Strip LED controller.</string>
+<string>This app uses Bluetooth to connect to your Car Light Sync LED controller.</string>
 ```
 
 ### Configuration automatique
@@ -82,10 +82,10 @@ Exemple en français :
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>Cette application utilise le Bluetooth pour se connecter à votre contrôleur Tesla Strip et piloter les effets lumineux.</string>
+<string>Cette application utilise le Bluetooth pour se connecter à votre contrôleur Car Light Sync et piloter les effets lumineux.</string>
 
 <key>NSBluetoothPeripheralUsageDescription</key>
-<string>Cette application utilise le Bluetooth pour se connecter à votre contrôleur Tesla Strip.</string>
+<string>Cette application utilise le Bluetooth pour se connecter à votre contrôleur Car Light Sync.</string>
 ```
 
 ### Notes importantes
@@ -107,7 +107,7 @@ Exemple en français :
 5. Acceptez les permissions
 
 Si les permissions ne sont pas demandées :
-- Allez dans **Paramètres** > **Applications** > **Tesla Strip**
+- Allez dans **Paramètres** > **Applications** > **Car Light Sync**
 - Vérifiez les permissions accordées
 - Accordez manuellement si nécessaire
 
@@ -120,7 +120,7 @@ Si les permissions ne sont pas demandées :
 5. Acceptez la permission Bluetooth
 
 Si la permission n'est pas demandée :
-- Allez dans **Réglages** > **Tesla Strip**
+- Allez dans **Réglages** > **Car Light Sync**
 - Vérifiez que le Bluetooth est autorisé
 
 ---
@@ -142,7 +142,7 @@ Si la permission n'est pas demandée :
 
 **Solution** :
 1. Expliquez à l'utilisateur que la localisation est requise pour le BLE sur Android < 12
-2. Guidez-le vers **Paramètres** > **Applications** > **Tesla Strip** > **Permissions**
+2. Guidez-le vers **Paramètres** > **Applications** > **Car Light Sync** > **Permissions**
 3. Accordez la permission de localisation
 
 ### iOS : "Bluetooth is unavailable"
@@ -151,7 +151,7 @@ Si la permission n'est pas demandée :
 
 **Solution** :
 1. Vérifiez que le Bluetooth est activé dans **Réglages** > **Bluetooth**
-2. Vérifiez les permissions dans **Réglages** > **Tesla Strip**
+2. Vérifiez les permissions dans **Réglages** > **Car Light Sync**
 3. Réinstallez l'application si nécessaire
 
 ### iOS : Permission popup ne s'affiche pas

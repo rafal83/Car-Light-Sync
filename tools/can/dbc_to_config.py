@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Générateur de configuration Tesla Strip depuis fichier DBC
+Générateur de configuration Car Light Sync depuis fichier DBC
 
 Usage:
     python dbc_to_config.py tesla_model3.dbc --output model3_2021.json
     python dbc_to_config.py tesla_model3.dbc --interactive
 
-Auteur: Tesla Strip Controller Team
+Auteur: Car Light Sync Team
 Licence: MIT
 """
 
@@ -443,7 +443,7 @@ def parse_dbc(dbc_file, output_file, vehicle_info=None, bus_mapping=None, intera
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convertir un fichier DBC en configuration JSON pour Tesla Strip Controller",
+        description="Convertir un fichier DBC en configuration JSON pour Car Light Sync",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Exemples:

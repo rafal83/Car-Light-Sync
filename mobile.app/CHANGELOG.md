@@ -1,4 +1,4 @@
-# Changelog - Tesla Strip Mobile App
+# Changelog - Car Light Sync Mobile App
 
 ## [1.0.0] - 2025-01-XX
 
@@ -98,7 +98,7 @@
 
 - Capacitor team pour le framework
 - Capacitor Community pour le plugin Bluetooth LE
-- Contributors du projet Tesla Strip
+- Contributors du projet Car Light Sync
 
 ---
 

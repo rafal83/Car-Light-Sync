@@ -1,4 +1,4 @@
-menu "Tesla Strip Configuration"
+menu "Car Light Sync Configuration"
 
     config LED_GPIO
         int "LED GPIO Pin"
@@ -15,13 +15,13 @@ menu "Tesla Strip Configuration"
 
     config WIFI_AP_SSID
         string "WiFi AP SSID"
-        default "Tesla-Strip"
+        default "CarLightSync"
         help
             SSID for the access point.
 
     config WIFI_AP_PASSWORD
         string "WiFi AP Password"
-        default "tesla123"
+        default ""
         help
             Password for the access point (min 8 characters).
 

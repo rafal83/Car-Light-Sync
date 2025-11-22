@@ -46,7 +46,7 @@
 - [ ] Au lancement, l'overlay de connexion s'affiche
 - [ ] Le message "Connectez-vous" ou "Connexion..." apparaît
 - [ ] **IMPORTANT** : L'app démarre le scan BLE automatiquement (sans clic)
-- [ ] L'appareil Tesla Strip est trouvé
+- [ ] L'appareil Car Light Sync est trouvé
 - [ ] La connexion s'établit automatiquement
 - [ ] L'overlay disparaît
 - [ ] L'interface est débloquée
@@ -92,7 +92,7 @@ Mesurer le temps de connexion :
 
 - [ ] Au lancement, l'overlay de connexion s'affiche
 - [ ] **IMPORTANT** : L'app démarre le scan BLE automatiquement (sans clic)
-- [ ] L'appareil Tesla Strip est trouvé
+- [ ] L'appareil Car Light Sync est trouvé
 - [ ] La connexion s'établit automatiquement
 - [ ] L'overlay disparaît
 - [ ] L'interface est débloquée
@@ -122,9 +122,9 @@ Vérifier les logs suivants dans Xcode > Console :
 
 ### Perte de connexion
 
-- [ ] Éteindre le Tesla Strip
+- [ ] Éteindre le Car Light Sync
 - [ ] L'overlay réapparaît avec message de déconnexion
-- [ ] Rallumer le Tesla Strip
+- [ ] Rallumer le Car Light Sync
 - [ ] **L'app retente automatiquement** la connexion
 - [ ] La connexion se rétablit
 
@@ -175,7 +175,7 @@ Une fois connecté automatiquement :
 
 ### Pas d'appareil à proximité
 
-- [ ] Aucun Tesla Strip allumé
+- [ ] Aucun Car Light Sync allumé
 - [ ] Lancer l'app
 - [ ] Le scan BLE dure 5 secondes
 - [ ] Message d'erreur : "No devices found"
@@ -183,7 +183,7 @@ Une fois connecté automatiquement :
 
 ### Plusieurs appareils
 
-- [ ] Plusieurs Tesla Strip allumés
+- [ ] Plusieurs Car Light Sync allumés
 - [ ] Lancer l'app
 - [ ] **L'app se connecte au premier trouvé** (comportement actuel)
 - [ ] TODO : Implémenter UI de sélection

@@ -154,7 +154,7 @@ Pour vérifier que la connexion automatique fonctionne, regardez les logs dans l
 📱 Capacitor native app detected: forcing wifiOnline = false to use BLE
 🔄 Triggering BLE auto-connect...
 [BLE] Requesting device...
-[BLE] Device found: Tesla Strip
+[BLE] Device found: Car Light Sync
 [BLE] Connecting to GATT...
 [BLE] Connected successfully
 ✅ Interface unlocked
@@ -215,7 +215,7 @@ L'utilisateur :
 **Solution future** : Implémenter une UI de sélection d'appareil.
 
 **Workaround actuel** :
-1. Éloigner les autres appareils Tesla Strip
+1. Éloigner les autres appareils Car Light Sync
 2. Lancer l'app
 3. Se connecter au seul appareil à proximité
 

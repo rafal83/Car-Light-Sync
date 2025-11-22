@@ -1,6 +1,6 @@
 {
-  "appId": "com.teslastrip.controller",
-  "appName": "Tesla Strip",
+  "appId": "com.carlightsync.controller",
+  "appName": "Car Light Sync",
   "webDir": "www",
   "bundledWebRuntime": false,
   "plugins": {

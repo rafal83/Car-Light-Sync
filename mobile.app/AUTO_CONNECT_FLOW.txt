@@ -7,7 +7,7 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │  1. LANCEMENT DE L'APPLICATION                                      │
 │                                                                     │
-│     Utilisateur ouvre l'app Tesla Strip                            │
+│     Utilisateur ouvre l'app Car Light Sync                            │
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                              ▼
@@ -87,9 +87,9 @@
 │  9. APPAREIL TROUVÉ                                                 │
 │                                                                     │
 │     Listener 'onScanResult' détecte un appareil                     │
-│     → Tesla Strip (ou premier appareil trouvé)                      │
+│     → Car Light Sync (ou premier appareil trouvé)                      │
 │                                                                     │
-│     Console: "[BLE] Device found: Tesla Strip"                      │
+│     Console: "[BLE] Device found: Car Light Sync"                      │
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                              ▼
@@ -190,7 +190,7 @@
   📱 Capacitor native app detected: forcing wifiOnline = false
   🔄 Triggering BLE auto-connect...
   [BLE] Requesting device...
-  [BLE] Device found: Tesla Strip
+  [BLE] Device found: Car Light Sync
   [BLE] Connecting to GATT...
   [BLE] Connected successfully
   ✅ BLE connected

@@ -1,7 +1,7 @@
 {
-  "name": "tesla-strip-mobile",
+  "name": "car-light-sync-mobile",
   "version": "1.0.0",
-  "description": "Tesla Strip Controller Mobile App",
+  "description": "Car Light Sync Mobile App",
   "main": "index.js",
   "scripts": {
     "init": "node init.js",

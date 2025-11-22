@@ -1,4 +1,4 @@
-# 🚀 Guide de Démarrage Rapide - Tesla Strip Controller v2.0
+# 🚀 Guide de Démarrage Rapide - Car Light Sync v2.0
 
 ## Installation en 5 Minutes
 
@@ -45,8 +45,8 @@ idf.py -p /dev/ttyUSB0 flash monitor
 
 #### 4.1 Connexion WiFi
 1. Chercher le réseau **Tesla-Strip**
-2. Se connecter avec le mot de passe : **tesla123**
-3. Ouvrir http://192.168.4.1
+2. Se connecter sans mot de passe
+3. Ouvrir http://192.168.10.1
 
 #### 4.2 Vérification Bus CAN
 1. Brancher le câble OBD-II avec le transceiver CAN connecté à l'ESP32
@@ -178,7 +178,7 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 
 ### Problème: Interface web inaccessible
 1. Vérifier connexion au WiFi "Tesla-Strip"
-2. Essayer http://192.168.4.1 (pas https)
+2. Essayer http://192.168.10.1 (pas https)
 3. Vider le cache du navigateur
 4. Essayer un autre navigateur
 
@@ -188,14 +188,14 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 1. Réglages → WiFi
 2. Se connecter à "Tesla-Strip"
 3. Ouvrir Safari
-4. Aller sur http://192.168.4.1
+4. Aller sur http://192.168.10.1
 5. Ajouter à l'écran d'accueil (optionnel)
 
 ### Android
 1. Paramètres → WiFi
 2. Se connecter à "Tesla-Strip"
 3. Ouvrir Chrome
-4. Aller sur http://192.168.4.1
+4. Aller sur http://192.168.10.1
 5. Menu → Ajouter à l'écran d'accueil (optionnel)
 
 ## 🎓 Prochaines Étapes

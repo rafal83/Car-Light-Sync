@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🚀 Initialisation du projet Tesla Strip Mobile...\n');
+console.log('🚀 Initialisation du projet Car Light Sync Mobile...\n');
 
 // Vérifier que nous sommes dans le bon dossier
 if (!fs.existsSync('package.json')) {

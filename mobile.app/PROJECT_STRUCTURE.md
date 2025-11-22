@@ -121,8 +121,8 @@ Configuration principale de Capacitor :
 
 ```json
 {
-  "appId": "com.teslastrip.controller",     // ID unique de l'app
-  "appName": "Tesla Strip",                 // Nom de l'app
+  "appId": "com.CarLightSync.controller",     // ID unique de l'app
+  "appName": "Car Light Sync",                 // Nom de l'app
   "webDir": "www",                          // Dossier web source
   "bundledWebRuntime": false,               // Pas de runtime embarqué
   "plugins": {
@@ -221,7 +221,7 @@ android/
 │   │   ├── res/
 │   │   │   ├── mipmap-*/             ← Icônes app
 │   │   │   └── values/               ← Strings, couleurs
-│   │   └── java/com/teslastrip/controller/
+│   │   └── java/com/CarLightSync/controller/
 │   │       └── MainActivity.java
 │   └── build.gradle                  ← Config build app
 ├── gradle/
@@ -386,4 +386,4 @@ npm run open:ios
 ### Utilisateur final
 → Installer l'APK/IPA
 → Accorder les permissions Bluetooth
-→ Connecter au Tesla Strip
+→ Connecter au Car Light Sync

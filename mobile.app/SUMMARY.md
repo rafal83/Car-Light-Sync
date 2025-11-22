@@ -1,4 +1,4 @@
-# 📱 Tesla Strip Mobile - Résumé du projet
+# 📱 Car Light Sync Mobile - Résumé du projet
 
 ## ✨ Ce qui a été créé
 

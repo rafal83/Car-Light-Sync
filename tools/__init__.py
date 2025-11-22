@@ -1,8 +1,8 @@
 """
-Tesla Strip Controller - Python Tools
+Car Light Sync - Python Tools
 
 This package contains various utilities for building and configuring
-the Tesla Strip Controller firmware.
+the Car Light Sync firmware.
 
 Modules:
     build - PlatformIO build scripts

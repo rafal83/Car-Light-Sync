@@ -1,4 +1,4 @@
-# Tesla Strip Controller
+# Car Light Sync
 
 Système de contrôle LED RGB WS2812 pour Tesla avec connexion CAN Bus directe, intégration CAN unifiée et interface web moderne.
 
@@ -186,8 +186,8 @@ Le système détecte 22+ événements CAN du véhicule Tesla :
 
 ### Accès à l'Interface
 
-1. Se connecter au WiFi **Tesla-Strip** (mot de passe : `tesla123`)
-2. Ouvrir un navigateur à l'adresse : `http://192.168.4.1`
+1. Se connecter au WiFi **CarLightSync** (sans mot de passe)
+2. Ouvrir un navigateur à l'adresse : `http://192.168.10.1`
 
 ### Fonctionnalités de l'Interface
 
@@ -442,7 +442,7 @@ Content-Type: multipart/form-data
 
 ### Problème : Interface web inaccessible
 - Vérifier connexion au WiFi `Tesla-Strip`
-- Essayer `http://192.168.4.1` (PAS https)
+- Essayer `http://192.168.10.1` (PAS https)
 - Vider le cache du navigateur (Ctrl+F5)
 - Vérifier logs série : "Page HTML envoyée avec succès"
 - Si erreur persistante, redémarrer l'ESP32

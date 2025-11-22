@@ -177,7 +177,7 @@ Si cela fonctionne, le problème est le timing de chargement des scripts.
 ### Solution
 
 **Android 12+** :
-1. Paramètres > Applications > Tesla Strip > Permissions
+1. Paramètres > Applications > Car Light Sync > Permissions
 2. Accorder **Bluetooth** et **Localisation**
 3. Relancer l'app
 

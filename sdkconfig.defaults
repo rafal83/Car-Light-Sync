@@ -1,4 +1,4 @@
-# Configuration par défaut pour Tesla Strip
+# Configuration par défaut pour Car Light Sync
 
 # WiFi
 CONFIG_ESP32_WIFI_STATIC_RX_BUFFER_NUM=10

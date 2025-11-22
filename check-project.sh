@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Script de vérification du projet Tesla Strip Controller v2.0
+# Script de vérification du projet Car Light Sync v2.0
 
-echo "🔍 Vérification du projet Tesla Strip Controller v2.0"
+echo "🔍 Vérification du projet Car Light Sync v2.0"
 echo "======================================================"
 echo ""
 
@@ -49,7 +49,6 @@ echo "💻 Vérification des fichiers source..."
 check_file "main/main.c"
 check_file "main/wifi_manager.c"
 check_file "main/can_bus.c"
-check_file "main/tesla_can.c"
 check_file "main/led_effects.c"
 check_file "main/web_server.c"
 check_file "main/config_manager.c"
@@ -79,7 +78,6 @@ check_file "LICENSE"
 echo ""
 
 echo "🛠️ Vérification des scripts..."
-check_file "tesla-strip.sh"
 check_file ".gitignore"
 echo ""
 

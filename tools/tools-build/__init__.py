@@ -1,7 +1,7 @@
 """
 Build Scripts
 
-PlatformIO build-time scripts for the Tesla Strip Controller firmware.
+PlatformIO build-time scripts for the Car Light Sync firmware.
 
 Scripts:
     compress_html    - Compresses index.html to GZIP format

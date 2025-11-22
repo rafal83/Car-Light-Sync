@@ -1,6 +1,6 @@
-# Tesla Strip Controller - Python Tools
+# Car Light Sync - Python Tools
 
-Ce dossier contient tous les outils Python utilisés pour le développement, la configuration et la compilation du firmware Tesla Strip Controller.
+Ce dossier contient tous les outils Python utilisés pour le développement, la configuration et la compilation du firmware Car Light Sync.
 
 ## Structure
 
@@ -102,7 +102,7 @@ Outils pour configurer et gérer les messages CAN des différents véhicules.
 
 **Usage:** Manuel
 
-Convertit un fichier DBC (CAN database) en configuration JSON pour Tesla Strip.
+Convertit un fichier DBC (CAN database) en configuration JSON pour Car Light Sync.
 
 **Fonctionnalités:**
 - Parsing de fichiers DBC avec `cantools`

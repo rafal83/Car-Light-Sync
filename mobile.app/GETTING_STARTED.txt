@@ -1,10 +1,10 @@
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                                                                   ║
-║              TESLA STRIP MOBILE - PREMIERS PAS                    ║
+║              Car Light Sync MOBILE - PREMIERS PAS                    ║
 ║                                                                   ║
 ╚═══════════════════════════════════════════════════════════════════╝
 
-📱 Application mobile pour contrôler votre Tesla Strip via Bluetooth
+📱 Application mobile pour contrôler votre Car Light Sync via Bluetooth
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

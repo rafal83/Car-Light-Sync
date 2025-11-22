@@ -1,6 +1,6 @@
-# Tesla Strip Mobile App
+# Car Light Sync Mobile App
 
-Application mobile Capacitor pour contrôler le Tesla Strip via Bluetooth.
+Application mobile Capacitor pour contrôler le Car Light Sync via Bluetooth.
 
 ## Architecture
 
@@ -149,9 +149,9 @@ Ajout automatique des descriptions d'usage :
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>This app uses Bluetooth to connect to your Tesla Strip device</string>
+<string>This app uses Bluetooth to connect to your Car Light Sync device</string>
 <key>NSBluetoothPeripheralUsageDescription</key>
-<string>This app uses Bluetooth to connect to your Tesla Strip device</string>
+<string>This app uses Bluetooth to connect to your Car Light Sync device</string>
 ```
 
 ## Structure du projet

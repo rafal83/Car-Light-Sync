@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script d'aide pour Tesla Strip Controller
+# Script d'aide pour Car Light Sync
 
 set -e
 
@@ -8,7 +8,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 
 function show_help() {
-    echo "Tesla Strip Controller - Script d'aide"
+    echo "Car Light Sync - Script d'aide"
     echo ""
     echo "Usage: $0 [commande]"
     echo ""
