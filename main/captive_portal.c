@@ -110,7 +110,7 @@ static void dns_server_task(void *pvParameters) {
 
         // Parser le nom de domaine demandé
         char domain_name[256];
-        int name_len = parse_dns_name(rx_buffer + sizeof(dns_header_t), domain_name, sizeof(domain_name));
+        parse_dns_name(rx_buffer + sizeof(dns_header_t), domain_name, sizeof(domain_name));
 
         ESP_LOGD(TAG, "Requête DNS pour: %s", domain_name);
 

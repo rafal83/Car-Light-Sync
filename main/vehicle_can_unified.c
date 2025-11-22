@@ -109,7 +109,6 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
     for (uint8_t i = 0; i < msg->signal_count; i++) {
         const can_signal_def_t *sig = &msg->signals[i];
 
-        float prev = history_get(msg->id, i);
         float now  = decode_signal_value(sig, frame->data, frame->dlc);
 
         history_set(msg->id, i, now);
