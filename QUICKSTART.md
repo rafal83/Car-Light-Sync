@@ -8,7 +8,7 @@
 - [ ] Alimentation 5V 3-6A minimum
 - [ ] Transceiver CAN (SN65HVD230 ou MCP2551)
 - [ ] Câble OBD-II ou câbles de connexion
-- [ ] Tesla (Model 3, Y, S ou X)
+- [ ] Véhicule compatible (Tesla Model 3, Y, S, X ou autre véhicule avec bus CAN)
 
 ### 2. Câblage Rapide ⚡
 
@@ -24,27 +24,27 @@ Alim 5V      ──────► WS2812 VCC
 
 #### Option A: PlatformIO (Recommandé)
 ```bash
-cd esp32-tesla-strip
+cd car-light-sync
 pio run -t upload
 pio device monitor
 ```
 
 #### Option B: ESP-IDF
 ```bash
-cd esp32-tesla-strip
+cd car-light-sync
 idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
 #### Option C: Script automatique
 ```bash
-./tesla-strip.sh all
+./car-light-sync.sh all
 ```
 
 ### 4. Configuration Initiale 🔧
 
 #### 4.1 Connexion WiFi
-1. Chercher le réseau **Tesla-Strip**
+1. Chercher le réseau **Car-Light-Sync**
 2. Se connecter sans mot de passe
 3. Ouvrir http://192.168.10.1
 
@@ -97,7 +97,7 @@ idf.py -p /dev/ttyUSB0 flash monitor
 - [ ] L'animation est fluide
 
 ### Test 2: Événements CAN
-Dans votre Tesla:
+Dans votre véhicule:
 - [ ] Activer clignotant gauche → Animation orange
 - [ ] Activer clignotant droit → Animation orange
 - [ ] Brancher charge → Animation de charge
@@ -177,7 +177,7 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 5. Tester un événement simple (clignotant) pour valider le système
 
 ### Problème: Interface web inaccessible
-1. Vérifier connexion au WiFi "Tesla-Strip"
+1. Vérifier connexion au WiFi "Car-Light-Sync"
 2. Essayer http://192.168.10.1 (pas https)
 3. Vider le cache du navigateur
 4. Essayer un autre navigateur
@@ -186,14 +186,14 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 
 ### iOS
 1. Réglages → WiFi
-2. Se connecter à "Tesla-Strip"
+2. Se connecter à "Car-Light-Sync"
 3. Ouvrir Safari
 4. Aller sur http://192.168.10.1
 5. Ajouter à l'écran d'accueil (optionnel)
 
 ### Android
 1. Paramètres → WiFi
-2. Se connecter à "Tesla-Strip"
+2. Se connecter à "Car-Light-Sync"
 3. Ouvrir Chrome
 4. Aller sur http://192.168.10.1
 5. Menu → Ajouter à l'écran d'accueil (optionnel)
@@ -230,7 +230,7 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 ### Support
 - GitHub Issues pour bugs et questions
 - Documentation ESP-IDF: https://docs.espressif.com
-- Forum Tesla: teslaownersonline.com
+- Forums véhicules: teslaownersonline.com et autres forums spécialisés
 
 ### Communauté
 - Partagez vos profils !
@@ -239,7 +239,7 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 
 ## 🎉 Félicitations !
 
-Vous avez maintenant un **système de LEDs Tesla hautement personnalisable** avec:
+Vous avez maintenant un **système de LEDs hautement personnalisable pour votre véhicule** avec:
 - ✅ 10 profils configurables
 - ✅ 17 événements CAN réactifs
 - ✅ Mode nuit automatique

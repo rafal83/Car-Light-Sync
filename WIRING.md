@@ -5,7 +5,7 @@
 ### Configuration Complète
 
 ```
-ESP32 DevKit S3                WS2812 LED Strip           CAN Transceiver         Bus CAN Tesla
+ESP32 DevKit S3                WS2812 LED Strip           CAN Transceiver         Bus CAN Véhicule
 ┌──────────────────┐          ┌───────────────┐          ┌───────────────┐       ┌──────────┐
 │                  │          │               │          │               │       │          │
 │            GPIO5 │─────────►│ DIN           │          │               │       │          │
@@ -59,7 +59,7 @@ Composants de protection:
 | 3V3       | VCC             | Alimentation 3.3V              |
 | GND       | GND             | Masse commune                  |
 
-| Pin Transceiver | Bus CAN Tesla | Description                    |
+| Pin Transceiver | Bus CAN Véhicule | Description                    |
 |-----------------|---------------|--------------------------------|
 | CAN_H           | Pin 6 OBD-II  | Signal CAN High                |
 | CAN_L           | Pin 14 OBD-II | Signal CAN Low                 |
@@ -108,7 +108,7 @@ Courant max = Nombre de LEDs × 60mA × Facteur d'utilisation (0.6-1.0)
 
 ⚠️ **Toujours prévoir 20% de marge de sécurité**
 
-## 🚗 Connexion au Bus CAN Tesla
+## 🚗 Connexion au Bus CAN du Véhicule
 
 ### Accès via le Port OBD-II
 
@@ -304,7 +304,7 @@ dans la plupart des véhicules. Ajouter seulement si nécessaire.
 
 **2.3 Test Interface Web**
 ```
-[ ] Se connecter au WiFi "Tesla-Strip"
+[ ] Se connecter au WiFi "Car-Light-Sync"
 [ ] Ouvrir http://192.168.10.1
 [ ] Vérifier affichage état véhicule en temps réel
 [ ] Tester changement d'effet
@@ -407,7 +407,7 @@ GND ────────────┴─ Masse Commune
 - Connexion en parallèle uniquement (non invasive)
 - Ne jamais interrompre le bus CAN existant
 - Pas de modification des messages CAN (lecture seule)
-- Déconnecter lors de mises à jour véhicule (service Tesla)
+- Déconnecter lors de mises à jour véhicule (service constructeur)
 
 ### Conformité Véhicule
 

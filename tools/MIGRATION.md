@@ -8,7 +8,7 @@ Les outils Python ont été réorganisés pour améliorer la maintenabilité et 
 
 #### Avant :
 ```
-esp32-tesla-strip/
+car-light-sync/
 ├── compress_html.py
 ├── inject_version.py
 ├── create_release.py
@@ -21,7 +21,7 @@ esp32-tesla-strip/
 
 #### Après :
 ```
-esp32-tesla-strip/
+car-light-sync/
 └── tools/
     ├── __init__.py
     ├── README.md
@@ -126,10 +126,10 @@ Si vous avez créé des scripts ou alias personnels, pensez à les mettre à jou
 #### Exemple pour Bash/Zsh
 ```bash
 # Avant
-alias tesla-build="python create_release.py"
+alias car-build="python create_release.py"
 
 # Après
-alias tesla-build="python tools/build/create_release.py"
+alias car-build="python tools/build/create_release.py"
 ```
 
 #### Exemple pour PowerShell

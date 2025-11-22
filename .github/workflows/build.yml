@@ -50,7 +50,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          build/tesla-strip.bin
+          build/car-light-sync.bin
           build/bootloader/bootloader.bin
           build/partition_table/partition-table.bin
       env:

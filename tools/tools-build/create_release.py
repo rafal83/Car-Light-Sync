@@ -10,10 +10,10 @@ import datetime
 import subprocess
 
 # Configuration
-_requested_env = os.environ.get("PIOENV") or os.environ.get("TESLA_STRIP_BUILD_ENV")
+_requested_env = os.environ.get("PIOENV") or os.environ.get("CAR_LIGHT_SYNC_BUILD_ENV")
 BUILD_DIR = os.path.join(".pio", "build", _requested_env) if _requested_env else ".pio/build/esp32s3"
 RELEASE_DIR = "build"
-PROJECT_NAME = "tesla-strip"
+PROJECT_NAME = "car-light-sync"
 
 
 def get_version_string():
@@ -282,7 +282,7 @@ Fonctionnalités:
 ✓ 16 effets lumineux différents
 ✓ Interface web de configuration
 ✓ Mise à jour OTA (Over-The-Air)
-✓ Support Tesla CAN bus via Commander
+✓ Support CAN bus véhicule (Tesla et autres)
 ✓ Profils de configuration
 ✓ Événements CAN personnalisables
 

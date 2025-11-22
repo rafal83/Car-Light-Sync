@@ -194,10 +194,10 @@ npm run open:ios
 
 ```bash
 # Créer le keystore
-keytool -genkey -v -keystore tesla-strip-release.keystore -alias tesla-strip -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkey -v -keystore car-light-sync-release.keystore -alias car-light-sync -keyalg RSA -keysize 2048 -validity 10000
 
 # Le placer dans android/app/
-mv tesla-strip-release.keystore android/app/
+mv car-light-sync-release.keystore android/app/
 ```
 
 ### Configurer Gradle
@@ -205,10 +205,10 @@ mv tesla-strip-release.keystore android/app/
 Créer `android/gradle.properties` :
 
 ```properties
-TESLA_STRIP_RELEASE_STORE_FILE=tesla-strip-release.keystore
-TESLA_STRIP_RELEASE_KEY_ALIAS=tesla-strip
-TESLA_STRIP_RELEASE_STORE_PASSWORD=votre_mot_de_passe
-TESLA_STRIP_RELEASE_KEY_PASSWORD=votre_mot_de_passe
+CAR_LIGHT_SYNC_RELEASE_STORE_FILE=car-light-sync-release.keystore
+CAR_LIGHT_SYNC_RELEASE_KEY_ALIAS=car-light-sync
+CAR_LIGHT_SYNC_RELEASE_STORE_PASSWORD=votre_mot_de_passe
+CAR_LIGHT_SYNC_RELEASE_KEY_PASSWORD=votre_mot_de_passe
 ```
 
 Modifier `android/app/build.gradle` :
@@ -218,10 +218,10 @@ android {
     ...
     signingConfigs {
         release {
-            storeFile file(TESLA_STRIP_RELEASE_STORE_FILE)
-            storePassword TESLA_STRIP_RELEASE_STORE_PASSWORD
-            keyAlias TESLA_STRIP_RELEASE_KEY_ALIAS
-            keyPassword TESLA_STRIP_RELEASE_KEY_PASSWORD
+            storeFile file(CAR_LIGHT_SYNC_RELEASE_STORE_FILE)
+            storePassword CAR_LIGHT_SYNC_RELEASE_STORE_PASSWORD
+            keyAlias CAR_LIGHT_SYNC_RELEASE_KEY_ALIAS
+            keyPassword CAR_LIGHT_SYNC_RELEASE_KEY_PASSWORD
         }
     }
     buildTypes {

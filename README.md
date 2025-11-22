@@ -1,19 +1,19 @@
 # Car Light Sync
 
-Système de contrôle LED RGB WS2812 pour Tesla avec connexion CAN Bus directe, intégration CAN unifiée et interface web moderne.
+Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégration CAN unifiée et interface web moderne. Compatible Tesla et autres véhicules.
 
 ## 🚀 Caractéristiques Principales
 
 ### Système LED Avancé
 - **Support WS2812/WS2812B** : Rubans LED RGB addressables haute performance
-- **19 Effets LED Intégrés** : Rainbow, breathing, fire, strobe, animations Tesla, blindspot flash, etc.
+- **19 Effets LED Intégrés** : Rainbow, breathing, fire, strobe, animations véhicule, blindspot flash, etc.
 - **Système de Profils** : Jusqu'à 10 profils de configuration personnalisés sauvegardés en NVS
 - **Mode Nuit Automatique** : Réduction automatique de luminosité basée sur capteur véhicule
 - **Performances** : 50 FPS (20ms par frame), latence CAN < 100ms
 
 ### Intégration CAN Unifiée
 - **Architecture Modulaire** : Système CAN unifié basé sur DBC avec décodage générique
-- **Support Multi-Véhicules** : Configuration par fichier pour Tesla Model 3, Model Y, Model S, etc.
+- **Support Multi-Véhicules** : Configuration par fichier pour différents véhicules (Tesla Model 3, Y, S, etc.)
 - **22+ Événements CAN** : Détection intelligente des événements véhicule (clignotants, portes, charge, blindspot, autopilot, etc.)
 - **Mapping Signal → État** : Mapping automatique des signaux CAN vers l'état du véhicule
 - **Gestion d'Événements** : Support des conditions RISING_EDGE, FALLING_EDGE, VALUE_EQUALS, THRESHOLD, etc.
@@ -38,8 +38,8 @@ Système de contrôle LED RGB WS2812 pour Tesla avec connexion CAN Bus directe, 
 - **ESP32** : ESP32-DevKit, ESP32-S2-Saola, ou ESP32-S3-DevKitC (support PSRAM)
 - **Ruban LED** : WS2812 ou WS2812B (60-150 LEDs recommandé)
 - **Alimentation** : 5V 3-10A selon nombre de LEDs
-- **Module CAN** : Transceiver CAN (ex: SN65HVD230, MCP2551) connecté au bus CAN de la Tesla
-- **Véhicule** : Tesla Model 3, Model Y, Model S, ou Model X
+- **Module CAN** : Transceiver CAN (ex: SN65HVD230, MCP2551) connecté au bus CAN du véhicule
+- **Véhicule** : Véhicule compatible avec bus CAN (Tesla Model 3, Y, S, X, ou autres)
 
 ### Logiciel
 - **ESP-IDF** : v5.0 ou supérieur
@@ -53,7 +53,7 @@ Système de contrôle LED RGB WS2812 pour Tesla avec connexion CAN Bus directe, 
 ```bash
 # Cloner le repository
 git clone <repo-url>
-cd esp32-tesla-strip
+cd car-light-sync
 
 # Sélectionner l'environnement selon votre ESP32
 # esp32dev (ESP32 standard)
@@ -79,7 +79,7 @@ cd esp-idf
 # Cloner et compiler le projet
 cd ~/projects
 git clone <repo-url>
-cd esp32-tesla-strip
+cd car-light-sync
 
 # Configurer (optionnel)
 idf.py menuconfig
@@ -210,7 +210,7 @@ L'interface expose une API REST complète. Voir section [API REST](#-api-rest) c
 Le système utilise le driver TWAI (Two-Wire Automotive Interface) de l'ESP32 pour une connexion directe au bus CAN :
 
 - **Driver** : ESP-IDF TWAI (driver CAN intégré ESP32)
-- **Vitesse** : 500 kbit/s (bus Chassis Tesla)
+- **Vitesse** : 500 kbit/s (configurable selon véhicule)
 - **GPIO TX** : GPIO 38 (configurable)
 - **GPIO RX** : GPIO 39 (configurable)
 - **Mode** : Normal (réception + transmission)
@@ -219,7 +219,7 @@ Le système utilise le driver TWAI (Two-Wire Automotive Interface) de l'ESP32 po
 ### Câblage du Transceiver CAN
 
 ```
-ESP32                    Transceiver CAN            Bus CAN Tesla
+ESP32                    Transceiver CAN            Bus CAN Véhicule
 ┌─────────────┐         ┌─────────────┐           ┌──────────────┐
 │             │         │             │           │              │
 │  GPIO 38 TX │────────►│ TX          │           │              │
@@ -232,9 +232,9 @@ ESP32                    Transceiver CAN            Bus CAN Tesla
 └─────────────┘         └─────────────┘           └──────────────┘
 ```
 
-### Accès au Bus CAN Tesla
+### Accès au Bus CAN du Véhicule
 
-**Emplacements d'accès au bus CAN Chassis (500 kbit/s) :**
+**Emplacements d'accès au bus CAN (exemple pour Tesla) :**
 
 1. **Port OBD-II** (sous le volant) :
    - Pin 6 : CAN_H
@@ -250,7 +250,7 @@ ESP32                    Transceiver CAN            Bus CAN Tesla
 ## 📊 Architecture du Code
 
 ```
-esp32-tesla-strip/
+car-light-sync/
 ├── include/                              # Headers
 │   ├── config.h                          # Configuration matérielle
 │   ├── vehicle_can_unified.h             # API CAN unifiée
@@ -441,7 +441,7 @@ Content-Type: multipart/form-data
 - Utiliser un outil de diagnostic CAN pour vérifier le bus
 
 ### Problème : Interface web inaccessible
-- Vérifier connexion au WiFi `Tesla-Strip`
+- Vérifier connexion au WiFi `Car-Light-Sync`
 - Essayer `http://192.168.10.1` (PAS https)
 - Vider le cache du navigateur (Ctrl+F5)
 - Vérifier logs série : "Page HTML envoyée avec succès"
@@ -511,7 +511,7 @@ Les contributions sont les bienvenues ! Pour contribuer :
 5. Ouvrir une Pull Request
 
 ### Zones de Contribution Prioritaires
-- Configurations CAN pour autres véhicules Tesla (Model Y, Model S, Model X)
+- Configurations CAN pour autres véhicules (Tesla, BMW, Audi, etc.)
 - Nouveaux effets LED créatifs
 - Optimisations de performance
 - Documentation et traductions
@@ -521,7 +521,7 @@ Les contributions sont les bienvenues ! Pour contribuer :
 
 - [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/)
 - [WS2812 Datasheet](https://cdn-shop.adafruit.com/datasheets/WS2812.pdf)
-- [Tesla CAN Bus Reverse Engineering](https://github.com/joshwardell/model3dbc)
+- [Tesla Model 3 CAN Bus DBC](https://github.com/joshwardell/model3dbc)
 - [ESP32 TWAI (CAN) Driver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/twai.html)
 - [PlatformIO Documentation](https://docs.platformio.org/)
 
@@ -533,6 +533,6 @@ Les contributions sont les bienvenues ! Pour contribuer :
 
 ---
 
-**Développé avec ❤️ pour la communauté Tesla**
+**Développé avec ❤️ pour la communauté automobile**
 
 Version actuelle : **v2.2.0** | Dernière mise à jour : 2025-11-20
