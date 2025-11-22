@@ -86,6 +86,13 @@ jobs:
       working-directory: mobile.app
       run: npm ci
 
+    - name: Add Android platform (if missing)
+      working-directory: mobile.app
+      run: |
+        if [ ! -d android ]; then
+          npx cap add android
+        fi
+
     - name: Sync Capacitor
       working-directory: mobile.app
       run: npm run sync:android
