@@ -790,8 +790,8 @@ bool config_manager_process_can_event(can_event_type_t event) {
 
     can_event_effect_t* event_effect = &profiles[active_profile_id].event_effects[event];
     effect_config_t effect_to_apply;
-    uint16_t duration_ms;
-    uint8_t priority;
+    uint16_t duration_ms = 0;
+    uint8_t priority = 0;
 
     // Gérer le changement de profil si configuré (indépendant du flag enabled)
     if (event_effect->action_type != EVENT_ACTION_APPLY_EFFECT) {

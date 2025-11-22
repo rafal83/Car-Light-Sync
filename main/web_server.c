@@ -485,7 +485,6 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
     }
 
     // Trouver un slot libre
-    bool slot_found = false;
     for (int i = 0; i < MAX_PROFILES; i++) {
         if (!config_manager_load_profile(i, temp)) {
             // Slot libre
