@@ -1,5 +1,5 @@
 # ESP-IDF
-build/
+build
 sdkconfig
 sdkconfig.old
 *.pyc

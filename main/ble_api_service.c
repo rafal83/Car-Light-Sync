@@ -25,9 +25,10 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "cJSON.h"
+#include "config.h"
 
 #define BLE_API_TAG                   "BLE_API"
-#define BLE_API_DEVICE_NAME           "TESLA-STRIP"
+#define BLE_API_DEVICE_NAME           "CarLightSync"  // Sera remplacé par g_device_name_with_suffix
 #define BLE_HTTP_LOCAL_BASE_URL       "http://127.0.0.1"
 #define BLE_MAX_REQUEST_LEN           16384
 #define BLE_MAX_RESPONSE_BODY         8192
@@ -573,8 +574,8 @@ static void ble_on_sync(void) {
 
     struct ble_hs_adv_fields fields = {0};
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    fields.name = (uint8_t *)BLE_API_DEVICE_NAME;
-    fields.name_len = strlen(BLE_API_DEVICE_NAME);
+    fields.name = (uint8_t *)g_device_name_with_suffix;
+    fields.name_len = strlen(g_device_name_with_suffix);
     fields.name_is_complete = 1;
 
     rc = ble_gap_adv_set_fields(&fields);
@@ -646,7 +647,7 @@ esp_err_t ble_api_service_init(void) {
     ble_hs_cfg.sync_cb = ble_on_sync;
     ble_hs_cfg.reset_cb = ble_on_reset;
 
-    ble_svc_gap_device_name_set(BLE_API_DEVICE_NAME);
+    ble_svc_gap_device_name_set(g_device_name_with_suffix);
     ble_svc_gap_init();
     ble_svc_gatt_init();
 

@@ -136,17 +136,21 @@ esp_err_t wifi_manager_start_ap(void) {
         return ESP_FAIL;
     }
 
-    // Configuration du point d'accès
+    // Configuration du point d'accès avec le nom personnalisé incluant le suffixe MAC
     wifi_config_t ap_config = {
         .ap = {
-            .ssid = WIFI_AP_SSID,
-            .ssid_len = strlen(WIFI_AP_SSID),
+            .ssid = "",
+            .ssid_len = 0,
             .password = WIFI_AP_PASSWORD,
             .max_connection = WIFI_MAX_CLIENTS,
             .authmode = WIFI_AUTH_WPA2_PSK,
             .channel = 6
         },
     };
+
+    // Copier le SSID avec suffixe MAC
+    strncpy((char*)ap_config.ap.ssid, g_wifi_ssid_with_suffix, sizeof(ap_config.ap.ssid) - 1);
+    ap_config.ap.ssid_len = strlen(g_wifi_ssid_with_suffix);
 
     if (strlen(WIFI_AP_PASSWORD) == 0) {
         ap_config.ap.authmode = WIFI_AUTH_OPEN;
@@ -164,7 +168,7 @@ esp_err_t wifi_manager_start_ap(void) {
             IPSTR, IP2STR(&ip_info.ip));
 
     current_status.ap_started = true;
-    ESP_LOGI(TAG, "Point d'accès démarré: %s, IP: %s", WIFI_AP_SSID, current_status.ap_ip);
+    ESP_LOGI(TAG, "Point d'accès démarré: %s, IP: %s", g_wifi_ssid_with_suffix, current_status.ap_ip);
 
     // Démarrer le portail captif
     esp_err_t portal_ret = captive_portal_start();

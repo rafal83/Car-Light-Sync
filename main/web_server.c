@@ -1399,7 +1399,7 @@ esp_err_t web_server_init(void) {
 esp_err_t web_server_start(void) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = WEB_SERVER_PORT;
-    config.max_uri_handlers = 35; // Augmenté pour supporter toutes les routes
+    config.max_uri_handlers = 35;
     config.lru_purge_enable = true;
 #ifndef CONFIG_HAS_PSRAM
     config.stack_size = 24576;

@@ -16,6 +16,7 @@ endif()
 idf_component_register(
     SRCS
         "main.c"
+        "config.c"
         "wifi_manager.c"
         "captive_portal.c"
         "can_bus.c"

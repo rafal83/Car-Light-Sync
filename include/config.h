@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <stdint.h>
+
 // Configuration GPIO
 #define LED_PIN             5
 #define NUM_LEDS            94
@@ -8,9 +10,17 @@
 #define COLOR_ORDER         GRB
 
 // Configuration WiFi
-#define WIFI_AP_SSID        "Tesla-Strip"
-#define WIFI_AP_PASSWORD    "tesla123"
+#define WIFI_AP_SSID_BASE   "CarLightSync"
+#define WIFI_AP_SSID        "CarLightSync"  // Sera remplacé dynamiquement
+#define WIFI_AP_PASSWORD    ""  // Réseau ouvert (pas de mot de passe)
 #define WIFI_MAX_CLIENTS    4
+
+// Buffer pour les noms avec suffixe MAC
+extern char g_device_name_with_suffix[32];
+extern char g_wifi_ssid_with_suffix[32];
+
+// Fonction pour initialiser les noms avec suffixe MAC
+void config_init_device_names(void);
 
 // Configuration CAN
 #define CAN_UPDATE_RATE_MS  100

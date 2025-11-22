@@ -274,7 +274,7 @@ static void can_event_task(void *pvParameters) {
         
         // Sauvegarder l'état précédent
         memcpy(&previous_state, &current_state, sizeof(vehicle_state_t));
-        
+
         vTaskDelay(pdMS_TO_TICKS(50)); // Vérifier toutes les 50ms
     }
 }
@@ -369,9 +369,14 @@ void app_main(void) {
     esp_log_level_set("BLE_API", ESP_LOG_INFO);
 
     ESP_LOGI(TAG, "=================================");
-    ESP_LOGI(TAG, "    Tesla Strip Controller      ");
+    ESP_LOGI(TAG, "        Car Light Sync           ");
     ESP_LOGI(TAG, "       Version %s            ", APP_VERSION_STRING);
     ESP_LOGI(TAG, "=================================");
+
+    // Initialiser les noms de périphérique avec suffixe MAC
+    config_init_device_names();
+    ESP_LOGI(TAG, "WiFi AP SSID: %s", g_wifi_ssid_with_suffix);
+    ESP_LOGI(TAG, "BLE Device Name: %s", g_device_name_with_suffix);
     
     // Initialiser NVS
     esp_err_t ret = nvs_flash_init();
