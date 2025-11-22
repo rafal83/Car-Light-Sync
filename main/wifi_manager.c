@@ -1,5 +1,6 @@
 #include "lwip/ip4_addr.h"
 #include "wifi_manager.h"
+#include "captive_portal.h"
 #include "config.h"
 #include "esp_log.h"
 #include "esp_event.h"
@@ -164,6 +165,15 @@ esp_err_t wifi_manager_start_ap(void) {
 
     current_status.ap_started = true;
     ESP_LOGI(TAG, "Point d'accès démarré: %s, IP: %s", WIFI_AP_SSID, current_status.ap_ip);
+
+    // Démarrer le portail captif
+    esp_err_t portal_ret = captive_portal_start();
+    if (portal_ret != ESP_OK) {
+        ESP_LOGW(TAG, "Erreur démarrage portail captif: %s", esp_err_to_name(portal_ret));
+    } else {
+        ESP_LOGI(TAG, "Portail captif activé");
+    }
+
     return ESP_OK;
 }
 
@@ -252,11 +262,14 @@ esp_err_t wifi_manager_stop(void) {
         return ESP_OK;
     }
 
+    // Arrêter le portail captif
+    captive_portal_stop();
+
     esp_wifi_stop();
     current_status.ap_started = false;
     current_status.sta_connected = false;
     current_status.connected_clients = 0;
-    
+
     ESP_LOGI(TAG, "WiFi arrêté");
     return ESP_OK;
 }

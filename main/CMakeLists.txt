@@ -17,6 +17,7 @@ idf_component_register(
     SRCS
         "main.c"
         "wifi_manager.c"
+        "captive_portal.c"
         "can_bus.c"
         "vehicle_can_unified.c"
         "vehicle_can_unified_config.generated.c"

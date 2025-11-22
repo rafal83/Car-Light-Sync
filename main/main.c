@@ -9,6 +9,7 @@
 #include "sdkconfig.h"
 #include "config.h"
 #include "wifi_manager.h"
+#include "captive_portal.h"
 #include "wifi_credentials.h"  // Configuration WiFi optionnelle
 #include "can_bus.h"
 #include "led_effects.h"
@@ -432,6 +433,7 @@ void app_main(void) {
         
     // WiFi
     ESP_ERROR_CHECK(wifi_manager_init());
+    ESP_ERROR_CHECK(captive_portal_init());
     ESP_ERROR_CHECK(wifi_manager_start_ap());
 
 #ifdef WIFI_AUTO_CONNECT

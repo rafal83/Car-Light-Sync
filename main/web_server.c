@@ -68,6 +68,24 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     return err;
 }
 
+// Handler d'erreur 404 pour le portail captif
+// Redirige toutes les URLs non trouvées vers la page principale
+static esp_err_t captive_portal_404_handler(httpd_req_t *req, httpd_err_code_t err) {
+    if (err == HTTPD_404_NOT_FOUND) {
+        // Envoyer la page principale (index.html) pour toutes les requêtes non trouvées
+        const size_t file_size = (index_html_gz_end - index_html_gz_start);
+
+        httpd_resp_set_type(req, "text/html");
+        httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+
+        ESP_LOGD(TAG, "Portail captif: redirection de %s vers index.html", req->uri);
+        return httpd_resp_send(req, (const char *)index_html_gz_start, file_size);
+    }
+
+    // Pour les autres erreurs, retourner l'erreur par défaut
+    return ESP_FAIL;
+}
+
 // Handler pour obtenir le statut
 static esp_err_t status_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
@@ -1619,7 +1637,11 @@ esp_err_t web_server_start(void) {
         };
         httpd_register_uri_handler(server, &events_get_uri);
 
-        ESP_LOGI(TAG, "Serveur web démarré");
+        // Enregistrer le handler d'erreur 404 pour le portail captif
+        // Toutes les URLs non trouvées seront redirigées vers la page principale
+        httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, captive_portal_404_handler);
+
+        ESP_LOGI(TAG, "Serveur web démarré avec support portail captif (handler 404)");
         return ESP_OK;
     }
     
