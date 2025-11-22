@@ -1,0 +1,3 @@
+# Generated or hand-crafted files we keep as-is
+main/vehicle_can_unified_config.generated.c
+main/led_strip_encoder.c
