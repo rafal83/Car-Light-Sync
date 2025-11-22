@@ -692,10 +692,10 @@
                 margin-right: 8px;
             }
             .header-content h1 {
-                font-size: 1rem;
+                font-size: 0.9rem;
             }
             .header-content p {
-                font-size: 0.7rem;
+                font-size: 0.6rem;
             }
         }
     </style>
@@ -1270,6 +1270,7 @@
                     gear: "Position de transmission",
                     brake: "Frein",
                     brightness: "Luminosité",
+                    off: "Éteint",
                     locked: "Verrouillé",
                     unlocked: "Déverrouillé",
                     doorsTitle: "Portes",
@@ -1352,10 +1353,17 @@
                     nightModeOn: "Activer",
                     nightModeOff: "Désactiver",
                     sending: "Envoi de l'événement",
+                    sendingEvent: "Envoi : {0}...",
                     simulated: "Événement simulé",
+                    eventSimulated: "OK - Événement simulé : {0}",
                     error: "Erreur lors de la simulation",
+                    simulationError: "Erreur - {0}",
                     stopping: "Arrêt de l'événement",
                     stopped: "Effet arrêté",
+                    eventStopped: "Stop - Effet arrêté",
+                    eventActive: "OK - {0} actif",
+                    eventDeactivated: "Stop - {0} arrêté",
+                    stoppingEvent: "Arrêt : {0}...",
                     active: "actif",
                     disabledEvent: "Événement désactivé dans la configuration"
                 },
@@ -1389,7 +1397,8 @@
                     GEAR_PARK: "Mode Park",
                     SENTRY_MODE_ON: "Sentry activé",
                     SENTRY_MODE_OFF: "Sentry désactivé",
-                    SENTRY_ALERT: "Alerte Sentry"
+                    SENTRY_ALERT: "Alerte Sentry",
+                    unknown: "Événement {0}"
                 },
                 effectNames: {
                     OFF: "Aucun",
@@ -1410,7 +1419,8 @@
                     BRAKE_LIGHT: "Feu stop",
                     CHARGE_STATUS: "Statut de charge",
                     HAZARD: "Avertisseur",
-                    BLINDSPOT_FLASH: "Flash angle mort"
+                    BLINDSPOT_FLASH: "Flash angle mort",
+                    unknown: "Effet {0}"
                 },
                 ota: {
                     title: "Mise à Jour OTA",
@@ -1614,6 +1624,7 @@
                     gear: "Gear",
                     brake: "Brake",
                     brightness: "Brightness",
+                    off: "Off",
                     locked: "Locked",
                     unlocked: "Unlocked",
                     doorsTitle: "Doors",
@@ -1696,10 +1707,17 @@
                     nightModeOn: "Activate",
                     nightModeOff: "Deactivate",
                     sending: "Sending event",
+                    sendingEvent: "Sending: {0}...",
                     simulated: "Event simulated",
+                    eventSimulated: "OK - Event simulated: {0}",
                     error: "Simulation error",
+                    simulationError: "Error - {0}",
                     stopping: "Stopping event",
                     stopped: "Effect stopped",
+                    eventStopped: "Stop - Effect stopped",
+                    eventActive: "OK - {0} active",
+                    eventDeactivated: "Stop - {0} stopped",
+                    stoppingEvent: "Stopping: {0}...",
                     active: "active",
                     disabledEvent: "Event disabled in configuration"
                 },
@@ -1733,7 +1751,8 @@
                     GEAR_PARK: "Gear Park",
                     SENTRY_MODE_ON: "Sentry enabled",
                     SENTRY_MODE_OFF: "Sentry disabled",
-                    SENTRY_ALERT: "Sentry alert"
+                    SENTRY_ALERT: "Sentry alert",
+                    unknown: "Event {0}"
                 },
                 effectNames: {
                     OFF: "Off",
@@ -1754,7 +1773,8 @@
                     BRAKE_LIGHT: "Brake light",
                     CHARGE_STATUS: "Charge status",
                     HAZARD: "Hazard",
-                    BLINDSPOT_FLASH: "Blindspot flash"
+                    BLINDSPOT_FLASH: "Blindspot flash",
+                    unknown: "Effect {0}"
                 },
                 ota: {
                     title: "OTA Update",
@@ -2610,13 +2630,18 @@
                 });
             });
         }
-        function t(key) {
+        function t(key, ...params) {
             const keys = key.split('.');
             let value = translations[currentLang];
             for (let k of keys) {
                 value = value[k];
             }
-            return value || key;
+            let result = value || key;
+            // Replace {0}, {1}, etc. with parameters
+            params.forEach((param, index) => {
+                result = result.replace(`{${index}}`, param);
+            });
+            return result;
         }
         // Gestion des tabs
         // État des toggles de simulation (persiste entre les changements d'onglets)
@@ -3447,7 +3472,7 @@
                         document.getElementById('v-headlights').textContent = v.lights.headlights ? t('status.active') : t('status.inactive');
                         document.getElementById('v-high-beams').textContent = v.lights.high_beams ? t('status.active') : t('status.inactive');
                         document.getElementById('v-fog-lights').textContent = v.lights.fog_lights ? t('status.active') : t('status.inactive');
-                        document.getElementById('v-turn-signal').textContent = v.lights.turn_left ? t('simulation.left'): v.lights.turn_right ? t('simulation.right'): 'Off'
+                        document.getElementById('v-turn-signal').textContent = v.lights.turn_left ? t('simulation.left'): v.lights.turn_right ? t('simulation.right'): t('vehicle.off')
                     }
                     // Batterie et autres
                     document.getElementById('v-battery-lv').textContent = v.battery_lv?.toFixed(2) + ' V';
@@ -3774,7 +3799,7 @@
         // Simulation des événements CAN
         async function simulateEvent(eventType) {
             try {
-                showNotification('simulation-notification', t('simulation.sending') + ': ' + getEventName(eventType) + '...', 'info');
+                showNotification('simulation-notification', t('simulation.sendingEvent', getEventName(eventType)), 'info');
                 const response = await fetch(API_BASE + '/api/simulate/event', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3782,13 +3807,13 @@
                 });
                 const result = await response.json();
                 if (result.status === 'ok') {
-                    showNotification('simulation-notification', 'OK - ' + t('simulation.simulated') + ': ' + getEventName(eventType), 'success');
+                    showNotification('simulation-notification', t('simulation.eventSimulated', getEventName(eventType)), 'success');
                 } else {
-                    showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                    showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
                 }
             } catch (e) {
                 console.error('Erreur:', e);
-                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
             }
         }
         // Arrêter l'effet en cours
@@ -3806,10 +3831,10 @@
                         color3: 0
                     })
                 });
-                showNotification('simulation-notification', 'Stop - ' + t('simulation.stopped'), 'success');
+                showNotification('simulation-notification', t('simulation.eventStopped'), 'success');
             } catch (e) {
                 console.error('Erreur:', e);
-                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
             }
         }
         // Toggle event on/off
@@ -3841,7 +3866,7 @@
                     });
                     const result = await response.json();
                     if (result.status === 'ok') {
-                        showNotification('simulation-notification', 'OK - ' + getEventName(eventType) + ' ' + t('simulation.active'), 'success');
+                        showNotification('simulation-notification', t('simulation.eventActive', getEventName(eventType)), 'success');
                         simulationTogglesState[eventType] = true;
                         const durationMs = await getSimulationEventDuration(eventType);
                         if (durationMs > 0) {
@@ -3850,12 +3875,12 @@
                     } else {
                         document.getElementById('toggle-' + eventType).checked = false;
                         setToggleContainerState(eventType, false);
-                        showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                        showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
                         simulationTogglesState[eventType] = false;
                     }
                 } else {
                     cancelSimulationAutoStop(eventType);
-                    showNotification('simulation-notification', t('simulation.stopping') + ': ' + getEventName(eventType) + '...', 'info');
+                    showNotification('simulation-notification', t('simulation.stoppingEvent', getEventName(eventType)), 'info');
                     const response = await fetch(API_BASE + '/api/stop/event', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3864,13 +3889,13 @@
                     const result = await response.json();
                     if (result.status === 'ok') {
                         setToggleContainerState(eventType, false);
-                        showNotification('simulation-notification', 'Stop - ' + getEventName(eventType) + ' ' + t('simulation.stopped'), 'success');
+                        showNotification('simulation-notification', t('simulation.eventDeactivated', getEventName(eventType)), 'success');
                         simulationTogglesState[eventType] = false;
                         cancelSimulationAutoStop(eventType);
                     } else {
                         document.getElementById('toggle-' + eventType).checked = true;
                         setToggleContainerState(eventType, true);
-                        showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                        showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
                         simulationTogglesState[eventType] = true;
                     }
                 }
@@ -3878,7 +3903,7 @@
                 console.error('Erreur:', e);
                 document.getElementById('toggle-' + eventType).checked = true;
                 setToggleContainerState(eventType, true);
-                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
             }
         }
         // Toggle night mode simulation (single switch for ON/OFF)
@@ -3887,7 +3912,7 @@
             const eventType = isEnabled ? 'NIGHT_MODE_ON' : 'NIGHT_MODE_OFF';
             const eventName = isEnabled ? t('canEvents.nightModeOn') : t('canEvents.nightModeOff');
             try {
-                showNotification('simulation-notification', t('simulation.sending') + ': ' + eventName + '...', 'info');
+                showNotification('simulation-notification', t('simulation.sendingEvent', eventName), 'info');
                 const response = await fetch(API_BASE + '/api/simulate/event', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3896,18 +3921,18 @@
                 const result = await response.json();
                 if (result.status === 'ok') {
                     toggleContainer.classList.toggle('active', isEnabled);
-                    showNotification('simulation-notification', 'OK - ' + eventName, 'success');
+                    showNotification('simulation-notification', t('simulation.eventSimulated', eventName), 'success');
                     simulationTogglesState['nightmode'] = isEnabled;
                 } else {
                     document.getElementById('toggle-nightmode').checked = !isEnabled;
                     simulationTogglesState['nightmode'] = !isEnabled;
-                    showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                    showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
                 }
             } catch (e) {
                 console.error('Erreur:', e);
                 document.getElementById('toggle-nightmode').checked = !isEnabled;
                 simulationTogglesState['nightmode'] = !isEnabled;
-                showNotification('simulation-notification', 'Error - ' + t('simulation.error'), 'error');
+                showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
             }
         }
         function translateEventId(eventId) {
@@ -3943,7 +3968,7 @@
                     return eventTypesList[numericIndex].name;
                 }
             }
-            return `Event ${eventId}`;
+            return t('eventNames.unknown', eventId);
         }
         // Helper pour obtenir le nom d'un effet (depuis API uniquement)
         function getEffectName(effectId) {
@@ -3953,9 +3978,9 @@
             }
             if (effectsList.length > 0) {
                 const effect = effectsList.find(e => e.id === effectId);
-                return effect ? translateEffectId(effect.id) || effect.name : `Effect ${effectId}`;
+                return effect ? translateEffectId(effect.id) || effect.name : t('effectNames.unknown', effectId);
             }
-            return `Effect ${effectId}`;
+            return t('effectNames.unknown', effectId);
         }
         // Charger la liste des effets depuis l'API
         let effectsList = [];
