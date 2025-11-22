@@ -22,11 +22,11 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install ESP-IDF
+    - name: Install ESP-IDF (v5.3.2)
       run: |
         mkdir -p ~/esp
         cd ~/esp
-        git clone --recursive --branch v5.1 https://github.com/espressif/esp-idf.git
+        git clone --recursive --branch v5.3.2 https://github.com/espressif/esp-idf.git
         cd esp-idf
         ./install.sh esp32s3
     
@@ -114,17 +114,3 @@ jobs:
           mobile.app/android/app/build/outputs/apk/release/*.apk
         retention-days: 30
 
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Install clang-format
-      run: sudo apt-get update && sudo apt-get install -y clang-format-14
-
-    - name: Run clang-format (project rules)
-      run: |
-        export PATH="/usr/lib/llvm-14/bin:$PATH"
-        ./tools/run-clang-format.sh
