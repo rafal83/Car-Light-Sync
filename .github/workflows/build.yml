@@ -2,9 +2,10 @@ name: Build ESP32 Firmware
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -27,12 +28,14 @@ jobs:
         cd ~/esp
         git clone --recursive --branch v5.1 https://github.com/espressif/esp-idf.git
         cd esp-idf
-        ./install.sh esp32
+        ./install.sh esp32s3
     
     - name: Build firmware
       run: |
         . ~/esp/esp-idf/export.sh
         cd $GITHUB_WORKSPACE
+        idf.py set-target esp32s3
+        cat sdkconfig.esp32s3 > sdkconfig
         idf.py build
     
     - name: Upload firmware artifacts
