@@ -2024,7 +2024,7 @@
                 this.responseBuffer = '';
                 this.pending = null;
                 this.listeners = new Set();
-                this.status = this.isSupported() ? 'disconnected' : 'unsupported';
+                this.status = this.isSupported() ? t('ble.disconnected') : t('ble.unsupported');
                 this.boundDeviceDisconnect = this.handleDeviceDisconnected.bind(this);
                 this.boundNotificationHandler = this.handleNotification.bind(this);
                 this.requestQueue = Promise.resolve();
