@@ -39,7 +39,7 @@ jobs:
         idf.py build
     
     - name: Upload firmware artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: firmware
         path: |
@@ -59,13 +59,61 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  lint:
+  build-mobile:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-    
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: mobile.app/package-lock.json
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install dependencies
+      working-directory: mobile.app
+      run: npm ci
+
+    - name: Sync Capacitor
+      working-directory: mobile.app
+      run: npm run sync:android
+
+    - name: Build APK (Debug)
+      working-directory: mobile.app/android
+      run: ./gradlew assembleDebug
+
+    - name: Build APK (Release)
+      working-directory: mobile.app/android
+      run: ./gradlew assembleRelease
+
+    - name: Upload APK artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mobile-app
+        path: |
+          mobile.app/android/app/build/outputs/apk/debug/*.apk
+          mobile.app/android/app/build/outputs/apk/release/*.apk
+        retention-days: 30
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
     - name: Run clang-format
       uses: jidicula/clang-format-action@v4.11.0
       with:
