@@ -1,0 +1,60 @@
+name: Build Android App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-mobile:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: mobile.app/package-lock.json
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install dependencies
+      working-directory: mobile.app
+      run: npm ci
+
+    - name: Add Android platform (if missing)
+      working-directory: mobile.app
+      run: |
+        if [ ! -d android ]; then
+          npx cap add android
+        fi
+
+    - name: Sync Capacitor
+      working-directory: mobile.app
+      run: npm run sync:android
+
+    - name: Build APK (Debug)
+      working-directory: mobile.app/android
+      run: ./gradlew assembleDebug
+
+    - name: Build APK (Release)
+      working-directory: mobile.app/android
+      run: ./gradlew assembleRelease
+
+    - name: Upload APK artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mobile-app
+        path: |
+          mobile.app/android/app/build/outputs/apk/debug/*.apk
+          mobile.app/android/app/build/outputs/apk/release/*.apk
+        retention-days: 30
