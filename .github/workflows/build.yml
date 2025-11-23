@@ -2,9 +2,29 @@ name: Build ESP32 Firmware
 
 on:
   workflow_dispatch:
+    inputs:
+      build_firmware:
+        description: 'Build ESP32 firmware'
+        required: true
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+      build_mobile:
+        description: 'Build mobile app'
+        required: true
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
+      build_ios:
+        description: 'Build iOS simulator app'
+        required: true
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
 
 jobs:
   build:
+    if: ${{ github.event.inputs.build_firmware == 'true' || github.event.inputs.build_firmware == '' }}
     runs-on: ubuntu-latest
     
     steps:
@@ -59,6 +79,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-mobile:
+    if: ${{ github.event.inputs.build_mobile == 'true' || github.event.inputs.build_mobile == '' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -111,4 +132,62 @@ jobs:
         path: |
           mobile.app/android/app/build/outputs/apk/debug/*.apk
           mobile.app/android/app/build/outputs/apk/release/*.apk
+        retention-days: 30
+
+  build-ios:
+    if: ${{ github.event.inputs.build_ios == 'true' || github.event.inputs.build_ios == '' }}
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: mobile.app/package-lock.json
+
+    - name: Install dependencies
+      working-directory: mobile.app
+      run: npm ci
+
+    - name: Add iOS platform (if missing)
+      working-directory: mobile.app
+      run: |
+        if [ ! -d ios ]; then
+          npx cap add ios
+        fi
+
+    - name: Sync Capacitor (iOS)
+      working-directory: mobile.app
+      run: npx cap sync ios
+
+    - name: Install CocoaPods
+      working-directory: mobile.app/ios/App
+      run: |
+        sudo gem install cocoapods --no-document
+        pod install
+
+    - name: Build iOS simulator (Debug)
+      working-directory: mobile.app/ios/App
+      run: |
+        xcodebuild \
+          -workspace App.xcworkspace \
+          -scheme App \
+          -configuration Debug \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
+          build
+
+    - name: Package simulator app
+      working-directory: mobile.app/ios/App/build/Build/Products/Debug-iphonesimulator
+      run: zip -r app-simulator.zip App.app
+
+    - name: Upload iOS simulator artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-simulator-app
+        path: mobile.app/ios/App/build/Build/Products/Debug-iphonesimulator/app-simulator.zip
         retention-days: 30
