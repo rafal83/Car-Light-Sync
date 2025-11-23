@@ -209,11 +209,19 @@ jobs:
           -configuration Debug \
           -sdk iphonesimulator \
           -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }},OS=${{ steps.sim.outputs.os }}" \
+          -derivedDataPath build \
           build
 
     - name: Package simulator app
-      working-directory: mobile.app/ios/App/build/Build/Products/Debug-iphonesimulator
-      run: zip -r app-simulator.zip App.app
+      working-directory: mobile.app/ios/App
+      run: |
+        APP_DIR="build/Build/Products/Debug-iphonesimulator/App.app"
+        if [ ! -d "$APP_DIR" ]; then
+          echo "App bundle not found at $APP_DIR"
+          exit 1
+        fi
+        cd build/Build/Products/Debug-iphonesimulator
+        zip -r app-simulator.zip App.app
 
     - name: Upload iOS simulator artifact
       uses: actions/upload-artifact@v4
