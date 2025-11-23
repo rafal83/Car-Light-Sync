@@ -517,6 +517,10 @@ Les contributions sont les bienvenues ! Pour contribuer :
 - Documentation et traductions
 - Tests et validation
 
+## ☕ Soutenir le projet
+
+Si ce projet vous est utile et que vous souhaitez soutenir son développement, vous pouvez m'offrir un café sur [Buy Me a Coffee](https://buymeacoffee.com/raphael.d). Merci pour votre aide !
+
 ## 📚 Références
 
 - [ESP-IDF Documentation](https://docs.espressif.com/projects/esp-idf/)
