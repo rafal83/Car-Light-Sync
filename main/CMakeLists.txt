@@ -9,8 +9,23 @@ set(component_requires
     esp_http_client
 )
 
+set(component_priv_includes "")
+
 if(CONFIG_BT_ENABLED)
     list(APPEND component_requires bt)
+    if(CONFIG_BT_NIMBLE_ENABLED)
+        set(nimble_include_candidates
+            "$ENV{IDF_PATH}/components/bt/host/nimble/nimble/host/include"
+            "$ENV{IDF_PATH}/components/bt/host/nimble/nimble/porting/nimble/include"
+            "$ENV{IDF_PATH}/components/bt/esp_nimble/nimble/host/include"
+            "$ENV{IDF_PATH}/components/bt/esp_nimble/nimble/porting/nimble/include"
+        )
+        foreach(dir ${nimble_include_candidates})
+            if(EXISTS ${dir})
+                list(APPEND component_priv_includes ${dir})
+            endif()
+        endforeach()
+    endif()
 endif()
 
 idf_component_register(
