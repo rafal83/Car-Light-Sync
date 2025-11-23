@@ -11,11 +11,6 @@ set(component_requires
 
 if(CONFIG_BT_ENABLED)
     list(APPEND component_requires bt)
-    # Ensure NimBLE headers are visible when Bluetooth is enabled
-    list(APPEND component_priv_includes
-        "$ENV{IDF_PATH}/components/bt/host/nimble/nimble/host/include"
-        "$ENV{IDF_PATH}/components/bt/host/nimble/nimble/porting/nimble/include"
-    )
 endif()
 
 idf_component_register(
