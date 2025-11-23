@@ -28,6 +28,9 @@ jobs:
     
     - name: Install PlatformIO Core
       run: pip install -U platformio
+
+    - name: Prefetch PlatformIO dependencies
+      run: pio pkg install -e esp32s3
     
     - name: Build firmware (esp32s3)
       run: pio run -e esp32s3

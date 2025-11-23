@@ -203,6 +203,12 @@ Le système détecte 22+ événements CAN du véhicule Tesla :
 
 L'interface expose une API REST complète. Voir section [API REST](#-api-rest) ci-dessous.
 
+## Application mobile
+
+- App iOS/Android (Capacitor) pour contrôler le Car Light Sync en Bluetooth avec connexion auto au démarrage
+- Réutilise le même fichier `data/index.html` que l'interface web
+- Guide complet et commandes disponibles : [mobile.app/README.md](mobile.app/README.md)
+
 ## 🔌 Connexion CAN Directe
 
 ### Configuration du Module CAN
@@ -447,16 +453,6 @@ Content-Type: multipart/form-data
 - Vérifier logs série : "Page HTML envoyée avec succès"
 - Si erreur persistante, redémarrer l'ESP32
 
-### Problème : Profils ne se chargent pas
-- Vérifier compatibilité version (v2.1+ requis)
-- Factory reset si nécessaire : `POST /api/factory-reset`
-- Créer de nouveaux profils via l'interface web
-
-### Problème : Guru Meditation Error / Stack Overflow
-- ✅ Résolu en v2.1.0 grâce à l'allocation dynamique
-- Si le problème persiste, mettre à jour le firmware
-- Reflasher avec `pio run -t upload`
-
 ## 🎓 Guides & Documentation
 
 - **[QUICKSTART.md](QUICKSTART.md)** : Guide de démarrage rapide en 5 minutes
@@ -466,20 +462,18 @@ Content-Type: multipart/form-data
 
 ## 🎯 Roadmap
 
-- [x] ~~Système de profils multiples~~ ✅ v2.0
-- [x] ~~Association événements CAN → Effets~~ ✅ v2.0
-- [x] ~~Mode nuit automatique~~ ✅ v2.0
-- [x] ~~Import/Export de profils~~ ✅ v2.1
-- [x] ~~OTA Updates~~ ✅ v2.1
-- [x] ~~Optimisation mémoire HTTP~~ ✅ v2.1
-- [x] ~~Architecture CAN unifiée~~ ✅ v2.2
-- [x] ~~Support multi-véhicules~~ ✅ v2.2
+- [x] ~~Système de profils multiples~~
+- [x] ~~Association événements CAN → Effets~~
+- [x] ~~Mode nuit automatique~~
+- [x] ~~Import/Export de profils~~
+- [x] ~~OTA Updates~~
+- [x] ~~Optimisation mémoire HTTP~~
+- [x] ~~Architecture CAN unifiée~~
+- [x] ~~Support multi-véhicules~~ 
+- [x] ~~Support BLE pour configuration mobile~~
+- [x] ~~Application mobile iOS/Android~~
 - [ ] Support de plusieurs rubans LED (multi-GPIO)
-- [ ] Intégration HomeAssistant/MQTT
 - [ ] Mode musique avec micro I2S
-- [ ] Support BLE pour configuration mobile
-- [ ] Application mobile iOS/Android
-- [ ] Synchronisation multi-véhicules
 - [ ] Enregistrement d'effets personnalisés via interface web
 
 ## 🔒 Sécurité
