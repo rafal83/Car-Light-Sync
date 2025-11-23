@@ -1,10 +1,6 @@
 name: Build ESP32 Firmware
 
 on:
-  push:
-    branches: [ master, develop ]
-  pull_request:
-    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -13,7 +9,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: 'recursive'
     
@@ -22,43 +18,30 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Cache ESP-IDF
+    - name: Cache PlatformIO
       uses: actions/cache@v4
       with:
         path: |
-          ~/esp/esp-idf
-          ~/.espressif
-        key: esp-idf-${{ runner.os }}-v5.3.2
+          ~/.platformio
+          .pio
+        key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
     
-    - name: Install ESP-IDF (v5.3.2)
-      run: |
-        mkdir -p ~/esp
-        if [ ! -d ~/esp/esp-idf ]; then
-          cd ~/esp
-          git clone --recursive --branch v5.3.2 https://github.com/espressif/esp-idf.git
-        fi
-        git -C ~/esp/esp-idf fetch --tags
-        git -C ~/esp/esp-idf checkout v5.3.2
-        git -C ~/esp/esp-idf submodule update --init --recursive
-        cd ~/esp/esp-idf
-        ./install.sh esp32s3
+    - name: Install PlatformIO Core
+      run: pip install -U platformio
     
-    - name: Build firmware
-      run: |
-        . ~/esp/esp-idf/export.sh
-        cd $GITHUB_WORKSPACE
-        idf.py set-target esp32s3
-        cat sdkconfig.esp32s3 > sdkconfig
-        idf.py build
+    - name: Build firmware (esp32s3)
+      run: pio run -e esp32s3
     
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
         name: firmware
         path: |
-          build/*.bin
-          build/*.elf
-          build/*.map
+          .pio/build/esp32s3/firmware.bin
+          .pio/build/esp32s3/firmware.elf
+          .pio/build/esp32s3/car-light-sync.map
+          .pio/build/esp32s3/bootloader.bin
+          .pio/build/esp32s3/partitions.bin
         retention-days: 30
     
     - name: Create Release
@@ -66,9 +49,9 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          build/car-light-sync.bin
-          build/bootloader/bootloader.bin
-          build/partition_table/partition-table.bin
+          .pio/build/esp32s3/firmware.bin
+          .pio/build/esp32s3/bootloader.bin
+          .pio/build/esp32s3/partitions.bin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
