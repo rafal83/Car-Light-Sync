@@ -170,6 +170,32 @@ jobs:
         sudo gem install cocoapods --no-document
         pod install
 
+    - name: Pick available iPhone simulator
+      id: sim
+      run: |
+        python - <<'PY'
+        import json, subprocess, os, sys
+        data = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "-j"]))
+        chosen = None
+        for runtime, devices in data.get("devices", {}).items():
+            if "iOS" not in runtime:
+                continue
+            for dev in devices:
+                if dev.get("isAvailable") and "iPhone" in dev.get("name", ""):
+                    chosen = (dev["name"], runtime)
+                    break
+            if chosen:
+                break
+        if not chosen:
+            sys.exit("No available iPhone simulator found")
+        name, runtime = chosen
+        os_version = runtime.split(".")[-1]
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"name={name}\n")
+            f.write(f"os={os_version}\n")
+        print(f"Using simulator: {name} (iOS {os_version})")
+        PY
+    
     - name: Build iOS simulator (Debug)
       working-directory: mobile.app/ios/App
       run: |
@@ -178,7 +204,7 @@ jobs:
           -scheme App \
           -configuration Debug \
           -sdk iphonesimulator \
-          -destination 'platform=iOS Simulator,name=iPhone 15' \
+          -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }},OS=${{ steps.sim.outputs.os }}" \
           build
 
     - name: Package simulator app
