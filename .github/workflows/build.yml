@@ -162,7 +162,7 @@ jobs:
 
     - name: Sync Capacitor (iOS)
       working-directory: mobile.app
-      run: npx cap sync:ios
+      run: npm run sync:ios
 
     - name: Install CocoaPods
       working-directory: mobile.app/ios/App
