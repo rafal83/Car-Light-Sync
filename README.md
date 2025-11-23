@@ -458,7 +458,6 @@ Content-Type: multipart/form-data
 - **[QUICKSTART.md](QUICKSTART.md)** : Guide de démarrage rapide en 5 minutes
 - **[TECHNICAL.md](TECHNICAL.md)** : Documentation technique approfondie (architecture CAN, mémoire, optimisations)
 - **[WIRING.md](WIRING.md)** : Guide de câblage détaillé avec schémas
-- **[CHANGELOG.md](CHANGELOG.md)** : Historique des versions et modifications
 
 ## 🎯 Roadmap
 

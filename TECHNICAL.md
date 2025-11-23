@@ -28,7 +28,7 @@ Le Car Light Sync est construit sur une architecture modulaire ESP32 avec les co
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🔧 Architecture CAN Unifiée (v2.2+)
+## 🔧 Architecture CAN Unifiée
 
 ### Principe de Fonctionnement
 

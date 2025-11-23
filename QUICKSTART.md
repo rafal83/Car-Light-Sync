@@ -1,4 +1,4 @@
-# 🚀 Guide de Démarrage Rapide - Car Light Sync v2.0
+# 🚀 Guide de Démarrage Rapide - Car Light Sync
 
 ## Installation en 5 Minutes
 
@@ -225,7 +225,6 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 - **FEATURES.md** - Guide des fonctionnalités v2.0
 - **ADVANCED.md** - Exemples avancés et extensions
 - **WIRING.md** - Guide de câblage détaillé
-- **CHANGES_V2.md** - Résumé des modifications v2.0
 
 ### Support
 - GitHub Issues pour bugs et questions
