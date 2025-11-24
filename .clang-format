@@ -1,21 +1,41 @@
-BasedOnStyle: LLVM
+BasedOnStyle: Google
 Language: Cpp
-IndentWidth: 4
+
+# INDENTATION
+IndentWidth: 4              # Plus lisible que 2 espaces sur des gros projets
 TabWidth: 4
 UseTab: Never
-ColumnLimit: 120
-BreakBeforeBraces: Attach
-AllowShortFunctionsOnASingleLine: Empty
+ContinuationIndentWidth: 8  # Les lignes qui continuent sont bien décrochées
+IndentCaseLabels: true
+IndentPPDirectives: AfterHash
+
+# STRUCTURE / ACCOLADES
+BreakBeforeBraces: Linux                # { sur nouvelle ligne : if, while, function, class…
+AllowShortFunctionsOnASingleLine: None  # Jamais de "mini-fonction" en une seule ligne
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-AllowShortBlocksOnASingleLine: Never
-PointerAlignment: Left
-DerivePointerAlignment: false
-SpaceBeforeParens: ControlStatements
-IndentCaseLabels: true
-ContinuationIndentWidth: 8
-BinPackParameters: false
+AllowShortBlocksOnASingleLine: Never    # Toujours des blocs multi-lignes
+
+# LISIBILITÉ DES ARGUMENTS / EXPRESSIONS
+BinPackParameters: false                # Un argument par ligne si ça déborde
 BinPackArguments: false
-AlignAfterOpenBracket: DontAlign
-SortIncludes: false
-ReflowComments: false
+AlignAfterOpenBracket: Align            # jolis alignements pour les appels de fonctions
+AlignOperands: true                     # aligne les opérations sur plusieurs lignes
+
+# LONGUEUR DE LIGNE
+ColumnLimit: 120                        # Très lisible en split-screen ou dans Git
+
+# POINTEURS / RÉFÉRENCES
+PointerAlignment: Left                  # "int* x" → plus courant et lisible
+DerivePointerAlignment: false
+
+# INCLUDES
+SortIncludes: false                     # Ne touche pas à l’ordre si tu ne veux pas
+
+# COMMENTAIRES
+ReflowComments: false                   # Ne reformate pas tes commentaires tout seul
+
+# ESPACES & DÉTAILS
+SpaceBeforeParens: ControlStatements    # "if (" mais "func(" → bien lisible
+SpaceAfterCStyleCast: true
+Cpp11BracedListStyle: true

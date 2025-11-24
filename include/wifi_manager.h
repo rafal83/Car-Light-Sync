@@ -5,7 +5,6 @@
 #include "esp_wifi.h"
 #include <stdbool.h>
 
-
 // État de la connexion
 typedef struct {
     bool ap_started;
@@ -71,4 +70,4 @@ esp_err_t wifi_manager_set_mode(wifi_mode_t mode);
 
 bool wifi_wait_for_sta(uint32_t timeout_ms);
 
-#endif // WIFI_MANAGER_H
+#endif  // WIFI_MANAGER_H

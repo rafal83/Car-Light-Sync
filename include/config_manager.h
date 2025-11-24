@@ -10,39 +10,39 @@
 #define PROFILE_NAME_MAX_LEN 32
 
 // IDs alphanumériques stables pour les événements CAN (ne changent jamais)
-#define EVENT_ID_NONE               "NONE"
-#define EVENT_ID_TURN_LEFT          "TURN_LEFT"
-#define EVENT_ID_TURN_RIGHT         "TURN_RIGHT"
-#define EVENT_ID_TURN_HAZARD        "TURN_HAZARD"
-#define EVENT_ID_CHARGING           "CHARGING"
-#define EVENT_ID_CHARGE_COMPLETE    "CHARGE_COMPLETE"
-#define EVENT_ID_CHARGING_STARTED   "CHARGING_STARTED"
-#define EVENT_ID_CHARGING_STOPPED   "CHARGING_STOPPED"
+#define EVENT_ID_NONE "NONE"
+#define EVENT_ID_TURN_LEFT "TURN_LEFT"
+#define EVENT_ID_TURN_RIGHT "TURN_RIGHT"
+#define EVENT_ID_TURN_HAZARD "TURN_HAZARD"
+#define EVENT_ID_CHARGING "CHARGING"
+#define EVENT_ID_CHARGE_COMPLETE "CHARGE_COMPLETE"
+#define EVENT_ID_CHARGING_STARTED "CHARGING_STARTED"
+#define EVENT_ID_CHARGING_STOPPED "CHARGING_STOPPED"
 #define EVENT_ID_CHARGING_CABLE_CONNECTED "CHARGING_CABLE_CONNECTED"
 #define EVENT_ID_CHARGING_CABLE_DISCONNECTED "CHARGING_CABLE_DISCONNECTED"
 #define EVENT_ID_CHARGING_PORT_OPENED "CHARGING_PORT_OPENED"
-#define EVENT_ID_DOOR_OPEN          "DOOR_OPEN"
-#define EVENT_ID_DOOR_CLOSE         "DOOR_CLOSE"
-#define EVENT_ID_LOCKED             "LOCKED"
-#define EVENT_ID_UNLOCKED           "UNLOCKED"
-#define EVENT_ID_BRAKE_ON           "BRAKE_ON"
-#define EVENT_ID_BRAKE_OFF          "BRAKE_OFF"
-#define EVENT_ID_BLINDSPOT_LEFT     "BLINDSPOT_LEFT"
-#define EVENT_ID_BLINDSPOT_RIGHT    "BLINDSPOT_RIGHT"
-#define EVENT_ID_BLINDSPOT_WARNING  "BLINDSPOT_WARNING"
-#define EVENT_ID_EVENT_FORWARD_COLISSION  "FORWARD_COLISSION"
-#define EVENT_ID_NIGHT_MODE_ON      "NIGHT_MODE_ON"
-#define EVENT_ID_NIGHT_MODE_OFF     "NIGHT_MODE_OFF"
-#define EVENT_ID_SPEED_THRESHOLD    "SPEED_THRESHOLD"
-#define EVENT_ID_AUTOPILOT_ENGAGED  "AUTOPILOT_ENGAGED"
+#define EVENT_ID_DOOR_OPEN "DOOR_OPEN"
+#define EVENT_ID_DOOR_CLOSE "DOOR_CLOSE"
+#define EVENT_ID_LOCKED "LOCKED"
+#define EVENT_ID_UNLOCKED "UNLOCKED"
+#define EVENT_ID_BRAKE_ON "BRAKE_ON"
+#define EVENT_ID_BRAKE_OFF "BRAKE_OFF"
+#define EVENT_ID_BLINDSPOT_LEFT "BLINDSPOT_LEFT"
+#define EVENT_ID_BLINDSPOT_RIGHT "BLINDSPOT_RIGHT"
+#define EVENT_ID_BLINDSPOT_WARNING "BLINDSPOT_WARNING"
+#define EVENT_ID_EVENT_FORWARD_COLISSION "FORWARD_COLISSION"
+#define EVENT_ID_NIGHT_MODE_ON "NIGHT_MODE_ON"
+#define EVENT_ID_NIGHT_MODE_OFF "NIGHT_MODE_OFF"
+#define EVENT_ID_SPEED_THRESHOLD "SPEED_THRESHOLD"
+#define EVENT_ID_AUTOPILOT_ENGAGED "AUTOPILOT_ENGAGED"
 #define EVENT_ID_AUTOPILOT_DISENGAGED "AUTOPILOT_DISENGAGED"
 #define EVENT_ID_AUTOPILOT_ABORTING "AUTOPILOT_ABORTING"
-#define EVENT_ID_GEAR_DRIVE         "GEAR_DRIVE"
-#define EVENT_ID_GEAR_REVERSE       "GEAR_REVERSE"
-#define EVENT_ID_GEAR_PARK          "GEAR_PARK"
-#define EVENT_ID_SENTRY_MODE_ON     "SENTRY_MODE_ON"
-#define EVENT_ID_SENTRY_MODE_OFF    "SENTRY_MODE_OFF"
-#define EVENT_ID_SENTRY_ALERT       "SENTRY_ALERT"
+#define EVENT_ID_GEAR_DRIVE "GEAR_DRIVE"
+#define EVENT_ID_GEAR_REVERSE "GEAR_REVERSE"
+#define EVENT_ID_GEAR_PARK "GEAR_PARK"
+#define EVENT_ID_SENTRY_MODE_ON "SENTRY_MODE_ON"
+#define EVENT_ID_SENTRY_MODE_OFF "SENTRY_MODE_OFF"
+#define EVENT_ID_SENTRY_ALERT "SENTRY_ALERT"
 
 #define EVENT_ID_MAX_LEN 32  // Longueur max d'un ID d'événement
 
@@ -93,12 +93,12 @@ typedef enum {
 // Configuration d'un effet pour un événement CAN spécifique
 typedef struct {
     can_event_type_t event;
-    event_action_type_t action_type; // Type d'action à effectuer
+    event_action_type_t action_type;  // Type d'action à effectuer
     effect_config_t effect_config;
-    uint16_t duration_ms;       // Durée de l'effet (0 = permanent jusqu'à nouvel événement)
-    uint8_t priority;           // Priorité (0-255, plus haut = prioritaire)
-    int8_t profile_id;          // ID du profil à activer (-1 = aucun)
-    bool enabled;               // Actif ou non
+    uint16_t duration_ms;  // Durée de l'effet (0 = permanent jusqu'à nouvel événement)
+    uint8_t priority;      // Priorité (0-255, plus haut = prioritaire)
+    int8_t profile_id;     // ID du profil à activer (-1 = aucun)
+    bool enabled;          // Actif ou non
 } can_event_effect_t;
 
 // Profil de configuration complet
@@ -106,15 +106,15 @@ typedef struct {
     char name[PROFILE_NAME_MAX_LEN];
     effect_config_t default_effect;     // Effet par défaut
     effect_config_t night_mode_effect;  // Effet en mode nuit
-    
+
     can_event_effect_t event_effects[CAN_EVENT_MAX];  // Effets par événement
-    
+
     // Paramètres généraux
-    bool auto_night_mode;       // Active automatiquement le mode nuit
-    uint8_t night_brightness;   // Luminosité en mode nuit (0-255)
-    
+    bool auto_night_mode;      // Active automatiquement le mode nuit
+    uint8_t night_brightness;  // Luminosité en mode nuit (0-255)
+
     // Métadonnées
-    bool active;                // Profil actif
+    bool active;  // Profil actif
     uint32_t created_timestamp;
     uint32_t modified_timestamp;
 } config_profile_t;
@@ -313,4 +313,4 @@ bool config_manager_event_can_switch_profile(can_event_type_t event);
  */
 bool config_manager_factory_reset(void);
 
-#endif // CONFIG_MANAGER_H
+#endif  // CONFIG_MANAGER_H

@@ -9,17 +9,18 @@
 #include "nvs_flash.h"
 #include <string.h>
 
-static const char *TAG = "WiFi";
+static const char* TAG = "WiFi";
 
 static wifi_status_t current_status = {0};
 static bool wifi_initialized = false;
-static esp_netif_t *ap_netif = NULL;
-static esp_netif_t *sta_netif = NULL;
+static esp_netif_t* ap_netif = NULL;
+static esp_netif_t* sta_netif = NULL;
 static int sta_retry_count = 0;
 static const int STA_MAX_RETRY = 5;
 static bool sta_auto_reconnect = true;
 
-bool wifi_wait_for_sta(uint32_t timeout_ms) {
+bool wifi_wait_for_sta(uint32_t timeout_ms)
+{
     uint32_t start = esp_log_timestamp();
     while ((esp_log_timestamp() - start) < timeout_ms) {
         wifi_status_t st;
@@ -33,8 +34,8 @@ bool wifi_wait_for_sta(uint32_t timeout_ms) {
 }
 
 // Event handler pour les événements WiFi
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,
-                               int32_t event_id, void* event_data) {
+static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
     if (event_base == WIFI_EVENT) {
         switch (event_id) {
             case WIFI_EVENT_AP_STACONNECTED: {
@@ -60,8 +61,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                 current_status.sta_connected = false;
                 if (sta_auto_reconnect && sta_retry_count < STA_MAX_RETRY) {
                     sta_retry_count++;
-                    ESP_LOGI(TAG, "Déconnecté du réseau, tentative %d/%d...",
-                             sta_retry_count, STA_MAX_RETRY);
+                    ESP_LOGI(TAG, "Déconnecté du réseau, tentative %d/%d...", sta_retry_count, STA_MAX_RETRY);
                     esp_wifi_connect();
                 } else if (sta_retry_count >= STA_MAX_RETRY) {
                     ESP_LOGW(TAG, "Nombre max de tentatives atteint, arrêt de la reconnexion automatique");
@@ -75,15 +75,15 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         if (event_id == IP_EVENT_STA_GOT_IP) {
             ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
             ESP_LOGI(TAG, "IP obtenue: " IPSTR, IP2STR(&event->ip_info.ip));
-            snprintf(current_status.sta_ip, sizeof(current_status.sta_ip),
-                    IPSTR, IP2STR(&event->ip_info.ip));
+            snprintf(current_status.sta_ip, sizeof(current_status.sta_ip), IPSTR, IP2STR(&event->ip_info.ip));
             current_status.sta_connected = true;
-            sta_retry_count = 0; // Réinitialiser le compteur en cas de succès
+            sta_retry_count = 0;  // Réinitialiser le compteur en cas de succès
         }
     }
 }
 
-esp_err_t wifi_manager_init(void) {
+esp_err_t wifi_manager_init(void)
+{
     if (wifi_initialized) {
         ESP_LOGW(TAG, "WiFi déjà initialisé");
         return ESP_OK;
@@ -107,8 +107,8 @@ esp_err_t wifi_manager_init(void) {
 
     // 🔧 Changer l'IP de l’AP pour éviter le conflit avec le Commander
     esp_netif_ip_info_t ip_info;
-    IP4_ADDR(&ip_info.ip,      192, 168, 10, 1);
-    IP4_ADDR(&ip_info.gw,      192, 168, 10, 1);
+    IP4_ADDR(&ip_info.ip, 192, 168, 10, 1);
+    IP4_ADDR(&ip_info.gw, 192, 168, 10, 1);
     IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
 
     ESP_ERROR_CHECK(esp_netif_dhcps_stop(ap_netif));
@@ -120,17 +120,16 @@ esp_err_t wifi_manager_init(void) {
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
     // Enregistrer les event handlers
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, 
-                                               &wifi_event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, 
-                                               &wifi_event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
 
     wifi_initialized = true;
     ESP_LOGI(TAG, "WiFi initialisé");
     return ESP_OK;
 }
 
-esp_err_t wifi_manager_start_ap(void) {
+esp_err_t wifi_manager_start_ap(void)
+{
     if (!wifi_initialized) {
         ESP_LOGE(TAG, "WiFi non initialisé");
         return ESP_FAIL;
@@ -138,18 +137,16 @@ esp_err_t wifi_manager_start_ap(void) {
 
     // Configuration du point d'accès avec le nom personnalisé incluant le suffixe MAC
     wifi_config_t ap_config = {
-        .ap = {
-            .ssid = "",
-            .ssid_len = 0,
-            .password = WIFI_AP_PASSWORD,
-            .max_connection = WIFI_MAX_CLIENTS,
-            .authmode = WIFI_AUTH_WPA2_PSK,
-            .channel = 6
-        },
+            .ap = {.ssid = "",
+                   .ssid_len = 0,
+                   .password = WIFI_AP_PASSWORD,
+                   .max_connection = WIFI_MAX_CLIENTS,
+                   .authmode = WIFI_AUTH_WPA2_PSK,
+                   .channel = 6},
     };
 
     // Copier le SSID avec suffixe MAC
-    strncpy((char*)ap_config.ap.ssid, g_wifi_ssid_with_suffix, sizeof(ap_config.ap.ssid) - 1);
+    strncpy((char*) ap_config.ap.ssid, g_wifi_ssid_with_suffix, sizeof(ap_config.ap.ssid) - 1);
     ap_config.ap.ssid_len = strlen(g_wifi_ssid_with_suffix);
 
     if (strlen(WIFI_AP_PASSWORD) == 0) {
@@ -164,8 +161,7 @@ esp_err_t wifi_manager_start_ap(void) {
     // Obtenir l'IP du AP
     esp_netif_ip_info_t ip_info;
     esp_netif_get_ip_info(ap_netif, &ip_info);
-    snprintf(current_status.ap_ip, sizeof(current_status.ap_ip),
-            IPSTR, IP2STR(&ip_info.ip));
+    snprintf(current_status.ap_ip, sizeof(current_status.ap_ip), IPSTR, IP2STR(&ip_info.ip));
 
     current_status.ap_started = true;
     ESP_LOGI(TAG, "Point d'accès démarré: %s, IP: %s", g_wifi_ssid_with_suffix, current_status.ap_ip);
@@ -181,7 +177,8 @@ esp_err_t wifi_manager_start_ap(void) {
     return ESP_OK;
 }
 
-esp_err_t wifi_manager_connect_sta(const char* ssid, const char* password) {
+esp_err_t wifi_manager_connect_sta(const char* ssid, const char* password)
+{
     if (!wifi_initialized) {
         ESP_LOGE(TAG, "WiFi non initialisé");
         return ESP_FAIL;
@@ -191,8 +188,8 @@ esp_err_t wifi_manager_connect_sta(const char* ssid, const char* password) {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
 
     wifi_config_t sta_config = {0};
-    strncpy((char*)sta_config.sta.ssid, ssid, sizeof(sta_config.sta.ssid) - 1);
-    strncpy((char*)sta_config.sta.password, password, sizeof(sta_config.sta.password) - 1);
+    strncpy((char*) sta_config.sta.ssid, ssid, sizeof(sta_config.sta.ssid) - 1);
+    strncpy((char*) sta_config.sta.password, password, sizeof(sta_config.sta.password) - 1);
     sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
@@ -207,7 +204,8 @@ esp_err_t wifi_manager_connect_sta(const char* ssid, const char* password) {
     return ESP_OK;
 }
 
-esp_err_t wifi_manager_disconnect_sta(void) {
+esp_err_t wifi_manager_disconnect_sta(void)
+{
     current_status.sta_connected = false;
     current_status.sta_ssid[0] = '\0';
     current_status.sta_ip[0] = '\0';
@@ -225,20 +223,19 @@ esp_err_t wifi_manager_disconnect_sta(void) {
     return ESP_OK;
 }
 
-int wifi_manager_scan_networks(uint32_t scan_time) {
+int wifi_manager_scan_networks(uint32_t scan_time)
+{
     if (!wifi_initialized) {
         return 0;
     }
 
-    wifi_scan_config_t scan_config = {
-        .ssid = NULL,
-        .bssid = NULL,
-        .channel = 0,
-        .show_hidden = true,
-        .scan_type = WIFI_SCAN_TYPE_ACTIVE,
-        .scan_time.active.min = scan_time,
-        .scan_time.active.max = scan_time
-    };
+    wifi_scan_config_t scan_config = {.ssid = NULL,
+                                      .bssid = NULL,
+                                      .channel = 0,
+                                      .show_hidden = true,
+                                      .scan_type = WIFI_SCAN_TYPE_ACTIVE,
+                                      .scan_time.active.min = scan_time,
+                                      .scan_time.active.max = scan_time};
 
     esp_err_t ret = esp_wifi_scan_start(&scan_config, true);
     if (ret != ESP_OK) {
@@ -248,12 +245,13 @@ int wifi_manager_scan_networks(uint32_t scan_time) {
 
     uint16_t ap_count = 0;
     esp_wifi_scan_get_ap_num(&ap_count);
-    
+
     ESP_LOGI(TAG, "%d réseaux trouvés", ap_count);
     return ap_count;
 }
 
-esp_err_t wifi_manager_get_status(wifi_status_t* status) {
+esp_err_t wifi_manager_get_status(wifi_status_t* status)
+{
     if (status == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -261,7 +259,8 @@ esp_err_t wifi_manager_get_status(wifi_status_t* status) {
     return ESP_OK;
 }
 
-esp_err_t wifi_manager_stop(void) {
+esp_err_t wifi_manager_stop(void)
+{
     if (!wifi_initialized) {
         return ESP_OK;
     }
@@ -278,9 +277,10 @@ esp_err_t wifi_manager_stop(void) {
     return ESP_OK;
 }
 
-esp_err_t wifi_manager_set_mode(wifi_mode_t mode) {
+esp_err_t wifi_manager_set_mode(wifi_mode_t mode)
+{
     wifi_mode_t esp_mode;
-    
+
     switch (mode) {
         case WIFI_MODE_AP:
             esp_mode = WIFI_MODE_AP;

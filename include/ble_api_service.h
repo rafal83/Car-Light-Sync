@@ -32,4 +32,3 @@ bool ble_api_service_is_connected(void);
 #ifdef __cplusplus
 }
 #endif
-

@@ -24,7 +24,7 @@ typedef struct {
     ota_state_t state;
     uint32_t total_size;
     uint32_t written_size;
-    uint8_t progress;       // Pourcentage 0-100
+    uint8_t progress;  // Pourcentage 0-100
     char error_msg[128];
 } ota_progress_t;
 
@@ -46,7 +46,7 @@ esp_err_t ota_begin(size_t total_size);
  * @param size Taille des données
  * @return ESP_OK si succès
  */
-esp_err_t ota_write(const void *data, size_t size);
+esp_err_t ota_write(const void* data, size_t size);
 
 /**
  * @brief Termine la mise à jour OTA
@@ -63,7 +63,7 @@ void ota_abort(void);
  * @brief Obtient la progression actuelle
  * @param progress Pointeur vers la structure de progression
  */
-void ota_get_progress(ota_progress_t *progress);
+void ota_get_progress(ota_progress_t* progress);
 
 /**
  * @brief Obtient la version actuelle du firmware
@@ -88,4 +88,4 @@ esp_err_t ota_validate_current_partition(void);
  */
 int ota_get_reboot_countdown(void);
 
-#endif // OTA_UPDATE_H
+#endif  // OTA_UPDATE_H

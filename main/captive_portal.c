@@ -9,7 +9,7 @@
 #include "freertos/task.h"
 #include <string.h>
 
-static const char *TAG = "CaptivePortal";
+static const char* TAG = "CaptivePortal";
 
 // Port DNS standard
 #define DNS_PORT 53
@@ -30,16 +30,19 @@ typedef struct {
 } __attribute__((packed)) dns_header_t;
 
 // Fonction pour parser le nom de domaine dans la requête DNS
-static int parse_dns_name(const uint8_t* data, char* name, int max_len) {
+static int parse_dns_name(const uint8_t* data, char* name, int max_len)
+{
     int pos = 0;
     int name_pos = 0;
 
     while (data[pos] != 0 && pos < max_len) {
         uint8_t label_len = data[pos];
-        if (label_len > 63) break; // Label trop long
+        if (label_len > 63)
+            break;  // Label trop long
 
         pos++;
-        if (name_pos + label_len + 1 >= max_len) break;
+        if (name_pos + label_len + 1 >= max_len)
+            break;
 
         if (name_pos > 0) {
             name[name_pos++] = '.';
@@ -51,11 +54,12 @@ static int parse_dns_name(const uint8_t* data, char* name, int max_len) {
     }
 
     name[name_pos] = '\0';
-    return pos + 1; // +1 pour le null byte final
+    return pos + 1;  // +1 pour le null byte final
 }
 
 // Tâche du serveur DNS
-static void dns_server_task(void *pvParameters) {
+static void dns_server_task(void* pvParameters)
+{
     struct sockaddr_in server_addr;
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
@@ -80,7 +84,7 @@ static void dns_server_task(void *pvParameters) {
     server_addr.sin_port = htons(DNS_PORT);
 
     // Bind du socket
-    if (bind(dns_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    if (bind(dns_socket, (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0) {
         ESP_LOGE(TAG, "Erreur bind socket DNS");
         close(dns_socket);
         dns_socket = -1;
@@ -94,14 +98,14 @@ static void dns_server_task(void *pvParameters) {
 
     while (dns_server_running) {
         // Recevoir une requête DNS
-        int len = recvfrom(dns_socket, rx_buffer, sizeof(rx_buffer), 0,
-                          (struct sockaddr *)&client_addr, &client_addr_len);
+        int len = recvfrom(
+                dns_socket, rx_buffer, sizeof(rx_buffer), 0, (struct sockaddr*) &client_addr, &client_addr_len);
 
         if (len < sizeof(dns_header_t)) {
             continue;
         }
 
-        dns_header_t *header = (dns_header_t *)rx_buffer;
+        dns_header_t* header = (dns_header_t*) rx_buffer;
 
         // Vérifier que c'est une requête (QR=0)
         if ((ntohs(header->flags) & 0x8000) != 0) {
@@ -116,7 +120,7 @@ static void dns_server_task(void *pvParameters) {
 
         // Construire la réponse DNS
         memcpy(tx_buffer, rx_buffer, len);
-        dns_header_t *resp_header = (dns_header_t *)tx_buffer;
+        dns_header_t* resp_header = (dns_header_t*) tx_buffer;
 
         // Modifier les flags: QR=1 (réponse), AA=1 (authoritative)
         resp_header->flags = htons(0x8400);
@@ -128,8 +132,8 @@ static void dns_server_task(void *pvParameters) {
 
         // Ajouter la section réponse (Answer)
         // Pointer vers le nom (compression DNS)
-        tx_buffer[response_len++] = 0xC0; // Pointeur
-        tx_buffer[response_len++] = 0x0C; // Offset vers le nom dans la question
+        tx_buffer[response_len++] = 0xC0;  // Pointeur
+        tx_buffer[response_len++] = 0x0C;  // Offset vers le nom dans la question
 
         // Type A (IPv4)
         tx_buffer[response_len++] = 0x00;
@@ -156,8 +160,7 @@ static void dns_server_task(void *pvParameters) {
         tx_buffer[response_len++] = 1;
 
         // Envoyer la réponse
-        sendto(dns_socket, tx_buffer, response_len, 0,
-               (struct sockaddr *)&client_addr, client_addr_len);
+        sendto(dns_socket, tx_buffer, response_len, 0, (struct sockaddr*) &client_addr, client_addr_len);
 
         ESP_LOGD(TAG, "Réponse DNS envoyée: %s -> 192.168.10.1", domain_name);
     }
@@ -171,12 +174,14 @@ static void dns_server_task(void *pvParameters) {
     vTaskDelete(NULL);
 }
 
-esp_err_t captive_portal_init(void) {
+esp_err_t captive_portal_init(void)
+{
     ESP_LOGI(TAG, "Initialisation du portail captif");
     return ESP_OK;
 }
 
-esp_err_t captive_portal_start(void) {
+esp_err_t captive_portal_start(void)
+{
     if (dns_server_running) {
         ESP_LOGW(TAG, "Portail captif déjà actif");
         return ESP_OK;
@@ -192,7 +197,8 @@ esp_err_t captive_portal_start(void) {
     return ESP_OK;
 }
 
-esp_err_t captive_portal_stop(void) {
+esp_err_t captive_portal_stop(void)
+{
     if (!dns_server_running) {
         return ESP_OK;
     }
@@ -216,6 +222,7 @@ esp_err_t captive_portal_stop(void) {
     return ESP_OK;
 }
 
-bool captive_portal_is_running(void) {
+bool captive_portal_is_running(void)
+{
     return dns_server_running;
 }

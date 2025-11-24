@@ -31,5 +31,4 @@ esp_err_t web_server_stop(void);
  */
 bool web_server_is_running(void);
 
-
-#endif // WEB_SERVER_H
+#endif  // WEB_SERVER_H

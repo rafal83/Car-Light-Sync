@@ -6,25 +6,25 @@
 #include "vehicle_can_unified.h"
 
 // IDs alphanumériques stables pour les effets (ne changent jamais)
-#define EFFECT_ID_OFF               "OFF"
-#define EFFECT_ID_SOLID             "SOLID"
-#define EFFECT_ID_BREATHING         "BREATHING"
-#define EFFECT_ID_RAINBOW           "RAINBOW"
-#define EFFECT_ID_RAINBOW_CYCLE     "RAINBOW_CYCLE"
-#define EFFECT_ID_THEATER_CHASE     "THEATER_CHASE"
-#define EFFECT_ID_RUNNING_LIGHTS    "RUNNING_LIGHTS"
-#define EFFECT_ID_TWINKLE           "TWINKLE"
-#define EFFECT_ID_FIRE              "FIRE"
-#define EFFECT_ID_SCAN              "SCAN"
-#define EFFECT_ID_KNIGHT_RIDER      "KNIGHT_RIDER"
-#define EFFECT_ID_FADE              "FADE"
-#define EFFECT_ID_STROBE            "STROBE"
-#define EFFECT_ID_VEHICLE_SYNC      "VEHICLE_SYNC"
-#define EFFECT_ID_TURN_SIGNAL       "TURN_SIGNAL"
-#define EFFECT_ID_BRAKE_LIGHT       "BRAKE_LIGHT"
-#define EFFECT_ID_CHARGE_STATUS     "CHARGE_STATUS"
-#define EFFECT_ID_HAZARD            "HAZARD"
-#define EFFECT_ID_BLINDSPOT_FLASH   "BLINDSPOT_FLASH"
+#define EFFECT_ID_OFF "OFF"
+#define EFFECT_ID_SOLID "SOLID"
+#define EFFECT_ID_BREATHING "BREATHING"
+#define EFFECT_ID_RAINBOW "RAINBOW"
+#define EFFECT_ID_RAINBOW_CYCLE "RAINBOW_CYCLE"
+#define EFFECT_ID_THEATER_CHASE "THEATER_CHASE"
+#define EFFECT_ID_RUNNING_LIGHTS "RUNNING_LIGHTS"
+#define EFFECT_ID_TWINKLE "TWINKLE"
+#define EFFECT_ID_FIRE "FIRE"
+#define EFFECT_ID_SCAN "SCAN"
+#define EFFECT_ID_KNIGHT_RIDER "KNIGHT_RIDER"
+#define EFFECT_ID_FADE "FADE"
+#define EFFECT_ID_STROBE "STROBE"
+#define EFFECT_ID_VEHICLE_SYNC "VEHICLE_SYNC"
+#define EFFECT_ID_TURN_SIGNAL "TURN_SIGNAL"
+#define EFFECT_ID_BRAKE_LIGHT "BRAKE_LIGHT"
+#define EFFECT_ID_CHARGE_STATUS "CHARGE_STATUS"
+#define EFFECT_ID_HAZARD "HAZARD"
+#define EFFECT_ID_BLINDSPOT_FLASH "BLINDSPOT_FLASH"
 
 #define EFFECT_ID_MAX_LEN 32  // Longueur max d'un ID d'effet
 
@@ -40,15 +40,15 @@ typedef enum {
     EFFECT_TWINKLE,
     EFFECT_FIRE,
     EFFECT_SCAN,
-    EFFECT_KNIGHT_RIDER,    // K2000 - traînée nette sans fade
+    EFFECT_KNIGHT_RIDER,  // K2000 - traînée nette sans fade
     EFFECT_FADE,
     EFFECT_STROBE,
-    EFFECT_VEHICLE_SYNC,    // Synchronisé avec l'état du véhicule
-    EFFECT_TURN_SIGNAL,     // Clignotants
-    EFFECT_BRAKE_LIGHT,     // Feux de stop
-    EFFECT_CHARGE_STATUS,   // Indicateur de charge
-    EFFECT_HAZARD,          // Warnings (les deux côtés)
-    EFFECT_BLINDSPOT_FLASH, // Flash directionnel pour angle mort
+    EFFECT_VEHICLE_SYNC,     // Synchronisé avec l'état du véhicule
+    EFFECT_TURN_SIGNAL,      // Clignotants
+    EFFECT_BRAKE_LIGHT,      // Feux de stop
+    EFFECT_CHARGE_STATUS,    // Indicateur de charge
+    EFFECT_HAZARD,           // Warnings (les deux côtés)
+    EFFECT_BLINDSPOT_FLASH,  // Flash directionnel pour angle mort
     EFFECT_MAX
 } led_effect_t;
 
@@ -76,12 +76,12 @@ typedef struct {
     led_effect_t effect;
     uint8_t brightness;
     uint8_t speed;
-    uint32_t color1;        // RGB au format 0xRRGGBB
+    uint32_t color1;  // RGB au format 0xRRGGBB
     uint32_t color2;
     uint32_t color3;
     sync_mode_t sync_mode;
-    bool reverse;           // Direction de l'animation (pour compatibilité)
-    led_zone_t zone;        // Zone d'application (full, left, right)
+    bool reverse;     // Direction de l'animation (pour compatibilité)
+    led_zone_t zone;  // Zone d'application (full, left, right)
 } effect_config_t;
 
 /**
@@ -253,4 +253,4 @@ void led_effects_show_upgrade_ready(void);
  */
 void led_effects_show_upgrade_error(void);
 
-#endif // LED_EFFECTS_H
+#endif  // LED_EFFECTS_H

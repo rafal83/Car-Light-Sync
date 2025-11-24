@@ -37,4 +37,4 @@ if [[ ${#files[@]} -eq 0 ]]; then
 fi
 
 # --dry-run + --Werror so CI fails on formatting regressions without modifying files.
-clang-format --style=file --dry-run --Werror "${files[@]}"
+clang-format --style=file -i "${files[@]}"

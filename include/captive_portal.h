@@ -28,4 +28,4 @@ esp_err_t captive_portal_stop(void);
  */
 bool captive_portal_is_running(void);
 
-#endif // CAPTIVE_PORTAL_H
+#endif  // CAPTIVE_PORTAL_H
