@@ -7,12 +7,12 @@
 
 // État de la connexion
 typedef struct {
-    bool ap_started;
-    bool sta_connected;
-    char sta_ssid[33];
-    char sta_ip[16];
-    char ap_ip[16];
-    uint8_t connected_clients;
+  bool ap_started;
+  bool sta_connected;
+  char sta_ssid[33];
+  char sta_ip[16];
+  char ap_ip[16];
+  uint8_t connected_clients;
 } wifi_status_t;
 
 /**
@@ -33,7 +33,7 @@ esp_err_t wifi_manager_start_ap(void);
  * @param password Mot de passe
  * @return ESP_OK si succès
  */
-esp_err_t wifi_manager_connect_sta(const char* ssid, const char* password);
+esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password);
 
 /**
  * @brief Déconnecte du réseau WiFi
@@ -53,7 +53,7 @@ int wifi_manager_scan_networks(uint32_t scan_time);
  * @param status Pointeur vers la structure de statut
  * @return ESP_OK si succès
  */
-esp_err_t wifi_manager_get_status(wifi_status_t* status);
+esp_err_t wifi_manager_get_status(wifi_status_t *status);
 
 /**
  * @brief Arrête complètement le WiFi
@@ -70,4 +70,4 @@ esp_err_t wifi_manager_set_mode(wifi_mode_t mode);
 
 bool wifi_wait_for_sta(uint32_t timeout_ms);
 
-#endif  // WIFI_MANAGER_H
+#endif // WIFI_MANAGER_H

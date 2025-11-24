@@ -1,9 +1,9 @@
 #ifndef LED_EFFECTS_H
 #define LED_EFFECTS_H
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "vehicle_can_unified.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 // IDs alphanumériques stables pour les effets (ne changent jamais)
 #define EFFECT_ID_OFF "OFF"
@@ -26,62 +26,62 @@
 #define EFFECT_ID_HAZARD "HAZARD"
 #define EFFECT_ID_BLINDSPOT_FLASH "BLINDSPOT_FLASH"
 
-#define EFFECT_ID_MAX_LEN 32  // Longueur max d'un ID d'effet
+#define EFFECT_ID_MAX_LEN 32 // Longueur max d'un ID d'effet
 
 // Types d'effets (enum interne, peut changer)
 typedef enum {
-    EFFECT_OFF = 0,
-    EFFECT_SOLID,
-    EFFECT_BREATHING,
-    EFFECT_RAINBOW,
-    EFFECT_RAINBOW_CYCLE,
-    EFFECT_THEATER_CHASE,
-    EFFECT_RUNNING_LIGHTS,
-    EFFECT_TWINKLE,
-    EFFECT_FIRE,
-    EFFECT_SCAN,
-    EFFECT_KNIGHT_RIDER,  // K2000 - traînée nette sans fade
-    EFFECT_FADE,
-    EFFECT_STROBE,
-    EFFECT_VEHICLE_SYNC,     // Synchronisé avec l'état du véhicule
-    EFFECT_TURN_SIGNAL,      // Clignotants
-    EFFECT_BRAKE_LIGHT,      // Feux de stop
-    EFFECT_CHARGE_STATUS,    // Indicateur de charge
-    EFFECT_HAZARD,           // Warnings (les deux côtés)
-    EFFECT_BLINDSPOT_FLASH,  // Flash directionnel pour angle mort
-    EFFECT_MAX
+  EFFECT_OFF = 0,
+  EFFECT_SOLID,
+  EFFECT_BREATHING,
+  EFFECT_RAINBOW,
+  EFFECT_RAINBOW_CYCLE,
+  EFFECT_THEATER_CHASE,
+  EFFECT_RUNNING_LIGHTS,
+  EFFECT_TWINKLE,
+  EFFECT_FIRE,
+  EFFECT_SCAN,
+  EFFECT_KNIGHT_RIDER, // K2000 - traînée nette sans fade
+  EFFECT_FADE,
+  EFFECT_STROBE,
+  EFFECT_VEHICLE_SYNC,    // Synchronisé avec l'état du véhicule
+  EFFECT_TURN_SIGNAL,     // Clignotants
+  EFFECT_BRAKE_LIGHT,     // Feux de stop
+  EFFECT_CHARGE_STATUS,   // Indicateur de charge
+  EFFECT_HAZARD,          // Warnings (les deux côtés)
+  EFFECT_BLINDSPOT_FLASH, // Flash directionnel pour angle mort
+  EFFECT_MAX
 } led_effect_t;
 
 // Modes de synchronisation véhicule
 typedef enum {
-    SYNC_OFF = 0,
-    SYNC_DOORS,         // Réagit à l'ouverture des portes
-    SYNC_SPEED,         // Change selon la vitesse
-    SYNC_TURN_SIGNALS,  // Suit les clignotants
-    SYNC_BRAKE,         // Feux de stop
-    SYNC_CHARGE,        // État de charge
-    SYNC_LOCKED,        // État verrouillage
-    SYNC_ALL            // Tous les événements
+  SYNC_OFF = 0,
+  SYNC_DOORS,        // Réagit à l'ouverture des portes
+  SYNC_SPEED,        // Change selon la vitesse
+  SYNC_TURN_SIGNALS, // Suit les clignotants
+  SYNC_BRAKE,        // Feux de stop
+  SYNC_CHARGE,       // État de charge
+  SYNC_LOCKED,       // État verrouillage
+  SYNC_ALL           // Tous les événements
 } sync_mode_t;
 
 // Zone d'application de l'effet
 typedef enum {
-    LED_ZONE_FULL = 0,  // Tout le strip (0 à NUM_LEDS-1)
-    LED_ZONE_LEFT,      // Moitié gauche (0 à NUM_LEDS/2-1)
-    LED_ZONE_RIGHT      // Moitié droite (NUM_LEDS/2 à NUM_LEDS-1)
+  LED_ZONE_FULL = 0, // Tout le strip (0 à NUM_LEDS-1)
+  LED_ZONE_LEFT,     // Moitié gauche (0 à NUM_LEDS/2-1)
+  LED_ZONE_RIGHT     // Moitié droite (NUM_LEDS/2 à NUM_LEDS-1)
 } led_zone_t;
 
 // Configuration d'un effet
 typedef struct {
-    led_effect_t effect;
-    uint8_t brightness;
-    uint8_t speed;
-    uint32_t color1;  // RGB au format 0xRRGGBB
-    uint32_t color2;
-    uint32_t color3;
-    sync_mode_t sync_mode;
-    bool reverse;     // Direction de l'animation (pour compatibilité)
-    led_zone_t zone;  // Zone d'application (full, left, right)
+  led_effect_t effect;
+  uint8_t brightness;
+  uint8_t speed;
+  uint32_t color1; // RGB au format 0xRRGGBB
+  uint32_t color2;
+  uint32_t color3;
+  sync_mode_t sync_mode;
+  bool reverse;    // Direction de l'animation (pour compatibilité)
+  led_zone_t zone; // Zone d'application (full, left, right)
 } effect_config_t;
 
 /**
@@ -99,20 +99,21 @@ void led_effects_deinit(void);
  * @brief Configure un effet
  * @param config Configuration de l'effet
  */
-void led_effects_set_config(const effect_config_t* config);
+void led_effects_set_config(const effect_config_t *config);
 
 /**
  * @brief Configure deux effets directionnels simultanés (gauche et droite)
  * @param left_config Configuration pour le côté gauche (peut être NULL)
  * @param right_config Configuration pour le côté droit (peut être NULL)
  */
-void led_effects_set_dual_directional(const effect_config_t* left_config, const effect_config_t* right_config);
+void led_effects_set_dual_directional(const effect_config_t *left_config,
+                                      const effect_config_t *right_config);
 
 /**
  * @brief Obtient la configuration actuelle
  * @param config Pointeur vers la structure de configuration
  */
-void led_effects_get_config(effect_config_t* config);
+void led_effects_get_config(effect_config_t *config);
 
 /**
  * @brief Met à jour les LEDs (à appeler régulièrement)
@@ -123,7 +124,7 @@ void led_effects_update(void);
  * @brief Met à jour avec l'état du véhicule
  * @param state État du véhicule
  */
-void led_effects_update_vehicle_state(const vehicle_state_t* state);
+void led_effects_update_vehicle_state(const vehicle_state_t *state);
 
 /**
  * @brief Active/désactive les LEDs
@@ -166,7 +167,7 @@ void led_effects_set_solid_color(uint32_t color);
  * @param effect Type d'effet
  * @return Nom de l'effet
  */
-const char* led_effects_get_name(led_effect_t effect);
+const char *led_effects_get_name(led_effect_t effect);
 
 /**
  * @brief Sauvegarde la configuration en mémoire non-volatile
@@ -188,7 +189,8 @@ void led_effects_reset_config(void);
 /**
  * @brief Active/désactive le mode nuit avec luminosité globale
  * @param active true pour activer le mode nuit
- * @param brightness Luminosité du mode nuit (0-255, appliqué comme multiplicateur)
+ * @param brightness Luminosité du mode nuit (0-255, appliqué comme
+ * multiplicateur)
  */
 void led_effects_set_night_mode(bool active, uint8_t brightness);
 
@@ -209,14 +211,14 @@ uint8_t led_effects_get_night_brightness(void);
  * @param effect Type d'effet
  * @return ID alphanumérique (constante statique)
  */
-const char* led_effects_enum_to_id(led_effect_t effect);
+const char *led_effects_enum_to_id(led_effect_t effect);
 
 /**
  * @brief Convertit un ID alphanumérique en enum d'effet
  * @param id ID alphanumérique
  * @return Type d'effet (EFFECT_OFF si ID inconnu)
  */
-led_effect_t led_effects_id_to_enum(const char* id);
+led_effect_t led_effects_id_to_enum(const char *id);
 
 /**
  * @brief Vérifie si un effet nécessite des données CAN pour fonctionner
@@ -253,4 +255,4 @@ void led_effects_show_upgrade_ready(void);
  */
 void led_effects_show_upgrade_error(void);
 
-#endif  // LED_EFFECTS_H
+#endif // LED_EFFECTS_H

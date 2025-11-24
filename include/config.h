@@ -11,8 +11,8 @@
 
 // Configuration WiFi
 #define WIFI_AP_SSID_BASE "Car-Light-Sync"
-#define WIFI_AP_SSID "Car-Light-Sync"  // Sera remplacé dynamiquement
-#define WIFI_AP_PASSWORD ""            // Réseau ouvert (pas de mot de passe)
+#define WIFI_AP_SSID "Car-Light-Sync" // Sera remplacé dynamiquement
+#define WIFI_AP_PASSWORD ""           // Réseau ouvert (pas de mot de passe)
 #define WIFI_MAX_CLIENTS 4
 
 // Buffer pour les noms avec suffixe MAC
@@ -34,7 +34,7 @@ void config_init_device_names(void);
 #define MAX_BRIGHTNESS 255
 
 // Pins disponibles pour futures extensions
-#define DOOR_SENSOR_PIN -1    // Non utilisé par défaut
-#define MOTION_SENSOR_PIN -1  // Non utilisé par défaut
+#define DOOR_SENSOR_PIN -1   // Non utilisé par défaut
+#define MOTION_SENSOR_PIN -1 // Non utilisé par défaut
 
-#endif  // CONFIG_H
+#endif // CONFIG_H

@@ -5,7 +5,7 @@
 #include "vehicle_can_unified.h"
 #include <stdbool.h>
 
-void web_server_update_vehicle_state(const vehicle_state_t* state);
+void web_server_update_vehicle_state(const vehicle_state_t *state);
 
 /**
  * @brief Initialise le serveur web
@@ -31,4 +31,4 @@ esp_err_t web_server_stop(void);
  */
 bool web_server_is_running(void);
 
-#endif  // WEB_SERVER_H
+#endif // WEB_SERVER_H
