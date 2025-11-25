@@ -35,10 +35,11 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 ## 📋 Prérequis
 
 ### Matériel
-- **ESP32** : ESP32-DevKit, ESP32-S2-Saola, ou ESP32-S3-DevKitC (support PSRAM)
-- **Ruban LED** : WS2812 ou WS2812B (60-150 LEDs recommandé)
+- **ESP32** : ESP32-DevKit, ESP32-S2-Saola, ou ESP32-S3-DevKitC (support PSRAM) — [ESP32-S3 recommandé](https://fr.aliexpress.com/item/1005006963045909.html)
+- **Ruban LED** : WS2812 ou WS2812B (60-150 LEDs recommandé) — [Ruban 110 cm compatible](https://fr.aliexpress.com/item/1005008483452231.html)
+- **Connecteur porte** : Faisceau 20 broches pour récupérer le bus CAN au niveau de la porte — [Connecteur 20 pin](https://fr.aliexpress.com/item/1005003434204981.html)
 - **Alimentation** : 5V 3-10A selon nombre de LEDs
-- **Module CAN** : Transceiver CAN (ex: SN65HVD230, MCP2551) connecté au bus CAN du véhicule
+- **Module CAN** : Transceiver CAN (ex: SN65HVD230, MCP2551) connecté au bus CAN du véhicule — [Module CAN MCP2551](https://fr.aliexpress.com/item/1005008251308592.html)
 - **Véhicule** : Véhicule compatible avec bus CAN (Tesla Model 3, Y, S, X, ou autres)
 
 ### Logiciel
