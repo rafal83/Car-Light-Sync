@@ -25,8 +25,12 @@ static esp_err_t event_single_post_handler(httpd_req_t *req);
 // HTML de la page principale (embarqué, version compressée GZIP)
 extern const uint8_t index_html_gz_start[] asm("_binary_index_html_gz_start");
 extern const uint8_t index_html_gz_end[] asm("_binary_index_html_gz_end");
-extern const uint8_t icon_svg_start[] asm("_binary_icon_svg_start");
-extern const uint8_t icon_svg_end[] asm("_binary_icon_svg_end");
+extern const uint8_t script_js_gz_start[] asm("_binary_script_js_gz_start");
+extern const uint8_t script_js_gz_end[] asm("_binary_script_js_gz_end");
+extern const uint8_t style_css_gz_start[] asm("_binary_style_css_gz_start");
+extern const uint8_t style_css_gz_end[] asm("_binary_style_css_gz_end");
+extern const uint8_t carlightsync_png_start[] asm("_binary_carlightsync_png_start");
+extern const uint8_t carlightsync_png_end[] asm("_binary_carlightsync_png_end");
 
 // Structure pour les handler des fichiers statiques
 typedef struct {
@@ -1514,8 +1518,12 @@ esp_err_t web_server_start(void) {
     static static_file_route_t static_files[] = {
         {"/", index_html_gz_start, index_html_gz_end, "text/html",
          "public, max-age=31536000", "gzip"},
-        {"/icon.svg", icon_svg_start, icon_svg_end, "image/svg+xml",
-         "public, max-age=31536000", NULL}};
+        {"/script.js", script_js_gz_start, script_js_gz_end, "text/javascript",
+         "public, max-age=31536000", "gzip"},
+        {"/style.css", style_css_gz_start, style_css_gz_end, "text/css",
+         "public, max-age=31536000", "gzip"},
+        {"/carlightsync.png", carlightsync_png_start, carlightsync_png_end,
+         "image/png", "public, max-age=31536000", NULL}};
     int num_static_files = sizeof(static_files) / sizeof(static_files[0]);
 
     for (int i = 0; i < num_static_files; i++) {

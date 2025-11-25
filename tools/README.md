@@ -30,7 +30,7 @@ Scripts utilisés automatiquement lors de la compilation PlatformIO.
 
 **Usage:** Automatique (pre-build script)
 
-Compresse le fichier `data/index.html` en format GZIP pour optimiser la taille en mémoire.
+Compresse les fichiers web `data/index.html`, `data/script.js` et `data/style.css` en format GZIP pour optimiser la taille en mémoire.
 
 **Fonctionnalités:**
 - Compression GZIP niveau 9
@@ -55,6 +55,27 @@ Génère automatiquement le fichier `include/version_auto.h` contenant la versio
 **Exemple de version:** `2025.47.342` (année 2025, semaine 47, 342 commits)
 
 **Appelé par:** PlatformIO `extra_scripts = pre:tools/build/inject_version.py`
+
+---
+
+### `generate_icons.py`
+
+**Usage:** Manuel (`python tools/generate_icons.py`)
+
+Génère automatiquement des déclinaisons PNG du logo `data/carlightsync.png` pour la WebUI et l'application mobile.
+
+**Fonctionnalités:**
+- Crée des icônes 32→1024 px dans `data/icons/` et `mobile.app/resources/icons/`
+- Produit `mobile.app/resources/icon.png` (1024 px) pour `capacitor-assets`
+- Paramètres `--source` et `--sizes` pour personnaliser les entrées
+
+**Prérequis:** `pip install Pillow`
+
+**Utilisation typique:**
+```bash
+python tools/generate_icons.py
+```
+Ensuite `npm run generate:icons` dans `mobile.app/` pour mettre à jour les assets Android/iOS.
 
 ---
 

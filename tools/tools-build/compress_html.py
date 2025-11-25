@@ -7,6 +7,8 @@ import os
 # Liste des fichiers à compresser
 files_to_compress = [
     "data/index.html",
+    "data/script.js",
+    "data/style.css",
 ]
 
 def compress_file(source_file):

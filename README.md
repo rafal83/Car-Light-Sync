@@ -204,7 +204,7 @@ L'interface expose une API REST complète. Voir section [API REST](#-api-rest) c
 ## Application mobile
 
 - App iOS/Android (Capacitor) pour contrôler le Car Light Sync en Bluetooth avec connexion auto au démarrage
-- Réutilise le même fichier `data/index.html` que l'interface web
+- Réutilise les mêmes fichiers `data/index.html`, `data/script.js` et `data/style.css` que l'interface web
 - Guide complet et commandes disponibles : [mobile.app/README.md](mobile.app/README.md)
 
 ## 🔌 Connexion CAN Directe
@@ -281,8 +281,11 @@ car-light-sync/
 │   ├── ota_update.c                      # Implémentation OTA
 │   └── ble_api_service.c                 # Implémentation BLE
 ├── data/                                 # Ressources web
-│   ├── index.html                        # Interface web (compressée)
-│   └── icon.svg                          # Icône
+│   ├── index.html                        # Structure HTML principale
+│   ├── script.js                         # Logique front-end (compressée)
+│   ├── style.css                         # Thème et layout (compressée)
+│   ├── icons/                            # Logos multi-tailles générés (PNG)
+│   └── carlightsync.png                  # Logo PNG source (pour générer les déclinaisons)
 ├── tools/                                # Scripts utilitaires
 ├── docs/                                 # Documentation
 ├── CMakeLists.txt                        # Configuration CMake

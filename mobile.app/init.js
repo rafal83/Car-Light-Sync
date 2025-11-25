@@ -12,11 +12,15 @@ if (!fs.existsSync('package.json')) {
     process.exit(1);
 }
 
-// Vérifier que le fichier source existe
-const sourceHtml = path.join(__dirname, '..', 'data', 'index.html');
-if (!fs.existsSync(sourceHtml)) {
-    console.error('❌ Erreur: ../data/index.html introuvable.');
-    process.exit(1);
+// Vérifier que les fichiers source existent
+const webSourceDir = path.join(__dirname, '..', 'data');
+const requiredSources = ['index.html', 'script.js', 'style.css', 'carlightsync.png'];
+for (const fileName of requiredSources) {
+    const sourcePath = path.join(webSourceDir, fileName);
+    if (!fs.existsSync(sourcePath)) {
+        console.error(`❌ Erreur: ../data/${fileName} introuvable.`);
+        process.exit(1);
+    }
 }
 
 function run(command, description) {
@@ -36,8 +40,8 @@ if (!run('npm install', 'Installation des dépendances npm')) {
     process.exit(1);
 }
 
-// Étape 2: Synchroniser le HTML
-if (!run('node sync-html.js', 'Synchronisation du fichier HTML')) {
+// Étape 2: Synchroniser les fichiers web
+if (!run('node sync-html.js', 'Synchronisation des fichiers web')) {
     process.exit(1);
 }
 
@@ -74,6 +78,6 @@ console.log('  Pour Android:');
 console.log('    npm run open:android');
 console.log('\n  Pour iOS (macOS uniquement):');
 console.log('    npm run open:ios');
-console.log('\n  Pour synchroniser après modification du HTML:');
+console.log('\n  Pour synchroniser après modification des fichiers web:');
 console.log('    npm run sync');
 console.log('\n📖 Consultez QUICKSTART.md pour plus d\'informations\n');

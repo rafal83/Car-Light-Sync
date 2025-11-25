@@ -51,7 +51,9 @@ idf_component_register(
         ${component_priv_includes}
     EMBED_FILES
         "../data/index.html.gz"
-        "../data/icon.svg"
+        "../data/script.js.gz"
+        "../data/style.css.gz"
+        "../data/carlightsync.png"
     REQUIRES
         ${component_requires}
 )

@@ -2,14 +2,16 @@
 
 ## ✨ Ce qui a été créé
 
-Un projet **Capacitor** complet qui transforme votre fichier `index.html` existant en application mobile native iOS et Android, avec support Bluetooth natif.
+Un projet **Capacitor** complet qui transforme votre interface web (`index.html`, `script.js`, `style.css`) existante en application mobile native iOS et Android, avec support Bluetooth natif.
 
 ## 🎯 Principe clé
 
-**Un seul fichier HTML pour tout !**
+**Une seule base web pour tout !**
 
 ```
 ../data/index.html
+../data/script.js
+../data/style.css
     ↓
     ├── ESP32 (embarqué)
     ├── Web (navigateur avec Web Bluetooth)
@@ -31,7 +33,7 @@ Un projet **Capacitor** complet qui transforme votre fichier `index.html` exista
 
 | Fichier | Description |
 |---------|-------------|
-| `sync-html.js` | Synchronise `../data/index.html` → `www/index.html` + injection scripts |
+| `sync-html.js` | Copie `../data/index.html`, `script.js`, `style.css` → `www/` + injection scripts |
 | `init.js` | Script d'initialisation automatique du projet |
 
 ### Code source
@@ -76,7 +78,7 @@ if (Capacitor.isNativePlatform()) {
 
 ### Résultat
 
-Le code dans `index.html` reste **inchangé** :
+Le code applicatif (dans `script.js`) reste **inchangé** :
 
 ```javascript
 // Ce code fonctionne PARTOUT sans modification !
@@ -96,7 +98,7 @@ npm install
 npm run init
 ```
 
-### Développement (après modification du HTML)
+### Développement (après modification des fichiers web)
 
 ```bash
 npm run sync        # Synchroniser tout
@@ -113,7 +115,7 @@ npm run build:ios      # IPA pour App Store
 
 ## 📊 Architecture en détail
 
-### Couche 1 : Application (index.html)
+### Couche 1 : Application web (index/script/style)
 
 ```
 ┌─────────────────────────────────────┐
@@ -159,13 +161,13 @@ npm run build:ios      # IPA pour App Store
 ## 🎨 Workflow de développement
 
 ```
-1. Modifier ../data/index.html
+1. Modifier ../data/index.html / script.js / style.css
         ↓
 2. npm run sync
         ↓
 3. sync-html.js copie + injecte scripts
         ↓
-4. www/index.html créé
+4. www/index.html + script.js + style.css créés
         ↓
 5. cap sync → synchronise Android/iOS
         ↓
@@ -180,12 +182,12 @@ npm run build:ios      # IPA pour App Store
 
 | Avantage | Description |
 |----------|-------------|
-| **Un seul fichier** | `../data/index.html` est la source unique |
+| **Base web unique** | `../data/index.html`, `script.js`, `style.css` servent partout |
 | **Pas de duplication** | Pas de maintenance de 2+ versions |
 | **Adaptation automatique** | Les scripts s'injectent automatiquement |
 | **Bluetooth natif** | Performance optimale sur mobile |
 | **API identique** | `navigator.bluetooth` partout |
-| **Hot reload** | Modifier HTML → sync → tester |
+| **Hot reload** | Modifier fichiers web → sync → tester |
 | **Cross-platform** | Android, iOS, Web avec le même code |
 
 ## 🔄 Conversion des données
@@ -237,7 +239,7 @@ await BluetoothLe.write({
 | Commande | Usage |
 |----------|-------|
 | `npm run init` | Première installation |
-| `npm run sync` | Après modification HTML |
+| `npm run sync` | Après modification des fichiers web |
 | `npm run sync:android` | Sync Android uniquement |
 | `npm run sync:ios` | Sync iOS uniquement |
 | `npm run open:android` | Ouvrir Android Studio |
@@ -301,16 +303,20 @@ Console tab
 
 ## 💡 Notes importantes
 
-### Fichier source unique
+### Base web unique
 
 ```
-../data/index.html  ← TOUJOURS modifier ce fichier
-www/index.html      ← JAMAIS modifier (généré automatiquement)
+../data/index.html
+../data/script.js
+../data/style.css   ← TOUJOURS modifier ces fichiers
+www/index.html
+www/script.js
+www/style.css       ← JAMAIS modifier (générés automatiquement)
 ```
 
 ### Synchronisation obligatoire
 
-Après CHAQUE modification de `../data/index.html` :
+Après CHAQUE modification dans `../data/` :
 
 ```bash
 npm run sync
@@ -331,7 +337,7 @@ Ces dossiers sont **générés automatiquement**.
 
 Une application mobile **native** qui :
 
-- ✅ Utilise le **même HTML** que l'ESP32
+- ✅ Utilise la **même interface web** que l'ESP32
 - ✅ Se connecte en **Bluetooth natif**
 - ✅ Fonctionne sur **Android et iOS**
 - ✅ Se déploie sur **Google Play et App Store**
@@ -342,7 +348,6 @@ Une application mobile **native** qui :
 
 - Documentation : Consultez les fichiers `*.md`
 - Issues : GitHub Issues du projet
-- Email : [votre email]
 
 ---
 

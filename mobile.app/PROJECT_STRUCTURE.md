@@ -7,7 +7,9 @@ mobile.app/
 │
 ├── www/                                  # Dossier web (généré automatiquement)
 │   ├── index.html                        # Copié depuis ../data/index.html + injection scripts
-│   ├── icon.svg                          # Copié depuis ../data/icon.svg
+│   ├── script.js                         # Copié depuis ../data/script.js
+│   ├── style.css                         # Copié depuis ../data/style.css
+│   ├── carlightsync.png                  # Copié depuis ../data/carlightsync.png
 │   ├── capacitor.js                      # Initialisation Capacitor
 │   └── capacitor-bluetooth-adapter.js    # Adaptateur BLE Web ↔ Natif
 │
@@ -35,7 +37,7 @@ mobile.app/
 ├── package.json                          # Dépendances et scripts npm
 ├── package-lock.json                     # Lockfile npm
 │
-├── sync-html.js                          # Script de synchronisation HTML
+├── sync-html.js                          # Script de synchronisation des fichiers web
 ├── init.js                               # Script d'initialisation du projet
 │
 ├── README.md                             # Documentation principale
@@ -49,10 +51,12 @@ mobile.app/
 
 ## 🔄 Workflow de fichiers
 
-### 1. Fichier source
+### 1. Fichiers source
 
 ```
-../data/index.html  (Source unique de vérité)
+../data/index.html   (Structure HTML)
+../data/script.js    (Logique front)
+../data/style.css    (Styles/thème)
 ```
 
 ### 2. Synchronisation
@@ -70,13 +74,17 @@ Exécute `sync-html.js` qui :
    <script type="module" src="capacitor-bluetooth-adapter.js"></script>
    ```
 3. Écrit dans `www/index.html`
-4. Copie `../data/icon.svg` vers `www/icon.svg`
-5. Lance `cap sync` pour synchroniser avec Android/iOS
+4. Copie `../data/script.js` vers `www/script.js`
+5. Copie `../data/style.css` vers `www/style.css`
+6. Copie `../data/carlightsync.png` vers `www/carlightsync.png`
+7. Lance `cap sync` pour synchroniser avec Android/iOS
 
 ### 3. Résultat
 
 ```
 www/index.html  (Fichier généré avec scripts Capacitor)
+www/script.js   (Logique front copiée)
+www/style.css   (Styles copiés)
 ```
 
 ## 📦 Dépendances
@@ -105,7 +113,7 @@ www/index.html  (Fichier généré avec scripts Capacitor)
 | Script | Commande | Description |
 |--------|----------|-------------|
 | `init` | `node init.js` | Initialisation complète du projet |
-| `sync` | `node sync-html.js && cap sync` | Synchroniser HTML + plateformes |
+| `sync` | `node sync-html.js && cap sync` | Synchroniser les fichiers web + plateformes |
 | `sync:android` | `node sync-html.js && cap sync android` | Synchroniser Android uniquement |
 | `sync:ios` | `node sync-html.js && cap sync ios` | Synchroniser iOS uniquement |
 | `open:android` | `cap open android` | Ouvrir Android Studio |
@@ -138,10 +146,11 @@ Configuration principale de Capacitor :
 Script Node.js qui :
 - Copie `../data/index.html` vers `www/index.html`
 - Injecte les scripts Capacitor
-- Copie les assets (icon.svg)
+- Copie `../data/script.js` et `../data/style.css`
+- Copie le logo (`carlightsync.png`)
 
 **Pourquoi ?**
-- Maintenir un seul fichier source
+- Maintenir une seule base web partagée
 - Adaptation automatique pour mobile
 - Pas de modification manuelle nécessaire
 
@@ -190,7 +199,9 @@ Fichiers exclus du versioning :
 ### Lors de `npm run sync`
 
 - `www/index.html` : HTML avec scripts Capacitor
-- `www/icon.svg` : Icône copiée
+- `www/script.js` : Logique copiée
+- `www/style.css` : Styles copiés
+- `www/carlightsync.png` : Logo PNG copié
 - `android/` : Mis à jour avec le nouveau HTML
 - `ios/` : Mis à jour avec le nouveau HTML
 
@@ -283,19 +294,23 @@ Product > Archive
 
 ```
 ../data/index.html
-    ↓ copié par sync-html.js
+../data/script.js
+../data/style.css
+    ↓ copiés par sync-html.js
 www/index.html
-    ↓ référencé par capacitor.config.json
+www/script.js
+www/style.css
+    ↓ référencés par capacitor.config.json
 android/app/src/main/assets/public/index.html
 ios/App/App/public/index.html
-    ↓ chargé par WebView Capacitor
+    ↓ chargés par WebView Capacitor
 Application mobile
 ```
 
 ## 💡 Bonnes pratiques
 
 1. **Ne jamais éditer directement `www/index.html`**
-   - Toujours éditer `../data/index.html`
+   - Toujours éditer les fichiers dans `../data/` (index/script/style)
    - Lancer `npm run sync` pour propager les changements
 
 2. **Ne jamais commit les dossiers générés**
@@ -306,7 +321,7 @@ Application mobile
 
 3. **Toujours synchroniser après modification**
    ```bash
-   # Modifier ../data/index.html
+   # Modifier ../data/index.html / ../data/script.js / ../data/style.css
    npm run sync
    # Tester sur mobile
    ```

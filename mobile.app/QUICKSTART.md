@@ -9,15 +9,15 @@ cd mobile.app
 npm install
 ```
 
-### 2. Synchroniser le fichier HTML depuis l'ESP32
+### 2. Synchroniser les fichiers web depuis l'ESP32
 
 ```bash
 npm run sync
 ```
 
 Cette commande va :
-- Copier `../data/index.html` vers `www/index.html`
-- Injecter les scripts Capacitor nécessaires
+- Copier `../data/index.html`, `../data/script.js` et `../data/style.css` vers `www/`
+- Injecter les scripts Capacitor nécessaires dans `www/index.html`
 - Préparer les plateformes Android/iOS
 
 ### 3. Initialiser les plateformes
@@ -68,7 +68,7 @@ L'application mobile se connecte **automatiquement** au démarrage :
 
 ## 🔄 Workflow de développement
 
-Quand vous modifiez le fichier `../data/index.html` :
+Quand vous modifiez `../data/index.html`, `../data/script.js` ou `../data/style.css` :
 
 ```bash
 # 1. Synchroniser les changements
@@ -105,7 +105,7 @@ npm run open:ios
 - Vérifiez que le Bluetooth est activé
 - Acceptez la permission Bluetooth
 
-### Le fichier HTML n'est pas à jour
+### Les fichiers web ne sont pas à jour
 
 ```bash
 npm run sync

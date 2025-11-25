@@ -6,18 +6,17 @@
 
 - [ ] `npm install` réussit sans erreurs
 - [ ] `npm run init` crée les dossiers `android/` et `ios/`
-- [ ] `npm run sync` génère `www/index.html`
+- [ ] `npm run sync` génère `www/index.html`, `www/script.js`, `www/style.css`
 - [ ] Le fichier `www/index.html` contient les scripts Capacitor
-- [ ] Le fichier `www/index.html` contient le patch `isCapacitorNativeApp`
+- [ ] Le fichier `www/script.js` contient `const usingCapacitor = window.Capacitor !== undefined`
 
-### Vérification du patch wifiOnline
+### Vérification de la détection Capacitor
 
-- [ ] Ouvrir `www/index.html` et chercher "isCapacitorNativeApp"
-- [ ] Vérifier que le code suivant est présent :
+- [ ] Ouvrir `www/script.js` et chercher `usingCapacitor`
+- [ ] Vérifier que la déclaration suivante est présente :
   ```javascript
-  if (window.isCapacitorNativeApp === true) {
-      wifiOnline = false;
-  }
+  const usingCapacitor = window.Capacitor !== undefined;
+  let wifiOnline = !usingFileProtocol && !usingCapacitor && navigator.onLine;
   ```
 
 ### Vérification de l'adaptateur

@@ -15,6 +15,8 @@
 │  2. CHARGEMENT DES SCRIPTS                                          │
 │                                                                     │
 │     index.html charge dans l'ordre :                                │
+│     ├─ style.css   (copié depuis ../data/style.css)                │
+│     ├─ script.js   (copié depuis ../data/script.js)                │
 │     ├─ capacitor.js                                                 │
 │     └─ capacitor-bluetooth-adapter.js                               │
 └────────────────────────────┬────────────────────────────────────────┘
@@ -50,13 +52,14 @@
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  6. PATCH DE wifiOnline                                             │
+│  6. DÉTECTION WIFI/BLE                                             │
 │                                                                     │
-│     if (window.isCapacitorNativeApp) {                              │
-│         wifiOnline = false;  // Force le mode BLE                   │
-│     }                                                               │
+│     const usingCapacitor = (window.Capacitor !== undefined);        │
+│     let wifiOnline = !usingFileProtocol && !usingCapacitor          │
+│         && navigator.onLine;                                        │
+│     // → sur mobile, window.Capacitor existe donc wifiOnline = false│
 │                                                                     │
-│     Console: "📱 Capacitor native app: forcing wifiOnline = false"  │
+│     Console: "[script.js] Capacitor détecté, wifiOnline = false"    │
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                              ▼
@@ -207,12 +210,12 @@
    └─ Définit window.isCapacitorNativeApp = true
 
 2. sync-html.js
-   └─ Patch wifiOnline pour le forcer à false sur mobile
-   └─ Injecte les scripts Capacitor dans <head>
+   └─ Copie index.html, script.js, style.css depuis ../data/
+   └─ Injecte les scripts Capacitor dans `<head>`
 
 3. www/index.html (généré automatiquement)
-   └─ Contient le patch wifiOnline
    └─ Contient les scripts Capacitor
+   └─ Charge script.js/style.css copiés depuis ../data/
 
 
 ═══════════════════════════════════════════════════════════════════════

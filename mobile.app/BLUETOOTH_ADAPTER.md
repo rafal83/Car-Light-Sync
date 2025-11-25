@@ -8,7 +8,7 @@ L'adaptateur Bluetooth permet d'utiliser **le même code** sur navigateur web et
 
 ```
 ┌─────────────────────────────────────────────┐
-│         Application (index.html)            │
+│         Application (index.html/script.js)  │
 │                                             │
 │    navigator.bluetooth.requestDevice()      │
 │    device.gatt.connect()                    │

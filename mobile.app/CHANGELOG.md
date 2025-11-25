@@ -8,7 +8,7 @@
 
 - ✅ Application mobile native iOS et Android
 - ✅ Bluetooth LE natif via Capacitor
-- ✅ Réutilisation du même `index.html` que l'ESP32
+- ✅ Réutilisation des mêmes fichiers web (`index.html`, `script.js`, `style.css`) que l'ESP32
 - ✅ Adaptateur transparent Web Bluetooth ↔ Capacitor BLE
 - ✅ Support multi-langue (FR/EN)
 - ✅ Interface identique à la version web
@@ -36,7 +36,7 @@
 #### Scripts
 
 - `npm run init` : Initialisation complète
-- `npm run sync` : Synchronisation HTML + plateformes
+- `npm run sync` : Synchronisation des fichiers web + plateformes
 - `npm run open:android` : Ouvrir dans Android Studio
 - `npm run open:ios` : Ouvrir dans Xcode
 - `npm run build:android` : Build APK/AAB
@@ -44,16 +44,16 @@
 
 #### Fichiers clés
 
-- `sync-html.js` : Synchronisation automatique du HTML
+- `sync-html.js` : Synchronisation automatique des fichiers web
 - `capacitor-bluetooth-adapter.js` : Adaptateur BLE transparent
 - `capacitor.config.json` : Configuration Capacitor
 
 ### 🔄 Workflow
 
-1. Modifier `../data/index.html` (source unique)
+1. Modifier `../data/index.html`, `../data/script.js` ou `../data/style.css` (source partagée)
 2. Lancer `npm run sync`
 3. Tester sur Android/iOS
-4. Le même HTML fonctionne partout !
+4. Les mêmes fichiers fonctionnent partout !
 
 ### 📱 Plateformes supportées
 

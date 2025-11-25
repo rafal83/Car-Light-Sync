@@ -123,22 +123,22 @@ Le script `sync-html.js` effectue **automatiquement** ces modifications lors de 
 </head>
 ```
 
-### 2. Patch de la variable wifiOnline
+### 2. Détection native dans `script.js`
 
-**Avant** (fichier source `../data/index.html`) :
+**Avant** (version web classique) :
 ```javascript
+const usingFileProtocol = window.location.protocol === 'file:';
 let wifiOnline = !usingFileProtocol && navigator.onLine;
 ```
 
-**Après** (fichier généré `www/index.html`) :
+**Après** (bundle généré pour mobile) :
 ```javascript
-let wifiOnline = !usingFileProtocol && navigator.onLine;
-// Sur Capacitor natif, forcer wifiOnline à false pour utiliser BLE exclusivement
-if (window.isCapacitorNativeApp === true) {
-    console.log('📱 Capacitor native app detected: forcing wifiOnline = false to use BLE');
-    wifiOnline = false;
-}
+const usingFileProtocol = window.location.protocol === 'file:';
+const usingCapacitor = window.Capacitor !== undefined;
+let wifiOnline = !usingFileProtocol && !usingCapacitor && navigator.onLine;
 ```
+
+👉 Résultat : sur mobile Capacitor, `window.Capacitor` existe, donc `wifiOnline` est automatiquement mis à `false` pour forcer le mode BLE.
 
 ## 🐛 Debug et logs
 
@@ -151,7 +151,6 @@ Pour vérifier que la connexion automatique fonctionne, regardez les logs dans l
 📱 Native platform detected: bypassing gesture requirement for BLE auto-connect
 ✅ BLE gesture flag created and set to true (native platform)
 ✅ Capacitor native app flag set
-📱 Capacitor native app detected: forcing wifiOnline = false to use BLE
 🔄 Triggering BLE auto-connect...
 [BLE] Requesting device...
 [BLE] Device found: Car Light Sync

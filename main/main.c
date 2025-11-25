@@ -464,7 +464,7 @@ void app_main(void) {
   ESP_LOGI(TAG, "");
   ESP_LOGI(TAG, "=================================");
   ESP_LOGI(TAG, "  Interface Web Disponible");
-  ESP_LOGI(TAG, "  SSID: %s", WIFI_AP_SSID);
+  ESP_LOGI(TAG, "  SSID: %s", g_wifi_ssid_with_suffix);
   ESP_LOGI(TAG, "  Password: %s", WIFI_AP_PASSWORD);
   ESP_LOGI(TAG, "  URL: http://%s", wifi_status.ap_ip);
   ESP_LOGI(TAG, "=================================");

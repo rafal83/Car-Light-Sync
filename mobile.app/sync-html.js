@@ -1,53 +1,58 @@
 const fs = require('fs');
 const path = require('path');
 
-// Chemins source et destination
-const sourcePath = path.join(__dirname, '..', 'data', 'index.html');
-const destDir = path.join(__dirname, 'www');
-const destPath = path.join(destDir, 'index.html');
-const iconSourcePath = path.join(__dirname, '..', 'data', 'icon.svg');
-const iconDestPath = path.join(destDir, 'icon.svg');
+const SOURCE_DIR = path.join(__dirname, '..', 'data');
+const DEST_DIR = path.join(__dirname, 'www');
+const HTML_FILENAME = 'index.html';
+const REQUIRED_ASSETS = ['script.js', 'style.css', 'carlightsync.png'];
+const OPTIONAL_ASSETS = [];
 
-// Créer le dossier www s'il n'existe pas
-if (!fs.existsSync(destDir)) {
-    fs.mkdirSync(destDir, { recursive: true });
+function ensureFileExists(filePath, label) {
+  if (!fs.existsSync(filePath)) {
+    console.error(`Missing ${label}.`);
+    process.exit(1);
+  }
 }
 
-// Lire le fichier source
-let htmlContent = fs.readFileSync(sourcePath, 'utf8');
-
-// Injecter le script Capacitor juste avant </head>
-// Simple: Capacitor charge automatiquement le plugin natif, on crée juste le wrapper
-const capacitorScript = `    <script src="capacitor.js"></script>
-    <script src="ble-client-loader.js"></script>
-    <script src="capacitor-bluetooth-adapter.js"></script>
-`;
-
-htmlContent = htmlContent.replace('</head>', capacitorScript + '</head>');
-
-// Patch pour forcer le mode BLE sur mobile natif
-// Modifier la déclaration de wifiOnline pour qu'elle soit toujours false sur mobile
-const wifiOnlinePatch = `let usingFileProtocol = window.location.protocol === 'file:';
-        let wifiOnline = !usingFileProtocol && navigator.onLine;
-        // Sur Capacitor natif, forcer wifiOnline à false pour utiliser BLE exclusivement
-        if (window.isCapacitorNativeApp === true) {
-            console.log('📱 Capacitor native app detected: forcing wifiOnline = false to use BLE');
-            wifiOnline = false;
-        }`;
-
-htmlContent = htmlContent.replace(
-    /let usingFileProtocol = window\.location\.protocol === 'file:';[\s\n]*let wifiOnline = !usingFileProtocol && navigator\.onLine;/,
-    wifiOnlinePatch
-);
-
-// Écrire le fichier modifié
-fs.writeFileSync(destPath, htmlContent, 'utf8');
-console.log('✅ index.html synchronized and Capacitor scripts injected');
-
-// Copier l'icône SVG si elle existe
-if (fs.existsSync(iconSourcePath)) {
-    fs.copyFileSync(iconSourcePath, iconDestPath);
-    console.log('✅ icon.svg copied');
+function copyAsset(fileName) {
+  const sourcePath = path.join(SOURCE_DIR, fileName);
+  const destPath = path.join(DEST_DIR, fileName);
+  fs.copyFileSync(sourcePath, destPath);
+  console.log(`${fileName} copied.`);
 }
 
-console.log('📱 Ready for Capacitor sync!');
+ensureFileExists(path.join(SOURCE_DIR, HTML_FILENAME), '../data/index.html');
+for (const asset of REQUIRED_ASSETS) {
+  ensureFileExists(path.join(SOURCE_DIR, asset), `../data/${asset}`);
+}
+
+if (!fs.existsSync(DEST_DIR)) {
+  fs.mkdirSync(DEST_DIR, { recursive: true });
+}
+
+const htmlSourcePath = path.join(SOURCE_DIR, HTML_FILENAME);
+const htmlDestPath = path.join(DEST_DIR, HTML_FILENAME);
+let htmlContent = fs.readFileSync(htmlSourcePath, 'utf8');
+
+const capacitorInjection = [
+  '    <script src="capacitor.js"></script>',
+  '    <script src="ble-client-loader.js"></script>',
+  '    <script src="capacitor-bluetooth-adapter.js"></script>',
+].join('\n');
+
+if (!htmlContent.includes('ble-client-loader.js')) {
+  if (!htmlContent.includes('</head>')) {
+    console.error('index.html does not contain </head>.');
+    process.exit(1);
+  }
+  htmlContent = htmlContent.replace('</head>', `${capacitorInjection}\n</head>`);
+}
+
+fs.writeFileSync(htmlDestPath, htmlContent, 'utf8');
+console.log('index.html synchronized with Capacitor injection.');
+
+for (const asset of REQUIRED_ASSETS) {
+  copyAsset(asset);
+}
+
+console.log('Web assets ready for Capacitor sync.');

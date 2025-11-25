@@ -60,7 +60,7 @@
 
                       ⚡ WORKFLOW QUOTIDIEN
 
-  1. Modifier ../data/index.html
+  1. Modifier ../data/index.html / script.js / style.css
   2. npm run run:android      (teste sur Android)
      ou
      npm run run:ios          (teste sur iOS)

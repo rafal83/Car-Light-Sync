@@ -4,7 +4,7 @@ Application mobile Capacitor pour contrôler le Car Light Sync via Bluetooth.
 
 ## Architecture
 
-Cette application utilise **le même fichier `index.html`** que celui embarqué dans l'ESP32, sans modification nécessaire. L'adaptation se fait de manière transparente :
+Cette application réutilise exactement les mêmes fichiers web (`index.html`, `script.js`, `style.css`) que ceux embarqués dans l'ESP32, sans fork spécifique pour le mobile. L'adaptation se fait de manière transparente :
 
 - **Sur navigateur web** : utilise Web Bluetooth API standard
 - **Sur mobile (iOS/Android)** : utilise Capacitor Bluetooth LE natif via un adaptateur
@@ -34,18 +34,29 @@ cd mobile.app
 npm install
 ```
 
-## Synchronisation du fichier HTML
+## Synchronisation des fichiers web
 
-Le fichier `index.html` est automatiquement copié depuis `../data/index.html` lors de la synchronisation :
+Les fichiers `index.html`, `script.js` et `style.css` sont automatiquement copiés depuis `../data/` lors de la synchronisation :
 
 ```bash
 npm run sync
 ```
 
 Cette commande :
-1. Copie `../data/index.html` vers `www/index.html`
-2. Injecte automatiquement les scripts Capacitor
-3. Synchronise avec les plateformes Android/iOS
+1. Copie `../data/index.html`, `../data/script.js` et `../data/style.css` vers `www/`
+2. Injecte automatiquement les scripts Capacitor dans `www/index.html`
+3. Copie `../data/carlightsync.png` (logo) vers `www/carlightsync.png`
+4. Synchronise avec les plateformes Android/iOS
+
+## Générer les icônes mobiles
+
+Le logo `data/carlightsync.png` est la source unique pour les icônes Android/iOS. Pour produire toutes les tailles nécessaires et mettre à jour les ressources Capacitor :
+
+```bash
+npm run generate:icons
+```
+
+Cette commande exécute le script `tools/generate_icons.py` (nécessite `Pillow`) puis lance `capacitor-assets` pour Android et iOS. Vous pouvez lancer uniquement la génération des PNG avec `npm run icons:prepare`.
 
 ## Développement
 
@@ -96,7 +107,7 @@ npm run build:ios
 ### 1. Synchronisation automatique
 
 Le script `sync-html.js` :
-- Copie le fichier `../data/index.html` original
+- Copie `../data/index.html`, `../data/script.js` et `../data/style.css`
 - Injecte les scripts Capacitor avant `</head>` :
   - `capacitor.js` : initialisation de Capacitor
   - `capacitor-bluetooth-adapter.js` : adaptateur Bluetooth
@@ -116,7 +127,7 @@ if (Capacitor.isNativePlatform()) {
 
 ### 3. Code applicatif inchangé
 
-Le code dans `index.html` reste **exactement identique** :
+Le code applicatif (maintenant dans `script.js`) reste **exactement identique** :
 
 ```javascript
 // Ce code fonctionne sur web ET mobile sans modification !
@@ -159,29 +170,31 @@ Ajout automatique des descriptions d'usage :
 ```
 mobile.app/
 ├── www/                          # Dossier web (auto-généré)
-│   ├── index.html                # Copié depuis ../data/index.html
-│   ├── icon.svg                  # Copié depuis ../data/icon.svg
+│   ├── index.html                # Copié depuis ../data/index.html + injection Capacitor
+│   ├── script.js                 # Copié depuis ../data/script.js
+│   ├── style.css                 # Copié depuis ../data/style.css
+│   ├── carlightsync.png          # Copié depuis ../data/carlightsync.png
 │   ├── capacitor.js              # Initialisation Capacitor
 │   └── capacitor-bluetooth-adapter.js  # Adaptateur BLE
 ├── android/                      # Projet Android (généré par Capacitor)
 ├── ios/                          # Projet iOS (généré par Capacitor)
 ├── capacitor.config.json         # Configuration Capacitor
 ├── package.json                  # Dépendances npm
-├── sync-html.js                  # Script de synchronisation HTML
+├── sync-html.js                  # Script de synchronisation des fichiers web
 └── README.md                     # Ce fichier
 ```
 
 ## Workflow de développement
 
-1. **Modifier le fichier HTML** : Éditez `../data/index.html` (le fichier source)
+1. **Modifier les fichiers web** : Éditez `../data/index.html`, `../data/script.js` ou `../data/style.css`
 2. **Synchroniser** : `npm run sync`
 3. **Tester sur mobile** : `npm run open:android` ou `npm run open:ios`
-4. **Compiler pour l'ESP32** : Le même fichier est utilisé via PlatformIO
+4. **Compiler pour l'ESP32** : Les mêmes fichiers sont utilisés via PlatformIO (compressés en `.gz`)
 
 ## Avantages de cette approche
 
-✅ **Un seul fichier source** : `data/index.html` fonctionne partout
-✅ **Pas de duplication** : Pas besoin de maintenir 2 versions
+✅ **Même base web** : `data/index.html`, `data/script.js` et `data/style.css` fonctionnent partout
+✅ **Pas de duplication** : Pas besoin de maintenir 2 versions des assets
 ✅ **Adaptation transparente** : Le code ne sait pas s'il tourne sur web ou mobile
 ✅ **API identique** : `navigator.bluetooth` fonctionne partout
 ✅ **Bluetooth natif** : Performance optimale sur mobile
@@ -199,7 +212,7 @@ mobile.app/
 - Vérifiez les descriptions d'usage dans `Info.plist`
 - Le Bluetooth doit être activé dans les réglages
 
-### Le fichier HTML n'est pas à jour
+### Les fichiers web ne sont pas à jour
 
 ```bash
 npm run sync
@@ -209,7 +222,7 @@ npm run sync
 
 ### UUID Bluetooth
 
-Les UUID de service et caractéristique sont définis dans `index.html` :
+Les UUID de service et caractéristique sont définis dans `script.js` :
 
 ```javascript
 const BLE_CONFIG = {

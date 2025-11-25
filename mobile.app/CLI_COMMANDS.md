@@ -246,7 +246,7 @@ npm run build:aab
 ### Développement Android
 
 ```bash
-# 1. Modifier ../data/index.html
+# 1. Modifier ../data/index.html / script.js / style.css
 # 2. Rebuild et installer
 npm run run:android
 ```
@@ -256,7 +256,7 @@ L'app sera automatiquement réinstallée sur votre appareil.
 ### Développement iOS
 
 ```bash
-# 1. Modifier ../data/index.html
+# 1. Modifier ../data/index.html / script.js / style.css
 # 2. Rebuild et lancer
 npm run run:ios
 ```
@@ -370,8 +370,8 @@ Pour rebuilder automatiquement à chaque changement :
 # Installer nodemon
 npm install -g nodemon
 
-# Surveiller index.html et rebuilder
-nodemon --watch ../data/index.html --exec "npm run run:android"
+# Surveiller les fichiers web et rebuilder
+nodemon --watch ../data/index.html --watch ../data/script.js --watch ../data/style.css --exec "npm run run:android"
 ```
 
 ## 🔍 Vérification de l'environnement

@@ -50,14 +50,14 @@ Option 2 - Avec Xcode :
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔧 APRÈS UNE MODIFICATION DU HTML
+🔧 APRÈS UNE MODIFICATION DES FICHIERS WEB
 
-Si vous modifiez ../data/index.html :
+Si vous modifiez ../data/index.html, ../data/script.js ou ../data/style.css :
 
 1. npm run sync
 2. Relancer l'app sur Android/iOS
 
-C'est tout ! Le même fichier HTML fonctionne partout.
+C'est tout ! La même interface web fonctionne partout.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -75,7 +75,7 @@ C'est tout ! Le même fichier HTML fonctionne partout.
 Q: "Bluetooth ne fonctionne pas"
 A: Vérifiez les permissions dans PERMISSIONS.md
 
-Q: "Le fichier HTML n'est pas à jour"
+Q: "Les fichiers web ne sont pas à jour"
 A: Lancez : npm run sync
 
 Q: "Erreur lors du build"
@@ -86,9 +86,9 @@ A: Supprimez node_modules/, android/, ios/, www/
 
 💡 ASTUCE
 
-L'application mobile utilise EXACTEMENT le même fichier index.html
-que celui embarqué dans l'ESP32. Pas de duplication, pas de
-maintenance double !
+L'application mobile utilise EXACTEMENT les mêmes fichiers web
+(index.html, script.js, style.css) que ceux embarqués dans l'ESP32.
+Pas de duplication, pas de maintenance double !
 
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                                                                   ║
