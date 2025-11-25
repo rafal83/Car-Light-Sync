@@ -473,7 +473,7 @@ Content-Type: multipart/form-data
 - [x] ~~Support multi-véhicules~~ 
 - [x] ~~Support BLE pour configuration mobile~~
 - [x] ~~Application mobile iOS/Android~~
-- [ ] Support de plusieurs rubans LED (multi-GPIO)
+- [ ] Support de plusieurs rubans LED (ESP-Now)
 - [ ] Mode musique avec micro I2S
 - [ ] Enregistrement d'effets personnalisés via interface web
 
