@@ -6,8 +6,6 @@
 // Configuration GPIO
 #define LED_PIN 5
 #define NUM_LEDS 112
-#define LED_TYPE WS2812B
-#define COLOR_ORDER GRB
 
 // Configuration WiFi
 #define WIFI_AP_SSID_BASE "CarLightSync"
@@ -32,9 +30,5 @@ void config_init_device_names(void);
 #define DEFAULT_BRIGHTNESS 128
 #define DEFAULT_SPEED 50
 #define MAX_BRIGHTNESS 255
-
-// Pins disponibles pour futures extensions
-#define DOOR_SENSOR_PIN -1   // Non utilisé par défaut
-#define MOTION_SENSOR_PIN -1 // Non utilisé par défaut
 
 #endif // CONFIG_H

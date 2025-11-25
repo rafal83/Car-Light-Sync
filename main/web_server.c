@@ -378,12 +378,17 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
   cJSON_Delete(root);
 
   if (success) {
+    if (!led_effects_apply_hardware_config(led_count, data_pin)) {
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                          "Failed to apply new hardware configuration");
+      return ESP_FAIL;
+    }
+
     cJSON *response = cJSON_CreateObject();
     cJSON_AddStringToObject(response, "status", "ok");
-    cJSON_AddStringToObject(
-        response, "message",
-        "Configuration saved. Restart required to apply changes.");
-    cJSON_AddBoolToObject(response, "restart_required", true);
+    cJSON_AddStringToObject(response, "message",
+                            "Configuration saved and applied.");
+    cJSON_AddBoolToObject(response, "restart_required", false);
 
     const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");
@@ -392,7 +397,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     free((void *)json_string);
     cJSON_Delete(response);
 
-    ESP_LOGI(TAG, "Configuration LED mise à jour: %d LEDs, GPIO %d", led_count,
+    ESP_LOGI(TAG, "Configuration LED appliquée: %d LEDs, GPIO %d", led_count,
              data_pin);
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,

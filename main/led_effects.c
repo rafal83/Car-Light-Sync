@@ -10,10 +10,12 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "soc/soc_caps.h"
+#include "config_manager.h"
 #include <math.h>
 #include <string.h>
 
 static const char *TAG = "LED";
+#define MAX_LED_COUNT 1000 // Align with config_manager_set_led_hardware validation
 
 // Handles pour la nouvelle API RMT
 static rmt_channel_handle_t led_chan = NULL;
@@ -26,7 +28,10 @@ typedef struct {
   uint8_t b;
 } rgb_t;
 
-static rgb_t leds[NUM_LEDS];
+static rgb_t leds[MAX_LED_COUNT];
+static uint8_t led_data[MAX_LED_COUNT * 3];
+static rgb_t left_led_buffer[MAX_LED_COUNT / 2];
+static rgb_t right_led_buffer[MAX_LED_COUNT / 2];
 static effect_config_t current_config;
 static bool enabled = true;
 static uint32_t effect_counter = 0;
@@ -53,6 +58,12 @@ static effect_config_t right_directional_config;
 
 // Global LED strip direction (false = normal, true = reversed)
 static bool global_reverse_direction = true;
+static uint16_t led_count = NUM_LEDS;
+static uint8_t led_pin = LED_PIN;
+
+static void cleanup_rmt_channel(void);
+static bool configure_rmt_channel(uint8_t pin);
+static uint16_t sanitize_led_count(uint16_t requested);
 
 // Conversion couleur 0xRRGGBB vers rgb_t
 static rgb_t color_to_rgb(uint32_t color) {
@@ -87,7 +98,7 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
 static rgb_t progress_base_color = {16, 255, 16};
 
 static void render_progress_display(void) {
-  if (NUM_LEDS == 0) {
+  if (led_count == 0) {
     return;
   }
 
@@ -98,15 +109,15 @@ static void render_progress_display(void) {
     ratio = 1.0f;
   }
 
-  int lit_leds = (int)floorf(ratio * NUM_LEDS + 1e-4f);
+  int lit_leds = (int)floorf(ratio * led_count + 1e-4f);
   if (ota_progress_percent > 0 && lit_leds == 0) {
     lit_leds = 1;
   }
-  if (lit_leds > NUM_LEDS) {
-    lit_leds = NUM_LEDS;
+  if (lit_leds > led_count) {
+    lit_leds = led_count;
   }
 
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     if (i < lit_leds) {
       leds[i] = progress_base_color;
     } else {
@@ -120,7 +131,7 @@ static void render_status_display(bool error_mode) {
   uint8_t intensity = 50 + (uint8_t)(phase * 205);
   rgb_t color =
       error_mode ? (rgb_t){intensity, 0, 0} : (rgb_t){0, 40, intensity};
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     leds[i] = color;
   }
 }
@@ -182,12 +193,12 @@ static rgb_t hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
 
 // Applique le masque de zone: éteint les LEDs hors de la zone spécifiée
 static void apply_zone_mask(led_zone_t zone) {
-  int half = NUM_LEDS / 2;
+  int half = led_count / 2;
 
   switch (zone) {
   case LED_ZONE_LEFT:
     // Éteindre la moitié droite
-    for (int i = half; i < NUM_LEDS; i++) {
+    for (int i = half; i < led_count; i++) {
       leds[i] = (rgb_t){0, 0, 0};
     }
     break;
@@ -213,11 +224,15 @@ static void led_strip_show(void) {
     return;
   }
 
+  if (led_count == 0) {
+    ESP_LOGW(TAG, "Aucune LED configurée, affichage ignoré");
+    return;
+  }
+
   // Préparer les données au format GRB pour WS2812B
   // Appliquer le reverse global si activé
-  uint8_t led_data[NUM_LEDS * 3];
-  for (int i = 0; i < NUM_LEDS; i++) {
-    int led_index = global_reverse_direction ? (NUM_LEDS - 1 - i) : i;
+  for (int i = 0; i < led_count; i++) {
+    int led_index = global_reverse_direction ? (led_count - 1 - i) : i;
     led_data[i * 3 + 0] = leds[led_index].g; // Green
     led_data[i * 3 + 1] = leds[led_index].r; // Red
     led_data[i * 3 + 2] = leds[led_index].b; // Blue
@@ -236,7 +251,7 @@ static void led_strip_show(void) {
   portENTER_CRITICAL(&mux);
 
   esp_err_t ret = rmt_transmit(led_chan, led_encoder, led_data,
-                               sizeof(led_data), &tx_config);
+                               led_count * 3, &tx_config);
 
   portEXIT_CRITICAL(&mux);
 
@@ -256,9 +271,82 @@ static void led_strip_show(void) {
   }
 }
 
+static uint16_t sanitize_led_count(uint16_t requested) {
+  if (requested == 0) {
+    ESP_LOGW(TAG, "Configuration LED vide, retour à %d LEDs par défaut",
+             NUM_LEDS);
+    return NUM_LEDS;
+  }
+
+  if (requested > MAX_LED_COUNT) {
+    ESP_LOGW(TAG, "Configuration LED trop grande (%d), max %d appliqué",
+             requested, MAX_LED_COUNT);
+    return MAX_LED_COUNT;
+  }
+
+  return requested;
+}
+
+static void cleanup_rmt_channel(void) {
+  if (led_encoder != NULL) {
+    rmt_del_encoder(led_encoder);
+    led_encoder = NULL;
+  }
+
+  if (led_chan != NULL) {
+    rmt_disable(led_chan);
+    rmt_del_channel(led_chan);
+    led_chan = NULL;
+  }
+}
+
+static bool configure_rmt_channel(uint8_t pin) {
+  cleanup_rmt_channel();
+
+  rmt_tx_channel_config_t tx_chan_config = {
+      .clk_src = RMT_CLK_SRC_DEFAULT,
+      .gpio_num = pin,
+      .mem_block_symbols = 256,
+      .resolution_hz = 10000000,
+      .trans_queue_depth = 4,
+      .flags.invert_out = false,
+#if SOC_RMT_SUPPORT_DMA
+      .flags.with_dma = true,
+#else
+      .flags.with_dma = false,
+#endif
+  };
+
+  esp_err_t ret = rmt_new_tx_channel(&tx_chan_config, &led_chan);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Erreur création canal RMT TX: %s", esp_err_to_name(ret));
+    return false;
+  }
+
+  led_strip_encoder_config_t encoder_config = {
+      .resolution = tx_chan_config.resolution_hz,
+  };
+
+  ret = rmt_new_led_strip_encoder(&encoder_config, &led_encoder);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Erreur création encodeur LED: %s", esp_err_to_name(ret));
+    cleanup_rmt_channel();
+    return false;
+  }
+
+  ret = rmt_enable(led_chan);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Erreur activation canal RMT: %s", esp_err_to_name(ret));
+    cleanup_rmt_channel();
+    return false;
+  }
+
+  return true;
+}
+
 // Remplit toutes les LEDs avec une couleur
 static void fill_solid(rgb_t color) {
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     leds[i] = color;
   }
 }
@@ -287,8 +375,8 @@ static void effect_rainbow(void) {
   // Utiliser la vitesse pour contrôler la vitesse d'animation
   uint32_t speed_factor = (effect_counter * (current_config.speed + 10)) / 50;
 
-  for (int i = 0; i < NUM_LEDS; i++) {
-    uint16_t hue = (i * 256 / NUM_LEDS + speed_factor) % 256;
+  for (int i = 0; i < led_count; i++) {
+    uint16_t hue = (i * 256 / led_count + speed_factor) % 256;
     rgb_t color = hsv_to_rgb(hue, 255, 255); // Utiliser luminosité max pour HSV
     color = apply_brightness(
         color, current_config.brightness); // Appliquer brightness ET mode nuit
@@ -323,7 +411,7 @@ static void effect_theater_chase(void) {
     speed_divider = 20;
   int pos = (effect_counter * 10 / speed_divider) % 3;
 
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     if (i % 3 == pos) {
       leds[i] = color1;
     } else {
@@ -338,18 +426,18 @@ static void effect_running_lights(void) {
   int speed_divider = 256 - current_config.speed;
   if (speed_divider < 10)
     speed_divider = 10;
-  int pos = (effect_counter * 100 / speed_divider) % NUM_LEDS;
+  int pos = (effect_counter * 100 / speed_divider) % led_count;
 
   rgb_t color = color_to_rgb(current_config.color1);
 
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     int distance = abs(i - pos);
-    if (distance > NUM_LEDS / 2) {
-      distance = NUM_LEDS - distance;
+    if (distance > led_count / 2) {
+      distance = led_count - distance;
     }
 
     uint8_t brightness =
-        current_config.brightness * (NUM_LEDS - distance * 2) / NUM_LEDS;
+        current_config.brightness * (led_count - distance * 2) / led_count;
     leds[i] = apply_brightness(color, brightness);
   }
 }
@@ -357,7 +445,7 @@ static void effect_running_lights(void) {
 // Effet: Twinkle
 static void effect_twinkle(void) {
   // Diminuer progressivement toutes les LEDs
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     leds[i].r = leds[i].r * 95 / 100;
     leds[i].g = leds[i].g * 95 / 100;
     leds[i].b = leds[i].b * 95 / 100;
@@ -365,19 +453,19 @@ static void effect_twinkle(void) {
 
   // Allumer aléatoirement quelques LEDs
   if (esp_random() % 10 < current_config.speed / 25) {
-    int pos = esp_random() % NUM_LEDS;
+    int pos = esp_random() % led_count;
     rgb_t color = color_to_rgb(current_config.color1);
     leds[pos] = apply_brightness(color, current_config.brightness);
   }
 }
 
 // Effet: Feu
-static uint8_t heat_map[NUM_LEDS]; // Carte de chaleur pour l'effet feu
+static uint8_t heat_map[MAX_LED_COUNT]; // Carte de chaleur pour l'effet feu
 
 static void effect_fire(void) {
   // Refroidissement de la carte de chaleur
   int cooling = 55 + (current_config.speed / 5);
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     int cooldown = esp_random() % cooling;
     if (cooldown > heat_map[i]) {
       heat_map[i] = 0;
@@ -387,7 +475,7 @@ static void effect_fire(void) {
   }
 
   // Propagation de la chaleur vers le haut
-  for (int i = NUM_LEDS - 1; i >= 2; i--) {
+  for (int i = led_count - 1; i >= 2; i--) {
     heat_map[i] = (heat_map[i - 1] + heat_map[i - 2] + heat_map[i - 2]) / 3;
   }
 
@@ -397,7 +485,7 @@ static void effect_fire(void) {
       3 + (current_config.speed / 50); // Plus rapide = plus de flammes
   for (int s = 0; s < num_sparks; s++) {
     if (esp_random() % 255 < 120) {
-      int pos = esp_random() % NUM_LEDS; // Sur toute la strip
+      int pos = esp_random() % led_count; // Sur toute la strip
       heat_map[pos] = heat_map[pos] + (esp_random() % 160) + 95;
       if (heat_map[pos] > 255)
         heat_map[pos] = 255;
@@ -405,7 +493,7 @@ static void effect_fire(void) {
   }
 
   // Conversion de la chaleur en couleurs (palette de feu)
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     rgb_t color;
     uint8_t heat = heat_map[i];
 
@@ -435,7 +523,7 @@ static void effect_fire(void) {
 static void effect_scan(void) {
   // Faire un fade progressif au lieu d'effacer complètement pour garder la
   // traînée
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < led_count; i++) {
     leds[i].r = (leds[i].r * 90) / 100; // Réduire de 10% à chaque frame
     leds[i].g = (leds[i].g * 90) / 100;
     leds[i].b = (leds[i].b * 90) / 100;
@@ -445,16 +533,16 @@ static void effect_scan(void) {
   int speed_divider = 256 - current_config.speed;
   if (speed_divider < 10)
     speed_divider = 10;
-  int pos = (effect_counter * 100 / speed_divider) % (NUM_LEDS * 2);
+  int pos = (effect_counter * 100 / speed_divider) % (led_count * 2);
 
-  if (pos >= NUM_LEDS) {
-    pos = NUM_LEDS * 2 - pos - 1;
+  if (pos >= led_count) {
+    pos = led_count * 2 - pos - 1;
   }
 
   rgb_t base_color = color_to_rgb(current_config.color1);
 
   // LED principale plus brillante
-  if (pos >= 0 && pos < NUM_LEDS) {
+  if (pos >= 0 && pos < led_count) {
     leds[pos] = apply_brightness(base_color, current_config.brightness);
   }
 
@@ -467,10 +555,10 @@ static void effect_scan(void) {
 
     // Appliquer la traînée des deux côtés, mais seulement dans les limites du
     // strip
-    if (pos - i >= 0 && pos - i < NUM_LEDS) {
+    if (pos - i >= 0 && pos - i < led_count) {
       leds[pos - i] = trail_color;
     }
-    if (pos + i >= 0 && pos + i < NUM_LEDS) {
+    if (pos + i >= 0 && pos + i < led_count) {
       leds[pos + i] = trail_color;
     }
   }
@@ -485,16 +573,16 @@ static void effect_knight_rider(void) {
   int speed_divider = 256 - current_config.speed;
   if (speed_divider < 10)
     speed_divider = 10;
-  int pos = (effect_counter * 100 / speed_divider) % (NUM_LEDS * 2);
+  int pos = (effect_counter * 100 / speed_divider) % (led_count * 2);
 
-  if (pos >= NUM_LEDS) {
-    pos = NUM_LEDS * 2 - pos - 1;
+  if (pos >= led_count) {
+    pos = led_count * 2 - pos - 1;
   }
 
   rgb_t base_color = color_to_rgb(current_config.color1);
 
   // LED principale à pleine luminosité
-  if (pos >= 0 && pos < NUM_LEDS) {
+  if (pos >= 0 && pos < led_count) {
     leds[pos] = apply_brightness(base_color, current_config.brightness);
   }
 
@@ -507,10 +595,10 @@ static void effect_knight_rider(void) {
     rgb_t trail_color = apply_brightness(base_color, trail_brightness);
 
     // Appliquer la traînée des deux côtés
-    if (pos - i >= 0 && pos - i < NUM_LEDS) {
+    if (pos - i >= 0 && pos - i < led_count) {
       leds[pos - i] = trail_color;
     }
-    if (pos + i >= 0 && pos + i < NUM_LEDS) {
+    if (pos + i >= 0 && pos + i < led_count) {
       leds[pos + i] = trail_color;
     }
   }
@@ -577,7 +665,7 @@ static void effect_blindspot_flash(void) {
   rgb_t color = color_to_rgb(current_config.color1);
   color = apply_brightness(color, current_config.brightness);
 
-  int half_leds = NUM_LEDS / 2;
+  int half_leds = led_count / 2;
 
   // Période de flash rapide basée sur le paramètre speed
   // speed: 0-255, converti en période 15-100 frames (speed élevé = période
@@ -608,7 +696,7 @@ static void effect_blindspot_flash(void) {
         led_index = half_leds - 1 - i;
       } else {
         // Côté droit: animation du centre (half_leds) vers la droite
-        // (NUM_LEDS-1)
+        // (led_count-1)
         led_index = half_leds + i;
       }
 
@@ -635,7 +723,7 @@ static void effect_turn_signal(void) {
   // Configuration: utiliser la moitié du ruban selon la direction
   // reverse = true : côté gauche (animation du centre vers la gauche)
   // reverse = false : côté droit (animation du centre vers la droite)
-  int half_leds = NUM_LEDS / 2;
+  int half_leds = led_count / 2;
 
   // Période complète d'animation basée sur le paramètre speed
   // speed: 0-255, converti en période 20-120 frames (speed élevé = période
@@ -666,7 +754,7 @@ static void effect_turn_signal(void) {
         led_index = half_leds - 1 - i;
       } else {
         // Côté droit: animation du centre (half_leds) vers la droite
-        // (NUM_LEDS-1)
+        // (led_count-1)
         led_index = half_leds + i;
       }
 
@@ -690,7 +778,7 @@ static void effect_hazard(void) {
   rgb_t color = color_to_rgb(current_config.color1);
   color = apply_brightness(color, current_config.brightness);
 
-  int half_leds = NUM_LEDS / 2;
+  int half_leds = led_count / 2;
 
   // Période complète d'animation basée sur le paramètre speed
   // speed: 0-255, converti en période 20-120 frames (speed élevé = période
@@ -728,7 +816,7 @@ static void effect_hazard(void) {
       // Côté gauche: animation du centre (half_leds-1) vers la gauche (0)
       leds[half_leds - 1 - i] = dimmed_color;
 
-      // Côté droit: animation du centre (half_leds) vers la droite (NUM_LEDS-1)
+      // Côté droit: animation du centre (half_leds) vers la droite (led_count-1)
       leds[half_leds + i] = dimmed_color;
     }
   }
@@ -761,9 +849,9 @@ static void effect_charge_status(void) {
                              ? last_vehicle_state.soc_percent
                              : simulated_charge;
 
-  int target_led = (NUM_LEDS * charge_level) / 100;
-  if (target_led >= NUM_LEDS)
-    target_led = NUM_LEDS - 1;
+  int target_led = (led_count * charge_level) / 100;
+  if (target_led >= led_count)
+    target_led = led_count - 1;
 
   // Effacer tout
   fill_solid((rgb_t){0, 0, 0});
@@ -817,11 +905,11 @@ static void effect_charge_status(void) {
     speed_factor = 0.017f + (current_config.speed / 255.0f) * 0.983f;
   }
 
-  // Position du pixel: commence au bout (NUM_LEDS-1) et va vers 0
+  // Position du pixel: commence au bout (led_count-1) et va vers 0
   // Cycle complet: du bout jusqu'au niveau de charge + longueur de la traînée
   // Cela permet à toute la traînée d'être "avalée" avant de recommencer
   const int TRAIL_LENGTH = 5;
-  int cycle_length = NUM_LEDS - target_led + TRAIL_LENGTH;
+  int cycle_length = led_count - target_led + TRAIL_LENGTH;
 
   if (cycle_length > TRAIL_LENGTH) {
     // Incrémenter l'accumulateur de position de manière fluide
@@ -834,14 +922,14 @@ static void effect_charge_status(void) {
 
     // Position actuelle du pixel (conversion en entier pour affichage)
     int anim_pos = (int)charge_anim_position;
-    int moving_pixel_pos = NUM_LEDS - 1 - anim_pos;
+    int moving_pixel_pos = led_count - 1 - anim_pos;
 
     // Extraire les composantes RGB de la couleur configurée
     rgb_t trail_color = color_to_rgb(current_config.color1);
 
     // Pixel principal brillant (couleur configurée)
     // Afficher seulement si dans la zone visible
-    if (moving_pixel_pos >= 0 && moving_pixel_pos < NUM_LEDS) {
+    if (moving_pixel_pos >= 0 && moving_pixel_pos < led_count) {
       leds[moving_pixel_pos] =
           apply_brightness(trail_color, current_config.brightness);
     }
@@ -852,10 +940,10 @@ static void effect_charge_status(void) {
       int trail_pos = moving_pixel_pos + trail;
 
       // Afficher la traînée seulement si:
-      // 1. Elle est dans la zone visible (< NUM_LEDS)
+      // 1. Elle est dans la zone visible (< led_count)
       // 2. Elle n'a pas encore été "avalée" par la barre de charge (>=
       // target_led)
-      if (trail_pos >= target_led && trail_pos < NUM_LEDS) {
+      if (trail_pos >= target_led && trail_pos < led_count) {
         // Décroissance exponentielle agressive pour une traînée bien visible
         // trail 1 = 80% (204), trail 2 = 60% (153), trail 3 = 40% (102), trail
         // 4 = 25% (64), trail 5 = 10% (25)
@@ -986,47 +1074,19 @@ find_effect_descriptor_by_id(const char *id) {
 }
 
 bool led_effects_init(void) {
-  esp_err_t ret;
+  uint16_t configured_leds = config_manager_get_led_count();
+  led_count = sanitize_led_count(configured_leds);
 
-  // Configuration du canal RMT TX
-  rmt_tx_channel_config_t tx_chan_config = {
-      .clk_src = RMT_CLK_SRC_DEFAULT, // Utilise l'horloge par défaut
-      .gpio_num = LED_PIN,
-      .mem_block_symbols = 256,  // Buffer plus large
-      .resolution_hz = 10000000, // 10MHz (résolution de 0.1us)
-      .trans_queue_depth = 4,    // Profondeur de la queue de transmission
-      .flags.invert_out = false, // Pas d'inversion du signal
-#if SOC_RMT_SUPPORT_DMA
-      .flags.with_dma = true, // DMA pour fiabiliser l'ESP32-S3
-#else
-      .flags.with_dma = false, // Fallback sans DMA
-#endif
-  };
-
-  ret = rmt_new_tx_channel(&tx_chan_config, &led_chan);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur création canal RMT TX: %s", esp_err_to_name(ret));
-    return false;
+  uint8_t configured_pin = config_manager_get_led_pin();
+  if (configured_pin > 39) {
+    ESP_LOGW(TAG, "GPIO LED invalide (%d), utilisation de la valeur par défaut",
+             configured_pin);
+    led_pin = LED_PIN;
+  } else {
+    led_pin = configured_pin;
   }
 
-  // Création de l'encodeur LED strip
-  led_strip_encoder_config_t encoder_config = {
-      .resolution = tx_chan_config.resolution_hz,
-  };
-
-  ret = rmt_new_led_strip_encoder(&encoder_config, &led_encoder);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur création encodeur LED: %s", esp_err_to_name(ret));
-    rmt_del_channel(led_chan);
-    return false;
-  }
-
-  // Activer le canal RMT
-  ret = rmt_enable(led_chan);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur activation canal RMT: %s", esp_err_to_name(ret));
-    rmt_del_encoder(led_encoder);
-    rmt_del_channel(led_chan);
+  if (!configure_rmt_channel(led_pin)) {
     return false;
   }
 
@@ -1036,7 +1096,7 @@ bool led_effects_init(void) {
   // Charger la config sauvegardée
   led_effects_load_config();
 
-  ESP_LOGI(TAG, "LEDs initialisées (%d LEDs sur GPIO %d)", NUM_LEDS, LED_PIN);
+  ESP_LOGI(TAG, "LEDs initialisées (%d LEDs sur GPIO %d)", led_count, led_pin);
   return true;
 }
 
@@ -1045,20 +1105,36 @@ void led_effects_deinit(void) {
   fill_solid((rgb_t){0, 0, 0});
   led_strip_show();
 
-  // Désactiver le canal RMT
-  if (led_chan != NULL) {
-    rmt_disable(led_chan);
-    rmt_del_channel(led_chan);
-    led_chan = NULL;
-  }
-
-  // Supprimer l'encodeur
-  if (led_encoder != NULL) {
-    rmt_del_encoder(led_encoder);
-    led_encoder = NULL;
-  }
+  cleanup_rmt_channel();
 
   ESP_LOGI(TAG, "LEDs désinitalisées");
+}
+
+bool led_effects_apply_hardware_config(uint16_t requested_led_count,
+                                       uint8_t requested_pin) {
+  if (requested_led_count < 1 || requested_led_count > MAX_LED_COUNT) {
+    ESP_LOGE(TAG, "LED count %d invalide", requested_led_count);
+    return false;
+  }
+
+  if (requested_pin > 39) {
+    ESP_LOGE(TAG, "GPIO %d invalide pour les LEDs", requested_pin);
+    return false;
+  }
+
+  bool reconfigure = (requested_pin != led_pin) || (led_chan == NULL);
+  if (reconfigure) {
+    if (!configure_rmt_channel(requested_pin)) {
+      return false;
+    }
+  }
+
+  led_count = requested_led_count;
+
+  led_pin = requested_pin;
+  ESP_LOGI(TAG, "LED hardware reconfigurée (%d LEDs sur GPIO %d)", led_count,
+           led_pin);
+  return true;
 }
 
 void led_effects_set_config(const effect_config_t *config) {
@@ -1134,14 +1210,12 @@ void led_effects_update(void) {
 
   // Mode dual directionnel (deux effets simultanés gauche/droite)
   if (dual_directional_mode) {
-    int half = NUM_LEDS / 2;
-    rgb_t left_leds[NUM_LEDS / 2];
-    rgb_t right_leds[NUM_LEDS / 2];
+    int half = led_count / 2;
 
     // Initialiser à noir
     for (int i = 0; i < half; i++) {
-      left_leds[i] = (rgb_t){0, 0, 0};
-      right_leds[i] = (rgb_t){0, 0, 0};
+      left_led_buffer[i] = (rgb_t){0, 0, 0};
+      right_led_buffer[i] = (rgb_t){0, 0, 0};
     }
 
     // Rendu effet gauche
@@ -1161,7 +1235,7 @@ void led_effects_update(void) {
       apply_zone_mask(LED_ZONE_LEFT);
 
       for (int i = 0; i < half; i++) {
-        left_leds[i] = leds[i];
+        left_led_buffer[i] = leds[i];
       }
       memcpy(&current_config, &saved, sizeof(effect_config_t));
     }
@@ -1182,14 +1256,14 @@ void led_effects_update(void) {
       apply_zone_mask(LED_ZONE_RIGHT);
 
       for (int i = 0; i < half; i++) {
-        right_leds[i] = leds[half + i];
+        right_led_buffer[i] = leds[half + i];
       }
     }
 
     // Combiner
     for (int i = 0; i < half; i++) {
-      leds[i] = left_leds[i];
-      leds[half + i] = right_leds[i];
+      leds[i] = left_led_buffer[i];
+      leds[half + i] = right_led_buffer[i];
     }
 
     // Réinitialiser le mode après affichage

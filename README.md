@@ -94,9 +94,7 @@ idf.py -p /dev/ttyUSB0 flash monitor
 1. **Configurer le matériel** dans [include/config.h](include/config.h) :
 ```c
 #define LED_PIN             5        // GPIO pour signal LED
-#define NUM_LEDS            94       // Nombre de LEDs sur le ruban
-#define LED_TYPE            WS2812B
-#define COLOR_ORDER         GRB
+#define NUM_LEDS            112       // Nombre de LEDs sur le ruban
 ```
 
 2. **Configurer le WiFi** dans [include/wifi_credentials.h](include/wifi_credentials.h) (optionnel)
