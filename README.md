@@ -447,7 +447,7 @@ Content-Type: multipart/form-data
 - Utiliser un outil de diagnostic CAN pour vérifier le bus
 
 ### Problème : Interface web inaccessible
-- Vérifier connexion au WiFi `Car-Light-Sync`
+- Vérifier connexion au WiFi `CarLightSync`
 - Essayer `http://192.168.10.1` (PAS https)
 - Vider le cache du navigateur (Ctrl+F5)
 - Vérifier logs série : "Page HTML envoyée avec succès"

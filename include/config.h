@@ -5,13 +5,13 @@
 
 // Configuration GPIO
 #define LED_PIN 5
-#define NUM_LEDS 94
+#define NUM_LEDS 112
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
 
 // Configuration WiFi
-#define WIFI_AP_SSID_BASE "Car-Light-Sync"
-#define WIFI_AP_SSID "Car-Light-Sync" // Sera remplacé dynamiquement
+#define WIFI_AP_SSID_BASE "CarLightSync"
+#define WIFI_AP_SSID "CarLightSync" // Sera remplacé dynamiquement
 #define WIFI_AP_PASSWORD ""           // Réseau ouvert (pas de mot de passe)
 #define WIFI_MAX_CLIENTS 4
 

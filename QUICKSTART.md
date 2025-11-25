@@ -44,7 +44,7 @@ idf.py -p /dev/ttyUSB0 flash monitor
 ### 4. Configuration Initiale 🔧
 
 #### 4.1 Connexion WiFi
-1. Chercher le réseau **Car-Light-Sync**
+1. Chercher le réseau **CarLightSync**
 2. Se connecter sans mot de passe
 3. Ouvrir http://192.168.10.1
 
@@ -177,7 +177,7 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 5. Tester un événement simple (clignotant) pour valider le système
 
 ### Problème: Interface web inaccessible
-1. Vérifier connexion au WiFi "Car-Light-Sync"
+1. Vérifier connexion au WiFi "CarLightSync"
 2. Essayer http://192.168.10.1 (pas https)
 3. Vider le cache du navigateur
 4. Essayer un autre navigateur
@@ -186,14 +186,14 @@ Mode nuit: Oui (luminosité 50 - plus élevé pour sécurité)
 
 ### iOS
 1. Réglages → WiFi
-2. Se connecter à "Car-Light-Sync"
+2. Se connecter à "CarLightSync"
 3. Ouvrir Safari
 4. Aller sur http://192.168.10.1
 5. Ajouter à l'écran d'accueil (optionnel)
 
 ### Android
 1. Paramètres → WiFi
-2. Se connecter à "Car-Light-Sync"
+2. Se connecter à "CarLightSync"
 3. Ouvrir Chrome
 4. Aller sur http://192.168.10.1
 5. Menu → Ajouter à l'écran d'accueil (optionnel)
