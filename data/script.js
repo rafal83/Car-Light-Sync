@@ -84,6 +84,8 @@ const translations = {
             sensitivity: "Sensibilité",
             gain: "Gain",
             autoGain: "Gain automatique",
+            i2sPins: "Pins I2S (INMP441)",
+            i2sPinsInfo: "Configuration définie au démarrage",
             status: "Statut",
             liveData: "Données en Direct",
             amplitude: "Amplitude",
@@ -92,13 +94,21 @@ const translations = {
             mid: "Médiums",
             treble: "Aigus",
             gpioConfig: "Configuration GPIO",
-            sckPin: "SCK Pin",
-            wsPin: "WS Pin",
-            sdPin: "SD Pin",
             applyGpio: "Appliquer GPIO",
             saveConfig: "Sauvegarder Configuration",
             noData: "Aucune donnée",
             warning: "⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif."
+        },
+        fft: {
+            title: "Analyse Spectrale FFT Avancée",
+            autoInfo: "ℹ️ Le FFT s'active automatiquement avec les effets audio-réactifs",
+            peakFreq: "Fréquence dominante",
+            centroid: "Centroïde spectral",
+            kick: "Kick",
+            snare: "Snare",
+            vocal: "Vocal",
+            spectrum: "Spectre FFT (32 bandes)",
+            detected: "Détecté"
         },
         profiles: {
             title: "Gestion des Profils",
@@ -466,6 +476,8 @@ en: {
             sensitivity: "Sensitivity",
             gain: "Gain",
             autoGain: "Auto Gain",
+            i2sPins: "I2S Pins (INMP441)",
+            i2sPinsInfo: "Configuration set at startup",
             status: "Status",
             liveData: "Live Data",
             amplitude: "Amplitude",
@@ -474,13 +486,21 @@ en: {
             mid: "Mid",
             treble: "Treble",
             gpioConfig: "GPIO Configuration",
-            sckPin: "SCK Pin",
-            wsPin: "WS Pin",
-            sdPin: "SD Pin",
             applyGpio: "Apply GPIO",
             saveConfig: "Save Configuration",
             noData: "No data",
             warning: "⚠️ The microphone can only be enabled on the default effect of the active profile."
+        },
+        fft: {
+            title: "Advanced FFT Spectrum Analysis",
+            autoInfo: "ℹ️ FFT is automatically enabled with audio-reactive effects",
+            peakFreq: "Peak Frequency",
+            centroid: "Spectral Centroid",
+            kick: "Kick",
+            snare: "Snare",
+            vocal: "Vocal",
+            spectrum: "FFT Spectrum (32 bands)",
+            detected: "Detected"
         },
         profiles: {
             title: "Profile Management",
@@ -1012,6 +1032,12 @@ class BleTransport {
         this.boundDeviceDisconnect = this.handleDeviceDisconnected.bind(this);
         this.boundNotificationHandler = this.handleNotification.bind(this);
         this.requestQueue = Promise.resolve();
+
+        if(this.isSupported()){
+          document.getElementById('wifi-status-item').style.display = 'none';
+        } else {
+          document.getElementById('ble-status-item').style.display = 'none';
+        }
     }
     async requestDevice(forceNew = false) {
         if (!forceNew && this.device) {
@@ -1650,11 +1676,13 @@ function switchTab(tabName, evt) {
     }
     activeTabName = tabName;
 
-    // Gérer le polling audio selon l'onglet actif
+    // Gérer le polling audio et FFT selon l'onglet actif
     if (tabName === 'config') {
-        startAudioDataPolling(); // Démarrera seulement si audioEnabled est true
+      startAudioDataPolling(); // Démarrera seulement si audioEnabled est true
+      startFFTPolling(); // Démarrer le polling FFT
     } else {
-        stopAudioDataPolling(); // Arrêter le polling si on quitte l'onglet config
+      stopAudioDataPolling(); // Arrêter le polling si on quitte l'onglet config
+      stopFFTPolling(); // Arrêter le polling FFT également
     }
 
     // Load data for specific tabs
@@ -2380,8 +2408,9 @@ async function saveDefaultEffect(silent = false) {
 }
 // Appliquer l'effet
 async function applyEffect() {
+    const effectId = parseInt(document.getElementById('effect-select').value);
     const config = {
-        effect: parseInt(document.getElementById('effect-select').value),
+        effect: effectId,
         brightness: percentTo255(parseInt(document.getElementById('brightness-slider').value)),
         speed: percentTo255(parseInt(document.getElementById('speed-slider').value)),
         color1: parseInt(document.getElementById('color1').value.substring(1), 16),
@@ -2394,6 +2423,9 @@ async function applyEffect() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
         });
+
+        // Activer automatiquement le FFT si l'effet le nécessite
+        await autoEnableFFT(effectId);
     } catch (e) {
         console.error('Erreur:', e);
     }
@@ -2682,6 +2714,7 @@ async function saveAudioConfig() {
         sensitivity: parseInt(document.getElementById('audio-sensitivity').value),
         gain: parseInt(document.getElementById('audio-gain').value),
         autoGain: document.getElementById('audio-auto-gain').checked
+        // fftEnabled est géré automatiquement selon l'effet sélectionné
     };
 
     try {
@@ -2700,12 +2733,14 @@ async function saveAudioConfig() {
     }
 }
 
-// Récupérer les données audio en temps réel
+// Récupérer les données audio et FFT en temps réel (un seul appel)
 async function updateAudioData() {
     try {
+        // Un seul appel qui retourne audio + FFT
         const response = await fetch(API_BASE + '/api/audio/data');
         const data = await response.json();
 
+        // Mise à jour des données audio de base
         if (data.available !== false) {
             document.getElementById('audio-amplitude-value').textContent =
                 (data.amplitude * 100).toFixed(0) + '%';
@@ -2718,8 +2753,136 @@ async function updateAudioData() {
             document.getElementById('audio-treble-value').textContent =
                 (data.treble * 100).toFixed(0) + '%';
         }
+
+        // Mise à jour des données FFT (si disponibles dans la réponse)
+        if (data.fft && data.fft.available) {
+            // Update frequency info
+            document.getElementById('fftPeakFreq').textContent = Math.round(data.fft.peakFreq);
+            document.getElementById('fftCentroid').textContent = Math.round(data.fft.spectralCentroid);
+
+            // Update detections with icons
+            const t = translations[currentLang];
+            document.getElementById('fftKick').innerHTML = data.fft.kickDetected ?
+                `<span style="color: #4CAF50;">🥁 ${t.fft.detected}</span>` : '-';
+            document.getElementById('fftSnare').innerHTML = data.fft.snareDetected ?
+                `<span style="color: #FF9800;">🎵 ${t.fft.detected}</span>` : '-';
+            document.getElementById('fftVocal').innerHTML = data.fft.vocalDetected ?
+                `<span style="color: #2196F3;">🎤 ${t.fft.detected}</span>` : '-';
+
+            // Draw spectrum
+            drawFFTSpectrum(data.fft.bands);
+        }
     } catch (error) {
         console.error('Failed to update audio data:', error);
+    }
+}
+
+// ============================================================================
+// FFT Functions
+// ============================================================================
+
+let audioFFTEnabled = false;
+
+// Effets qui nécessitent le FFT (basés sur led_effects.h)
+const FFT_REQUIRED_EFFECTS = [
+    58, // EFFECT_AUDIO_REACTIVE
+    59, // EFFECT_AUDIO_BPM
+    60, // EFFECT_FFT_SPECTRUM
+    61, // EFFECT_FFT_BASS_PULSE
+    62, // EFFECT_FFT_VOCAL_WAVE
+    63  // EFFECT_FFT_ENERGY_BAR
+];
+
+// Vérifie si un effet nécessite le FFT
+function effectRequiresFFT(effectId) {
+    return FFT_REQUIRED_EFFECTS.includes(parseInt(effectId));
+}
+
+// Active/désactive automatiquement le FFT selon l'effet
+async function autoEnableFFT(effectId) {
+    const needsFFT = effectRequiresFFT(effectId);
+
+    if (needsFFT !== audioFFTEnabled) {
+        audioFFTEnabled = needsFFT;
+
+        // Envoyer la requête au backend pour activer/désactiver le FFT
+        try {
+            await fetch(API_BASE + '/api/audio/fft/enable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: needsFFT })
+            });
+
+            // Afficher/masquer la section FFT
+            const fftBox = document.getElementById('fftStatusBox');
+            if (fftBox) {
+                fftBox.style.display = needsFFT ? 'block' : 'none';
+            }
+        } catch (error) {
+            console.error('Failed to auto-enable FFT:', error);
+        }
+    }
+}
+
+// Draw FFT spectrum on canvas
+function drawFFTSpectrum(bands) {
+    const canvas = document.getElementById('fftSpectrumCanvas');
+    if (!canvas) {
+        console.warn('Canvas fftSpectrumCanvas not found');
+        return;
+    }
+
+    if (!bands || bands.length === 0) {
+        console.warn('No FFT bands data to draw');
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Clear canvas
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+
+    const barWidth = width / bands.length;
+
+    // Draw bars
+    for (let i = 0; i < bands.length; i++) {
+        const barHeight = bands[i] * height;
+
+        // Calculate rainbow color (bass = red, treble = blue)
+        const hue = (i / bands.length) * 255;
+        const r = Math.floor(255 * Math.sin((hue / 255) * Math.PI));
+        const g = Math.floor(255 * Math.sin(((hue / 255) + 0.33) * Math.PI));
+        const b = Math.floor(255 * Math.sin(((hue / 255) + 0.66) * Math.PI));
+
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillRect(i * barWidth, height - barHeight, barWidth - 2, barHeight);
+    }
+}
+
+// Initialise FFT status from backend (called on page load)
+async function loadFFTStatus() {
+    try {
+        // Charger l'état FFT du backend
+        const audioResponse = await fetch(API_BASE + '/api/audio/status');
+        const audioData = await audioResponse.json();
+        audioFFTEnabled = audioData.fftEnabled || false;
+
+        // Charger l'effet actuel pour vérifier s'il nécessite le FFT
+        const configResponse = await fetch(API_BASE + '/api/config');
+        const config = await configResponse.json();
+        const currentEffect = config.effect;
+
+        // N'afficher la section FFT que si l'effet actuel le nécessite
+        const needsFFT = effectRequiresFFT(currentEffect);
+        const fftBox = document.getElementById('fftStatusBox');
+        if (fftBox) {
+            fftBox.style.display = (audioFFTEnabled && needsFFT) ? 'block' : 'none';
+        }
+    } catch (error) {
+        console.error('Failed to load FFT status:', error);
     }
 }
 
@@ -2729,11 +2892,15 @@ function startAudioDataPolling() {
         return;
     }
 
+    // En mode BLE, désactiver complètement le polling audio pour économiser la bande passante
+    if (bleTransportInstance && bleTransportInstance.shouldUseBle()) {
+        console.log('[Audio] Polling désactivé en mode BLE (économie bande passante)');
+        return;
+    }
+
     if (audioUpdateInterval === null) {
-        // Ralentir le polling en BLE pour éviter l'embouteillage (1Hz au lieu de 5Hz)
-        const pollingInterval = (bleTransportInstance && bleTransportInstance.shouldUseBle()) ? 1000 : 200;
-        audioUpdateInterval = setInterval(updateAudioData, pollingInterval);
-        console.log('[Audio] Polling démarré à', pollingInterval === 1000 ? '1Hz (BLE)' : '5Hz (WiFi)');
+        audioUpdateInterval = setInterval(updateAudioData, 500); // 2Hz en WiFi
+        console.log('[Audio] Polling démarré à 2Hz (WiFi)');
     }
 }
 
@@ -3239,7 +3406,9 @@ async function loadInitialData() {
     renderSimulationSections();
     loadProfiles();
     loadConfig();
+    loadHardwareConfig(); // Charger la configuration matérielle LED
     loadAudioStatus(); // Charger la configuration audio
+    loadFFTStatus(); // Charger l'état FFT
     updateStatus();
     loadOTAInfo();
     if (!statusIntervalHandle) {

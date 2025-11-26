@@ -14,6 +14,7 @@ static const char *TAG = "Audio";
 // État du module
 static bool initialized = false;
 static bool enabled = false;
+// Note: fft_enabled est maintenant dans current_config.fft_enabled
 static i2s_chan_handle_t rx_handle = NULL;
 static TaskHandle_t audio_task_handle = NULL;
 
@@ -23,18 +24,19 @@ static audio_config_t current_config = {
     .sensitivity = 128,
     .gain = 128,
     .auto_gain = true,
-    .i2s_sck_pin = AUDIO_I2S_SCK_PIN,
-    .i2s_ws_pin = AUDIO_I2S_WS_PIN,
-    .i2s_sd_pin = AUDIO_I2S_SD_PIN
+    .fft_enabled = false
 };
 
 // Données audio
 static audio_data_t current_audio_data = {0};
+static audio_fft_data_t current_fft_data = {0};
 static bool audio_data_ready = false;
+static bool fft_data_ready = false;
 
 // Buffers
 static int32_t audio_buffer[AUDIO_BUFFER_SIZE];
 static float fft_input[AUDIO_FFT_SIZE];
+static float fft_output[AUDIO_FFT_SIZE]; // Pour stocker les magnitudes FFT
 
 // Variables pour la détection de BPM
 static float bpm_history[AUDIO_BPM_HISTORY_SIZE] = {0};
@@ -42,6 +44,10 @@ static uint8_t bpm_history_index = 0;
 static uint32_t last_beat_time_ms = 0;
 static float energy_history[8] = {0};
 static uint8_t energy_index = 0;
+
+// Forward declarations pour les fonctions FFT
+static void compute_fft_magnitude(int32_t *audio_samples, int num_samples);
+static void group_fft_into_bands(audio_fft_data_t *fft_data);
 
 // Fonction pour calculer l'amplitude RMS
 static float calculate_rms(int32_t *buffer, size_t size) {
@@ -215,6 +221,13 @@ static void audio_task(void *pvParameters) {
 
         audio_data_ready = true;
 
+        // Si FFT activée, calculer le spectre FFT
+        if (current_config.fft_enabled) {
+            compute_fft_magnitude(audio_buffer, samples);
+            group_fft_into_bands(&current_fft_data);
+            fft_data_ready = true;
+        }
+
         // Petit délai pour ne pas saturer le CPU
         vTaskDelay(pdMS_TO_TICKS(20)); // ~50Hz de mise à jour
     }
@@ -246,10 +259,10 @@ bool audio_input_init(void) {
         .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,
-            .bclk = current_config.i2s_sck_pin,
-            .ws = current_config.i2s_ws_pin,
+            .bclk = AUDIO_I2S_SCK_PIN,
+            .ws = AUDIO_I2S_WS_PIN,
             .dout = I2S_GPIO_UNUSED,
-            .din = current_config.i2s_sd_pin,
+            .din = AUDIO_I2S_SD_PIN,
             .invert_flags = {
                 .mclk_inv = false,
                 .bclk_inv = false,
@@ -277,7 +290,7 @@ bool audio_input_init(void) {
 
     initialized = true;
     ESP_LOGI(TAG, "Module audio initialisé (GPIO: SCK=%d, WS=%d, SD=%d)",
-             current_config.i2s_sck_pin, current_config.i2s_ws_pin, current_config.i2s_sd_pin);
+             AUDIO_I2S_SCK_PIN, AUDIO_I2S_WS_PIN, AUDIO_I2S_SD_PIN);
 
     // Activer si configuré
     if (current_config.enabled) {
@@ -433,9 +446,289 @@ void audio_input_reset_config(void) {
     current_config.sensitivity = 128;
     current_config.gain = 128;
     current_config.auto_gain = true;
-    current_config.i2s_sck_pin = AUDIO_I2S_SCK_PIN;
-    current_config.i2s_ws_pin = AUDIO_I2S_WS_PIN;
-    current_config.i2s_sd_pin = AUDIO_I2S_SD_PIN;
 
     ESP_LOGI(TAG, "Configuration réinitialisée");
+}
+
+// ============================================================================
+// FFT IMPLEMENTATION (Cooley-Tukey radix-2 DIT)
+// ============================================================================
+
+// Fenêtre de Hann pour réduire les fuites spectrales
+static void apply_hann_window(float *data, int size) {
+    for (int i = 0; i < size; i++) {
+        float multiplier = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (size - 1)));
+        data[i] *= multiplier;
+    }
+}
+
+// FFT radix-2 in-place (Cooley-Tukey algorithm)
+// data contient [real0, imag0, real1, imag1, ...]
+static void fft_radix2(float *data, int size, bool inverse) {
+    if (size <= 1) return;
+
+    // Bit reversal permutation
+    int j = 0;
+    for (int i = 0; i < size - 1; i++) {
+        if (i < j) {
+            // Swap real parts
+            float temp = data[i * 2];
+            data[i * 2] = data[j * 2];
+            data[j * 2] = temp;
+            // Swap imaginary parts
+            temp = data[i * 2 + 1];
+            data[i * 2 + 1] = data[j * 2 + 1];
+            data[j * 2 + 1] = temp;
+        }
+        int k = size / 2;
+        while (k <= j) {
+            j -= k;
+            k /= 2;
+        }
+        j += k;
+    }
+
+    // FFT computation
+    float direction = inverse ? 1.0f : -1.0f;
+    for (int len = 2; len <= size; len *= 2) {
+        float angle = direction * 2.0f * M_PI / len;
+        float wlen_real = cosf(angle);
+        float wlen_imag = sinf(angle);
+
+        for (int i = 0; i < size; i += len) {
+            float w_real = 1.0f;
+            float w_imag = 0.0f;
+
+            for (int j = 0; j < len / 2; j++) {
+                int idx_even = (i + j) * 2;
+                int idx_odd = (i + j + len / 2) * 2;
+
+                float even_real = data[idx_even];
+                float even_imag = data[idx_even + 1];
+                float odd_real = data[idx_odd];
+                float odd_imag = data[idx_odd + 1];
+
+                // Multiply odd by twiddle factor
+                float t_real = w_real * odd_real - w_imag * odd_imag;
+                float t_imag = w_real * odd_imag + w_imag * odd_real;
+
+                // Butterfly operation
+                data[idx_even] = even_real + t_real;
+                data[idx_even + 1] = even_imag + t_imag;
+                data[idx_odd] = even_real - t_real;
+                data[idx_odd + 1] = even_imag - t_imag;
+
+                // Update twiddle factor
+                float w_temp = w_real;
+                w_real = w_real * wlen_real - w_imag * wlen_imag;
+                w_imag = w_temp * wlen_imag + w_imag * wlen_real;
+            }
+        }
+    }
+
+    // Normalize if inverse FFT
+    if (inverse) {
+        for (int i = 0; i < size * 2; i++) {
+            data[i] /= size;
+        }
+    }
+}
+
+// Calcule la magnitude du spectre FFT et le stocke dans fft_output
+static void compute_fft_magnitude(int32_t *audio_samples, int num_samples) {
+    // Préparer les données pour la FFT (format [real, imag, real, imag, ...])
+    static float fft_complex[AUDIO_FFT_SIZE * 2]; // 512 * 2 = 1024 floats
+
+    // Copier les échantillons audio en partie réelle, imag = 0
+    for (int i = 0; i < AUDIO_FFT_SIZE && i < num_samples; i++) {
+        fft_complex[i * 2] = (float)audio_samples[i] / 2147483648.0f; // Normaliser
+        fft_complex[i * 2 + 1] = 0.0f; // Partie imaginaire = 0
+    }
+
+    // Remplir de zéros si nécessaire
+    for (int i = num_samples; i < AUDIO_FFT_SIZE; i++) {
+        fft_complex[i * 2] = 0.0f;
+        fft_complex[i * 2 + 1] = 0.0f;
+    }
+
+    // Appliquer la fenêtre de Hann pour réduire les fuites spectrales
+    for (int i = 0; i < AUDIO_FFT_SIZE; i++) {
+        float multiplier = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (AUDIO_FFT_SIZE - 1)));
+        fft_complex[i * 2] *= multiplier;
+    }
+
+    // Calculer la FFT
+    fft_radix2(fft_complex, AUDIO_FFT_SIZE, false);
+
+    // Calculer les magnitudes (seulement la première moitié, car symétrique)
+    for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
+        float real = fft_complex[i * 2];
+        float imag = fft_complex[i * 2 + 1];
+        fft_output[i] = sqrtf(real * real + imag * imag);
+    }
+}
+
+// Groupe les bins FFT en bandes de fréquence logarithmiques
+static void group_fft_into_bands(audio_fft_data_t *fft_data) {
+    // Résolution fréquentielle: freq_resolution = SAMPLE_RATE / FFT_SIZE
+    // Pour 44100 Hz et FFT 512: 44100 / 512 = 86.13 Hz par bin
+    float freq_resolution = (float)AUDIO_SAMPLE_RATE / (float)AUDIO_FFT_SIZE;
+
+    // Grouper en AUDIO_FFT_BANDS bandes logarithmiques
+    // Plage utile: 20 Hz - 20000 Hz (limite humaine)
+    float min_freq = 20.0f;
+    float max_freq = 20000.0f;
+
+    // Facteur logarithmique
+    float log_min = logf(min_freq);
+    float log_max = logf(max_freq);
+    float log_step = (log_max - log_min) / AUDIO_FFT_BANDS;
+
+    float max_band_value = 0.0f;
+    int max_band_index = 0;
+
+    for (int band = 0; band < AUDIO_FFT_BANDS; band++) {
+        float freq_low = expf(log_min + band * log_step);
+        float freq_high = expf(log_min + (band + 1) * log_step);
+
+        int bin_low = (int)(freq_low / freq_resolution);
+        int bin_high = (int)(freq_high / freq_resolution);
+
+        if (bin_low < 0) bin_low = 0;
+        if (bin_high >= AUDIO_FFT_SIZE / 2) bin_high = AUDIO_FFT_SIZE / 2 - 1;
+
+        // Moyenne de l'énergie dans cette bande
+        float band_energy = 0.0f;
+        int bin_count = bin_high - bin_low + 1;
+        if (bin_count > 0) {
+            for (int bin = bin_low; bin <= bin_high; bin++) {
+                band_energy += fft_output[bin];
+            }
+            band_energy /= bin_count;
+        }
+
+        fft_data->bands[band] = band_energy;
+
+        if (band_energy > max_band_value) {
+            max_band_value = band_energy;
+            max_band_index = band;
+        }
+    }
+
+    // Normaliser les bandes (0.0 - 1.0)
+    if (max_band_value > 0.0f) {
+        for (int i = 0; i < AUDIO_FFT_BANDS; i++) {
+            fft_data->bands[i] /= max_band_value;
+        }
+    }
+
+    fft_data->dominant_band = max_band_index;
+
+    // Calculer la fréquence pic
+    float max_magnitude = 0.0f;
+    int max_bin = 0;
+    for (int i = 1; i < AUDIO_FFT_SIZE / 2; i++) {
+        if (fft_output[i] > max_magnitude) {
+            max_magnitude = fft_output[i];
+            max_bin = i;
+        }
+    }
+    fft_data->peak_freq = max_bin * freq_resolution;
+
+    // Calculer le centroïde spectral (centre de masse du spectre)
+    float weighted_sum = 0.0f;
+    float magnitude_sum = 0.0f;
+    for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
+        float freq = i * freq_resolution;
+        weighted_sum += freq * fft_output[i];
+        magnitude_sum += fft_output[i];
+    }
+    fft_data->spectral_centroid = (magnitude_sum > 0.0f) ? (weighted_sum / magnitude_sum) : 0.0f;
+
+    // Calculer l'énergie par plage de fréquence
+    fft_data->bass_energy = 0.0f;
+    fft_data->mid_energy = 0.0f;
+    fft_data->treble_energy = 0.0f;
+
+    for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
+        float freq = i * freq_resolution;
+        if (freq >= FREQ_BASS_LOW && freq < FREQ_BASS_HIGH) {
+            fft_data->bass_energy += fft_output[i];
+        } else if (freq >= FREQ_MID_LOW && freq < FREQ_MID_HIGH) {
+            fft_data->mid_energy += fft_output[i];
+        } else if (freq >= FREQ_TREBLE_LOW && freq < FREQ_TREBLE_HIGH) {
+            fft_data->treble_energy += fft_output[i];
+        }
+    }
+
+    // Normaliser les énergies
+    float total_energy = fft_data->bass_energy + fft_data->mid_energy + fft_data->treble_energy;
+    if (total_energy > 0.0f) {
+        fft_data->bass_energy /= total_energy;
+        fft_data->mid_energy /= total_energy;
+        fft_data->treble_energy /= total_energy;
+    }
+
+    // Détection de kick (20-120 Hz, forte énergie soudaine)
+    float kick_energy = 0.0f;
+    for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
+        float freq = i * freq_resolution;
+        if (freq >= 20.0f && freq < 120.0f) {
+            kick_energy += fft_output[i];
+        }
+    }
+    fft_data->kick_detected = (kick_energy > 0.5f); // Seuil arbitraire
+
+    // Détection de snare (150-250 Hz)
+    float snare_energy = 0.0f;
+    for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
+        float freq = i * freq_resolution;
+        if (freq >= 150.0f && freq < 250.0f) {
+            snare_energy += fft_output[i];
+        }
+    }
+    fft_data->snare_detected = (snare_energy > 0.3f); // Seuil arbitraire
+
+    // Détection de voix (500-2000 Hz, énergie concentrée)
+    float vocal_energy = 0.0f;
+    for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
+        float freq = i * freq_resolution;
+        if (freq >= 500.0f && freq < 2000.0f) {
+            vocal_energy += fft_output[i];
+        }
+    }
+    fft_data->vocal_detected = (vocal_energy > 0.4f); // Seuil arbitraire
+}
+
+// ============================================================================
+// FFT API Functions
+// ============================================================================
+
+void audio_input_set_fft_enabled(bool enable) {
+    if (current_config.fft_enabled == enable) {
+        return;
+    }
+
+    current_config.fft_enabled = enable;
+
+    if (enable) {
+        ESP_LOGI(TAG, "Mode FFT activé (coût: ~20KB RAM, ~20%% CPU)");
+    } else {
+        ESP_LOGI(TAG, "Mode FFT désactivé");
+        fft_data_ready = false;
+        memset(&current_fft_data, 0, sizeof(audio_fft_data_t));
+    }
+}
+
+bool audio_input_is_fft_enabled(void) {
+    return current_config.fft_enabled;
+}
+
+bool audio_input_get_fft_data(audio_fft_data_t *fft_data) {
+    if (fft_data == NULL || !fft_data_ready || !current_config.fft_enabled) {
+        return false;
+    }
+
+    memcpy(fft_data, &current_fft_data, sizeof(audio_fft_data_t));
+    return true;
 }

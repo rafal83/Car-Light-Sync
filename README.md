@@ -36,7 +36,7 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 ## 📋 Prérequis
 
 ### Matériel
-- **ESP32** : ESP32-DevKit, ESP32-S2-Saola, ou ESP32-S3-DevKitC (support PSRAM) — [ESP32-S3 recommandé](https://fr.aliexpress.com/item/1005006963045909.html)
+- **ESP32-S3** : ESP32-S3-DevKitC avec PSRAM (support PSRAM requis) — [ESP32-S3 recommandé](https://fr.aliexpress.com/item/1005006963045909.html)
 - **Ruban LED** : WS2812 ou WS2812B (60-150 LEDs recommandé) — [Ruban 110 cm compatible](https://fr.aliexpress.com/item/1005008483452231.html)
 - **Connecteur porte** : Faisceau 20 broches pour récupérer le bus CAN au niveau de la porte — [Connecteur 20 pin](https://fr.aliexpress.com/item/1005003434204981.html)
 - **Alimentation** : 5V 3-10A selon nombre de LEDs
@@ -58,13 +58,10 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 git clone <repo-url>
 cd car-light-sync
 
-# Sélectionner l'environnement selon votre ESP32
-# esp32dev (ESP32 standard)
-# esp32s2 (ESP32-S2 avec PSRAM)
-# esp32s3 (ESP32-S3 avec PSRAM)
-
-# Compiler et uploader
+# Compiler et uploader pour ESP32-S3
 pio run -e esp32s3 -t upload
+# OU pour ESP32-S3 avec 4MB Flash / 2MB PSRAM
+pio run -e esp32s3_n4r2 -t upload
 pio device monitor
 ```
 
@@ -76,7 +73,7 @@ mkdir -p ~/esp
 cd ~/esp
 git clone --recursive https://github.com/espressif/esp-idf.git
 cd esp-idf
-./install.sh esp32,esp32s2,esp32s3
+./install.sh esp32s3
 . ./export.sh
 
 # Cloner et compiler le projet
@@ -104,8 +101,8 @@ idf.py -p /dev/ttyUSB0 flash monitor
 
 3. **Configurer les GPIO CAN** dans [main/can_bus.c](main/can_bus.c) :
 ```c
-#define CONFIG_CAN_TX_GPIO  GPIO_NUM_38  // TX du transceiver CAN
-#define CONFIG_CAN_RX_GPIO  GPIO_NUM_39  // RX du transceiver CAN
+#define CONFIG_CAN_TX_GPIO  GPIO_NUM_8  // TX du transceiver CAN
+#define CONFIG_CAN_RX_GPIO  GPIO_NUM_7  // RX du transceiver CAN
 ```
 
 ## ⚙️ Configuration CAN Multi-Véhicules
@@ -172,9 +169,9 @@ INMP441          ESP32
 -------          -----
 VDD       -----> 3.3V
 GND       -----> GND
-SD        -----> GPIO 9 (configurable)
-WS (LR)   -----> GPIO 11 (configurable)
-SCK       -----> GPIO 10 (configurable)
+SD        -----> GPIO 11 (configurable)
+WS (LR)   -----> GPIO 13 (configurable)
+SCK       -----> GPIO 12 (configurable)
 L/R       -----> GND (canal gauche)
 ```
 
@@ -333,9 +330,8 @@ car-light-sync/
 ├── CMakeLists.txt                        # Configuration CMake
 ├── platformio.ini                        # Configuration PlatformIO
 ├── partitions.csv                        # Table de partitions
-├── sdkconfig.esp32dev                    # Config ESP32 standard
-├── sdkconfig.esp32s2                     # Config ESP32-S2
-├── sdkconfig.esp32s3                     # Config ESP32-S3
+├── sdkconfig.esp32s3                     # Config ESP32-S3 (8MB Flash)
+├── sdkconfig.esp32s3_n4r2                # Config ESP32-S3 (4MB Flash + 2MB PSRAM)
 └── README.md                             # Ce fichier
 ```
 

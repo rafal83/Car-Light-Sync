@@ -27,6 +27,10 @@
 #define EFFECT_ID_BLINDSPOT_FLASH "BLINDSPOT_FLASH"
 #define EFFECT_ID_AUDIO_REACTIVE "AUDIO_REACTIVE"
 #define EFFECT_ID_AUDIO_BPM "AUDIO_BPM"
+#define EFFECT_ID_FFT_SPECTRUM "FFT_SPECTRUM"
+#define EFFECT_ID_FFT_BASS_PULSE "FFT_BASS_PULSE"
+#define EFFECT_ID_FFT_VOCAL_WAVE "FFT_VOCAL_WAVE"
+#define EFFECT_ID_FFT_ENERGY_BAR "FFT_ENERGY_BAR"
 
 #define EFFECT_ID_MAX_LEN 32 // Longueur max d'un ID d'effet
 
@@ -53,6 +57,10 @@ typedef enum {
   EFFECT_BLINDSPOT_FLASH, // Flash directionnel pour angle mort
   EFFECT_AUDIO_REACTIVE,  // Effet réactif au son
   EFFECT_AUDIO_BPM,       // Effet synchronisé au BPM
+  EFFECT_FFT_SPECTRUM,    // Spectre FFT en temps réel (égaliseur)
+  EFFECT_FFT_BASS_PULSE,  // Pulse sur les basses (kick)
+  EFFECT_FFT_VOCAL_WAVE,  // Vague réactive aux voix
+  EFFECT_FFT_ENERGY_BAR,  // Barre d'énergie spectrale
   EFFECT_MAX
 } led_effect_t;
 

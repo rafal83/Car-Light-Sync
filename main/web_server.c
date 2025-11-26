@@ -313,13 +313,18 @@ static esp_err_t effect_handler(httpd_req_t *req) {
 
 // Handler pour sauvegarder la configuration
 static esp_err_t save_handler(httpd_req_t *req) {
-  bool success = led_effects_save_config();
+  // Sauvegarder tous les paramètres: LED + Audio
+  bool led_success = led_effects_save_config();
+  bool audio_success = audio_input_save_config();
 
-  if (success) {
+  if (led_success && audio_success) {
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
+    ESP_LOGI(TAG, "Configuration sauvegardée (LED + Audio)");
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Save failed");
+    ESP_LOGE(TAG, "Échec sauvegarde - LED: %s, Audio: %s",
+             led_success ? "OK" : "FAIL", audio_success ? "OK" : "FAIL");
   }
 
   return ESP_OK;
@@ -1525,9 +1530,7 @@ static esp_err_t audio_status_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(root, "sensitivity", config.sensitivity);
   cJSON_AddNumberToObject(root, "gain", config.gain);
   cJSON_AddBoolToObject(root, "autoGain", config.auto_gain);
-  cJSON_AddNumberToObject(root, "sckPin", config.i2s_sck_pin);
-  cJSON_AddNumberToObject(root, "wsPin", config.i2s_ws_pin);
-  cJSON_AddNumberToObject(root, "sdPin", config.i2s_sd_pin);
+  cJSON_AddBoolToObject(root, "fftEnabled", config.fft_enabled);
 
   const char *json_str = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -1619,6 +1622,12 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
     audio_input_set_auto_gain(config.auto_gain);
   }
 
+  cJSON *fftEnabled = cJSON_GetObjectItem(root, "fftEnabled");
+  if (cJSON_IsBool(fftEnabled)) {
+    config.fft_enabled = cJSON_IsTrue(fftEnabled);
+    audio_input_set_fft_enabled(config.fft_enabled);
+  }
+
   // Sauvegarder la configuration
   audio_input_save_config();
 
@@ -1636,11 +1645,13 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler GET /api/audio/data - Données audio en temps réel
+// Handler GET /api/audio/data - Données audio en temps réel (avec FFT si activé)
 static esp_err_t audio_data_handler(httpd_req_t *req) {
   audio_data_t audio_data;
+  audio_fft_data_t fft_data;
   cJSON *root = cJSON_CreateObject();
 
+  // Données audio de base
   if (audio_input_get_data(&audio_data)) {
     cJSON_AddNumberToObject(root, "amplitude", audio_data.amplitude);
     cJSON_AddNumberToObject(root, "bass", audio_data.bass);
@@ -1652,6 +1663,125 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
   } else {
     cJSON_AddBoolToObject(root, "available", false);
   }
+
+  // Données FFT (si activées)
+  if (audio_input_is_fft_enabled() && audio_input_get_fft_data(&fft_data)) {
+    // Créer un objet FFT
+    cJSON *fft_obj = cJSON_CreateObject();
+
+    // Ajouter les bandes FFT
+    cJSON *bands_array = cJSON_CreateArray();
+    for (int i = 0; i < AUDIO_FFT_BANDS; i++) {
+      cJSON_AddItemToArray(bands_array, cJSON_CreateNumber(fft_data.bands[i]));
+    }
+    cJSON_AddItemToObject(fft_obj, "bands", bands_array);
+
+    // Ajouter les métadonnées FFT
+    cJSON_AddNumberToObject(fft_obj, "peakFreq", fft_data.peak_freq);
+    cJSON_AddNumberToObject(fft_obj, "spectralCentroid", fft_data.spectral_centroid);
+    cJSON_AddNumberToObject(fft_obj, "dominantBand", fft_data.dominant_band);
+    cJSON_AddNumberToObject(fft_obj, "bassEnergy", fft_data.bass_energy);
+    cJSON_AddNumberToObject(fft_obj, "midEnergy", fft_data.mid_energy);
+    cJSON_AddNumberToObject(fft_obj, "trebleEnergy", fft_data.treble_energy);
+    cJSON_AddBoolToObject(fft_obj, "kickDetected", fft_data.kick_detected);
+    cJSON_AddBoolToObject(fft_obj, "snareDetected", fft_data.snare_detected);
+    cJSON_AddBoolToObject(fft_obj, "vocalDetected", fft_data.vocal_detected);
+    cJSON_AddBoolToObject(fft_obj, "available", true);
+
+    cJSON_AddItemToObject(root, "fft", fft_obj);
+  } else {
+    // FFT non disponible
+    cJSON *fft_obj = cJSON_CreateObject();
+    cJSON_AddBoolToObject(fft_obj, "available", false);
+    cJSON_AddItemToObject(root, "fft", fft_obj);
+  }
+
+  const char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(root);
+  return ESP_OK;
+}
+
+// Handler POST /api/audio/fft - Activer/désactiver la FFT
+// NOTE: Cette route est dépréciée. Utilisez /api/audio/config pour configurer
+// et /api/save pour sauvegarder
+static esp_err_t audio_fft_enable_handler(httpd_req_t *req) {
+  char content[100];
+  int ret = httpd_req_recv(req, content, MIN(req->content_len, sizeof(content)));
+
+  if (ret <= 0) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive data");
+    return ESP_FAIL;
+  }
+
+  cJSON *root = cJSON_Parse(content);
+  if (root == NULL) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+    return ESP_FAIL;
+  }
+
+  cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
+  if (enabled != NULL && cJSON_IsBool(enabled)) {
+    audio_input_set_fft_enabled(cJSON_IsTrue(enabled));
+  }
+
+  cJSON_Delete(root);
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
+
+  ESP_LOGI(TAG, "FFT mode: %s (not saved)", cJSON_IsTrue(enabled) ? "enabled" : "disabled");
+  return ESP_OK;
+}
+
+// Handler GET /api/audio/fft/data - Données FFT en temps réel
+static esp_err_t audio_fft_data_handler(httpd_req_t *req) {
+  audio_fft_data_t fft_data;
+  cJSON *root = cJSON_CreateObject();
+
+  if (audio_input_get_fft_data(&fft_data)) {
+    // Ajouter les bandes FFT
+    cJSON *bands_array = cJSON_CreateArray();
+    for (int i = 0; i < AUDIO_FFT_BANDS; i++) {
+      cJSON_AddItemToArray(bands_array, cJSON_CreateNumber(fft_data.bands[i]));
+    }
+    cJSON_AddItemToObject(root, "bands", bands_array);
+
+    // Ajouter les métadonnées
+    cJSON_AddNumberToObject(root, "peakFreq", fft_data.peak_freq);
+    cJSON_AddNumberToObject(root, "spectralCentroid", fft_data.spectral_centroid);
+    cJSON_AddNumberToObject(root, "dominantBand", fft_data.dominant_band);
+    cJSON_AddNumberToObject(root, "bassEnergy", fft_data.bass_energy);
+    cJSON_AddNumberToObject(root, "midEnergy", fft_data.mid_energy);
+    cJSON_AddNumberToObject(root, "trebleEnergy", fft_data.treble_energy);
+    cJSON_AddBoolToObject(root, "kickDetected", fft_data.kick_detected);
+    cJSON_AddBoolToObject(root, "snareDetected", fft_data.snare_detected);
+    cJSON_AddBoolToObject(root, "vocalDetected", fft_data.vocal_detected);
+    cJSON_AddBoolToObject(root, "available", true);
+  } else {
+    cJSON_AddBoolToObject(root, "available", false);
+  }
+
+  const char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(root);
+  return ESP_OK;
+}
+
+// Handler GET /api/audio/fft/status - Statut FFT
+static esp_err_t audio_fft_status_handler(httpd_req_t *req) {
+  cJSON *root = cJSON_CreateObject();
+
+  cJSON_AddBoolToObject(root, "enabled", audio_input_is_fft_enabled());
+  cJSON_AddNumberToObject(root, "bands", AUDIO_FFT_BANDS);
+  cJSON_AddNumberToObject(root, "sampleRate", AUDIO_SAMPLE_RATE);
+  cJSON_AddNumberToObject(root, "fftSize", AUDIO_FFT_SIZE);
 
   const char *json_str = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -1670,7 +1800,7 @@ esp_err_t web_server_init(void) {
 esp_err_t web_server_start(void) {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.server_port = WEB_SERVER_PORT;
-  config.max_uri_handlers = 40; // Augmenté pour les handlers audio
+  config.max_uri_handlers = 45; // Augmenté pour les handlers audio et FFT
   config.lru_purge_enable = true;
 #ifndef CONFIG_HAS_PSRAM
   config.stack_size = 24576;
@@ -1885,6 +2015,25 @@ esp_err_t web_server_start(void) {
                                   .handler = audio_data_handler,
                                   .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_data_uri);
+
+    // Routes FFT
+    httpd_uri_t audio_fft_status_uri = {.uri = "/api/audio/fft/status",
+                                        .method = HTTP_GET,
+                                        .handler = audio_fft_status_handler,
+                                        .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_fft_status_uri);
+
+    httpd_uri_t audio_fft_enable_uri = {.uri = "/api/audio/fft/enable",
+                                        .method = HTTP_POST,
+                                        .handler = audio_fft_enable_handler,
+                                        .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_fft_enable_uri);
+
+    httpd_uri_t audio_fft_data_uri = {.uri = "/api/audio/fft/data",
+                                      .method = HTTP_GET,
+                                      .handler = audio_fft_data_handler,
+                                      .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_fft_data_uri);
 
     // Enregistrer le handler d'erreur 404 pour le portail captif
     // Toutes les URLs non trouvées seront redirigées vers la page principale

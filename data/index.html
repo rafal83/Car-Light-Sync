@@ -40,10 +40,10 @@
               <button id="ble-connect-button" class="btn-secondary ble-icon-button" onclick="toggleBleConnection()" title="BLE"></button>
               <div class="status-item">
                   <div class="status-label" data-i18n="ble.title">Connexion BLE</div>
-                  <div class="status-value" id="ble-status-text" data-i18n="ble.disconnected">D�connect�</div>
+                  <div class="status-value" id="ble-status-text" data-i18n="ble.disconnected">Déconnecté</div>
                 </div>
             </div>
-            <div class="status-item">
+            <div id="wifi-status-item"  class="status-item">
                 <div class="status-label" data-i18n="status.wifi">WiFi</div>
                 <div class="status-value" id="wifi-status">...</div>
             </div>
@@ -411,9 +411,56 @@
                         </div>
                     </div>
 
+                    <!-- FFT Advanced Mode -->
+                    <div class="section" style="margin-top: 30px;">
+                        <div class="section-title" data-i18n="fft.title">🎼 FFT Advanced Spectrum Analysis</div>
+
+                        <div style="background: var(--color-info); padding: 10px 15px; border-radius: 6px; margin-bottom: 15px;">
+                            <small style="color: var(--color-text);" data-i18n="fft.autoInfo">
+                                ℹ️ Le FFT s'active automatiquement avec les effets audio-réactifs
+                            </small>
+                        </div>
+
+                        <div id="fftStatusBox" style="display: none; margin-top: 10px;">
+                            <div style="background: var(--color-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--color-border);">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                    <div>
+                                        <span data-i18n="fft.peakFreq">Fréquence dominante</span>:
+                                        <strong id="fftPeakFreq" style="color: #4CAF50;">-</strong> Hz
+                                    </div>
+                                    <div>
+                                        <span data-i18n="fft.centroid">Centroïde spectral</span>:
+                                        <strong id="fftCentroid" style="color: #2196F3;">-</strong> Hz
+                                    </div>
+                                </div>
+        
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                    <div>
+                                        <span data-i18n="fft.kick">Kick</span>:
+                                        <strong id="fftKick">-</strong>
+                                    </div>
+                                    <div>
+                                        <span data-i18n="fft.snare">Snare</span>:
+                                        <strong id="fftSnare">-</strong>
+                                    </div>
+                                    <div>
+                                        <span data-i18n="fft.vocal">Vocal</span>:
+                                        <strong id="fftVocal">-</strong>
+                                    </div>
+                                </div>
+        
+                                <!-- Canvas pour visualisation spectre -->
+                                <div style="margin-top: 15px;">
+                                    <div style="font-weight: 500; margin-bottom: 8px;" data-i18n="fft.spectrum">Spectre FFT (32 bandes)</div>
+                                    <canvas id="fftSpectrumCanvas" width="600" height="200" style="width: 100%; max-width: 600px; background: #000; border-radius: 4px; border: 1px solid var(--color-border);"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <button class="btn-primary" onclick="saveAudioConfig()" style="margin-top: 15px;" data-i18n="audio.saveConfig">Sauvegarder Configuration</button>
                 </div>
             </div>
+
 
             <div class="section" style="margin-top: 40px; border-top: 2px solid #E82127; padding-top: 20px;">
                 <div class="section-title" style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</div>

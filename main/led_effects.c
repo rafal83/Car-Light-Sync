@@ -13,6 +13,7 @@
 #include "config_manager.h"
 #include "audio_input.h"
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char *TAG = "LED";
@@ -1065,6 +1066,157 @@ static void effect_audio_bpm(void) {
   }
 }
 
+// ============================================================================
+// EFFETS FFT AVANCÉS
+// ============================================================================
+
+// Effet FFT: Spectre complet (égaliseur visuel)
+static void effect_fft_spectrum(void) {
+  audio_fft_data_t fft_data;
+  if (!audio_input_get_fft_data(&fft_data)) {
+    // FFT non disponible, afficher noir
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
+
+  // Nombre de LEDs par bande
+  int leds_per_band = led_count / AUDIO_FFT_BANDS;
+  if (leds_per_band < 1) leds_per_band = 1;
+
+  for (int band = 0; band < AUDIO_FFT_BANDS; band++) {
+    // Couleur arc-en-ciel selon la bande (bass=rouge, treble=bleu)
+    uint8_t hue = (band * 255) / AUDIO_FFT_BANDS;
+    rgb_t band_color = hsv_to_rgb(hue, 255, 255);
+
+    // Hauteur proportionnelle au niveau de la bande
+    int height = (int)(fft_data.bands[band] * leds_per_band);
+    if (height > leds_per_band) height = leds_per_band;
+
+    // Allumer les LEDs pour cette bande
+    for (int i = 0; i < leds_per_band && (band * leds_per_band + i) < led_count; i++) {
+      int led_idx = band * leds_per_band + i;
+      if (i < height) {
+        // Dégradé de bas en haut
+        float intensity = (float)(i + 1) / height;
+        rgb_t color;
+        color.r = (uint8_t)(band_color.r * intensity);
+        color.g = (uint8_t)(band_color.g * intensity);
+        color.b = (uint8_t)(band_color.b * intensity);
+        leds[led_idx] = apply_brightness(color, current_config.brightness);
+      } else {
+        leds[led_idx] = (rgb_t){0, 0, 0};
+      }
+    }
+  }
+}
+
+// Effet FFT: Bass Pulse (pulse uniquement sur les kicks)
+static void effect_fft_bass_pulse(void) {
+  audio_fft_data_t fft_data;
+  if (!audio_input_get_fft_data(&fft_data)) {
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
+
+  rgb_t color = color_to_rgb(current_config.color1);
+
+  // Pulse basé sur l'énergie des basses
+  float bass_intensity = fft_data.bass_energy;
+
+  // Effet de pulse si kick détecté
+  if (fft_data.kick_detected) {
+    bass_intensity = 1.0f; // Flash complet
+  }
+
+  // Appliquer l'intensité
+  uint8_t pulse_brightness = (uint8_t)(current_config.brightness * bass_intensity);
+  color = apply_brightness(color, pulse_brightness);
+  fill_solid(color);
+}
+
+// Effet FFT: Vocal Wave (vague réactive aux voix)
+static void effect_fft_vocal_wave(void) {
+  audio_fft_data_t fft_data;
+  if (!audio_input_get_fft_data(&fft_data)) {
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
+
+  rgb_t base_color = color_to_rgb(current_config.color1);
+  rgb_t vocal_color = color_to_rgb(current_config.color2);
+
+  // Position de la vague basée sur le centroïde spectral
+  // Plus le centroïde est haut (aigus), plus la vague avance
+  float wave_pos = (fft_data.spectral_centroid - 500.0f) / 3500.0f; // Normaliser 500-4000 Hz
+  if (wave_pos < 0.0f) wave_pos = 0.0f;
+  if (wave_pos > 1.0f) wave_pos = 1.0f;
+
+  int center = (int)(wave_pos * led_count);
+  int width = (int)(fft_data.mid_energy * 20.0f); // Largeur proportionnelle à l'énergie mid
+
+  for (int i = 0; i < led_count; i++) {
+    int distance = abs(i - center);
+    if (distance < width) {
+      // Dégradé vers la voix
+      float mix = (float)distance / width;
+      rgb_t color;
+      color.r = (uint8_t)(vocal_color.r * (1.0f - mix) + base_color.r * mix);
+      color.g = (uint8_t)(vocal_color.g * (1.0f - mix) + base_color.g * mix);
+      color.b = (uint8_t)(vocal_color.b * (1.0f - mix) + base_color.b * mix);
+      leds[i] = apply_brightness(color, current_config.brightness);
+    } else {
+      leds[i] = apply_brightness(base_color, current_config.brightness / 4);
+    }
+  }
+}
+
+// Effet FFT: Energy Bar (barre d'énergie spectrale)
+static void effect_fft_energy_bar(void) {
+  audio_fft_data_t fft_data;
+  if (!audio_input_get_fft_data(&fft_data)) {
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
+
+  // Diviser le ruban en 3 sections: Bass, Mid, Treble
+  int section_size = led_count / 3;
+
+  // Section Bass (rouge)
+  int bass_leds = (int)(fft_data.bass_energy * section_size);
+  for (int i = 0; i < section_size; i++) {
+    if (i < bass_leds) {
+      rgb_t color = {255, 0, 0}; // Rouge
+      leds[i] = apply_brightness(color, current_config.brightness);
+    } else {
+      leds[i] = (rgb_t){0, 0, 0};
+    }
+  }
+
+  // Section Mid (vert)
+  int mid_leds = (int)(fft_data.mid_energy * section_size);
+  for (int i = 0; i < section_size; i++) {
+    int led_idx = section_size + i;
+    if (i < mid_leds && led_idx < led_count) {
+      rgb_t color = {0, 255, 0}; // Vert
+      leds[led_idx] = apply_brightness(color, current_config.brightness);
+    } else if (led_idx < led_count) {
+      leds[led_idx] = (rgb_t){0, 0, 0};
+    }
+  }
+
+  // Section Treble (bleu)
+  int treble_leds = (int)(fft_data.treble_energy * section_size);
+  for (int i = 0; i < section_size; i++) {
+    int led_idx = section_size * 2 + i;
+    if (i < treble_leds && led_idx < led_count) {
+      rgb_t color = {0, 0, 255}; // Bleu
+      leds[led_idx] = apply_brightness(color, current_config.brightness);
+    } else if (led_idx < led_count) {
+      leds[led_idx] = (rgb_t){0, 0, 0};
+    }
+  }
+}
+
 // Table des fonctions d'effets
 typedef void (*effect_func_t)(void);
 static const effect_func_t effect_functions[] = {
@@ -1089,6 +1241,10 @@ static const effect_func_t effect_functions[] = {
     [EFFECT_BLINDSPOT_FLASH] = effect_blindspot_flash,
     [EFFECT_AUDIO_REACTIVE] = effect_audio_reactive,
     [EFFECT_AUDIO_BPM] = effect_audio_bpm,
+    [EFFECT_FFT_SPECTRUM] = effect_fft_spectrum,
+    [EFFECT_FFT_BASS_PULSE] = effect_fft_bass_pulse,
+    [EFFECT_FFT_VOCAL_WAVE] = effect_fft_vocal_wave,
+    [EFFECT_FFT_ENERGY_BAR] = effect_fft_energy_bar,
 };
 
 typedef struct {
@@ -1121,6 +1277,10 @@ static const led_effect_descriptor_t effect_descriptors[] = {
      true},
     {EFFECT_AUDIO_REACTIVE, EFFECT_ID_AUDIO_REACTIVE, "Audio Reactive", false},
     {EFFECT_AUDIO_BPM, EFFECT_ID_AUDIO_BPM, "Audio BPM", false},
+    {EFFECT_FFT_SPECTRUM, EFFECT_ID_FFT_SPECTRUM, "FFT Spectrum", false},
+    {EFFECT_FFT_BASS_PULSE, EFFECT_ID_FFT_BASS_PULSE, "FFT Bass Pulse", false},
+    {EFFECT_FFT_VOCAL_WAVE, EFFECT_ID_FFT_VOCAL_WAVE, "FFT Vocal Wave", false},
+    {EFFECT_FFT_ENERGY_BAR, EFFECT_ID_FFT_ENERGY_BAR, "FFT Energy Bar", false},
 };
 
 #define EFFECT_DESCRIPTOR_COUNT                                                \

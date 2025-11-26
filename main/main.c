@@ -363,6 +363,7 @@ void app_main(void) {
   esp_log_level_set("LEDStrip", ESP_LOG_INFO);
   esp_log_level_set("ConfigMgr", ESP_LOG_INFO);
   esp_log_level_set("OTA", ESP_LOG_INFO);
+  esp_log_level_set("Audio", ESP_LOG_INFO);
   // esp_log_level_set("BLE_API", ESP_LOG_INFO);
 
   ESP_LOGI(TAG, "=================================");

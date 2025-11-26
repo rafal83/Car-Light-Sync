@@ -11,8 +11,8 @@ static const char *TAG = "CAN_BUS";
 
 #ifndef CONFIG_CAN_TX_GPIO
 // À adapter à ton câblage
-#define CONFIG_CAN_TX_GPIO GPIO_NUM_38
-#define CONFIG_CAN_RX_GPIO GPIO_NUM_39
+#define CONFIG_CAN_TX_GPIO GPIO_NUM_8
+#define CONFIG_CAN_RX_GPIO GPIO_NUM_7
 #endif
 
 static can_bus_callback_t s_callback = NULL;
