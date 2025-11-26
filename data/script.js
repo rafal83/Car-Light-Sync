@@ -1679,10 +1679,8 @@ function switchTab(tabName, evt) {
     // Gérer le polling audio et FFT selon l'onglet actif
     if (tabName === 'config') {
       startAudioDataPolling(); // Démarrera seulement si audioEnabled est true
-      startFFTPolling(); // Démarrer le polling FFT
     } else {
       stopAudioDataPolling(); // Arrêter le polling si on quitte l'onglet config
-      stopFFTPolling(); // Arrêter le polling FFT également
     }
 
     // Load data for specific tabs
@@ -2564,6 +2562,11 @@ async function updateStatus() {
         }
     } catch (e) {
         console.error('Erreur:', e);
+    } finally {
+        // Planifier le prochain appel après avoir terminé (évite les bouchons)
+        if (statusIntervalHandle !== null) {
+            statusIntervalHandle = setTimeout(updateStatus, 2000);
+        }
     }
 }
 // Chargement de la config
@@ -2774,6 +2777,12 @@ async function updateAudioData() {
         }
     } catch (error) {
         console.error('Failed to update audio data:', error);
+    } finally {
+        // Planifier le prochain appel seulement après avoir terminé celui-ci
+        // Évite les bouchons si une requête prend du temps
+        if (audioUpdateInterval !== null) {
+            audioUpdateInterval = setTimeout(updateAudioData, 500);
+        }
     }
 }
 
@@ -2899,15 +2908,21 @@ function startAudioDataPolling() {
     }
 
     if (audioUpdateInterval === null) {
-        audioUpdateInterval = setInterval(updateAudioData, 500); // 2Hz en WiFi
-        console.log('[Audio] Polling démarré à 2Hz (WiFi)');
+        // Utiliser un flag non-null pour indiquer que le polling est actif
+        audioUpdateInterval = 'active';
+        // Démarrer immédiatement, puis utiliser setTimeout dans la fonction
+        updateAudioData();
+        console.log('[Audio] Polling démarré à ~2Hz (WiFi, auto-régulé)');
     }
 }
 
 function stopAudioDataPolling() {
     if (audioUpdateInterval !== null) {
         console.log('[Audio] Polling arrêté');
-        clearInterval(audioUpdateInterval);
+        // Arrêter le setTimeout planifié (si audioUpdateInterval est un timeout ID)
+        if (typeof audioUpdateInterval === 'number') {
+            clearTimeout(audioUpdateInterval);
+        }
         audioUpdateInterval = null;
         // Réinitialiser l'affichage
         document.getElementById('audio-amplitude-value').textContent = '-';
@@ -2927,6 +2942,7 @@ function showNotification(section, message, type) {
 // OTA Functions
 let otaReloadScheduled = false;
 let otaManualUploadRunning = false;
+let otaPollingInterval = null;
 function scheduleOtaReload(delayMs) {
     if (otaReloadScheduled) {
         return;
@@ -3061,7 +3077,12 @@ async function uploadFirmware() {
     }
     statusMessage.textContent = t('ota.states.receiving');
     statusMessage.style.color = 'var(--color-muted)';
-    setInterval(loadOTAInfo, 1000);
+    // Nettoyer l'ancien intervalle s'il existe
+    if (otaPollingInterval) {
+        clearInterval(otaPollingInterval);
+    }
+    // Démarrer le polling OTA pendant l'upload
+    otaPollingInterval = setInterval(loadOTAInfo, 1000);
     try {
         await waitForApiConnection();
         const xhr = new XMLHttpRequest();
@@ -3081,6 +3102,7 @@ async function uploadFirmware() {
                 statusMessage.style.color = 'var(--color-muted)';
                 restartBtn.style.display = 'inline-block';
                 uploadBtn.style.display = 'none';
+                // L'intervalle continue pour suivre l'écriture en flash
             } else {
                 statusMessage.textContent = t('ota.states.error');
                 statusMessage.style.color = '#f87171';
@@ -3089,6 +3111,11 @@ async function uploadFirmware() {
                 if (fileInputEl) {
                     fileInputEl.disabled = false;
                     fileInputEl.style.display = 'block';
+                }
+                // Arrêter le polling OTA en cas d'erreur
+                if (otaPollingInterval) {
+                    clearInterval(otaPollingInterval);
+                    otaPollingInterval = null;
                 }
             }
         });
@@ -3100,6 +3127,11 @@ async function uploadFirmware() {
             if (fileInputEl) {
                 fileInputEl.disabled = false;
                 fileInputEl.style.display = 'block';
+            }
+            // Arrêter le polling OTA en cas d'erreur réseau
+            if (otaPollingInterval) {
+                clearInterval(otaPollingInterval);
+                otaPollingInterval = null;
             }
         });
         xhr.open('POST', API_BASE + '/api/ota/upload');
@@ -3113,7 +3145,12 @@ async function uploadFirmware() {
         if (fileInputEl) {
             fileInputEl.disabled = false;
             fileInputEl.style.display = 'block';
-    }
+        }
+        // Arrêter le polling OTA en cas d'exception
+        if (otaPollingInterval) {
+            clearInterval(otaPollingInterval);
+            otaPollingInterval = null;
+        }
     }
 }
 async function restartDevice() {
@@ -3409,10 +3446,11 @@ async function loadInitialData() {
     loadHardwareConfig(); // Charger la configuration matérielle LED
     loadAudioStatus(); // Charger la configuration audio
     loadFFTStatus(); // Charger l'état FFT
-    updateStatus();
     loadOTAInfo();
+    // Démarrer le polling de status avec setTimeout auto-régulé
     if (!statusIntervalHandle) {
-        statusIntervalHandle = setInterval(updateStatus, 2000);
+        statusIntervalHandle = 'active'; // Flag pour indiquer que le polling est actif
+        updateStatus(); // Premier appel, puis auto-planification via finally
     }
 }
 // Init
