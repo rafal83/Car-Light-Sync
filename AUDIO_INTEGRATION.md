@@ -193,10 +193,10 @@ L/R       -----> GND (pour canal gauche)
 
 ## 🔄 Activation Automatique du FFT
 
-Le FFT s'active **automatiquement** selon l'effet sélectionné :
+Le FFT s'active **automatiquement** selon l'effet sélectionné, **entièrement géré par le backend** :
 
 ### Effets nécessitant le FFT
-Lorsque vous sélectionnez l'un de ces effets, le FFT s'active automatiquement :
+Lorsque vous sélectionnez l'un de ces effets, le backend active automatiquement le FFT :
 - `EFFECT_AUDIO_REACTIVE` (58)
 - `EFFECT_AUDIO_BPM` (59)
 - `EFFECT_FFT_SPECTRUM` (60)
@@ -204,12 +204,20 @@ Lorsque vous sélectionnez l'un de ces effets, le FFT s'active automatiquement :
 - `EFFECT_FFT_VOCAL_WAVE` (62)
 - `EFFECT_FFT_ENERGY_BAR` (63)
 
-### Comportement de l'interface
-1. **Sélection d'un effet FFT** → Le FFT s'active automatiquement et la section "Analyse Spectrale FFT Avancée" apparaît
-2. **Changement vers un effet non-FFT** → Le FFT se désactive automatiquement et la section disparaît
-3. **Message informatif** → L'interface affiche : *"ℹ️ Le FFT s'active automatiquement avec les effets audio-réactifs"*
+### Architecture Backend-Driven
+- **Backend** ([web_server.c:302-315](main/web_server.c:302-315)) : Lors de l'application d'un effet via `/api/effect`, le backend :
+  1. Vérifie si l'effet nécessite le FFT via `led_effects_requires_fft()`
+  2. Active/désactive automatiquement le FFT via `audio_input_set_fft_enabled()`
+  3. Log l'activation : `"Effet X configuré, FFT activé/désactivé"`
+
+- **Frontend** ([script.js:2843-2847](data/script.js:2843-2847)) : L'interface ne fait **aucune décision** :
+  1. Recharge simplement l'état FFT depuis `/api/audio/status` après application d'un effet
+  2. Affiche/masque la section FFT selon l'état renvoyé par le backend
+  3. Aucune logique de décision côté client
 
 ### Avantages
+- ✅ **Architecture propre** : Le backend décide, le frontend affiche
+- ✅ **Fiabilité** : Impossible de désynchroniser frontend/backend
 - ✅ **Transparent** : Pas besoin d'activer manuellement le FFT
 - ✅ **Économie CPU** : Le FFT ne tourne que quand nécessaire (+20% CPU uniquement sur les effets FFT)
 - ✅ **Économie RAM** : +20KB RAM uniquement quand le FFT est actif
@@ -217,7 +225,10 @@ Lorsque vous sélectionnez l'un de ces effets, le FFT s'active automatiquement :
 
 ## ⚠️ Notes Importantes
 
-1. **Activation uniquement sur l'effet par défaut**: Le micro ne peut être activé QUE depuis l'effet par défaut du profil (pas sur les événements CAN).
+1. **Effets audio exclus des événements CAN**: Les effets audio-réactifs ne peuvent **pas** être assignés aux événements CAN (clignotants, charge, etc.). Ils sont uniquement disponibles pour l'effet par défaut du profil.
+   - **Backend** ([web_server.c:868-874](main/web_server.c:868-874)) : Valide et rejette avec erreur 400 toute tentative d'assigner un effet audio à un événement
+   - **Frontend** ([script.js:3363-3366](data/script.js:3363-3366)) : Filtre automatiquement les effets audio des dropdowns d'événements
+   - **API** : Le flag `audio_effect: true` est ajouté aux métadonnées des effets via `/api/effects`
 
 2. **Événements CAN prioritaires**: Lorsque vous modifiez l'effet par défaut dans l'interface web, tous les événements CAN actifs sont automatiquement arrêtés pour que le changement soit immédiatement visible. Les événements CAN (clignotants, charge, etc.) continueront de fonctionner normalement par la suite.
 
