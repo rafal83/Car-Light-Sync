@@ -6,10 +6,11 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 
 ### Système LED Avancé
 - **Support WS2812/WS2812B** : Rubans LED RGB addressables haute performance
-- **19 Effets LED Intégrés** : Rainbow, breathing, fire, strobe, animations véhicule, blindspot flash, etc.
+- **21 Effets LED Intégrés** : Rainbow, breathing, fire, strobe, animations véhicule, blindspot flash, **effets audio-réactifs**, etc.
+- **Mode Audio Réactif** : Micro INMP441 I2S avec modulation audio des effets, détection BPM et analyse spectrale
 - **Système de Profils** : Jusqu'à 10 profils de configuration personnalisés sauvegardés en NVS
 - **Mode Nuit Automatique** : Réduction automatique de luminosité basée sur capteur véhicule
-- **Performances** : 50 FPS (20ms par frame), latence CAN < 100ms
+- **Performances** : 50 FPS (20ms par frame), latence CAN < 100ms, traitement audio temps réel ~50Hz
 
 ### Intégration CAN Unifiée
 - **Architecture Modulaire** : Système CAN unifié basé sur DBC avec décodage générique
@@ -40,6 +41,7 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 - **Connecteur porte** : Faisceau 20 broches pour récupérer le bus CAN au niveau de la porte — [Connecteur 20 pin](https://fr.aliexpress.com/item/1005003434204981.html)
 - **Alimentation** : 5V 3-10A selon nombre de LEDs
 - **Module CAN** : Transceiver CAN (ex: SN65HVD230, MCP2551) connecté au bus CAN du véhicule — [Module CAN MCP2551](https://fr.aliexpress.com/item/1005008251308592.html)
+- **Micro INMP441** (optionnel) : Microphone I2S MEMS pour mode audio-réactif avec détection BPM
 - **Véhicule** : Véhicule compatible avec bus CAN (Tesla Model 3, Y, S, X, ou autres)
 
 ### Logiciel
@@ -152,6 +154,43 @@ vehicle_can_unified_config.generated.c → Définitions messages/signaux (auto-g
 | `CHARGE_STATUS` | Charge Status | Indicateur de charge |
 | `HAZARD` | Hazard | Warning animé |
 | `BLINDSPOT_FLASH` | Blindspot Flash | Flash angle mort |
+| `AUDIO_REACTIVE` | Audio Reactive | VU-mètre audio visuel |
+| `AUDIO_BPM` | Audio BPM | Flash synchronisé BPM |
+
+## 🎵 Mode Audio Réactif (INMP441)
+
+### Fonctionnalités Audio
+- **Modulation Audio** : TOUS les effets existants peuvent réagir à l'amplitude audio (variation 10%-100%)
+- **Effet VU-Mètre** : Bargraph visuel proportionnel à l'amplitude
+- **Détection BPM** : Flash synchronisé au rythme musical (60-180 BPM)
+- **Analyse Spectrale** : Séparation en 3 bandes (Bass, Mid, Treble)
+- **Beat Detection** : Détection en temps réel des battements
+
+### Configuration Matérielle
+```
+INMP441          ESP32
+-------          -----
+VDD       -----> 3.3V
+GND       -----> GND
+SD        -----> GPIO 9 (configurable)
+WS (LR)   -----> GPIO 11 (configurable)
+SCK       -----> GPIO 10 (configurable)
+L/R       -----> GND (canal gauche)
+```
+
+### Activation
+1. Connecter le micro INMP441 selon le câblage ci-dessus
+2. Dans l'interface web, onglet **Configuration**, activer le micro
+3. Dans l'onglet **Profils**, cocher "Mode Audio Réactif" sur l'effet par défaut
+4. Les LEDs varient maintenant avec le son ambiant!
+
+### Performances
+- Traitement audio : ~50Hz en tâche dédiée (core séparé)
+- Mémoire : ~4KB RAM pour buffers audio
+- Latence : < 20ms du son à la LED
+- Compatible BLE : Polling optimisé 1Hz (au lieu de 5Hz WiFi)
+
+📖 **Documentation complète** : [AUDIO_INTEGRATION.md](AUDIO_INTEGRATION.md)
 
 ## 🚗 Événements CAN Supportés
 
@@ -263,6 +302,7 @@ car-light-sync/
 │   ├── vehicle_can_unified_config.generated.h  # Config auto-générée
 │   ├── vehicle_can_mapping.h             # Mapping signal → état
 │   ├── led_effects.h                     # Effets LED
+│   ├── audio_input.h                     # Driver I2S INMP441
 │   ├── web_server.h                      # Serveur web
 │   ├── wifi_manager.h                    # Gestion WiFi
 │   ├── config_manager.h                  # Gestion profils
@@ -275,6 +315,7 @@ car-light-sync/
 │   ├── vehicle_can_unified_config.generated.c  # Config CAN auto-générée
 │   ├── vehicle_can_mapping.c             # Implémentation mapping
 │   ├── led_effects.c                     # Implémentation effets LED
+│   ├── audio_input.c                     # Implémentation micro I2S
 │   ├── web_server.c                      # Implémentation serveur web
 │   ├── wifi_manager.c                    # Implémentation WiFi
 │   ├── config_manager.c                  # Implémentation profils
@@ -470,11 +511,12 @@ Content-Type: multipart/form-data
 - [x] ~~OTA Updates~~
 - [x] ~~Optimisation mémoire HTTP~~
 - [x] ~~Architecture CAN unifiée~~
-- [x] ~~Support multi-véhicules~~ 
+- [x] ~~Support multi-véhicules~~
 - [x] ~~Support BLE pour configuration mobile~~
 - [x] ~~Application mobile iOS/Android~~
+- [x] ~~Mode musique avec micro I2S INMP441~~
 - [ ] Support de plusieurs rubans LED (ESP-Now)
-- [ ] Mode musique avec micro I2S
+- [ ] FFT temps réel pour analyse spectrale avancée
 - [ ] Enregistrement d'effets personnalisés via interface web
 
 ## 🔒 Sécurité

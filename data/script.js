@@ -70,7 +70,35 @@ const translations = {
             vehicleSync: "Sync Véhicule",
             turnSignal: "Clignotant",
             brakeLight: "Feu de Frein",
-            chargeStatus: "État de Charge"
+            chargeStatus: "État de Charge",
+            audioReactive: "Audio Réactif",
+            audioBpm: "Audio BPM",
+            audioReactiveMode: "Mode Audio Réactif"
+        },
+        audio: {
+            title: "Configuration Audio",
+            microphone: "Micro INMP441",
+            enable: "Activer le micro",
+            enabled: "Activé",
+            disabled: "Désactivé",
+            sensitivity: "Sensibilité",
+            gain: "Gain",
+            autoGain: "Gain automatique",
+            status: "Statut",
+            liveData: "Données en Direct",
+            amplitude: "Amplitude",
+            bpm: "BPM Détecté",
+            bass: "Basses",
+            mid: "Médiums",
+            treble: "Aigus",
+            gpioConfig: "Configuration GPIO",
+            sckPin: "SCK Pin",
+            wsPin: "WS Pin",
+            sdPin: "SD Pin",
+            applyGpio: "Appliquer GPIO",
+            saveConfig: "Sauvegarder Configuration",
+            noData: "Aucune donnée",
+            warning: "⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif."
         },
         profiles: {
             title: "Gestion des Profils",
@@ -424,7 +452,35 @@ en: {
             vehicleSync: "Vehicle Sync",
             turnSignal: "Turn Signal",
             brakeLight: "Brake Light",
-            chargeStatus: "Charge Status"
+            chargeStatus: "Charge Status",
+            audioReactive: "Audio Reactive",
+            audioBpm: "Audio BPM",
+            audioReactiveMode: "Audio Reactive Mode"
+        },
+        audio: {
+            title: "Audio Configuration",
+            microphone: "INMP441 Microphone",
+            enable: "Enable microphone",
+            enabled: "Enabled",
+            disabled: "Disabled",
+            sensitivity: "Sensitivity",
+            gain: "Gain",
+            autoGain: "Auto Gain",
+            status: "Status",
+            liveData: "Live Data",
+            amplitude: "Amplitude",
+            bpm: "BPM Detected",
+            bass: "Bass",
+            mid: "Mid",
+            treble: "Treble",
+            gpioConfig: "GPIO Configuration",
+            sckPin: "SCK Pin",
+            wsPin: "WS Pin",
+            sdPin: "SD Pin",
+            applyGpio: "Apply GPIO",
+            saveConfig: "Save Configuration",
+            noData: "No data",
+            warning: "⚠️ The microphone can only be enabled on the default effect of the active profile."
         },
         profiles: {
             title: "Profile Management",
@@ -1170,11 +1226,29 @@ class BleTransport {
     }
     enqueueRequest(taskFn) {
         const next = this.requestQueue.then(() => taskFn()).then(async (result) => {
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 20));
             return result;
         });
         this.requestQueue = next.catch(() => {});
         return next;
+    }
+    clearQueue() {
+        // Réinitialise la queue pour éviter l'accumulation
+        console.log('[BLE] Queue vidée pour éviter l\'accumulation');
+
+        // Annuler la requête en attente si elle existe
+        if (this.pending && this.pending.reject) {
+            this.pending.reject(new Error('Queue cleared'));
+            this.pending = null;
+        }
+
+        this.requestQueue = Promise.resolve();
+    }
+    async waitForQueue() {
+        // Attend que la queue soit vide sans annuler les requêtes en cours
+        console.log('[BLE] Attente de la fin de la queue...');
+        await this.requestQueue.catch(() => {});
+        console.log('[BLE] Queue vide, prêt pour la prochaine requête');
     }
 }
 const bleTransport = new BleTransport();
@@ -1575,6 +1649,14 @@ function switchTab(tabName, evt) {
         target.classList.add('active');
     }
     activeTabName = tabName;
+
+    // Gérer le polling audio selon l'onglet actif
+    if (tabName === 'config') {
+        startAudioDataPolling(); // Démarrera seulement si audioEnabled est true
+    } else {
+        stopAudioDataPolling(); // Arrêter le polling si on quitte l'onglet config
+    }
+
     // Load data for specific tabs
     if (tabName === 'events-config') {
         loadEventsConfig();
@@ -2253,12 +2335,22 @@ async function saveProfileSettings() {
     }
 }
 async function saveDefaultEffect(silent = false) {
+    // Attendre que la queue BLE soit vide avant de sauvegarder
+    if (bleTransportInstance && bleTransportInstance.waitForQueue) {
+        await bleTransportInstance.waitForQueue();
+    }
+
     const profileId = parseInt(document.getElementById('profile-select').value);
     const effectId = document.getElementById('default-effect-select').value;
     const effect = effectIdToEnum(effectId); // Convert string ID to numeric enum
     const brightness = percentTo255(parseInt(document.getElementById('default-brightness-slider').value));
     const speed = percentTo255(parseInt(document.getElementById('default-speed-slider').value));
     const color1 = parseInt(document.getElementById('default-color1').value.substring(1), 16);
+
+    // Audio reactive
+    const audioReactiveCheckbox = document.getElementById('default-audio-reactive');
+    const audioReactive = audioReactiveCheckbox ? audioReactiveCheckbox.checked : false;
+
     try {
         const response = await fetch(API_BASE + '/api/profile/update/default', {
             method: 'POST',
@@ -2268,7 +2360,8 @@ async function saveDefaultEffect(silent = false) {
                 effect: effect,
                 brightness: brightness,
                 speed: speed,
-                color1: color1
+                color1: color1,
+                audio_reactive: audioReactive
             })
         });
         const apiResult = await parseApiResponse(response);
@@ -2485,11 +2578,185 @@ async function loadActiveProfileDefaultEffect() {
             document.getElementById('default-speed-slider').value = defSpeedPercent;
             document.getElementById('default-speed-value').textContent = defSpeedPercent + '%';
             document.getElementById('default-color1').value = '#' + defaultEffect.color1.toString(16).padStart(6, '0');
+
+            // Audio reactive
+            const audioReactiveCheckbox = document.getElementById('default-audio-reactive');
+            if (audioReactiveCheckbox && defaultEffect.audio_reactive !== undefined) {
+                audioReactiveCheckbox.checked = defaultEffect.audio_reactive;
+            }
         }
     } catch (e) {
         console.error('Error loading default effect:', e);
     }
 }
+
+// ============================================================================
+// AUDIO FUNCTIONS
+// ============================================================================
+
+let audioEnabled = false;
+let audioUpdateInterval = null;
+
+// Charger le statut audio
+async function loadAudioStatus() {
+    try {
+        const response = await fetch(API_BASE + '/api/audio/status');
+        const data = await response.json();
+
+        audioEnabled = data.enabled;
+        document.getElementById('audio-enable').checked = audioEnabled;
+        document.getElementById('audio-sensitivity').value = data.sensitivity;
+        document.getElementById('audio-sensitivity-value').textContent = data.sensitivity;
+        document.getElementById('audio-gain').value = data.gain;
+        document.getElementById('audio-gain-value').textContent = data.gain;
+        document.getElementById('audio-auto-gain').checked = data.autoGain;
+
+        // Mettre à jour le statut
+        const statusEl = document.getElementById('audio-status');
+        if (statusEl) {
+            statusEl.textContent = t(`audio.${audioEnabled ? 'enabled' : 'disabled'}`);
+            statusEl.style.color = audioEnabled ? '#10B981' : 'var(--color-muted)';
+        }
+
+        // Afficher/masquer les paramètres
+        const settingsEl = document.getElementById('audio-settings');
+        if (settingsEl) {
+            settingsEl.style.display = audioEnabled ? 'block' : 'none';
+        }
+
+        if (audioEnabled) {
+            startAudioDataPolling();
+        }
+    } catch (error) {
+        console.error('Failed to load audio status:', error);
+    }
+}
+
+// Activer/désactiver le micro
+async function toggleAudio(enabled) {
+    try {
+        const response = await fetch(API_BASE + '/api/audio/enable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+
+        if (response.ok) {
+            audioEnabled = enabled;
+
+            // Mettre à jour le statut
+            const statusEl = document.getElementById('audio-status');
+            if (statusEl) {
+                statusEl.textContent = t(`audio.${enabled ? 'enabled' : 'disabled'}`);
+                statusEl.style.color = enabled ? '#10B981' : 'var(--color-muted)';
+            }
+
+            // Afficher/masquer les paramètres
+            const settingsEl = document.getElementById('audio-settings');
+            if (settingsEl) {
+                settingsEl.style.display = enabled ? 'block' : 'none';
+            }
+
+            if (enabled) {
+                startAudioDataPolling();
+            } else {
+                stopAudioDataPolling();
+            }
+
+            showNotification('audio', enabled ? 'Audio enabled' : 'Audio disabled', 'success');
+        }
+    } catch (error) {
+        console.error('Failed to toggle audio:', error);
+        showNotification('audio', 'Failed to toggle audio', 'error');
+    }
+}
+
+// Mettre à jour les valeurs des sliders
+function updateAudioValue(param, value) {
+    document.getElementById(`audio-${param}-value`).textContent = value;
+}
+
+// Sauvegarder la configuration audio
+async function saveAudioConfig() {
+    const config = {
+        sensitivity: parseInt(document.getElementById('audio-sensitivity').value),
+        gain: parseInt(document.getElementById('audio-gain').value),
+        autoGain: document.getElementById('audio-auto-gain').checked
+    };
+
+    try {
+        const response = await fetch(API_BASE + '/api/audio/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+
+        if (response.ok) {
+            showNotification('audio', 'Audio configuration saved', 'success');
+        }
+    } catch (error) {
+        console.error('Failed to save audio config:', error);
+        showNotification('audio', 'Failed to save audio config', 'error');
+    }
+}
+
+// Récupérer les données audio en temps réel
+async function updateAudioData() {
+    try {
+        const response = await fetch(API_BASE + '/api/audio/data');
+        const data = await response.json();
+
+        if (data.available !== false) {
+            document.getElementById('audio-amplitude-value').textContent =
+                (data.amplitude * 100).toFixed(0) + '%';
+            document.getElementById('audio-bpm-value').textContent =
+                data.bpm > 0 ? data.bpm.toFixed(1) : '-';
+            document.getElementById('audio-bass-value').textContent =
+                (data.bass * 100).toFixed(0) + '%';
+            document.getElementById('audio-mid-value').textContent =
+                (data.mid * 100).toFixed(0) + '%';
+            document.getElementById('audio-treble-value').textContent =
+                (data.treble * 100).toFixed(0) + '%';
+        }
+    } catch (error) {
+        console.error('Failed to update audio data:', error);
+    }
+}
+
+function startAudioDataPolling() {
+    // Ne démarrer le polling que si on est sur l'onglet config ET que le micro est activé
+    if (!audioEnabled || activeTabName !== 'config') {
+        return;
+    }
+
+    if (audioUpdateInterval === null) {
+        // Ralentir le polling en BLE pour éviter l'embouteillage (1Hz au lieu de 5Hz)
+        const pollingInterval = (bleTransportInstance && bleTransportInstance.shouldUseBle()) ? 1000 : 200;
+        audioUpdateInterval = setInterval(updateAudioData, pollingInterval);
+        console.log('[Audio] Polling démarré à', pollingInterval === 1000 ? '1Hz (BLE)' : '5Hz (WiFi)');
+    }
+}
+
+function stopAudioDataPolling() {
+    if (audioUpdateInterval !== null) {
+        console.log('[Audio] Polling arrêté');
+        clearInterval(audioUpdateInterval);
+        audioUpdateInterval = null;
+        // Réinitialiser l'affichage
+        document.getElementById('audio-amplitude-value').textContent = '-';
+        document.getElementById('audio-bpm-value').textContent = '-';
+        document.getElementById('audio-bass-value').textContent = '-';
+        document.getElementById('audio-mid-value').textContent = '-';
+        document.getElementById('audio-treble-value').textContent = '-';
+    }
+}
+
+// Fonction d'aide pour afficher une notification audio
+function showNotification(section, message, type) {
+    // Utiliser le système de notification existant si disponible
+    console.log(`[${type}] ${section}: ${message}`);
+}
+
 // OTA Functions
 let otaReloadScheduled = false;
 let otaManualUploadRunning = false;
@@ -2706,6 +2973,11 @@ async function restartDevice() {
 }
 // Simulation des événements CAN
 async function simulateEvent(eventType) {
+    // Attendre que la queue BLE soit vide avant de simuler l'événement
+    if (bleTransportInstance && bleTransportInstance.waitForQueue) {
+        await bleTransportInstance.waitForQueue();
+    }
+
     try {
         showNotification('simulation-notification', t('simulation.sendingEvent', getEventName(eventType)), 'info');
         const response = await fetch(API_BASE + '/api/simulate/event', {
@@ -2967,6 +3239,7 @@ async function loadInitialData() {
     renderSimulationSections();
     loadProfiles();
     loadConfig();
+    loadAudioStatus(); // Charger la configuration audio
     updateStatus();
     loadOTAInfo();
     if (!statusIntervalHandle) {

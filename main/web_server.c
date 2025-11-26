@@ -9,6 +9,7 @@
 #include "ota_update.h"
 #include "vehicle_can_unified.h"
 #include "wifi_manager.h"
+#include "audio_input.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -413,47 +414,56 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
 
 // Handler pour lister les profils
 static esp_err_t profiles_handler(httpd_req_t *req) {
-  // Allouer dynamiquement pour éviter stack overflow (10 profils × 1900 bytes =
-  // 19KB!)
-  config_profile_t *profiles =
-      (config_profile_t *)malloc(MAX_PROFILES * sizeof(config_profile_t));
-  if (profiles == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire pour profils");
+  // Allouer un seul profil à la fois pour économiser la mémoire
+  config_profile_t *profile =
+      (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (profile == NULL) {
+    ESP_LOGE(TAG, "Erreur allocation mémoire pour profil");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
                         "Memory allocation failed");
     return ESP_FAIL;
   }
 
-  int count = config_manager_list_profiles(profiles, MAX_PROFILES);
   int active_id = config_manager_get_active_profile_id();
-
   cJSON *root = cJSON_CreateObject();
   cJSON *profiles_array = cJSON_CreateArray();
 
-  for (int i = 0; i < count; i++) {
+  // Charger chaque profil un par un
+  for (int i = 0; i < MAX_PROFILES; i++) {
+    if (!config_manager_load_profile(i, profile)) {
+      continue; // Profil n'existe pas, passer au suivant
+    }
+
     cJSON *profile_obj = cJSON_CreateObject();
     cJSON_AddNumberToObject(profile_obj, "id", i);
-    cJSON_AddStringToObject(profile_obj, "name", profiles[i].name);
+    cJSON_AddStringToObject(profile_obj, "name", profile->name);
     cJSON_AddBoolToObject(profile_obj, "active", (i == active_id));
 
     // Ajouter l'effet par défaut
     cJSON *default_effect_obj = cJSON_CreateObject();
     cJSON_AddNumberToObject(default_effect_obj, "effect",
-                            profiles[i].default_effect.effect);
+                            profile->default_effect.effect);
     cJSON_AddNumberToObject(default_effect_obj, "brightness",
-                            profiles[i].default_effect.brightness);
+                            profile->default_effect.brightness);
     cJSON_AddNumberToObject(default_effect_obj, "speed",
-                            profiles[i].default_effect.speed);
+                            profile->default_effect.speed);
     cJSON_AddNumberToObject(default_effect_obj, "color1",
-                            profiles[i].default_effect.color1);
+                            profile->default_effect.color1);
+    cJSON_AddBoolToObject(default_effect_obj, "audio_reactive",
+                          profile->default_effect.audio_reactive);
     cJSON_AddItemToObject(profile_obj, "default_effect", default_effect_obj);
 
     cJSON_AddItemToArray(profiles_array, profile_obj);
   }
 
   cJSON_AddItemToObject(root, "profiles", profiles_array);
-  cJSON_AddStringToObject(root, "active_name",
-                          (active_id >= 0) ? profiles[active_id].name : "None");
+
+  // Charger le nom du profil actif
+  if (active_id >= 0 && config_manager_load_profile(active_id, profile)) {
+    cJSON_AddStringToObject(root, "active_name", profile->name);
+  } else {
+    cJSON_AddStringToObject(root, "active_name", "None");
+  }
 
   const char *json_string = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -461,7 +471,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 
   free((void *)json_string);
   cJSON_Delete(root);
-  free(profiles);
+  free(profile);
 
   return ESP_OK;
 }
@@ -766,6 +776,7 @@ static esp_err_t profile_update_default_handler(httpd_req_t *req) {
   cJSON *brightness_json = cJSON_GetObjectItem(root, "brightness");
   cJSON *speed_json = cJSON_GetObjectItem(root, "speed");
   cJSON *color_json = cJSON_GetObjectItem(root, "color1");
+  cJSON *audio_reactive_json = cJSON_GetObjectItem(root, "audio_reactive");
 
   if (effect_json) {
     profile->default_effect.effect = (led_effect_t)effect_json->valueint;
@@ -779,12 +790,18 @@ static esp_err_t profile_update_default_handler(httpd_req_t *req) {
   if (color_json) {
     profile->default_effect.color1 = (uint32_t)color_json->valueint;
   }
+  if (audio_reactive_json && cJSON_IsBool(audio_reactive_json)) {
+    profile->default_effect.audio_reactive = cJSON_IsTrue(audio_reactive_json);
+  }
 
   // Sauvegarder le profil
   bool success = config_manager_save_profile(profile_id, profile);
 
   // Si c'est le profil actif, appliquer l'effet immédiatement
   if (success && profile_id == config_manager_get_active_profile_id()) {
+    // Arrêter tous les événements actifs pour que l'effet par défaut soit visible
+    config_manager_stop_all_events();
+
     led_effects_set_config(&profile->default_effect);
     // Garder l'état actuel du mode nuit (contrôlé par les événements CAN)
     bool current_night_mode = led_effects_get_night_mode();
@@ -1494,6 +1511,157 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+// ============================================================================
+// HANDLERS AUDIO
+// ============================================================================
+
+// Handler GET /api/audio/status - Statut et configuration du micro
+static esp_err_t audio_status_handler(httpd_req_t *req) {
+  cJSON *root = cJSON_CreateObject();
+  audio_config_t config;
+  audio_input_get_config(&config);
+
+  cJSON_AddBoolToObject(root, "enabled", audio_input_is_enabled());
+  cJSON_AddNumberToObject(root, "sensitivity", config.sensitivity);
+  cJSON_AddNumberToObject(root, "gain", config.gain);
+  cJSON_AddBoolToObject(root, "autoGain", config.auto_gain);
+  cJSON_AddNumberToObject(root, "sckPin", config.i2s_sck_pin);
+  cJSON_AddNumberToObject(root, "wsPin", config.i2s_ws_pin);
+  cJSON_AddNumberToObject(root, "sdPin", config.i2s_sd_pin);
+
+  const char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(root);
+  return ESP_OK;
+}
+
+// Handler POST /api/audio/enable - Activer/désactiver le micro
+static esp_err_t audio_enable_handler(httpd_req_t *req) {
+  char buf[128];
+  int ret = httpd_req_recv(req, buf, MIN(req->content_len, sizeof(buf) - 1));
+  if (ret <= 0) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
+    return ESP_FAIL;
+  }
+  buf[ret] = '\0';
+
+  cJSON *root = cJSON_Parse(buf);
+  if (root == NULL) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+    return ESP_FAIL;
+  }
+
+  cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
+  if (cJSON_IsBool(enabled)) {
+    bool enable = cJSON_IsTrue(enabled);
+    if (audio_input_set_enabled(enable)) {
+      audio_input_save_config();
+      ESP_LOGI(TAG, "Micro %s", enable ? "activé" : "désactivé");
+    } else {
+      cJSON_Delete(root);
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                          "Failed to toggle audio");
+      return ESP_FAIL;
+    }
+  }
+
+  cJSON_Delete(root);
+
+  cJSON *response = cJSON_CreateObject();
+  cJSON_AddBoolToObject(response, "success", true);
+  const char *json_str = cJSON_PrintUnformatted(response);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+  cJSON_free((void *)json_str);
+  cJSON_Delete(response);
+
+  return ESP_OK;
+}
+
+// Handler POST /api/audio/config - Mettre à jour la configuration audio
+static esp_err_t audio_config_handler(httpd_req_t *req) {
+  char buf[256];
+  int ret = httpd_req_recv(req, buf, MIN(req->content_len, sizeof(buf) - 1));
+  if (ret <= 0) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
+    return ESP_FAIL;
+  }
+  buf[ret] = '\0';
+
+  cJSON *root = cJSON_Parse(buf);
+  if (root == NULL) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+    return ESP_FAIL;
+  }
+
+  audio_config_t config;
+  audio_input_get_config(&config);
+
+  // Mettre à jour les paramètres fournis
+  cJSON *sensitivity = cJSON_GetObjectItem(root, "sensitivity");
+  if (cJSON_IsNumber(sensitivity)) {
+    config.sensitivity = (uint8_t)sensitivity->valueint;
+    audio_input_set_sensitivity(config.sensitivity);
+  }
+
+  cJSON *gain = cJSON_GetObjectItem(root, "gain");
+  if (cJSON_IsNumber(gain)) {
+    config.gain = (uint8_t)gain->valueint;
+    audio_input_set_gain(config.gain);
+  }
+
+  cJSON *autoGain = cJSON_GetObjectItem(root, "autoGain");
+  if (cJSON_IsBool(autoGain)) {
+    config.auto_gain = cJSON_IsTrue(autoGain);
+    audio_input_set_auto_gain(config.auto_gain);
+  }
+
+  // Sauvegarder la configuration
+  audio_input_save_config();
+
+  cJSON_Delete(root);
+
+  cJSON *response = cJSON_CreateObject();
+  cJSON_AddBoolToObject(response, "success", true);
+  const char *json_str = cJSON_PrintUnformatted(response);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+  cJSON_free((void *)json_str);
+  cJSON_Delete(response);
+
+  ESP_LOGI(TAG, "Configuration audio mise à jour");
+  return ESP_OK;
+}
+
+// Handler GET /api/audio/data - Données audio en temps réel
+static esp_err_t audio_data_handler(httpd_req_t *req) {
+  audio_data_t audio_data;
+  cJSON *root = cJSON_CreateObject();
+
+  if (audio_input_get_data(&audio_data)) {
+    cJSON_AddNumberToObject(root, "amplitude", audio_data.amplitude);
+    cJSON_AddNumberToObject(root, "bass", audio_data.bass);
+    cJSON_AddNumberToObject(root, "mid", audio_data.mid);
+    cJSON_AddNumberToObject(root, "treble", audio_data.treble);
+    cJSON_AddNumberToObject(root, "bpm", audio_data.bpm);
+    cJSON_AddBoolToObject(root, "beatDetected", audio_data.beat_detected);
+    cJSON_AddBoolToObject(root, "available", true);
+  } else {
+    cJSON_AddBoolToObject(root, "available", false);
+  }
+
+  const char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(root);
+  return ESP_OK;
+}
+
 esp_err_t web_server_init(void) {
   ESP_LOGI(TAG, "Serveur web initialise");
   return ESP_OK;
@@ -1502,7 +1670,7 @@ esp_err_t web_server_init(void) {
 esp_err_t web_server_start(void) {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.server_port = WEB_SERVER_PORT;
-  config.max_uri_handlers = 35;
+  config.max_uri_handlers = 40; // Augmenté pour les handlers audio
   config.lru_purge_enable = true;
 #ifndef CONFIG_HAS_PSRAM
   config.stack_size = 24576;
@@ -1692,6 +1860,31 @@ esp_err_t web_server_start(void) {
                                   .handler = events_get_handler,
                                   .user_ctx = NULL};
     httpd_register_uri_handler(server, &events_get_uri);
+
+    // Routes audio (micro INMP441)
+    httpd_uri_t audio_status_uri = {.uri = "/api/audio/status",
+                                    .method = HTTP_GET,
+                                    .handler = audio_status_handler,
+                                    .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_status_uri);
+
+    httpd_uri_t audio_enable_uri = {.uri = "/api/audio/enable",
+                                    .method = HTTP_POST,
+                                    .handler = audio_enable_handler,
+                                    .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_enable_uri);
+
+    httpd_uri_t audio_config_uri = {.uri = "/api/audio/config",
+                                    .method = HTTP_POST,
+                                    .handler = audio_config_handler,
+                                    .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_config_uri);
+
+    httpd_uri_t audio_data_uri = {.uri = "/api/audio/data",
+                                  .method = HTTP_GET,
+                                  .handler = audio_data_handler,
+                                  .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_data_uri);
 
     // Enregistrer le handler d'erreur 404 pour le portail captif
     // Toutes les URLs non trouvées seront redirigées vers la page principale

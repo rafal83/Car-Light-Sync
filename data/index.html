@@ -265,6 +265,10 @@
                     <label class="control-label" data-i18n="effects.color">Couleur</label>
                     <input type="color" id="default-color1" value="#ff0000">
                 </div>
+                <div class="checkbox-container" style="margin-top: 15px;">
+                    <input type="checkbox" id="default-audio-reactive">
+                    <label for="default-audio-reactive" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</label>
+                </div>
             </div>
         </div>
         <!-- Tab: Events Configuration -->
@@ -345,6 +349,72 @@
             <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
             <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
             <button class="btn-danger" style="margin-left: 10px;" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
+
+            <!-- Section Audio (Micro INMP441) -->
+            <div class="section" style="margin-top: 40px; border-top: 2px solid var(--color-border); padding-top: 20px;">
+                <div class="section-title" data-i18n="audio.title">Configuration Audio</div>
+                <p style="margin-bottom: 15px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px; color: var(--color-text);" data-i18n="audio.warning">
+                    ⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif.
+                </p>
+
+                <div class="checkbox-container" style="margin-bottom: 20px;">
+                    <input type="checkbox" id="audio-enable" onchange="toggleAudio(this.checked)">
+                    <label for="audio-enable" data-i18n="audio.enable">Activer le micro</label>
+                    <span id="audio-status" style="margin-left: 10px; font-weight: bold; color: var(--color-muted);" data-i18n="audio.disabled">Désactivé</span>
+                </div>
+
+                <div id="audio-settings" style="display: none;">
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="audio.sensitivity">Sensibilité</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" id="audio-sensitivity" min="0" max="255" value="128" oninput="updateAudioValue('sensitivity', this.value)" style="flex: 1;">
+                            <span id="audio-sensitivity-value" style="min-width: 40px; font-weight: bold;">128</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="audio.gain">Gain</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" id="audio-gain" min="0" max="255" value="128" oninput="updateAudioValue('gain', this.value)" style="flex: 1;">
+                            <span id="audio-gain-value" style="min-width: 40px; font-weight: bold;">128</span>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="audio-auto-gain">
+                        <label for="audio-auto-gain" data-i18n="audio.autoGain">Gain automatique</label>
+                    </div>
+
+                    <div class="section" style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
+                        <h4 style="margin: 0 0 15px 0;" data-i18n="audio.liveData">Données en Direct</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">
+                            <div>
+                                <span data-i18n="audio.amplitude">Amplitude</span>:
+                                <strong id="audio-amplitude-value">-</strong>
+                            </div>
+                            <div>
+                                <span data-i18n="audio.bpm">BPM</span>:
+                                <strong id="audio-bpm-value">-</strong>
+                            </div>
+                            <div>
+                                <span data-i18n="audio.bass">Basses</span>:
+                                <strong id="audio-bass-value">-</strong>
+                            </div>
+                            <div>
+                                <span data-i18n="audio.mid">Médiums</span>:
+                                <strong id="audio-mid-value">-</strong>
+                            </div>
+                            <div>
+                                <span data-i18n="audio.treble">Aigus</span>:
+                                <strong id="audio-treble-value">-</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="saveAudioConfig()" style="margin-top: 15px;" data-i18n="audio.saveConfig">Sauvegarder Configuration</button>
+                </div>
+            </div>
+
             <div class="section" style="margin-top: 40px; border-top: 2px solid #E82127; padding-top: 20px;">
                 <div class="section-title" style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</div>
                 <p style="margin-bottom: 15px; color: var(--color-muted); font-size: 14px;" data-i18n="config.factoryResetWarning">

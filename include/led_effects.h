@@ -25,6 +25,8 @@
 #define EFFECT_ID_CHARGE_STATUS "CHARGE_STATUS"
 #define EFFECT_ID_HAZARD "HAZARD"
 #define EFFECT_ID_BLINDSPOT_FLASH "BLINDSPOT_FLASH"
+#define EFFECT_ID_AUDIO_REACTIVE "AUDIO_REACTIVE"
+#define EFFECT_ID_AUDIO_BPM "AUDIO_BPM"
 
 #define EFFECT_ID_MAX_LEN 32 // Longueur max d'un ID d'effet
 
@@ -49,6 +51,8 @@ typedef enum {
   EFFECT_CHARGE_STATUS,   // Indicateur de charge
   EFFECT_HAZARD,          // Warnings (les deux côtés)
   EFFECT_BLINDSPOT_FLASH, // Flash directionnel pour angle mort
+  EFFECT_AUDIO_REACTIVE,  // Effet réactif au son
+  EFFECT_AUDIO_BPM,       // Effet synchronisé au BPM
   EFFECT_MAX
 } led_effect_t;
 
@@ -82,6 +86,7 @@ typedef struct {
   sync_mode_t sync_mode;
   bool reverse;    // Direction de l'animation (pour compatibilité)
   led_zone_t zone; // Zone d'application (full, left, right)
+  bool audio_reactive; // L'effet réagit au micro si activé
 } effect_config_t;
 
 /**

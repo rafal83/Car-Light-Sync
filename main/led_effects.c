@@ -11,6 +11,7 @@
 #include "nvs_flash.h"
 #include "soc/soc_caps.h"
 #include "config_manager.h"
+#include "audio_input.h"
 #include <math.h>
 #include <string.h>
 
@@ -76,7 +77,7 @@ static rgb_t color_to_rgb(uint32_t color) {
 
 static void fill_solid(rgb_t color);
 
-// Applique la luminosité à une couleur (avec prise en compte du mode nuit)
+// Applique la luminosité à une couleur (avec prise en compte du mode nuit et audio)
 static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   rgb_t result;
   // Apply effect brightness
@@ -89,6 +90,19 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
     result.r = (result.r * night_mode_brightness) / 255;
     result.g = (result.g * night_mode_brightness) / 255;
     result.b = (result.b * night_mode_brightness) / 255;
+  }
+
+  // Apply audio reactive modulation if enabled
+  if (current_config.audio_reactive && audio_input_is_enabled()) {
+    audio_data_t audio_data;
+    if (audio_input_get_data(&audio_data)) {
+      // Moduler la luminosité avec l'amplitude audio (10% base + 90% audio)
+      // Cela donne une variation très visible de 10% à 100%
+      float audio_factor = 0.1f + (audio_data.amplitude * 0.9f);
+      result.r = (uint8_t)(result.r * audio_factor);
+      result.g = (uint8_t)(result.g * audio_factor);
+      result.b = (uint8_t)(result.b * audio_factor);
+    }
   }
 
   return result;
@@ -991,6 +1005,66 @@ static void effect_vehicle_sync(void) {
   fill_solid(base_color);
 }
 
+// Effet: Audio Réactif (VU-mètre)
+static void effect_audio_reactive(void) {
+  audio_data_t audio_data;
+  if (!audio_input_get_data(&audio_data)) {
+    // Pas de données audio, afficher noir
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
+
+  // VU-mètre: remplir selon l'amplitude
+  int lit_leds = (int)(audio_data.amplitude * led_count);
+  if (lit_leds > led_count) lit_leds = led_count;
+
+  rgb_t base_color = color_to_rgb(current_config.color1);
+
+  for (int i = 0; i < led_count; i++) {
+    if (i < lit_leds) {
+      // Couleur dégradée selon le niveau
+      float intensity = (float)(i + 1) / lit_leds;
+      rgb_t color;
+      color.r = (uint8_t)(base_color.r * intensity);
+      color.g = (uint8_t)(base_color.g * intensity);
+      color.b = (uint8_t)(base_color.b * intensity);
+      leds[i] = apply_brightness(color, current_config.brightness);
+    } else {
+      leds[i] = (rgb_t){0, 0, 0};
+    }
+  }
+}
+
+// Effet: Audio BPM (flash sur les battements)
+static void effect_audio_bpm(void) {
+  audio_data_t audio_data;
+  if (!audio_input_get_data(&audio_data)) {
+    // Pas de données audio, afficher noir
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
+
+  rgb_t color = color_to_rgb(current_config.color1);
+
+  // Si battement détecté récemment (dans les dernières 100ms)
+  uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+  uint32_t time_since_beat = now - audio_data.last_beat_ms;
+
+  if (audio_data.beat_detected || time_since_beat < 100) {
+    // Flash sur le battement avec decay
+    float decay = 1.0f - (time_since_beat / 100.0f);
+    if (decay < 0.0f) decay = 0.0f;
+
+    uint8_t flash_brightness = (uint8_t)(current_config.brightness * decay);
+    color = apply_brightness(color, flash_brightness);
+    fill_solid(color);
+  } else {
+    // Couleur faible entre les battements
+    color = apply_brightness(color, current_config.brightness / 4);
+    fill_solid(color);
+  }
+}
+
 // Table des fonctions d'effets
 typedef void (*effect_func_t)(void);
 static const effect_func_t effect_functions[] = {
@@ -1013,6 +1087,8 @@ static const effect_func_t effect_functions[] = {
     [EFFECT_BRAKE_LIGHT] = effect_brake_light,
     [EFFECT_CHARGE_STATUS] = effect_charge_status,
     [EFFECT_BLINDSPOT_FLASH] = effect_blindspot_flash,
+    [EFFECT_AUDIO_REACTIVE] = effect_audio_reactive,
+    [EFFECT_AUDIO_BPM] = effect_audio_bpm,
 };
 
 typedef struct {
@@ -1043,6 +1119,8 @@ static const led_effect_descriptor_t effect_descriptors[] = {
     {EFFECT_HAZARD, EFFECT_ID_HAZARD, "Hazard", true},
     {EFFECT_BLINDSPOT_FLASH, EFFECT_ID_BLINDSPOT_FLASH, "Blindspot Flash",
      true},
+    {EFFECT_AUDIO_REACTIVE, EFFECT_ID_AUDIO_REACTIVE, "Audio Reactive", false},
+    {EFFECT_AUDIO_BPM, EFFECT_ID_AUDIO_BPM, "Audio BPM", false},
 };
 
 #define EFFECT_DESCRIPTOR_COUNT                                                \
@@ -1140,6 +1218,8 @@ bool led_effects_apply_hardware_config(uint16_t requested_led_count,
 void led_effects_set_config(const effect_config_t *config) {
   if (config != NULL) {
     memcpy(&current_config, config, sizeof(effect_config_t));
+    ESP_LOGI(TAG, "Effet configuré: %d, audio_reactive=%d",
+             current_config.effect, current_config.audio_reactive);
   }
 }
 
@@ -1438,6 +1518,7 @@ void led_effects_reset_config(void) {
   current_config.color3 = 0x0000FF; // Bleu
   current_config.sync_mode = SYNC_OFF;
   current_config.reverse = false;
+  current_config.audio_reactive = false;
 
   ESP_LOGI(TAG, "Configuration réinitialisée");
 }

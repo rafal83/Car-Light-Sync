@@ -20,6 +20,7 @@
 #include "web_server.h"
 #include "wifi_credentials.h" // Configuration WiFi optionnelle
 #include "wifi_manager.h"
+#include "audio_input.h"
 
 // La config est générée par generate_vehicle_can_config.py
 #include "vehicle_can_unified_config.h"
@@ -362,7 +363,7 @@ void app_main(void) {
   esp_log_level_set("LEDStrip", ESP_LOG_INFO);
   esp_log_level_set("ConfigMgr", ESP_LOG_INFO);
   esp_log_level_set("OTA", ESP_LOG_INFO);
-  esp_log_level_set("BLE_API", ESP_LOG_INFO);
+  // esp_log_level_set("BLE_API", ESP_LOG_INFO);
 
   ESP_LOGI(TAG, "=================================");
   ESP_LOGI(TAG, "        Car Light Sync           ");
@@ -412,6 +413,13 @@ void app_main(void) {
     return;
   }
   ESP_LOGI(TAG, "✓ Gestionnaire de configuration initialisé");
+
+  // Module audio (micro INMP441)
+  if (!audio_input_init()) {
+    ESP_LOGW(TAG, "Module audio non disponible (optionnel)");
+  } else {
+    ESP_LOGI(TAG, "✓ Module audio initialisé");
+  }
 
 #if CONFIG_BT_ENABLED
   esp_err_t ble_init_status = ble_api_service_init();

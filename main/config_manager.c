@@ -1089,6 +1089,9 @@ void config_manager_update(void) {
     // Priorité au FULL si présent, sinon combiner LEFT/RIGHT
     if (full_active) {
       // Effet FULL avec la plus haute priorité
+      ESP_LOGI(TAG, "Événement '%s' actif écrase l'effet par défaut (priorité=%d)",
+               config_manager_get_event_name(active_events[full_slot].event),
+               active_events[full_slot].priority);
       led_effects_set_config(&active_events[full_slot].effect_config);
       effect_override_active = true;
     } else if (left_active && right_active) {
