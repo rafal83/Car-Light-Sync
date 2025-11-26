@@ -205,15 +205,17 @@ Lorsque vous sélectionnez l'un de ces effets, le backend active automatiquement
 - `EFFECT_FFT_ENERGY_BAR` (63)
 
 ### Architecture Backend-Driven
-- **Backend** ([web_server.c:302-315](main/web_server.c:302-315)) : Lors de l'application d'un effet via `/api/effect`, le backend :
+- **Core LED** ([led_effects.c:1382-1388](main/led_effects.c:1382-1388)) : Lors de l'application d'un effet via `led_effects_set_config()` :
   1. Vérifie si l'effet nécessite le FFT via `led_effects_requires_fft()`
   2. Active/désactive automatiquement le FFT via `audio_input_set_fft_enabled()`
   3. Log l'activation : `"Effet X configuré, FFT activé/désactivé"`
+  4. **Fonctionne quel que soit la source** : HTTP, profil, événement CAN, etc.
 
 - **Frontend** ([script.js:2843-2847](data/script.js:2843-2847)) : L'interface ne fait **aucune décision** :
   1. Recharge simplement l'état FFT depuis `/api/audio/status` après application d'un effet
   2. Affiche/masque la section FFT selon l'état renvoyé par le backend
   3. Aucune logique de décision côté client
+  4. **Zéro couplage** avec la logique métier
 
 ### Avantages
 - ✅ **Architecture propre** : Le backend décide, le frontend affiche
