@@ -1623,6 +1623,35 @@ bool led_effects_requires_can(led_effect_t effect) {
   return desc ? desc->requires_can : false;
 }
 
+bool led_effects_requires_fft(led_effect_t effect) {
+  switch (effect) {
+  case EFFECT_AUDIO_REACTIVE:
+  case EFFECT_AUDIO_BPM:
+  case EFFECT_FFT_SPECTRUM:
+  case EFFECT_FFT_BASS_PULSE:
+  case EFFECT_FFT_VOCAL_WAVE:
+  case EFFECT_FFT_ENERGY_BAR:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool led_effects_is_audio_effect(led_effect_t effect) {
+  // Tous les effets audio ne peuvent pas être assignés aux événements CAN
+  switch (effect) {
+  case EFFECT_AUDIO_REACTIVE:
+  case EFFECT_AUDIO_BPM:
+  case EFFECT_FFT_SPECTRUM:
+  case EFFECT_FFT_BASS_PULSE:
+  case EFFECT_FFT_VOCAL_WAVE:
+  case EFFECT_FFT_ENERGY_BAR:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool led_effects_save_config(void) {
   nvs_handle_t nvs_handle;
   esp_err_t ret = nvs_open("led_config", NVS_READWRITE, &nvs_handle);

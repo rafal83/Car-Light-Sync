@@ -241,6 +241,20 @@ led_effect_t led_effects_id_to_enum(const char *id);
 bool led_effects_requires_can(led_effect_t effect);
 
 /**
+ * @brief Vérifie si un effet nécessite le FFT audio
+ * @param effect Type d'effet
+ * @return true si l'effet nécessite le FFT, false sinon
+ */
+bool led_effects_requires_fft(led_effect_t effect);
+
+/**
+ * @brief Vérifie si un effet est audio-réactif (donc non sélectionnable dans les événements CAN)
+ * @param effect Type d'effet
+ * @return true si l'effet est audio-réactif, false sinon
+ */
+bool led_effects_is_audio_effect(led_effect_t effect);
+
+/**
  * @brief Active l'affichage de progression OTA sur la strip
  */
 void led_effects_start_progress_display(void);

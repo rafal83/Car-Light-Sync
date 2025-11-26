@@ -301,12 +301,16 @@ static esp_err_t effect_handler(httpd_req_t *req) {
 
   led_effects_set_config(&config);
 
+  // Activer/désactiver automatiquement le FFT selon l'effet
+  bool needs_fft = led_effects_requires_fft(config.effect);
+  audio_input_set_fft_enabled(needs_fft);
+  ESP_LOGI(TAG, "Effet %d configuré, FFT %s", config.effect,
+           needs_fft ? "activé" : "désactivé");
+
   cJSON_Delete(root);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
-
-  ESP_LOGI(TAG, "Effet configuré: %d", config.effect);
 
   return ESP_OK;
 }
@@ -860,6 +864,15 @@ static esp_err_t event_effect_handler(httpd_req_t *req) {
   if (event && effect) {
     effect_config_t effect_config;
     effect_config.effect = effect->valueint;
+
+    // Vérifier que l'effet n'est pas un effet audio (non autorisé dans les événements)
+    if (led_effects_is_audio_effect(effect_config.effect)) {
+      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                          "Audio effects cannot be assigned to CAN events");
+      cJSON_Delete(root);
+      return ESP_FAIL;
+    }
+
     effect_config.brightness = brightness ? brightness->valueint : 128;
     effect_config.speed = speed ? speed->valueint : 50;
     effect_config.color1 = color1 ? color1->valueint : 0xFF0000;
@@ -1171,6 +1184,8 @@ static esp_err_t effects_list_handler(httpd_req_t *req) {
                             led_effects_get_name((led_effect_t)i));
     cJSON_AddBoolToObject(effect, "can_required",
                           led_effects_requires_can((led_effect_t)i));
+    cJSON_AddBoolToObject(effect, "audio_effect",
+                          led_effects_is_audio_effect((led_effect_t)i));
     cJSON_AddItemToArray(effects, effect);
   }
 

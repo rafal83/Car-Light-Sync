@@ -2422,8 +2422,9 @@ async function applyEffect() {
             body: JSON.stringify(config)
         });
 
-        // Activer automatiquement le FFT si l'effet le nécessite
-        await autoEnableFFT(effectId);
+        // Le backend active automatiquement le FFT si l'effet le nécessite
+        // Recharger le statut FFT pour mettre à jour l'affichage
+        await loadFFTStatus();
     } catch (e) {
         console.error('Erreur:', e);
     }
@@ -2792,47 +2793,6 @@ async function updateAudioData() {
 
 let audioFFTEnabled = false;
 
-// Effets qui nécessitent le FFT (basés sur led_effects.h)
-const FFT_REQUIRED_EFFECTS = [
-    58, // EFFECT_AUDIO_REACTIVE
-    59, // EFFECT_AUDIO_BPM
-    60, // EFFECT_FFT_SPECTRUM
-    61, // EFFECT_FFT_BASS_PULSE
-    62, // EFFECT_FFT_VOCAL_WAVE
-    63  // EFFECT_FFT_ENERGY_BAR
-];
-
-// Vérifie si un effet nécessite le FFT
-function effectRequiresFFT(effectId) {
-    return FFT_REQUIRED_EFFECTS.includes(parseInt(effectId));
-}
-
-// Active/désactive automatiquement le FFT selon l'effet
-async function autoEnableFFT(effectId) {
-    const needsFFT = effectRequiresFFT(effectId);
-
-    if (needsFFT !== audioFFTEnabled) {
-        audioFFTEnabled = needsFFT;
-
-        // Envoyer la requête au backend pour activer/désactiver le FFT
-        try {
-            await fetch(API_BASE + '/api/audio/fft/enable', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: needsFFT })
-            });
-
-            // Afficher/masquer la section FFT
-            const fftBox = document.getElementById('fftStatusBox');
-            if (fftBox) {
-                fftBox.style.display = needsFFT ? 'block' : 'none';
-            }
-        } catch (error) {
-            console.error('Failed to auto-enable FFT:', error);
-        }
-    }
-}
-
 // Draw FFT spectrum on canvas
 function drawFFTSpectrum(bands) {
     const canvas = document.getElementById('fftSpectrumCanvas');
@@ -2879,16 +2839,11 @@ async function loadFFTStatus() {
         const audioData = await audioResponse.json();
         audioFFTEnabled = audioData.fftEnabled || false;
 
-        // Charger l'effet actuel pour vérifier s'il nécessite le FFT
-        const configResponse = await fetch(API_BASE + '/api/config');
-        const config = await configResponse.json();
-        const currentEffect = config.effect;
-
-        // N'afficher la section FFT que si l'effet actuel le nécessite
-        const needsFFT = effectRequiresFFT(currentEffect);
+        // Le backend décide si le FFT doit être activé selon l'effet
+        // Afficher la section FFT uniquement si le FFT est activé
         const fftBox = document.getElementById('fftStatusBox');
         if (fftBox) {
-            fftBox.style.display = (audioFFTEnabled && needsFFT) ? 'block' : 'none';
+            fftBox.style.display = audioFFTEnabled ? 'block' : 'none';
         }
     } catch (error) {
         console.error('Failed to load FFT status:', error);
@@ -3398,11 +3353,16 @@ async function loadEffects() {
                 select.innerHTML = '';
                 // Pour les sélecteurs d'effet par défaut et d'effet manuel,
                 // filtrer les effets qui nécessitent le CAN bus
+                // Pour le sélecteur d'événement, filtrer aussi les effets audio
                 const isEventSelector = select.id === 'event-effect-select';
                 effectsList.forEach(effect => {
                     // Filtrer les effets CAN si ce n'est pas le sélecteur d'événement
                     if (!isEventSelector && effect.can_required) {
                         return; // Skip cet effet
+                    }
+                    // Filtrer les effets audio si c'est le sélecteur d'événement
+                    if (isEventSelector && effect.audio_effect) {
+                        return; // Skip cet effet audio
                     }
                     const option = document.createElement('option');
                     option.value = effect.id;
