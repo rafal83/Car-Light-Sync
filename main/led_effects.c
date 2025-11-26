@@ -1378,8 +1378,14 @@ bool led_effects_apply_hardware_config(uint16_t requested_led_count,
 void led_effects_set_config(const effect_config_t *config) {
   if (config != NULL) {
     memcpy(&current_config, config, sizeof(effect_config_t));
-    ESP_LOGI(TAG, "Effet configuré: %d, audio_reactive=%d",
-             current_config.effect, current_config.audio_reactive);
+
+    // Activer/désactiver automatiquement le FFT selon l'effet
+    bool needs_fft = led_effects_requires_fft(current_config.effect);
+    audio_input_set_fft_enabled(needs_fft);
+
+    ESP_LOGI(TAG, "Effet configuré: %d, audio_reactive=%d, FFT %s",
+             current_config.effect, current_config.audio_reactive,
+             needs_fft ? "activé" : "désactivé");
   }
 }
 

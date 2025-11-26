@@ -301,12 +301,6 @@ static esp_err_t effect_handler(httpd_req_t *req) {
 
   led_effects_set_config(&config);
 
-  // Activer/désactiver automatiquement le FFT selon l'effet
-  bool needs_fft = led_effects_requires_fft(config.effect);
-  audio_input_set_fft_enabled(needs_fft);
-  ESP_LOGI(TAG, "Effet %d configuré, FFT %s", config.effect,
-           needs_fft ? "activé" : "désactivé");
-
   cJSON_Delete(root);
 
   httpd_resp_set_type(req, "application/json");
