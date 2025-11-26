@@ -2002,9 +2002,11 @@ function renderEventsTable() {
             </td>
             <td>
                 <select data-effect-options="true" onchange="updateEventConfig(${index}, 'effect', this.value)" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
-                    ${effectsList.map(effect =>
-                        `<option value="${effect.id}" data-effect-name="${effect.name}" ${event.effect == effect.id ? 'selected' : ''}>${getEffectName(effect.id)}</option>`
-                    ).join('')}
+                    ${effectsList
+                        .filter(effect => !effect.audio_effect)
+                        .map(effect =>
+                            `<option value="${effect.id}" data-effect-name="${effect.name}" ${event.effect == effect.id ? 'selected' : ''}>${getEffectName(effect.id)}</option>`
+                        ).join('')}
                 </select>
             </td>
             <td>
