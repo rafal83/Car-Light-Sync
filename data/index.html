@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Car Light Sync</title>
-    <link rel="icon" type="image/png" href="carlightsync.png">
+    <link rel="icon" type="image/png" href="carlightsync64.png">
     <link href="style.css" rel="stylesheet" />
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="header-logo">
-                <img src="carlightsync.png" alt="Car Light Sync Logo">
+                <img src="carlightsync64.png" alt="Car Light Sync Logo">
             </div>
             <div class="header-content">
                 <h1 data-i18n="app.title">Car Light Sync</h1>
@@ -185,12 +185,20 @@
                     <div class="vehicle-value" id="v-brightness">--</div>
                 </div>
                 <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft">Angle Mort G</div>
-                    <div class="vehicle-value" id="v-blindspot-left">--</div>
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft_lv1">Angle Mort G Niv1</div>
+                    <div class="vehicle-value" id="v-blindspot-left-lv1">--</div>
                 </div>
                 <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight">Angle Mort D</div>
-                    <div class="vehicle-value" id="v-blindspot-right">--</div>
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft_lv2">Angle Mort G Niv2</div>
+                    <div class="vehicle-value" id="v-blindspot-left-lv2">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight_lv1">Angle Mort D Niv1</div>
+                    <div class="vehicle-value" id="v-blindspot-right-lv1">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight_lv2">Angle Mort D Niv2</div>
+                    <div class="vehicle-value" id="v-blindspot-right-lv2">--</div>
                 </div>
             </div>
             <div class="section-subtitle" data-i18n="vehicle.sentryTitle">Mode Sentry</div>
@@ -216,23 +224,23 @@
             <div id="profiles-notification" class="notification"></div>
             <div class="control-group">
                 <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
-                <select id="profile-select">
+                <select id="profile-select" onchange="activateProfile()">
                     <option value="-1" data-i18n="profiles.loading">Chargement...</option>
                 </select>
             </div>
-            <button class="btn-primary" onclick="activateProfile()" data-i18n="profiles.activate">Activer</button>
+            <!-- <button class="btn-primary" onclick="activateProfile()" data-i18n="profiles.activate">Activer</button> -->
             <button class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
             <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
             <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
             <button class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
             <div class="checkbox-container" style="margin-top: 20px;">
-                <input type="checkbox" id="auto-night-mode" onchange="saveProfileSettings()">
+                <input type="checkbox" id="auto-night-mode">
                 <label for="auto-night-mode" data-i18n="profiles.autoNightMode">Mode nuit automatique (basé sur CAN)</label>
             </div>
             <div class="control-group" style="margin-top: 10px;">
                 <label class="control-label" data-i18n="profiles.nightBrightness">Luminosité Mode Nuit</label>
                 <div class="slider-container">
-                    <input type="range" id="night-brightness-slider" min="0" max="100" value="12" onchange="saveProfileSettings()">
+                    <input type="range" id="night-brightness-slider" min="0" max="100" value="12">
                     <span class="slider-value" id="night-brightness-value">12%</span>
                 </div>
             </div>
@@ -517,6 +525,7 @@
     </div>
 </div>
 </body>
+<script src="i18n.js"></script>
 <script src="script.js"></script>
 </html>
 

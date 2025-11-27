@@ -7,6 +7,7 @@ import os
 # Liste des fichiers à compresser
 files_to_compress = [
     "data/index.html",
+    "data/i18n.js",
     "data/script.js",
     "data/style.css",
 ]
@@ -21,12 +22,12 @@ def compress_file(source_file):
 
     # Vérifier si le fichier .gz existe et est à jour
     needs_compression = True
-    # if os.path.exists(gz_file):
-    #     source_mtime = os.path.getmtime(source_file)
-    #     gz_mtime = os.path.getmtime(gz_file)
-    #     if gz_mtime >= source_mtime:
-    #         needs_compression = False
-    #         print("Skip {} (already up-to-date)".format(source_file))
+    if os.path.exists(gz_file):
+        source_mtime = os.path.getmtime(source_file)
+        gz_mtime = os.path.getmtime(gz_file)
+        if gz_mtime >= source_mtime:
+            needs_compression = False
+            print("Skip {} (already up-to-date)".format(source_file))
 
     if needs_compression:
         print("Compression de {}...".format(source_file))

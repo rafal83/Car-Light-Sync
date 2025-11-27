@@ -12,6 +12,7 @@
 #include "audio_input.h"
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -24,12 +25,14 @@ static esp_err_t event_single_post_handler(httpd_req_t *req);
 // HTML de la page principale (embarqué, version compressée GZIP)
 extern const uint8_t index_html_gz_start[] asm("_binary_index_html_gz_start");
 extern const uint8_t index_html_gz_end[] asm("_binary_index_html_gz_end");
+extern const uint8_t i18n_js_gz_start[] asm("_binary_i18n_js_gz_start");
+extern const uint8_t i18n_js_gz_end[] asm("_binary_i18n_js_gz_end");
 extern const uint8_t script_js_gz_start[] asm("_binary_script_js_gz_start");
 extern const uint8_t script_js_gz_end[] asm("_binary_script_js_gz_end");
 extern const uint8_t style_css_gz_start[] asm("_binary_style_css_gz_start");
 extern const uint8_t style_css_gz_end[] asm("_binary_style_css_gz_end");
-extern const uint8_t carlightsync_png_start[] asm("_binary_carlightsync_png_start");
-extern const uint8_t carlightsync_png_end[] asm("_binary_carlightsync_png_end");
+extern const uint8_t carlightsync64_png_start[] asm("_binary_carlightsync64_png_start");
+extern const uint8_t carlightsync64_png_end[] asm("_binary_carlightsync64_png_end");
 
 // Structure pour les handler des fichiers statiques
 typedef struct {
@@ -55,6 +58,13 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
   static_file_route_t *route = (static_file_route_t *)req->user_ctx;
   const size_t file_size = (route->end - route->start);
 
+  // Vérifier si la connexion est toujours valide
+  int sockfd = httpd_req_to_sockfd(req);
+  if (sockfd < 0) {
+    ESP_LOGW(TAG_WEBSERVER, "Socket invalide pour URI %s", route->uri);
+    return ESP_FAIL;
+  }
+
   httpd_resp_set_type(req, route->content_type);
   if (route->cache_control) {
     httpd_resp_set_hdr(req, "Cache-Control", route->cache_control);
@@ -63,10 +73,47 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     httpd_resp_set_hdr(req, "Content-Encoding", route->content_encoding);
   }
 
+  // Fermer la connexion après l'envoi (désactive keep-alive pour cette requête)
+  httpd_resp_set_hdr(req, "Connection", "close");
+
+  // Pour les fichiers > 8KB, envoyer par chunks pour éviter EAGAIN
+  #define CHUNK_SIZE 4096
+  if (file_size > 8192) {
+    const uint8_t *data = route->start;
+    size_t remaining = file_size;
+    esp_err_t err = ESP_OK;
+
+    while (remaining > 0 && err == ESP_OK) {
+      size_t chunk_size = (remaining > CHUNK_SIZE) ? CHUNK_SIZE : remaining;
+      err = httpd_resp_send_chunk(req, (const char *)data, chunk_size);
+      if (err != ESP_OK) {
+        ESP_LOGW(TAG_WEBSERVER, "Erreur envoi chunk pour %s: %s (errno: %d)",
+                 route->uri, esp_err_to_name(err), errno);
+        break;
+      }
+      data += chunk_size;
+      remaining -= chunk_size;
+      // Petit délai pour laisser le buffer TCP se vider
+      if (remaining > 0) {
+        vTaskDelay(pdMS_TO_TICKS(1));
+      }
+    }
+    // Terminer l'envoi chunké
+    if (err == ESP_OK) {
+      err = httpd_resp_send_chunk(req, NULL, 0);
+    }
+    return err;
+  }
+
+  // Pour les petits fichiers, envoi normal
   esp_err_t err = httpd_resp_send(req, (const char *)route->start, file_size);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG_WEBSERVER, "Erreur envoi fichier statique pour URI %s: %s", route->uri,
-             esp_err_to_name(err));
+    ESP_LOGW(TAG_WEBSERVER, "Erreur envoi fichier statique pour URI %s: %s (errno: %d)",
+             route->uri, esp_err_to_name(err), errno);
+    // Ne pas considérer EAGAIN comme une erreur fatale
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      ESP_LOGW(TAG_WEBSERVER, "Socket bloquée, connexion sera fermée");
+    }
   }
   return err;
 }
@@ -99,83 +146,85 @@ static esp_err_t status_handler(httpd_req_t *req) {
   // Statut WiFi
   wifi_status_t wifi_status;
   wifi_manager_get_status(&wifi_status);
-  cJSON_AddBoolToObject(root, "wifi_connected", wifi_status.sta_connected);
-  cJSON_AddStringToObject(root, "wifi_ip", wifi_status.sta_ip);
+  cJSON_AddBoolToObject(root, "wc", wifi_status.sta_connected);
+  cJSON_AddStringToObject(root, "wip", wifi_status.sta_ip);
 
   // Statut CAN Bus
   can_bus_status_t can_status;
   can_bus_get_status(&can_status);
-  cJSON_AddBoolToObject(root, "can_bus_running", can_status.running);
+  cJSON_AddBoolToObject(root, "cbr", can_status.running);
 
   // Statut véhicule
   uint32_t now = xTaskGetTickCount();
   bool vehicle_active =
       (now - current_vehicle_state.last_update_ms) < pdMS_TO_TICKS(5000);
-  cJSON_AddBoolToObject(root, "vehicle_active", vehicle_active);
+  cJSON_AddBoolToObject(root, "va", vehicle_active);
 
   // Données véhicule complètes
   cJSON *vehicle = cJSON_CreateObject();
 
   // État général
-  cJSON_AddNumberToObject(vehicle, "gear", current_vehicle_state.gear);
-  cJSON_AddNumberToObject(vehicle, "speed", current_vehicle_state.speed_kph);
-  cJSON_AddNumberToObject(vehicle, "brake_pressed",
+  cJSON_AddNumberToObject(vehicle, "g", current_vehicle_state.gear);
+  cJSON_AddNumberToObject(vehicle, "s", current_vehicle_state.speed_kph);
+  cJSON_AddNumberToObject(vehicle, "bp",
                           current_vehicle_state.brake_pressed);
 
   // Portes
   cJSON *doors = cJSON_CreateObject();
-  cJSON_AddBoolToObject(doors, "front_left",
+  cJSON_AddBoolToObject(doors, "fl",
                         current_vehicle_state.door_front_left_open);
-  cJSON_AddBoolToObject(doors, "front_right",
+  cJSON_AddBoolToObject(doors, "fr",
                         current_vehicle_state.door_front_right_open);
-  cJSON_AddBoolToObject(doors, "rear_left",
+  cJSON_AddBoolToObject(doors, "rl",
                         current_vehicle_state.door_rear_left_open);
-  cJSON_AddBoolToObject(doors, "rear_right",
+  cJSON_AddBoolToObject(doors, "rr",
                         current_vehicle_state.door_rear_right_open);
-  cJSON_AddBoolToObject(doors, "trunk", current_vehicle_state.trunk_open);
-  cJSON_AddBoolToObject(doors, "frunk", current_vehicle_state.frunk_open);
-  cJSON_AddNumberToObject(doors, "count_open",
+  cJSON_AddBoolToObject(doors, "t", current_vehicle_state.trunk_open);
+  cJSON_AddBoolToObject(doors, "f", current_vehicle_state.frunk_open);
+  cJSON_AddNumberToObject(doors, "co",
                           current_vehicle_state.doors_open_count);
   cJSON_AddItemToObject(vehicle, "doors", doors);
 
   // Verrouillage
-  cJSON_AddBoolToObject(vehicle, "locked", current_vehicle_state.locked);
+  cJSON_AddBoolToObject(vehicle, "lk", current_vehicle_state.locked);
 
   // Lumières
   cJSON *lights = cJSON_CreateObject();
-  cJSON_AddBoolToObject(lights, "headlights", current_vehicle_state.headlights);
-  cJSON_AddBoolToObject(lights, "high_beams", current_vehicle_state.high_beams);
-  cJSON_AddBoolToObject(lights, "fog_lights", current_vehicle_state.fog_lights);
-  cJSON_AddBoolToObject(lights, "turn_left", current_vehicle_state.turn_left);
-  cJSON_AddBoolToObject(lights, "turn_right", current_vehicle_state.turn_right);
+  cJSON_AddBoolToObject(lights, "h", current_vehicle_state.headlights);
+  cJSON_AddBoolToObject(lights, "hb", current_vehicle_state.high_beams);
+  cJSON_AddBoolToObject(lights, "fg", current_vehicle_state.fog_lights);
+  cJSON_AddBoolToObject(lights, "tl", current_vehicle_state.turn_left);
+  cJSON_AddBoolToObject(lights, "tr", current_vehicle_state.turn_right);
   cJSON_AddItemToObject(vehicle, "lights", lights);
 
   // Charge
   cJSON *charge = cJSON_CreateObject();
-  cJSON_AddBoolToObject(charge, "charging", current_vehicle_state.charging);
-  cJSON_AddNumberToObject(charge, "percent", current_vehicle_state.soc_percent);
-  cJSON_AddNumberToObject(charge, "power_kw",
+  cJSON_AddBoolToObject(charge, "ch", current_vehicle_state.charging);
+  cJSON_AddNumberToObject(charge, "pct", current_vehicle_state.soc_percent);
+  cJSON_AddNumberToObject(charge, "pw",
                           current_vehicle_state.charge_power_kw);
   cJSON_AddItemToObject(vehicle, "charge", charge);
 
   // Batterie et autres
-  cJSON_AddNumberToObject(vehicle, "battery_lv",
+  cJSON_AddNumberToObject(vehicle, "blv",
                           current_vehicle_state.battery_voltage_LV);
-  cJSON_AddNumberToObject(vehicle, "battery_hv",
+  cJSON_AddNumberToObject(vehicle, "bhv",
                           current_vehicle_state.battery_voltage_HV);
-  cJSON_AddNumberToObject(vehicle, "odometer_km",
+  cJSON_AddNumberToObject(vehicle, "odo",
                           current_vehicle_state.odometer_km);
 
   // Sécurité
   cJSON *safety = cJSON_CreateObject();
-  cJSON_AddBoolToObject(safety, "blindspot_left",
-                        current_vehicle_state.blindspot_left);
-  cJSON_AddBoolToObject(safety, "blindspot_right",
-                        current_vehicle_state.blindspot_right);
-  cJSON_AddBoolToObject(safety, "blindspot_warning",
-                        current_vehicle_state.blindspot_warning);
-  cJSON_AddBoolToObject(safety, "night_mode", current_vehicle_state.night_mode);
-  cJSON_AddNumberToObject(safety, "brightness",
+  cJSON_AddBoolToObject(safety, "bl1",
+                        current_vehicle_state.blindspot_left_lv1);
+  cJSON_AddBoolToObject(safety, "bl2",
+                        current_vehicle_state.blindspot_left_lv2);
+  cJSON_AddBoolToObject(safety, "br1",
+                        current_vehicle_state.blindspot_right_lv1);
+  cJSON_AddBoolToObject(safety, "br2",
+                        current_vehicle_state.blindspot_right_lv2);
+  cJSON_AddBoolToObject(safety, "nm", current_vehicle_state.night_mode);
+  cJSON_AddNumberToObject(safety, "br",
                           current_vehicle_state.brightness);
   cJSON_AddItemToObject(vehicle, "safety", safety);
 
@@ -183,13 +232,13 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
   // Profil actuellement appliqué (peut changer temporairement via évènements)
   int active_profile_id = config_manager_get_active_profile_id();
-  cJSON_AddNumberToObject(root, "active_profile_id", active_profile_id);
+  cJSON_AddNumberToObject(root, "pid", active_profile_id);
   config_profile_t *active_profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (active_profile && config_manager_get_active_profile(active_profile)) {
-    cJSON_AddStringToObject(root, "active_profile_name", active_profile->name);
+    cJSON_AddStringToObject(root, "pn", active_profile->name);
   } else {
-    cJSON_AddStringToObject(root, "active_profile_name", "None");
+    cJSON_AddStringToObject(root, "pn", "None");
   }
   if (active_profile) {
     free(active_profile);
@@ -211,22 +260,22 @@ static esp_err_t config_handler(httpd_req_t *req) {
   led_effects_get_config(&config);
 
   cJSON *root = cJSON_CreateObject();
-  cJSON_AddNumberToObject(root, "effect", config.effect);
-  cJSON_AddNumberToObject(root, "brightness", config.brightness);
-  cJSON_AddNumberToObject(root, "speed", config.speed);
-  cJSON_AddNumberToObject(root, "color1", config.color1);
-  cJSON_AddNumberToObject(root, "color2", config.color2);
-  cJSON_AddNumberToObject(root, "color3", config.color3);
-  cJSON_AddNumberToObject(root, "sync_mode", config.sync_mode);
-  cJSON_AddBoolToObject(root, "reverse", config.reverse);
+  cJSON_AddNumberToObject(root, "fx", config.effect);
+  cJSON_AddNumberToObject(root, "br", config.brightness);
+  cJSON_AddNumberToObject(root, "sp", config.speed);
+  cJSON_AddNumberToObject(root, "c1", config.color1);
+  cJSON_AddNumberToObject(root, "c2", config.color2);
+  cJSON_AddNumberToObject(root, "c3", config.color3);
+  cJSON_AddNumberToObject(root, "sm", config.sync_mode);
+  cJSON_AddBoolToObject(root, "rv", config.reverse);
 
   // Ajouter les paramètres du profil actif (allouer dynamiquement pour éviter
   // stack overflow)
   config_profile_t *profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile != NULL && config_manager_get_active_profile(profile)) {
-    cJSON_AddBoolToObject(root, "auto_night_mode", profile->auto_night_mode);
-    cJSON_AddNumberToObject(root, "night_brightness",
+    cJSON_AddBoolToObject(root, "anm", profile->auto_night_mode);
+    cJSON_AddNumberToObject(root, "nbr",
                             profile->night_brightness);
     free(profile);
   } else if (profile != NULL) {
@@ -234,11 +283,11 @@ static esp_err_t config_handler(httpd_req_t *req) {
   }
 
   // Ajouter la configuration matérielle LED
-  cJSON_AddNumberToObject(root, "led_count", config_manager_get_led_count());
-  cJSON_AddNumberToObject(root, "data_pin", config_manager_get_led_pin());
+  cJSON_AddNumberToObject(root, "lc", config_manager_get_led_count());
+  cJSON_AddNumberToObject(root, "dp", config_manager_get_led_pin());
 
   // Ajouter la configuration du sens de la strip
-  cJSON_AddBoolToObject(root, "strip_reverse", led_effects_get_reverse());
+  cJSON_AddBoolToObject(root, "srv", led_effects_get_reverse());
 
   const char *json_string = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -273,27 +322,27 @@ static esp_err_t effect_handler(httpd_req_t *req) {
   effect_config_t config;
   led_effects_get_config(&config);
 
-  const cJSON *effect = cJSON_GetObjectItem(root, "effect");
+  const cJSON *effect = cJSON_GetObjectItem(root, "fx");
   if (effect)
     config.effect = effect->valueint;
 
-  const cJSON *brightness = cJSON_GetObjectItem(root, "brightness");
+  const cJSON *brightness = cJSON_GetObjectItem(root, "br");
   if (brightness)
     config.brightness = brightness->valueint;
 
-  const cJSON *speed = cJSON_GetObjectItem(root, "speed");
+  const cJSON *speed = cJSON_GetObjectItem(root, "sp");
   if (speed)
     config.speed = speed->valueint;
 
-  const cJSON *color1 = cJSON_GetObjectItem(root, "color1");
+  const cJSON *color1 = cJSON_GetObjectItem(root, "c1");
   if (color1)
     config.color1 = color1->valueint;
 
-  const cJSON *color2 = cJSON_GetObjectItem(root, "color2");
+  const cJSON *color2 = cJSON_GetObjectItem(root, "c2");
   if (color2)
     config.color2 = color2->valueint;
 
-  const cJSON *color3 = cJSON_GetObjectItem(root, "color3");
+  const cJSON *color3 = cJSON_GetObjectItem(root, "c3");
   if (color3)
     config.color3 = color3->valueint;
 
@@ -346,9 +395,9 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  const cJSON *led_count_json = cJSON_GetObjectItem(root, "led_count");
-  const cJSON *data_pin_json = cJSON_GetObjectItem(root, "data_pin");
-  const cJSON *strip_reverse_json = cJSON_GetObjectItem(root, "strip_reverse");
+  const cJSON *led_count_json = cJSON_GetObjectItem(root, "lc");
+  const cJSON *data_pin_json = cJSON_GetObjectItem(root, "dp");
+  const cJSON *strip_reverse_json = cJSON_GetObjectItem(root, "srv");
 
   if (led_count_json == NULL || data_pin_json == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
@@ -391,10 +440,10 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     }
 
     cJSON *response = cJSON_CreateObject();
-    cJSON_AddStringToObject(response, "status", "ok");
-    cJSON_AddStringToObject(response, "message",
+    cJSON_AddStringToObject(response, "st", "ok");
+    cJSON_AddStringToObject(response, "msg",
                             "Configuration saved and applied.");
-    cJSON_AddBoolToObject(response, "restart_required", false);
+    cJSON_AddBoolToObject(response, "rr", false);
 
     const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");
@@ -437,20 +486,20 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 
     cJSON *profile_obj = cJSON_CreateObject();
     cJSON_AddNumberToObject(profile_obj, "id", i);
-    cJSON_AddStringToObject(profile_obj, "name", profile->name);
-    cJSON_AddBoolToObject(profile_obj, "active", (i == active_id));
+    cJSON_AddStringToObject(profile_obj, "n", profile->name);
+    cJSON_AddBoolToObject(profile_obj, "ac", (i == active_id));
 
     // Ajouter l'effet par défaut
     cJSON *default_effect_obj = cJSON_CreateObject();
-    cJSON_AddNumberToObject(default_effect_obj, "effect",
+    cJSON_AddNumberToObject(default_effect_obj, "fx",
                             profile->default_effect.effect);
-    cJSON_AddNumberToObject(default_effect_obj, "brightness",
+    cJSON_AddNumberToObject(default_effect_obj, "br",
                             profile->default_effect.brightness);
-    cJSON_AddNumberToObject(default_effect_obj, "speed",
+    cJSON_AddNumberToObject(default_effect_obj, "sp",
                             profile->default_effect.speed);
-    cJSON_AddNumberToObject(default_effect_obj, "color1",
+    cJSON_AddNumberToObject(default_effect_obj, "c1",
                             profile->default_effect.color1);
-    cJSON_AddBoolToObject(default_effect_obj, "audio_reactive",
+    cJSON_AddBoolToObject(default_effect_obj, "ar",
                           profile->default_effect.audio_reactive);
     cJSON_AddItemToObject(profile_obj, "default_effect", default_effect_obj);
 
@@ -461,9 +510,9 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 
   // Charger le nom du profil actif
   if (active_id >= 0 && config_manager_load_profile(active_id, profile)) {
-    cJSON_AddStringToObject(root, "active_name", profile->name);
+    cJSON_AddStringToObject(root, "an", profile->name);
   } else {
-    cJSON_AddStringToObject(root, "active_name", "None");
+    cJSON_AddStringToObject(root, "an", "None");
   }
 
   const char *json_string = cJSON_PrintUnformatted(root);
@@ -494,7 +543,7 @@ static esp_err_t profile_activate_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  const cJSON *profile_id = cJSON_GetObjectItem(root, "profile_id");
+  const cJSON *profile_id = cJSON_GetObjectItem(root, "pid");
   if (profile_id) {
     bool success = config_manager_activate_profile(profile_id->valueint);
     httpd_resp_set_type(req, "application/json");
@@ -598,13 +647,13 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  const cJSON *profile_id = cJSON_GetObjectItem(root, "profile_id");
+  const cJSON *profile_id = cJSON_GetObjectItem(root, "pid");
   if (profile_id) {
     bool success = config_manager_delete_profile(profile_id->valueint);
     cJSON *response = cJSON_CreateObject();
-    cJSON_AddStringToObject(response, "status", success ? "ok" : "error");
+    cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
     if (!success) {
-      cJSON_AddStringToObject(response, "message",
+      cJSON_AddStringToObject(response, "msg",
                               "Profile in use by an event or deletion failed");
     }
     const char *json_string = cJSON_PrintUnformatted(response);
@@ -625,12 +674,12 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
   bool success = config_manager_factory_reset();
 
   cJSON *response = cJSON_CreateObject();
-  cJSON_AddStringToObject(response, "status", success ? "ok" : "error");
+  cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
   if (success) {
-    cJSON_AddStringToObject(response, "message",
+    cJSON_AddStringToObject(response, "msg",
                             "Factory reset successful. Device will restart.");
   } else {
-    cJSON_AddStringToObject(response, "message", "Factory reset failed");
+    cJSON_AddStringToObject(response, "msg", "Factory reset failed");
   }
 
   const char *json_string = cJSON_PrintUnformatted(response);
@@ -650,7 +699,7 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
 
 // Handler pour mettre à jour les paramètres d'un profil
 static esp_err_t profile_update_handler(httpd_req_t *req) {
-  char content[256];
+  char content[512];  // Augmenté pour accepter settings + effet par défaut
   int ret = httpd_req_recv(req, content, sizeof(content) - 1);
 
   if (ret <= 0) {
@@ -665,7 +714,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  cJSON *profile_id_json = cJSON_GetObjectItem(root, "profile_id");
+  cJSON *profile_id_json = cJSON_GetObjectItem(root, "pid");
   if (!profile_id_json) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id");
     cJSON_Delete(root);
@@ -693,129 +742,69 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
 
   // Mettre à jour les paramètres si fournis
-  const cJSON *auto_night_mode = cJSON_GetObjectItem(root, "auto_night_mode");
+  const cJSON *auto_night_mode = cJSON_GetObjectItem(root, "anm");
   if (auto_night_mode) {
     profile->auto_night_mode = cJSON_IsTrue(auto_night_mode);
   }
 
-  const cJSON *night_brightness = cJSON_GetObjectItem(root, "night_brightness");
+  const cJSON *night_brightness = cJSON_GetObjectItem(root, "nbr");
   if (night_brightness) {
     profile->night_brightness = (uint8_t)night_brightness->valueint;
+  }
+
+  // Mettre à jour l'effet par défaut si fourni
+  bool default_effect_updated = false;
+  const cJSON *effect_json = cJSON_GetObjectItem(root, "fx");
+  const cJSON *brightness_json = cJSON_GetObjectItem(root, "br");
+  const cJSON *speed_json = cJSON_GetObjectItem(root, "sp");
+  const cJSON *color_json = cJSON_GetObjectItem(root, "c1");
+  const cJSON *audio_reactive_json = cJSON_GetObjectItem(root, "ar");
+
+  if (effect_json) {
+    profile->default_effect.effect = (led_effect_t)effect_json->valueint;
+    default_effect_updated = true;
+  }
+  if (brightness_json) {
+    profile->default_effect.brightness = (uint8_t)brightness_json->valueint;
+    default_effect_updated = true;
+  }
+  if (speed_json) {
+    profile->default_effect.speed = (uint8_t)speed_json->valueint;
+    default_effect_updated = true;
+  }
+  if (color_json) {
+    profile->default_effect.color1 = (uint32_t)color_json->valueint;
+    default_effect_updated = true;
+  }
+  if (audio_reactive_json && cJSON_IsBool(audio_reactive_json)) {
+    profile->default_effect.audio_reactive = cJSON_IsTrue(audio_reactive_json);
+    default_effect_updated = true;
   }
 
   // Sauvegarder le profil
   bool success = config_manager_save_profile(profile_id, profile);
 
-  // Si c'est le profil actif, mettre à jour la configuration du mode nuit mais
-  // ne pas l'activer Le mode nuit sera activé/désactivé par les événements CAN
+  // Si c'est le profil actif, mettre à jour la configuration
   if (success && config_manager_get_active_profile_id() == profile_id) {
-    // On garde l'état actuel du mode nuit mais on met à jour la luminosité
+    // Appliquer l'effet par défaut si modifié
+    if (default_effect_updated) {
+      config_manager_stop_all_events();
+      led_effects_set_config(&profile->default_effect);
+      ESP_LOGI(TAG_WEBSERVER, "Applied updated default effect");
+    }
+
+    // Mettre à jour le mode nuit (garder l'état actuel)
     bool current_night_mode = led_effects_get_night_mode();
     led_effects_set_night_mode(current_night_mode, profile->night_brightness);
     ESP_LOGI(TAG_WEBSERVER,
-             "Updated night mode settings (auto: %s, brightness: %d, current "
-             "state: %s)",
+             "Updated profile settings (auto: %s, brightness: %d, night state: %s)",
              profile->auto_night_mode ? "ENABLED" : "DISABLED",
              profile->night_brightness, current_night_mode ? "ON" : "OFF");
   }
 
   free(profile);
   httpd_resp_set_type(req, "application/json");
-  httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}"
-                                  : "{\"status\":\"error\"}");
-
-  cJSON_Delete(root);
-  return ESP_OK;
-}
-
-// Handler pour mettre à jour l'effet par défaut d'un profil
-static esp_err_t profile_update_default_handler(httpd_req_t *req) {
-  char content[512];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
-
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
-    return ESP_FAIL;
-  }
-
-  cJSON *profile_id_json = cJSON_GetObjectItem(root, "profile_id");
-  if (!profile_id_json) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id");
-    cJSON_Delete(root);
-    return ESP_FAIL;
-  }
-
-  uint8_t profile_id = (uint8_t)profile_id_json->valueint;
-
-  // Allouer dynamiquement pour éviter stack overflow
-  config_profile_t *profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
-  if (profile == NULL) {
-    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire");
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
-    cJSON_Delete(root);
-    return ESP_FAIL;
-  }
-
-  if (!config_manager_load_profile(profile_id, profile)) {
-    httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Profile not found");
-    free(profile);
-    cJSON_Delete(root);
-    return ESP_FAIL;
-  }
-
-  // Mettre à jour l'effet par défaut
-  cJSON *effect_json = cJSON_GetObjectItem(root, "effect");
-  cJSON *brightness_json = cJSON_GetObjectItem(root, "brightness");
-  cJSON *speed_json = cJSON_GetObjectItem(root, "speed");
-  cJSON *color_json = cJSON_GetObjectItem(root, "color1");
-  cJSON *audio_reactive_json = cJSON_GetObjectItem(root, "audio_reactive");
-
-  if (effect_json) {
-    profile->default_effect.effect = (led_effect_t)effect_json->valueint;
-  }
-  if (brightness_json) {
-    profile->default_effect.brightness = (uint8_t)brightness_json->valueint;
-  }
-  if (speed_json) {
-    profile->default_effect.speed = (uint8_t)speed_json->valueint;
-  }
-  if (color_json) {
-    profile->default_effect.color1 = (uint32_t)color_json->valueint;
-  }
-  if (audio_reactive_json && cJSON_IsBool(audio_reactive_json)) {
-    profile->default_effect.audio_reactive = cJSON_IsTrue(audio_reactive_json);
-  }
-
-  // Sauvegarder le profil
-  bool success = config_manager_save_profile(profile_id, profile);
-
-  // Si c'est le profil actif, appliquer l'effet immédiatement
-  if (success && profile_id == config_manager_get_active_profile_id()) {
-    // Arrêter tous les événements actifs pour que l'effet par défaut soit visible
-    config_manager_stop_all_events();
-
-    led_effects_set_config(&profile->default_effect);
-    // Garder l'état actuel du mode nuit (contrôlé par les événements CAN)
-    bool current_night_mode = led_effects_get_night_mode();
-    led_effects_set_night_mode(current_night_mode, profile->night_brightness);
-    ESP_LOGI(TAG_WEBSERVER,
-             "Applied default effect (night mode state: %s, brightness=%d)",
-             current_night_mode ? "ON" : "OFF", profile->night_brightness);
-  }
-
-  free(profile);
-  httpd_resp_set_type(req, "application/json");
-  httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}"
-                                  : "{\"status\":\"error\"}");
+  httpd_resp_sendstr(req, success ? "{\"st\":\"ok\"}" : "{\"st\":\"error\"}");
 
   cJSON_Delete(root);
   return ESP_OK;
@@ -1009,19 +998,19 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
 static esp_err_t ota_info_handler(httpd_req_t *req) {
   cJSON *root = cJSON_CreateObject();
 
-  cJSON_AddStringToObject(root, "version", ota_get_current_version());
+  cJSON_AddStringToObject(root, "v", ota_get_current_version());
 
   ota_progress_t progress;
   ota_get_progress(&progress);
 
-  cJSON_AddNumberToObject(root, "state", progress.state);
-  cJSON_AddNumberToObject(root, "progress", progress.progress);
-  cJSON_AddNumberToObject(root, "written_size", progress.written_size);
-  cJSON_AddNumberToObject(root, "total_size", progress.total_size);
-  cJSON_AddNumberToObject(root, "reboot_countdown", ota_get_reboot_countdown());
+  cJSON_AddNumberToObject(root, "st", progress.state);
+  cJSON_AddNumberToObject(root, "pg", progress.progress);
+  cJSON_AddNumberToObject(root, "ws", progress.written_size);
+  cJSON_AddNumberToObject(root, "ts", progress.total_size);
+  cJSON_AddNumberToObject(root, "rc", ota_get_reboot_countdown());
 
   if (strlen(progress.error_msg) > 0) {
-    cJSON_AddStringToObject(root, "error", progress.error_msg);
+    cJSON_AddStringToObject(root, "err", progress.error_msg);
   }
 
   const char *json_string = cJSON_PrintUnformatted(root);
@@ -1156,7 +1145,7 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
   config_manager_stop_event(event);
 
   httpd_resp_set_type(req, "application/json");
-  httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
 
   cJSON_Delete(root);
   return ESP_OK;
@@ -1172,11 +1161,11 @@ static esp_err_t effects_list_handler(httpd_req_t *req) {
     cJSON *effect = cJSON_CreateObject();
     cJSON_AddStringToObject(effect, "id",
                             led_effects_enum_to_id((led_effect_t)i));
-    cJSON_AddStringToObject(effect, "name",
+    cJSON_AddStringToObject(effect, "n",
                             led_effects_get_name((led_effect_t)i));
-    cJSON_AddBoolToObject(effect, "can_required",
+    cJSON_AddBoolToObject(effect, "cr",
                           led_effects_requires_can((led_effect_t)i));
-    cJSON_AddBoolToObject(effect, "audio_effect",
+    cJSON_AddBoolToObject(effect, "ae",
                           led_effects_is_audio_effect((led_effect_t)i));
     cJSON_AddItemToArray(effects, effect);
   }
@@ -1202,7 +1191,7 @@ static esp_err_t event_types_list_handler(httpd_req_t *req) {
     cJSON *event_type = cJSON_CreateObject();
     cJSON_AddStringToObject(event_type, "id",
                             config_manager_enum_to_id((can_event_type_t)i));
-    cJSON_AddStringToObject(event_type, "name",
+    cJSON_AddStringToObject(event_type, "n",
                             config_manager_get_event_name((can_event_type_t)i));
     cJSON_AddItemToArray(event_types, event_type);
   }
@@ -1268,8 +1257,8 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
            config_manager_get_event_name(event), event);
 
   cJSON *response = cJSON_CreateObject();
-  cJSON_AddStringToObject(response, "status", success ? "ok" : "error");
-  cJSON_AddStringToObject(response, "event",
+  cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
+  cJSON_AddStringToObject(response, "ev",
                           config_manager_get_event_name(event));
 
   const char *json_string = cJSON_PrintUnformatted(response);
@@ -1290,16 +1279,16 @@ static bool apply_event_update_from_json(config_profile_t *profile,
     return false;
   }
 
-  const cJSON *event_json = cJSON_GetObjectItem(event_obj, "event");
-  const cJSON *effect_json = cJSON_GetObjectItem(event_obj, "effect");
-  const cJSON *brightness_json = cJSON_GetObjectItem(event_obj, "brightness");
-  const cJSON *speed_json = cJSON_GetObjectItem(event_obj, "speed");
-  const cJSON *color_json = cJSON_GetObjectItem(event_obj, "color");
-  const cJSON *duration_json = cJSON_GetObjectItem(event_obj, "duration");
-  const cJSON *priority_json = cJSON_GetObjectItem(event_obj, "priority");
-  const cJSON *enabled_json = cJSON_GetObjectItem(event_obj, "enabled");
-  const cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "action_type");
-  const cJSON *profile_id_json = cJSON_GetObjectItem(event_obj, "profile_id");
+  const cJSON *event_json = cJSON_GetObjectItem(event_obj, "ev");
+  const cJSON *effect_json = cJSON_GetObjectItem(event_obj, "fx");
+  const cJSON *brightness_json = cJSON_GetObjectItem(event_obj, "br");
+  const cJSON *speed_json = cJSON_GetObjectItem(event_obj, "sp");
+  const cJSON *color_json = cJSON_GetObjectItem(event_obj, "c1");
+  const cJSON *duration_json = cJSON_GetObjectItem(event_obj, "dur");
+  const cJSON *priority_json = cJSON_GetObjectItem(event_obj, "pri");
+  const cJSON *enabled_json = cJSON_GetObjectItem(event_obj, "en");
+  const cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "at");
+  const cJSON *profile_id_json = cJSON_GetObjectItem(event_obj, "pid");
 
   if (event_json == NULL || effect_json == NULL ||
       !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
@@ -1328,7 +1317,9 @@ static bool apply_event_update_from_json(config_profile_t *profile,
   }
   effect_config.sync_mode = SYNC_OFF;
   effect_config.reverse = (event_type == CAN_EVENT_TURN_LEFT ||
-                           event_type == CAN_EVENT_BLINDSPOT_LEFT);
+                           event_type == CAN_EVENT_BLINDSPOT_LEFT_LV1 ||
+                           event_type == CAN_EVENT_BLINDSPOT_LEFT_LV2
+                          );
 
   uint16_t duration = duration_json && cJSON_IsNumber(duration_json)
                           ? duration_json->valueint
@@ -1381,25 +1372,25 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
       cJSON *event_obj = cJSON_CreateObject();
 
       // Utiliser des IDs alphanumériques
-      cJSON_AddStringToObject(event_obj, "event",
+      cJSON_AddStringToObject(event_obj, "ev",
                               config_manager_enum_to_id(event_effect.event));
       cJSON_AddStringToObject(
-          event_obj, "effect",
+          event_obj, "fx",
           led_effects_enum_to_id(event_effect.effect_config.effect));
-      cJSON_AddNumberToObject(event_obj, "brightness",
+      cJSON_AddNumberToObject(event_obj, "br",
                               event_effect.effect_config.brightness);
-      cJSON_AddNumberToObject(event_obj, "speed",
+      cJSON_AddNumberToObject(event_obj, "sp",
                               event_effect.effect_config.speed);
-      cJSON_AddNumberToObject(event_obj, "color",
+      cJSON_AddNumberToObject(event_obj, "c1",
                               event_effect.effect_config.color1);
-      cJSON_AddNumberToObject(event_obj, "duration", event_effect.duration_ms);
-      cJSON_AddNumberToObject(event_obj, "priority", event_effect.priority);
-      cJSON_AddBoolToObject(event_obj, "enabled", event_effect.enabled);
-      cJSON_AddNumberToObject(event_obj, "action_type",
+      cJSON_AddNumberToObject(event_obj, "dur", event_effect.duration_ms);
+      cJSON_AddNumberToObject(event_obj, "pri", event_effect.priority);
+      cJSON_AddBoolToObject(event_obj, "en", event_effect.enabled);
+      cJSON_AddNumberToObject(event_obj, "at",
                               event_effect.action_type);
-      cJSON_AddNumberToObject(event_obj, "profile_id", event_effect.profile_id);
+      cJSON_AddNumberToObject(event_obj, "pid", event_effect.profile_id);
       cJSON_AddBoolToObject(
-          event_obj, "can_switch_profile",
+          event_obj, "csp",
           config_manager_event_can_switch_profile(event_type));
 
       cJSON_AddItemToArray(events_array, event_obj);
@@ -1508,8 +1499,8 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 
   // Réponse
   cJSON *response = cJSON_CreateObject();
-  cJSON_AddStringToObject(response, "status", "ok");
-  cJSON_AddNumberToObject(response, "updated", updated_count);
+  cJSON_AddStringToObject(response, "st", "ok");
+  cJSON_AddNumberToObject(response, "upd", updated_count);
 
   const char *json_string = cJSON_PrintUnformatted(response);
   httpd_resp_set_type(req, "application/json");
@@ -1533,11 +1524,11 @@ static esp_err_t audio_status_handler(httpd_req_t *req) {
   audio_config_t config;
   audio_input_get_config(&config);
 
-  cJSON_AddBoolToObject(root, "enabled", audio_input_is_enabled());
-  cJSON_AddNumberToObject(root, "sensitivity", config.sensitivity);
-  cJSON_AddNumberToObject(root, "gain", config.gain);
-  cJSON_AddBoolToObject(root, "autoGain", config.auto_gain);
-  cJSON_AddBoolToObject(root, "fftEnabled", config.fft_enabled);
+  cJSON_AddBoolToObject(root, "en", audio_input_is_enabled());
+  cJSON_AddNumberToObject(root, "sen", config.sensitivity);
+  cJSON_AddNumberToObject(root, "gn", config.gain);
+  cJSON_AddBoolToObject(root, "ag", config.auto_gain);
+  cJSON_AddBoolToObject(root, "ffe", config.fft_enabled);
 
   const char *json_str = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -1564,7 +1555,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
+  cJSON *enabled = cJSON_GetObjectItem(root, "en");
   if (cJSON_IsBool(enabled)) {
     bool enable = cJSON_IsTrue(enabled);
     if (audio_input_set_enabled(enable)) {
@@ -1581,7 +1572,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
   cJSON_Delete(root);
 
   cJSON *response = cJSON_CreateObject();
-  cJSON_AddBoolToObject(response, "success", true);
+  cJSON_AddBoolToObject(response, "ok", true);
   const char *json_str = cJSON_PrintUnformatted(response);
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, json_str);
@@ -1611,25 +1602,25 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   audio_input_get_config(&config);
 
   // Mettre à jour les paramètres fournis
-  cJSON *sensitivity = cJSON_GetObjectItem(root, "sensitivity");
+  cJSON *sensitivity = cJSON_GetObjectItem(root, "sen");
   if (cJSON_IsNumber(sensitivity)) {
     config.sensitivity = (uint8_t)sensitivity->valueint;
     audio_input_set_sensitivity(config.sensitivity);
   }
 
-  cJSON *gain = cJSON_GetObjectItem(root, "gain");
+  cJSON *gain = cJSON_GetObjectItem(root, "gn");
   if (cJSON_IsNumber(gain)) {
     config.gain = (uint8_t)gain->valueint;
     audio_input_set_gain(config.gain);
   }
 
-  cJSON *autoGain = cJSON_GetObjectItem(root, "autoGain");
+  cJSON *autoGain = cJSON_GetObjectItem(root, "ag");
   if (cJSON_IsBool(autoGain)) {
     config.auto_gain = cJSON_IsTrue(autoGain);
     audio_input_set_auto_gain(config.auto_gain);
   }
 
-  cJSON *fftEnabled = cJSON_GetObjectItem(root, "fftEnabled");
+  cJSON *fftEnabled = cJSON_GetObjectItem(root, "ffe");
   if (cJSON_IsBool(fftEnabled)) {
     config.fft_enabled = cJSON_IsTrue(fftEnabled);
     audio_input_set_fft_enabled(config.fft_enabled);
@@ -1641,7 +1632,7 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   cJSON_Delete(root);
 
   cJSON *response = cJSON_CreateObject();
-  cJSON_AddBoolToObject(response, "success", true);
+  cJSON_AddBoolToObject(response, "ok", true);
   const char *json_str = cJSON_PrintUnformatted(response);
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, json_str);
@@ -1660,15 +1651,15 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
 
   // Données audio de base
   if (audio_input_get_data(&audio_data)) {
-    cJSON_AddNumberToObject(root, "amplitude", audio_data.amplitude);
-    cJSON_AddNumberToObject(root, "bass", audio_data.bass);
-    cJSON_AddNumberToObject(root, "mid", audio_data.mid);
-    cJSON_AddNumberToObject(root, "treble", audio_data.treble);
+    cJSON_AddNumberToObject(root, "amp", audio_data.amplitude);
+    cJSON_AddNumberToObject(root, "ba", audio_data.bass);
+    cJSON_AddNumberToObject(root, "md", audio_data.mid);
+    cJSON_AddNumberToObject(root, "tr", audio_data.treble);
     cJSON_AddNumberToObject(root, "bpm", audio_data.bpm);
-    cJSON_AddBoolToObject(root, "beatDetected", audio_data.beat_detected);
-    cJSON_AddBoolToObject(root, "available", true);
+    cJSON_AddBoolToObject(root, "bd", audio_data.beat_detected);
+    cJSON_AddBoolToObject(root, "av", true);
   } else {
-    cJSON_AddBoolToObject(root, "available", false);
+    cJSON_AddBoolToObject(root, "av", false);
   }
 
   // Données FFT (si activées)
@@ -1684,22 +1675,22 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
     cJSON_AddItemToObject(fft_obj, "bands", bands_array);
 
     // Ajouter les métadonnées FFT
-    cJSON_AddNumberToObject(fft_obj, "peakFreq", fft_data.peak_freq);
-    cJSON_AddNumberToObject(fft_obj, "spectralCentroid", fft_data.spectral_centroid);
-    cJSON_AddNumberToObject(fft_obj, "dominantBand", fft_data.dominant_band);
-    cJSON_AddNumberToObject(fft_obj, "bassEnergy", fft_data.bass_energy);
-    cJSON_AddNumberToObject(fft_obj, "midEnergy", fft_data.mid_energy);
-    cJSON_AddNumberToObject(fft_obj, "trebleEnergy", fft_data.treble_energy);
-    cJSON_AddBoolToObject(fft_obj, "kickDetected", fft_data.kick_detected);
-    cJSON_AddBoolToObject(fft_obj, "snareDetected", fft_data.snare_detected);
-    cJSON_AddBoolToObject(fft_obj, "vocalDetected", fft_data.vocal_detected);
-    cJSON_AddBoolToObject(fft_obj, "available", true);
+    cJSON_AddNumberToObject(fft_obj, "pf", fft_data.peak_freq);
+    cJSON_AddNumberToObject(fft_obj, "sc", fft_data.spectral_centroid);
+    cJSON_AddNumberToObject(fft_obj, "db", fft_data.dominant_band);
+    cJSON_AddNumberToObject(fft_obj, "be", fft_data.bass_energy);
+    cJSON_AddNumberToObject(fft_obj, "me", fft_data.mid_energy);
+    cJSON_AddNumberToObject(fft_obj, "te", fft_data.treble_energy);
+    cJSON_AddBoolToObject(fft_obj, "kd", fft_data.kick_detected);
+    cJSON_AddBoolToObject(fft_obj, "sd", fft_data.snare_detected);
+    cJSON_AddBoolToObject(fft_obj, "vd", fft_data.vocal_detected);
+    cJSON_AddBoolToObject(fft_obj, "av", true);
 
     cJSON_AddItemToObject(root, "fft", fft_obj);
   } else {
     // FFT non disponible
     cJSON *fft_obj = cJSON_CreateObject();
-    cJSON_AddBoolToObject(fft_obj, "available", false);
+    cJSON_AddBoolToObject(fft_obj, "av", false);
     cJSON_AddItemToObject(root, "fft", fft_obj);
   }
 
@@ -1730,7 +1721,7 @@ static esp_err_t audio_fft_enable_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
+  cJSON *enabled = cJSON_GetObjectItem(root, "en");
   if (enabled != NULL && cJSON_IsBool(enabled)) {
     audio_input_set_fft_enabled(cJSON_IsTrue(enabled));
   }
@@ -1758,18 +1749,18 @@ static esp_err_t audio_fft_data_handler(httpd_req_t *req) {
     cJSON_AddItemToObject(root, "bands", bands_array);
 
     // Ajouter les métadonnées
-    cJSON_AddNumberToObject(root, "peakFreq", fft_data.peak_freq);
-    cJSON_AddNumberToObject(root, "spectralCentroid", fft_data.spectral_centroid);
-    cJSON_AddNumberToObject(root, "dominantBand", fft_data.dominant_band);
-    cJSON_AddNumberToObject(root, "bassEnergy", fft_data.bass_energy);
-    cJSON_AddNumberToObject(root, "midEnergy", fft_data.mid_energy);
-    cJSON_AddNumberToObject(root, "trebleEnergy", fft_data.treble_energy);
-    cJSON_AddBoolToObject(root, "kickDetected", fft_data.kick_detected);
-    cJSON_AddBoolToObject(root, "snareDetected", fft_data.snare_detected);
-    cJSON_AddBoolToObject(root, "vocalDetected", fft_data.vocal_detected);
-    cJSON_AddBoolToObject(root, "available", true);
+    cJSON_AddNumberToObject(root, "pf", fft_data.peak_freq);
+    cJSON_AddNumberToObject(root, "sc", fft_data.spectral_centroid);
+    cJSON_AddNumberToObject(root, "db", fft_data.dominant_band);
+    cJSON_AddNumberToObject(root, "be", fft_data.bass_energy);
+    cJSON_AddNumberToObject(root, "me", fft_data.mid_energy);
+    cJSON_AddNumberToObject(root, "te", fft_data.treble_energy);
+    cJSON_AddBoolToObject(root, "kd", fft_data.kick_detected);
+    cJSON_AddBoolToObject(root, "sd", fft_data.snare_detected);
+    cJSON_AddBoolToObject(root, "vd", fft_data.vocal_detected);
+    cJSON_AddBoolToObject(root, "av", true);
   } else {
-    cJSON_AddBoolToObject(root, "available", false);
+    cJSON_AddBoolToObject(root, "av", false);
   }
 
   const char *json_str = cJSON_PrintUnformatted(root);
@@ -1785,10 +1776,10 @@ static esp_err_t audio_fft_data_handler(httpd_req_t *req) {
 static esp_err_t audio_fft_status_handler(httpd_req_t *req) {
   cJSON *root = cJSON_CreateObject();
 
-  cJSON_AddBoolToObject(root, "enabled", audio_input_is_fft_enabled());
+  cJSON_AddBoolToObject(root, "en", audio_input_is_fft_enabled());
   cJSON_AddNumberToObject(root, "bands", AUDIO_FFT_BANDS);
-  cJSON_AddNumberToObject(root, "sampleRate", AUDIO_SAMPLE_RATE);
-  cJSON_AddNumberToObject(root, "fftSize", AUDIO_FFT_SIZE);
+  cJSON_AddNumberToObject(root, "sr", AUDIO_SAMPLE_RATE);
+  cJSON_AddNumberToObject(root, "sz", AUDIO_FFT_SIZE);
 
   const char *json_str = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -1808,14 +1799,17 @@ esp_err_t web_server_start(void) {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.server_port = WEB_SERVER_PORT;
   config.max_uri_handlers = 45; // Augmenté pour les handlers audio et FFT
+  config.max_open_sockets = 13; // Augmenté pour gérer les rafraîchissements de page (max 7 par défaut)
   config.lru_purge_enable = true;
 #ifndef CONFIG_HAS_PSRAM
   config.stack_size = 24576;
 #else
   config.stack_size = 16384;
 #endif
-  config.recv_wait_timeout = 30;
-  config.send_wait_timeout = 30;
+  config.recv_wait_timeout = 10; // Réduit de 30 à 10 secondes
+  config.send_wait_timeout = 10; // Réduit de 30 à 10 secondes
+  config.close_fn = NULL; // Permet de fermer proprement les connexions
+  config.keep_alive_enable = false; // Désactive keep-alive pour libérer les connexions plus rapidement
 
   ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 
@@ -1823,11 +1817,13 @@ esp_err_t web_server_start(void) {
     static static_file_route_t static_files[] = {
         {"/", index_html_gz_start, index_html_gz_end, "text/html",
          "public, max-age=31536000", "gzip"},
+        {"/i18n.js", i18n_js_gz_start, i18n_js_gz_end, "text/javascript",
+         "public, max-age=31536000", "gzip"},
         {"/script.js", script_js_gz_start, script_js_gz_end, "text/javascript",
          "public, max-age=31536000", "gzip"},
         {"/style.css", style_css_gz_start, style_css_gz_end, "text/css",
          "public, max-age=31536000", "gzip"},
-        {"/carlightsync.png", carlightsync_png_start, carlightsync_png_end,
+        {"/carlightsync64.png", carlightsync64_png_start, carlightsync64_png_end,
          "image/png", "public, max-age=31536000", NULL}};
     int num_static_files = sizeof(static_files) / sizeof(static_files[0]);
 
@@ -1899,13 +1895,6 @@ esp_err_t web_server_start(void) {
                                       .handler = profile_update_handler,
                                       .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_update_uri);
-
-    httpd_uri_t profile_update_default_uri = {
-        .uri = "/api/profile/update/default",
-        .method = HTTP_POST,
-        .handler = profile_update_default_handler,
-        .user_ctx = NULL};
-    httpd_register_uri_handler(server, &profile_update_default_uri);
 
     httpd_uri_t event_effect_uri = {.uri = "/api/event-effect",
                                     .method = HTTP_POST,
@@ -2141,7 +2130,7 @@ static esp_err_t event_single_post_handler(httpd_req_t *req) {
   }
 
   cJSON *response = cJSON_CreateObject();
-  cJSON_AddStringToObject(response, "status", "ok");
+  cJSON_AddStringToObject(response, "st", "ok");
   const char *json_string = cJSON_PrintUnformatted(response);
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, json_string);

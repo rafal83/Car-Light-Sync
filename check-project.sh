@@ -56,6 +56,7 @@ echo ""
 
 echo "🌐 Vérification de l'interface web..."
 check_file "data/index.html"
+check_file "data/i18n.js"
 check_file "data/script.js"
 check_file "data/style.css"
 echo ""

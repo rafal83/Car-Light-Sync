@@ -1,793 +1,14 @@
 const API_BASE = '';
+// DOM helpers
+const $ = (id) => document.getElementById(id);
+const $$ = (sel) => document.querySelector(sel);
+const doc = document;
+const hide = (el) => el.style.display = 'none';
+const show = (el, displayType = 'block') => el.style.display = displayType;
 // Translations
 let currentLang = 'en';
 let currentTheme = 'dark';
-const translations = {
-    fr: {
-        app: {
-            title: "Car Light Sync",
-            subtitle: "Contrôle RGB synchronisé avec votre voiture",
-            waitingConnection: "Connectez-vous en WiFi ou BLE pour continuer."
-        },
-        status: {
-            wifi: "WiFi",
-            canBus: "CAN Bus",
-            vehicle: "Véhicule",
-            profile: "Profil",
-            connected: "Connecté",
-            disconnected: "Déconnecté",
-            active: "Actif",
-            inactive: "Inactif",
-            ap: "AP"
-        },
-        ble: {
-            title: "Connexion BLE",
-            connect: "Connexion",
-            connecting: "Connexion...",
-            disconnect: "Déconnexion",
-            connected: "Connecté",
-            disconnected: "Déconnecté",
-            statusUnsupported: "Non supporté",
-            notSupported: "Web Bluetooth non supporté sur ce navigateur.",
-            toastConnected: "Connexion BLE établie",
-            toastDisconnected: "Connexion BLE fermée",
-            toastError: "Erreur de communication BLE",
-            requestRejected: "Commande BLE refusée",
-            timeout: "Délai d'attente BLE dépassé",
-            tapToAuthorize: "Touchez l'écran pour autoriser la connexion BLE."
-        },
-        tabs: {
-            effects: "Effets LED",
-            profiles: "Profils",
-            eventsConfig: "Événements",
-            canEvents: "Événements CAN",
-            config: "Configuration",
-            vehicle: "Véhicule",
-            simulation: "Simulation",
-            ota: "Mise à Jour"
-        },
-        effects: {
-            title: "Configuration des Effets",
-            effect: "Effet",
-            brightness: "Luminosité",
-            speed: "Vitesse",
-            color: "Couleur",
-            apply: "Appliquer",
-            save: "Sauvegarder",
-            off: "Off",
-            solid: "Couleur Unie",
-            breathing: "Respiration",
-            rainbow: "Arc-en-ciel",
-            rainbowCycle: "Arc-en-ciel Cyclique",
-            theaterChase: "Theater Chase",
-            runningLights: "Running Lights",
-            twinkle: "Twinkle",
-            fire: "Feu",
-            scan: "Scan",
-            knightRider: "Knight Rider",
-            fade: "Fade",
-            strobe: "Strobe",
-            vehicleSync: "Sync Véhicule",
-            turnSignal: "Clignotant",
-            brakeLight: "Feu de Frein",
-            chargeStatus: "État de Charge",
-            audioReactive: "Audio Réactif",
-            audioBpm: "Audio BPM",
-            audioReactiveMode: "Mode Audio Réactif"
-        },
-        audio: {
-            title: "Configuration Audio",
-            microphone: "Micro INMP441",
-            enable: "Activer le micro",
-            enabled: "Activé",
-            disabled: "Désactivé",
-            sensitivity: "Sensibilité",
-            gain: "Gain",
-            autoGain: "Gain automatique",
-            i2sPins: "Pins I2S (INMP441)",
-            i2sPinsInfo: "Configuration définie au démarrage",
-            status: "Statut",
-            liveData: "Données en Direct",
-            amplitude: "Amplitude",
-            bpm: "BPM Détecté",
-            bass: "Basses",
-            mid: "Médiums",
-            treble: "Aigus",
-            gpioConfig: "Configuration GPIO",
-            applyGpio: "Appliquer GPIO",
-            saveConfig: "Sauvegarder Configuration",
-            noData: "Aucune donnée",
-            warning: "⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif."
-        },
-        fft: {
-            title: "Analyse Spectrale FFT Avancée",
-            autoInfo: "ℹ️ Le FFT s'active automatiquement avec les effets audio-réactifs",
-            peakFreq: "Fréquence dominante",
-            centroid: "Centroïde spectral",
-            kick: "Kick",
-            snare: "Snare",
-            vocal: "Vocal",
-            spectrum: "Spectre FFT (32 bandes)",
-            detected: "Détecté"
-        },
-        profiles: {
-            title: "Gestion des Profils",
-            activeProfile: "Profil Actif",
-            loading: "Chargement...",
-            activate: "Activer",
-            new: "Nouveau",
-            delete: "Supprimer",
-            export: "Exporter",
-            import: "Importer",
-            autoNightMode: "Mode nuit automatique (basé sur CAN)",
-            nightBrightness: "Luminosité Mode Nuit",
-            defaultEffect: "Effet par Défaut",
-            defaultEffectDesc: "Configurez l'effet affiché lorsqu'aucun événement CAN n'est actif.",
-            saveDefault: "Sauvegarder Effet par Défaut",
-            newProfileTitle: "Nouveau Profil",
-            profileName: "Nom du profil",
-            create: "Créer",
-            cancel: "Annuler",
-            deleteConfirm: "Supprimer ce profil ?",
-            selectProfile: "Sélectionnez un profil",
-            exportSuccess: "Profil exporté avec succès",
-            exportError: "Erreur lors de l'export",
-            importSuccess: "Profil importé avec succès",
-            importError: "Erreur lors de l'import"
-        },
-        eventsConfig: {
-            title: "Configuration des Événements",
-            description: "Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.",
-            loading: "Chargement de la configuration...",
-            eventName: "Événement",
-            action: "Action",
-            profile: "Profil",
-            applyEffect: "Appliquer Effet",
-            switchProfile: "Changer Profil",
-            effect: "Effet",
-            brightness: "Luminosité",
-            speed: "Vitesse",
-            color: "Couleur",
-            duration: "Durée (ms)",
-            priority: "Priorité",
-            enabled: "Activé",
-            save: "Sauvegarder la Configuration",
-            reload: "Recharger",
-            saveSuccess: "Configuration sauvegardée avec succès",
-            saveError: "Erreur lors de la sauvegarde",
-            loadError: "Erreur lors du chargement"
-        },
-        canEvents: {
-            title: "Association Événements CAN",
-            event: "Événement",
-            effectToTrigger: "Effet à déclencher",
-            duration: "Durée (ms, 0 = infini)",
-            priority: "Priorité",
-            assign: "Assigner",
-            turnLeft: "Clignotant Gauche",
-            turnRight: "Clignotant Droit",
-            hazard: "Warning",
-            charging: "En Charge",
-            chargeComplete: "Charge Complète",
-            doorOpen: "Porte Ouverte",
-            doorClose: "Porte Fermée",
-            locked: "Verrouillé",
-            unlocked: "Déverrouillé",
-            brakeOn: "Frein Activé",
-            brakeOff: "Frein Relâché",
-            blindspotLeft: "Angle Mort Gauche",
-            blindspotRight: "Angle Mort Droit",
-            nightModeOn: "Mode Nuit Activé",
-            nightModeOff: "Mode Nuit Désactivé",
-            speedThreshold: "Seuil Vitesse Dépassé",
-            assignSuccess: "Effet assigné !"
-        },
-        config: {
-            title: "Configuration Matérielle",
-            description: "Configurez les paramètres matériels du contrôleur LED.",
-            ledCount: "Nombre de LEDs",
-            dataPin: "Pin de Données",
-            stripReverse: "Inverser le sens de la strip LED",
-            language: "Langue",
-            languageFrench: "Français",
-            languageEnglish: "Anglais",
-            theme: "Thème",
-            themeDark: "Mode sombre",
-            themeLight: "Mode clair",
-            save: "Sauvegarder",
-            reload: "Recharger",
-            restartEsp: "Redémarrer",
-            saveSuccess: "Configuration sauvegardée",
-            saveError: "Erreur lors de la sauvegarde",
-            loadError: "Erreur lors du chargement",
-            dangerZone: "Zone Dangereuse",
-            factoryReset: "Réinitialisation Usine",
-            factoryResetWarning: "La réinitialisation usine supprimera TOUS les profils et configurations. Cette action est irréversible !",
-            factoryResetConfirm: "Êtes-vous VRAIMENT sûr de vouloir effacer toutes les configurations ? Cette action ne peut pas être annulée !",
-            factoryResetInProgress: "Réinitialisation en cours...",
-            factoryResetSuccess: "Réinitialisation réussie !",
-            factoryResetError: "Erreur lors de la réinitialisation",
-            deviceRestarting: "L'appareil va redémarrer dans quelques secondes..."
-        },
-        vehicle: {
-            title: "Données Véhicule",
-            generalState: "État Général",
-            speed: "Vitesse",
-            gear: "Position de transmission",
-            brake: "Frein",
-            brightness: "Luminosité",
-            off: "Éteint",
-            locked: "Verrouillé",
-            unlocked: "Déverrouillé",
-            doorsTitle: "Portes",
-            doorFL: "AV Gauche",
-            doorFR: "AV Droite",
-            doorRL: "AR Gauche",
-            doorRR: "AR Droite",
-            trunk: "Coffre",
-            frunk: "Frunk",
-            chargeTitle: "Charge",
-            charging: "En Charge",
-            chargePercent: "Niveau",
-            chargePower: "Puissance",
-            lightsTitle: "Lumières",
-            headlights: "Phares",
-            highBeams: "Feux Route",
-            fogLights: "Anti-brouillard",
-            turnSignal: "Clignotant",
-            othersTitle: "Autres",
-            batterylv: "Batterie LV",
-            batteryhv: "Batterie HV",
-            odometer: "Odomètre",
-            nightMode: "Mode Nuit",
-            blindspotLeft: "Angle Mort G",
-            blindspotRight: "Angle Mort D",
-            open: "Ouvert",
-            closed: "Fermé",
-            none: "Aucun",
-            sentryTitle: "Mode Sentry",
-            sentryMode: "État UI",
-            sentryRequest: "Requête Autopilot",
-            sentryAlert: "Alerte",
-            sentryNominal: "Nominal",
-            sentrySuspend: "Suspendu"
-        },
-        simulation: {
-            title: "Simulation d'événements CAN",
-            description: "Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule.",
-            turnSignals: "Clignotants",
-            left: "Gauche",
-            right: "Droite",
-            hazard: "Warning",
-            stop: "Arrêter",
-            charging: "Charge",
-            chargingNow: "En charge",
-            chargeComplete: "Charge complète",
-            chargingStarted: "Charge démarrée",
-            chargingStopped: "Charge arrêtée",
-            chargingHardware: "Connectique de charge",
-            cableConnected: "Câble connecté",
-            cableDisconnected: "Câble déconnecté",
-            portOpened: "Port de charge ouvert",
-            doors: "Portes",
-            doorOpen: "Porte ouverte",
-            doorClose: "Porte fermée",
-            lock: "Verrouillage",
-            locked: "Verrouillé",
-            unlocked: "Déverrouillé",
-            driving: "Conduite",
-            brakeOn: "Frein ON",
-            brakeOff: "Frein OFF",
-            speedThreshold: "Seuil Vitesse",
-            autopilot: "Autopilot",
-            autopilotEngaged: "Autopilot activé",
-            autopilotDisengaged: "Autopilot désactivé",
-            gear: "Transmission",
-            gearDrive: "Drive",
-            gearReverse: "Marche arrière",
-            gearPark: "Park",
-            blindspot: "Angle mort",
-            blindspotLeft: "Gauche",
-            blindspotRight: "Droite",
-            blindspotWarning: "Alerte angle mort",
-            sentry: "Mode Sentry",
-            sentryOn: "Sentry ON",
-            sentryOff: "Sentry OFF",
-            sentryAlert: "Alerte Sentry",
-            nightMode: "Mode Nuit",
-            nightModeToggle: "Mode Nuit",
-            nightModeOn: "Activer",
-            nightModeOff: "Désactiver",
-            sending: "Envoi de l'événement",
-            sendingEvent: "Envoi : {0}...",
-            simulated: "Événement simulé",
-            eventSimulated: "OK - Événement simulé : {0}",
-            error: "Erreur lors de la simulation",
-            simulationError: "Erreur - {0}",
-            stopping: "Arrêt de l'événement",
-            stopped: "Effet arrêté",
-            eventStopped: "Stop - Effet arrêté",
-            eventActive: "OK - {0} actif",
-            eventDeactivated: "Stop - {0} arrêté",
-            stoppingEvent: "Arrêt : {0}...",
-            active: "actif",
-            disabledEvent: "Événement désactivé dans la configuration"
-        },
-        eventNames: {
-            TURN_LEFT: "Clignotant gauche",
-            TURN_RIGHT: "Clignotant droit",
-            TURN_HAZARD: "Feux de détresse",
-            CHARGING: "Charge en cours",
-            CHARGE_COMPLETE: "Charge terminée",
-            CHARGING_STARTED: "Charge démarrée",
-            CHARGING_STOPPED: "Charge arrêtée",
-            CHARGING_CABLE_CONNECTED: "Câble connecté",
-            CHARGING_CABLE_DISCONNECTED: "Câble déconnecté",
-            CHARGING_PORT_OPENED: "Port de charge ouvert",
-            DOOR_OPEN: "Porte ouverte",
-            DOOR_CLOSE: "Porte fermée",
-            LOCKED: "Véhicule verrouillé",
-            UNLOCKED: "Véhicule déverrouillé",
-            BRAKE_ON: "Frein activé",
-            BRAKE_OFF: "Frein relâché",
-            BLINDSPOT_LEFT: "Angle mort gauche",
-            BLINDSPOT_RIGHT: "Angle mort droit",
-            BLINDSPOT_WARNING: "Alerte angle mort",
-            NIGHT_MODE_ON: "Mode nuit activé",
-            NIGHT_MODE_OFF: "Mode nuit désactivé",
-            SPEED_THRESHOLD: "Seuil de vitesse atteint",
-            AUTOPILOT_ENGAGED: "Autopilot activé",
-            AUTOPILOT_DISENGAGED: "Autopilot désactivé",
-            GEAR_DRIVE: "Passage en Drive",
-            GEAR_REVERSE: "Marche arrière",
-            GEAR_PARK: "Mode Park",
-            SENTRY_MODE_ON: "Sentry activé",
-            SENTRY_MODE_OFF: "Sentry désactivé",
-            SENTRY_ALERT: "Alerte Sentry",
-            unknown: "Événement {0}"
-        },
-        effectNames: {
-            OFF: "Aucun",
-            SOLID: "Couleur fixe",
-            BREATHING: "Respiration",
-            RAINBOW: "Arc-en-ciel",
-            RAINBOW_CYCLE: "Arc-en-ciel cyclique",
-            THEATER_CHASE: "Théâtre",
-            RUNNING_LIGHTS: "Lumières glissantes",
-            TWINKLE: "Scintillement",
-            FIRE: "Feu",
-            SCAN: "Balayage",
-            KNIGHT_RIDER: "Knight Rider",
-            FADE: "Fondu",
-            STROBE: "Stroboscope",
-            VEHICLE_SYNC: "Synchro véhicule",
-            TURN_SIGNAL: "Clignotant",
-            BRAKE_LIGHT: "Feu stop",
-            CHARGE_STATUS: "Statut de charge",
-            HAZARD: "Avertisseur",
-            BLINDSPOT_FLASH: "Flash angle mort",
-            unknown: "Effet {0}"
-        },
-        ota: {
-            title: "Mise à Jour OTA",
-            currentVersion: "Version Actuelle",
-            loading: "Chargement...",
-            firmwareFile: "Fichier Firmware (.bin)",
-            progress: "Progression",
-            upload: "Téléverser",
-            restart: "Redémarrer",
-            uploading: "Téléversement en cours...",
-            success: "Mise à jour réussie ! Vous pouvez redémarrer.",
-        error: "Erreur lors de la mise à jour",
-        selectFile: "Veuillez sélectionner un fichier firmware",
-        wrongExtension: "Le fichier doit avoir l'extension .bin",
-        confirmUpdate: "Êtes-vous sûr de vouloir mettre à jour le firmware ? L'appareil redémarrera.",
-        confirmRestart: "Redémarrer maintenant ?",
-        restarting: "Redémarrage en cours... Reconnexion dans 10 secondes.",
-        autoRestartIn: "Redémarrage automatique dans",
-        states: {
-            idle: "En attente d'une mise à jour",
-            receiving: "Réception du firmware...",
-            writing: "Écriture du firmware...",
-            success: "Mise à jour terminée, redémarrage imminent",
-            error: "Erreur pendant la mise à jour"
-        },
-        bleNote: "Connectez-vous au Wi-Fi de l'appareil (AP) pour effectuer la mise à jour."
-    }
-},
-en: {
-        app: {
-            title: "Car Light Sync",
-            subtitle: "RGB Control Synchronized with your Car",
-            waitingConnection: "Connect via WiFi or BLE to continue."
-        },
-        status: {
-            wifi: "WiFi",
-            canBus: "CAN Bus",
-            vehicle: "Vehicle",
-            profile: "Profile",
-            connected: "Connected",
-            disconnected: "Disconnected",
-            active: "Active",
-            inactive: "Inactive",
-            ap: "AP"
-        },
-        ble: {
-            title: "BLE Link",
-            connect: "Connect",
-            connecting: "Connecting...",
-            disconnect: "Disconnect",
-            connected: "Connected",
-            disconnected: "Disconnected",
-            statusUnsupported: "Unsupported",
-            notSupported: "Web Bluetooth is not supported on this browser.",
-            toastConnected: "BLE connected",
-            toastDisconnected: "BLE disconnected",
-            toastError: "BLE communication error",
-            requestRejected: "BLE request rejected",
-            timeout: "BLE request timed out",
-            tapToAuthorize: "Tap anywhere to authorize the BLE connection."
-        },
-        tabs: {
-            effects: "LED Effects",
-            profiles: "Profiles",
-            eventsConfig: "Events",
-            canEvents: "CAN Events",
-            config: "Configuration",
-            vehicle: "Vehicle",
-            simulation: "Simulation",
-            ota: "Update"
-        },
-        effects: {
-            title: "Effects Configuration",
-            effect: "Effect",
-            brightness: "Brightness",
-            speed: "Speed",
-            color: "Color",
-            apply: "Apply",
-            save: "Save",
-            off: "Off",
-            solid: "Solid Color",
-            breathing: "Breathing",
-            rainbow: "Rainbow",
-            rainbowCycle: "Rainbow Cycle",
-            theaterChase: "Theater Chase",
-            runningLights: "Running Lights",
-            twinkle: "Twinkle",
-            fire: "Fire",
-            scan: "Scan",
-            knightRider: "Knight Rider",
-            fade: "Fade",
-            strobe: "Strobe",
-            vehicleSync: "Vehicle Sync",
-            turnSignal: "Turn Signal",
-            brakeLight: "Brake Light",
-            chargeStatus: "Charge Status",
-            audioReactive: "Audio Reactive",
-            audioBpm: "Audio BPM",
-            audioReactiveMode: "Audio Reactive Mode"
-        },
-        audio: {
-            title: "Audio Configuration",
-            microphone: "INMP441 Microphone",
-            enable: "Enable microphone",
-            enabled: "Enabled",
-            disabled: "Disabled",
-            sensitivity: "Sensitivity",
-            gain: "Gain",
-            autoGain: "Auto Gain",
-            i2sPins: "I2S Pins (INMP441)",
-            i2sPinsInfo: "Configuration set at startup",
-            status: "Status",
-            liveData: "Live Data",
-            amplitude: "Amplitude",
-            bpm: "BPM Detected",
-            bass: "Bass",
-            mid: "Mid",
-            treble: "Treble",
-            gpioConfig: "GPIO Configuration",
-            applyGpio: "Apply GPIO",
-            saveConfig: "Save Configuration",
-            noData: "No data",
-            warning: "⚠️ The microphone can only be enabled on the default effect of the active profile."
-        },
-        fft: {
-            title: "Advanced FFT Spectrum Analysis",
-            autoInfo: "ℹ️ FFT is automatically enabled with audio-reactive effects",
-            peakFreq: "Peak Frequency",
-            centroid: "Spectral Centroid",
-            kick: "Kick",
-            snare: "Snare",
-            vocal: "Vocal",
-            spectrum: "FFT Spectrum (32 bands)",
-            detected: "Detected"
-        },
-        profiles: {
-            title: "Profile Management",
-            activeProfile: "Active Profile",
-            loading: "Loading...",
-            activate: "Activate",
-            new: "New",
-            delete: "Delete",
-            export: "Export",
-            import: "Import",
-            autoNightMode: "Automatic night mode (based on CAN)",
-            nightBrightness: "Night Mode Brightness",
-            defaultEffect: "Default Effect",
-            defaultEffectDesc: "Configure the effect displayed when no CAN event is active.",
-            saveDefault: "Save Default Effect",
-            newProfileTitle: "New Profile",
-            profileName: "Profile name",
-            create: "Create",
-            cancel: "Cancel",
-            deleteConfirm: "Delete this profile?",
-            selectProfile: "Select a profile",
-            exportSuccess: "Profile exported successfully",
-            exportError: "Error exporting profile",
-            importSuccess: "Profile imported successfully",
-            importError: "Error importing profile"
-        },
-        eventsConfig: {
-            title: "Events Configuration",
-            description: "Configure light effects for each CAN event detected by the vehicle.",
-            loading: "Loading configuration...",
-            eventName: "Event",
-            action: "Action",
-            profile: "Profile",
-            applyEffect: "Apply Effect",
-            switchProfile: "Switch Profile",
-            effect: "Effect",
-            brightness: "Brightness",
-            speed: "Speed",
-            color: "Color",
-            duration: "Duration (ms)",
-            priority: "Priority",
-            enabled: "Enabled",
-            save: "Save Configuration",
-            reload: "Reload",
-            saveSuccess: "Configuration saved successfully",
-            saveError: "Error saving configuration",
-            loadError: "Error loading configuration"
-        },
-        canEvents: {
-            title: "CAN Events Association",
-            event: "Event",
-            effectToTrigger: "Effect to trigger",
-            duration: "Duration (ms, 0 = infinite)",
-            priority: "Priority",
-            assign: "Assign",
-            turnLeft: "Turn Left",
-            turnRight: "Turn Right",
-            hazard: "Hazard",
-            charging: "Charging",
-            chargeComplete: "Charge Complete",
-            doorOpen: "Door Open",
-            doorClose: "Door Close",
-            locked: "Locked",
-            unlocked: "Unlocked",
-            brakeOn: "Brake On",
-            brakeOff: "Brake Off",
-            blindspotLeft: "Blindspot Left",
-            blindspotRight: "Blindspot Right",
-            nightModeOn: "Night Mode On",
-            nightModeOff: "Night Mode Off",
-            speedThreshold: "Speed Threshold",
-            assignSuccess: "Effect assigned!"
-        },
-        config: {
-            title: "Hardware Configuration",
-            description: "Configure hardware parameters for the LED controller.",
-            ledCount: "LED Count",
-            dataPin: "Data Pin",
-            stripReverse: "Reverse LED strip direction",
-            language: "Language",
-            languageFrench: "French",
-            languageEnglish: "English",
-            theme: "Theme",
-            themeDark: "Dark mode",
-            themeLight: "Light mode",
-            save: "Save",
-            reload: "Reload",
-            restartEsp: "Restart",
-            saveSuccess: "Configuration saved",
-            saveError: "Error saving configuration",
-            loadError: "Error loading configuration",
-            dangerZone: "Danger Zone",
-            factoryReset: "Factory Reset",
-            factoryResetWarning: "Factory reset will delete ALL profiles and configurations. This action is irreversible!",
-            factoryResetConfirm: "Are you REALLY sure you want to erase all configurations? This action cannot be undone!",
-            factoryResetInProgress: "Reset in progress...",
-            factoryResetSuccess: "Reset successful!",
-            factoryResetError: "Error during reset",
-            deviceRestarting: "The device will restart in a few seconds..."
-        },
-        vehicle: {
-            title: "Vehicle Data",
-            generalState: "General State",
-            speed: "Speed",
-            gear: "Gear",
-            brake: "Brake",
-            brightness: "Brightness",
-            off: "Off",
-            locked: "Locked",
-            unlocked: "Unlocked",
-            doorsTitle: "Doors",
-            doorFL: "Front Left",
-            doorFR: "Front Right",
-            doorRL: "Rear Left",
-            doorRR: "Rear Right",
-            trunk: "Trunk",
-            frunk: "Frunk",
-            chargeTitle: "Charge",
-            charging: "Charging",
-            chargePercent: "Level",
-            chargePower: "Power",
-            lightsTitle: "Lights",
-            headlights: "Headlights",
-            highBeams: "High Beams",
-            fogLights: "Fog Lights",
-            turnSignal: "Turn Signal",
-            othersTitle: "Others",
-            batterylv: "LV Battery",
-            batteryhv: "HV Battery",
-            odometer: "Odometer",
-            nightMode: "Night Mode",
-            blindspotLeft: "Blindspot L",
-            blindspotRight: "Blindspot R",
-            open: "Open",
-            closed: "Closed",
-            none: "None",
-            sentryTitle: "Sentry Mode",
-            sentryMode: "UI State",
-            sentryRequest: "Autopilot Request",
-            sentryAlert: "Alert",
-            sentryNominal: "Nominal",
-            sentrySuspend: "Suspend"
-        },
-        simulation: {
-            title: "CAN Event Simulation",
-            description: "Test light effects by simulating CAN events without vehicle connection.",
-            turnSignals: "Turn Signals",
-            left: "Left",
-            right: "Right",
-            hazard: "Hazard",
-            stop: "Stop",
-            charging: "Charging",
-            chargingNow: "Charging",
-            chargeComplete: "Charge complete",
-            chargingStarted: "Charging started",
-            chargingStopped: "Charging stopped",
-            chargingHardware: "Charging hardware",
-            cableConnected: "Cable connected",
-            cableDisconnected: "Cable disconnected",
-            portOpened: "Charge port opened",
-            doors: "Doors",
-            doorOpen: "Door open",
-            doorClose: "Door close",
-            lock: "Lock",
-            locked: "Locked",
-            unlocked: "Unlocked",
-            driving: "Driving",
-            brakeOn: "Brake ON",
-            brakeOff: "Brake OFF",
-            speedThreshold: "Speed Threshold",
-            autopilot: "Autopilot",
-            autopilotEngaged: "Autopilot engaged",
-            autopilotDisengaged: "Autopilot disengaged",
-            gear: "Transmission",
-            gearDrive: "Drive",
-            gearReverse: "Reverse",
-            gearPark: "Park",
-            blindspot: "Blindspot",
-            blindspotLeft: "Left",
-            blindspotRight: "Right",
-            blindspotWarning: "Blindspot warning",
-            sentry: "Sentry Mode",
-            sentryOn: "Sentry ON",
-            sentryOff: "Sentry OFF",
-            sentryAlert: "Sentry Alert",
-            nightMode: "Night Mode",
-            nightModeToggle: "Night Mode",
-            nightModeOn: "Activate",
-            nightModeOff: "Deactivate",
-            sending: "Sending event",
-            sendingEvent: "Sending: {0}...",
-            simulated: "Event simulated",
-            eventSimulated: "OK - Event simulated: {0}",
-            error: "Simulation error",
-            simulationError: "Error - {0}",
-            stopping: "Stopping event",
-            stopped: "Effect stopped",
-            eventStopped: "Stop - Effect stopped",
-            eventActive: "OK - {0} active",
-            eventDeactivated: "Stop - {0} stopped",
-            stoppingEvent: "Stopping: {0}...",
-            active: "active",
-            disabledEvent: "Event disabled in configuration"
-        },
-        eventNames: {
-            TURN_LEFT: "Turn signal left",
-            TURN_RIGHT: "Turn signal right",
-            TURN_HAZARD: "Hazard lights",
-            CHARGING: "Charging",
-            CHARGE_COMPLETE: "Charge complete",
-            CHARGING_STARTED: "Charging started",
-            CHARGING_STOPPED: "Charging stopped",
-            CHARGING_CABLE_CONNECTED: "Cable connected",
-            CHARGING_CABLE_DISCONNECTED: "Cable disconnected",
-            CHARGING_PORT_OPENED: "Charge port opened",
-            DOOR_OPEN: "Door open",
-            DOOR_CLOSE: "Door close",
-            LOCKED: "Vehicle locked",
-            UNLOCKED: "Vehicle unlocked",
-            BRAKE_ON: "Brake pressed",
-            BRAKE_OFF: "Brake released",
-            BLINDSPOT_LEFT: "Left blindspot",
-            BLINDSPOT_RIGHT: "Right blindspot",
-            BLINDSPOT_WARNING: "Blindspot warning",
-            NIGHT_MODE_ON: "Night mode on",
-            NIGHT_MODE_OFF: "Night mode off",
-            SPEED_THRESHOLD: "Speed threshold reached",
-            AUTOPILOT_ENGAGED: "Autopilot engaged",
-            AUTOPILOT_DISENGAGED: "Autopilot disengaged",
-            GEAR_DRIVE: "Gear Drive",
-            GEAR_REVERSE: "Gear Reverse",
-            GEAR_PARK: "Gear Park",
-            SENTRY_MODE_ON: "Sentry enabled",
-            SENTRY_MODE_OFF: "Sentry disabled",
-            SENTRY_ALERT: "Sentry alert",
-            unknown: "Event {0}"
-        },
-        effectNames: {
-            OFF: "Off",
-            SOLID: "Solid color",
-            BREATHING: "Breathing",
-            RAINBOW: "Rainbow",
-            RAINBOW_CYCLE: "Rainbow cycle",
-            THEATER_CHASE: "Theater chase",
-            RUNNING_LIGHTS: "Running lights",
-            TWINKLE: "Twinkle",
-            FIRE: "Fire",
-            SCAN: "Scanner",
-            KNIGHT_RIDER: "Knight Rider",
-            FADE: "Fade",
-            STROBE: "Strobe",
-            VEHICLE_SYNC: "Vehicle sync",
-            TURN_SIGNAL: "Turn signal",
-            BRAKE_LIGHT: "Brake light",
-            CHARGE_STATUS: "Charge status",
-            HAZARD: "Hazard",
-            BLINDSPOT_FLASH: "Blindspot flash",
-            unknown: "Effect {0}"
-        },
-        ota: {
-            title: "OTA Update",
-            currentVersion: "Current Version",
-            loading: "Loading...",
-            firmwareFile: "Firmware File (.bin)",
-            progress: "Progress",
-            upload: "Upload",
-            restart: "Restart",
-            uploading: "Uploading...",
-            success: "Update successful! You can restart.",
-        error: "Update error",
-        selectFile: "Please select a firmware file",
-        wrongExtension: "File must have .bin extension",
-        confirmUpdate: "Are you sure you want to update the firmware? The device will restart.",
-        confirmRestart: "Restart now?",
-        restarting: "Restarting... Reconnecting in 10 seconds.",
-        autoRestartIn: "Auto reboot in",
-        states: {
-            idle: "Waiting for an update",
-            receiving: "Receiving firmware...",
-            writing: "Writing firmware to flash...",
-            success: "Update completed, restart pending",
-            error: "Update failed"
-        },
-        bleNote: "Connect to the device's Wi-Fi (AP) to perform the update."
-    }
-}
-};
+
 const OTA_STATE_KEYS = {
     0: 'idle',
     1: 'receiving',
@@ -863,8 +84,8 @@ function registerBleAutoConnectGestureHandler() {
     }
     bleAutoConnectGestureHandlerRegistered = true;
     const unlock = () => {
-        document.removeEventListener('pointerdown', unlock);
-        document.removeEventListener('keydown', unlock);
+        doc.removeEventListener('pointerdown', unlock);
+        doc.removeEventListener('keydown', unlock);
         bleAutoConnectGestureHandlerRegistered = false;
         bleAutoConnectGestureCaptured = true;
         bleAutoConnectAwaitingGesture = false;
@@ -874,8 +95,8 @@ function registerBleAutoConnectGestureHandler() {
             updateConnectionOverlay();
         }
     };
-    document.addEventListener('pointerdown', unlock, { once: true });
-    document.addEventListener('keydown', unlock, { once: true });
+    doc.addEventListener('pointerdown', unlock, { once: true });
+    doc.addEventListener('keydown', unlock, { once: true });
 }
 function maybeAutoConnectBle(fromGesture = false) {
     if (!bleTransport.isSupported()) {
@@ -903,7 +124,7 @@ function maybeAutoConnectBle(fromGesture = false) {
     bleAutoConnectAwaitingGesture = false;
     bleAutoConnectInProgress = true;
     bleTransport.connect().catch(error => {
-        if (error && (error.name === 'SecurityError' || /SecurityError/i.test(error.message || ''))) {
+        if (error && (error.n === 'SecurityError' || /SecurityError/i.test(error.message || ''))) {
             console.warn('BLE auto-connect blocked by browser security, waiting for interaction');
             bleAutoConnectGestureCaptured = false;
             bleAutoConnectAwaitingGesture = true;
@@ -918,9 +139,9 @@ function maybeAutoConnectBle(fromGesture = false) {
     });
 }
 function updateConnectionOverlay() {
-    const overlay = document.getElementById('connection-overlay');
-    const message = document.getElementById('connection-overlay-message');
-    const content = document.getElementById('app-content');
+    const overlay = $('connection-overlay');
+    const message = $('connection-overlay-message');
+    const content = $('app-content');
     const ready = isApiConnectionReady();
     if (overlay) {
         overlay.style.display = ready ? 'none' : 'flex';
@@ -1034,9 +255,9 @@ class BleTransport {
         this.requestQueue = Promise.resolve();
 
         if(this.isSupported()){
-          document.getElementById('wifi-status-item').style.display = 'none';
+          $('wifi-status-item').style.display = 'none';
         } else {
-          document.getElementById('ble-status-item').style.display = 'none';
+          $('ble-status-item').style.display = 'none';
         }
     }
     async requestDevice(forceNew = false) {
@@ -1127,7 +348,7 @@ class BleTransport {
             try {
                 service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
             } catch (error) {
-                if (error && error.name === 'NetworkError') {
+                if (error && error.n === 'NetworkError') {
                     server = await this.ensureGattConnection(device, true);
                     service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
                 } else {
@@ -1427,9 +648,10 @@ const simulationSections = [
     {
         titleKey: 'simulation.blindspot',
         events: [
-            { id: 'BLINDSPOT_LEFT', labelKey: 'simulation.blindspotLeft' },
-            { id: 'BLINDSPOT_RIGHT', labelKey: 'simulation.blindspotRight' },
-            { id: 'BLINDSPOT_WARNING', labelKey: 'simulation.blindspotWarning' }
+            { id: 'BLINDSPOT_LEFT_LV1', labelKey: 'simulation.blindspotLeftLv1' },
+            { id: 'BLINDSPOT_LEFT_LV2', labelKey: 'simulation.blindspotLeftLv2' },
+            { id: 'BLINDSPOT_RIGHT_LV1', labelKey: 'simulation.blindspotRightLv1' },
+            { id: 'BLINDSPOT_RIGHT_LV2', labelKey: 'simulation.blindspotRightLv2' }
         ]
     },
     {
@@ -1445,9 +667,9 @@ const simulationSections = [
 currentLang = localStorage.getItem('language') || currentLang;
 currentTheme = localStorage.getItem('theme') || currentTheme;
 function updateBleUiState() {
-    const button = document.getElementById('ble-connect-button');
-    const statusValue = document.getElementById('ble-status-text');
-    const statusItem = document.getElementById('ble-status-item');
+    const button = $('ble-connect-button');
+    const statusValue = $('ble-status-text');
+    const statusItem = $('ble-status-item');
     if (!button || !statusValue) {
         return;
     }
@@ -1496,7 +718,7 @@ function updateBleUiState() {
     updateConnectionOverlay();
 }
 function updateOtaBleNote() {
-    const note = document.getElementById('ota-ble-note');
+    const note = $('ota-ble-note');
     if (!note) {
         return;
     }
@@ -1504,8 +726,8 @@ function updateOtaBleNote() {
         ? bleTransport.shouldUseBle()
         : false;
     note.style.display = useBle ? 'block' : 'none';
-    const fileInput = document.getElementById('firmware-file');
-    const uploadBtn = document.getElementById('ota-upload-btn');
+    const fileInput = $('firmware-file');
+    const uploadBtn = $('ota-upload-btn');
     if (fileInput) {
         fileInput.style.display = useBle ? 'none' : 'block';
         fileInput.disabled = useBle;
@@ -1549,18 +771,15 @@ function setLanguage(lang) {
     renderSimulationSections();
     renderEventsTable();
 }
-function toggleLanguage() {
-    setLanguage(currentLang === 'fr' ? 'en' : 'fr');
-}
 function updateLanguageSelector() {
-    const select = document.getElementById('language-select');
+    const select = $('language-select');
     if (select) {
         select.value = currentLang;
     }
 }
 function applyTheme() {
-    document.body.classList.toggle('light-theme', currentTheme === 'light');
-    const select = document.getElementById('theme-select');
+    doc.body.classList.toggle('light-theme', currentTheme === 'light');
+    const select = $('theme-select');
     if (select) {
         select.value = currentTheme;
     }
@@ -1572,7 +791,7 @@ function setTheme(theme) {
     applyTheme();
 }
 function applyTranslations() {
-    document.querySelectorAll('[data-i18n]').forEach(el => {
+    doc.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         const keys = key.split('.');
         let value = translations[currentLang];
@@ -1583,7 +802,7 @@ function applyTranslations() {
             el.textContent = value;
         }
     });
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    doc.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.getAttribute('data-i18n-placeholder');
         const keys = key.split('.');
         let value = translations[currentLang];
@@ -1598,14 +817,14 @@ function applyTranslations() {
     updateSelectOptions();
     refreshEffectOptionLabels();
     updateLanguageSelector();
-    const themeSelect = document.getElementById('theme-select');
+    const themeSelect = $('theme-select');
     if (themeSelect) {
         themeSelect.value = currentTheme;
     }
     updateBleUiState();
 }
 function updateSelectOptions() {
-    const effectSelect = document.getElementById('effect-select');
+    const effectSelect = $('effect-select');
     if (effectSelect) {
         Array.from(effectSelect.options).forEach(opt => {
             const key = opt.getAttribute('data-i18n');
@@ -1621,7 +840,7 @@ function updateSelectOptions() {
     }
 }
 function refreshEffectOptionLabels() {
-    const selects = document.querySelectorAll('select[data-effect-options]');
+    const selects = doc.querySelectorAll('select[data-effect-options]');
     selects.forEach(select => {
         Array.from(select.options).forEach(opt => {
             const effectId = opt.value;
@@ -1660,17 +879,17 @@ function isSimulationEventEnabled(eventType) {
     if (!config) {
         return true;
     }
-    return config.enabled !== false;
+    return config.en !== false;
 }
 function switchTab(tabName, evt) {
-    const tabs = document.querySelectorAll('.tabs .tab');
+    const tabs = doc.querySelectorAll('.tabs .tab');
     tabs.forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    const button = (evt && evt.currentTarget) || document.querySelector(`.tabs .tab[data-tab="${tabName}"]`);
+    doc.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    const button = (evt && evt.currentTarget) || $$(`.tabs .tab[data-tab="${tabName}"]`);
     if (button) {
         button.classList.add('active');
     }
-    const target = document.getElementById(tabName + '-tab');
+    const target = $(tabName + '-tab');
     if (target) {
         target.classList.add('active');
     }
@@ -1698,14 +917,14 @@ function switchTab(tabName, evt) {
 function restoreSimulationToggles() {
     // Restaurer l'état de tous les toggles
     Object.keys(simulationTogglesState).forEach(eventId => {
-        const checkbox = document.getElementById('toggle-' + eventId);
+        const checkbox = $('toggle-' + eventId);
         if (checkbox) {
             checkbox.checked = simulationTogglesState[eventId];
         }
         setToggleContainerState(eventId, simulationTogglesState[eventId]);
     });
     // Restaurer le toggle du mode nuit
-    const nightModeCheckbox = document.getElementById('toggle-nightmode');
+    const nightModeCheckbox = $('toggle-nightmode');
     if (nightModeCheckbox && simulationTogglesState['nightmode'] !== undefined) {
         nightModeCheckbox.checked = simulationTogglesState['nightmode'];
     }
@@ -1715,7 +934,7 @@ function getSimulationEventConfig(eventType) {
         return null;
     }
     const normalized = typeof eventType === 'string' ? eventType : String(eventType);
-    return eventsConfigData.find(evt => evt.event === normalized) || null;
+    return eventsConfigData.find(evt => evt.ev === normalized) || null;
 }
 function cancelSimulationAutoStop(eventType) {
     if (simulationAutoStopTimers[eventType]) {
@@ -1734,7 +953,7 @@ function scheduleSimulationAutoStop(eventType, durationMs) {
 }
 async function autoStopSimulationEvent(eventType) {
     cancelSimulationAutoStop(eventType);
-    const checkbox = document.getElementById('toggle-' + eventType);
+    const checkbox = $('toggle-' + eventType);
     if (checkbox) {
         checkbox.checked = false;
     }
@@ -1747,25 +966,25 @@ async function getSimulationEventDuration(eventType) {
         return 0;
     }
     const config = getSimulationEventConfig(eventType);
-    return config && typeof config.duration === 'number' ? config.duration : 0;
+    return config && typeof config.dur === 'number' ? config.dur : 0;
 }
 function renderSimulationSections() {
-    const container = document.getElementById('simulation-sections');
+    const container = $('simulation-sections');
     if (!container) return;
     container.innerHTML = '';
     simulationSections.forEach(section => {
-        const sectionDiv = document.createElement('div');
+        const sectionDiv = doc.createElement('div');
         sectionDiv.className = 'section';
-        const title = document.createElement('div');
+        const title = doc.createElement('div');
         title.className = 'section-title';
         title.style.fontSize = '16px';
         title.setAttribute('data-i18n', section.titleKey);
         title.textContent = t(section.titleKey);
         sectionDiv.appendChild(title);
-        const grid = document.createElement('div');
+        const grid = doc.createElement('div');
         grid.className = 'simulation-grid';
         section.events.forEach(event => {
-            const toggleContainer = document.createElement('div');
+            const toggleContainer = doc.createElement('div');
             toggleContainer.className = 'event-toggle-container';
             toggleContainer.id = 'event-toggle-' + event.id;
             const eventConfig = getSimulationEventConfig(event.id);
@@ -1773,20 +992,20 @@ function renderSimulationSections() {
             if (eventConfig && !eventEnabledInConfig) {
                 simulationTogglesState[event.id] = false;
             }
-            const label = document.createElement('label');
+            const label = doc.createElement('label');
             label.className = 'event-toggle-label';
             label.htmlFor = 'toggle-' + event.id;
             label.setAttribute('data-i18n', event.labelKey);
             label.textContent = t(event.labelKey);
-            const toggle = document.createElement('label');
+            const toggle = doc.createElement('label');
             toggle.className = 'toggle-switch';
-            const input = document.createElement('input');
+            const input = doc.createElement('input');
             input.type = 'checkbox';
             input.id = 'toggle-' + event.id;
             input.checked = eventEnabledInConfig && !!simulationTogglesState[event.id];
             input.disabled = !eventEnabledInConfig;
             input.addEventListener('change', (e) => toggleEvent(event.id, e.target.checked));
-            const slider = document.createElement('span');
+            const slider = doc.createElement('span');
             slider.className = 'toggle-slider';
             toggle.appendChild(input);
             toggle.appendChild(slider);
@@ -1803,7 +1022,7 @@ function renderSimulationSections() {
     });
 }
 function setToggleContainerState(eventType, isActive) {
-    const container = document.getElementById('event-toggle-' + eventType);
+    const container = $('event-toggle-' + eventType);
     if (container) {
         container.classList.toggle('active', !!isActive);
     }
@@ -1815,38 +1034,47 @@ function percentTo255(percent) {
 function to255ToPercent(value) {
     return Math.round((value * 100) / 255);
 }
+const defaultNightMode = $('default-night-mode');
+if (defaultNightMode) {
+    defaultNightMode.addEventListener('change', scheduleDefaultEffectSave);
+}
 // Mise à jour des sliders avec pourcentage (seulement ceux qui existent)
-const nightBrightnessSlider = document.getElementById('night-brightness-slider');
+const nightBrightnessSlider = $('night-brightness-slider');
 if (nightBrightnessSlider) {
     nightBrightnessSlider.oninput = function() {
-        document.getElementById('night-brightness-value').textContent = this.value + '%';
+        $('night-brightness-value').textContent = this.value + '%';
+        scheduleDefaultEffectSave();
     };
 }
-const defaultBrightnessSlider = document.getElementById('default-brightness-slider');
+const defaultBrightnessSlider = $('default-brightness-slider');
 if (defaultBrightnessSlider) {
     defaultBrightnessSlider.oninput = function() {
-        document.getElementById('default-brightness-value').textContent = this.value + '%';
+        $('default-brightness-value').textContent = this.value + '%';
         scheduleDefaultEffectSave();
     };
 }
-const defaultSpeedSlider = document.getElementById('default-speed-slider');
+const defaultSpeedSlider = $('default-speed-slider');
 if (defaultSpeedSlider) {
     defaultSpeedSlider.oninput = function() {
-        document.getElementById('default-speed-value').textContent = this.value + '%';
+        $('default-speed-value').textContent = this.value + '%';
         scheduleDefaultEffectSave();
     };
 }
-const defaultColorInput = document.getElementById('default-color1');
+const defaultColorInput = $('default-color1');
 if (defaultColorInput) {
     defaultColorInput.addEventListener('change', scheduleDefaultEffectSave);
 }
-const defaultEffectSelect = document.getElementById('default-effect-select');
+const defaultEffectSelect = $('default-effect-select');
 if (defaultEffectSelect) {
     defaultEffectSelect.addEventListener('change', scheduleDefaultEffectSave);
 }
+const defaultAudioReactive = $('default-audio-reactive');
+if (defaultAudioReactive) {
+    defaultAudioReactive.addEventListener('change', scheduleDefaultEffectSave);
+}
 // Notification helper
 function showNotification(elementId, message, type, timeout = 2000) {
-    const notification = document.getElementById(elementId);
+    const notification = $(elementId);
     notification.textContent = message;
     notification.className = 'notification ' + type + ' show';
     setTimeout(() => {
@@ -1863,7 +1091,7 @@ async function parseApiResponse(response) {
             data = null;
         }
     }
-    const status = data && typeof data.status === 'string' ? data.status : null;
+    const status = data && typeof data.st === 'string' ? data.st : null;
     const success = response.ok && (status === null || status === 'ok');
     return { success, data, raw: rawText };
 }
@@ -1882,7 +1110,7 @@ function getDefaultEffectId() {
     if (offEffect) {
         return offEffect.id;
     }
-    const nonCan = effectsList.find(effect => !effect.can_required);
+    const nonCan = effectsList.find(effect => !effect.cr);
     if (nonCan) {
         return nonCan.id;
     }
@@ -1918,8 +1146,8 @@ async function ensureEventsConfigData(forceRefresh = false) {
     return fetchPromise;
 }
 async function loadEventsConfig() {
-    const loading = document.getElementById('events-loading');
-    const content = document.getElementById('events-content');
+    const loading = $('events-loading');
+    const content = $('events-content');
     loading.style.display = 'block';
     content.style.display = 'none';
     try {
@@ -1935,12 +1163,12 @@ async function loadEventsConfig() {
     }
 }
 function renderEventsTable() {
-    const tbody = document.getElementById('events-table-body');
+    const tbody = $('events-table-body');
     tbody.innerHTML = '';
     // If no data from API, create default rows for all events
     if (eventsConfigData.length === 0) {
         const defaultEffectId =
-            effectsList.find(effect => !effect.can_required)?.id ||
+            effectsList.find(effect => !effect.cr)?.id ||
             effectsList[0]?.id ||
             'OFF';
         if (eventTypesList.length > 0) {
@@ -1948,31 +1176,31 @@ function renderEventsTable() {
                 .filter(evt => evt.id !== 'NONE')
                 .forEach(evt => {
                     eventsConfigData.push({
-                        event: evt.id,
-                        effect: defaultEffectId,
-                        brightness: 128,
-                        speed: 128,
-                        color: 0xFF0000,
-                        duration: 0,
-                        priority: 100,
-                        enabled: true,
-                        action_type: 0,
-                        profile_id: -1,
-                        can_switch_profile: false
+                        ev: evt.id,
+                        fx: defaultEffectId,
+                        bri: 128,
+                        sp: 128,
+                        c1: 0xFF0000,
+                        dur: 0,
+                        pri: 100,
+                        en: true,
+                        at: 0,
+                        pid: -1,
+                        csp: false
                     });
                 });
         }
     }
     eventsConfigData.forEach((event, index) => {
         // Skip CAN_EVENT_NONE only
-        if (event.event === 'NONE') {
+        if (event.ev === 'NONE') {
             return;
         }
-        const row = document.createElement('tr');
-        const eventName = getEventName(event.event);
-        const actionType = event.action_type !== undefined ? event.action_type : 0;
-        const canSwitchProfile = event.can_switch_profile || false;
-        const profileId = event.profile_id !== undefined ? event.profile_id : -1;
+        const row = doc.createElement('tr');
+        const eventName = getEventName(event.ev);
+        const actionType = event.at !== undefined ? event.at : 0;
+        const canSwitchProfile = event.csp || false;
+        const profileId = event.pid !== undefined ? event.pid : -1;
         // Générer les options d'action
         let actionOptions = '';
         actionOptions += `<option value="0" ${actionType === 0 ? 'selected' : ''}>${t('eventsConfig.applyEffect')}</option>`;
@@ -1980,7 +1208,7 @@ function renderEventsTable() {
             actionOptions += `<option value="1" ${actionType === 1 ? 'selected' : ''}>${t('eventsConfig.switchProfile')}</option>`;
         }
         // Générer les options de profil
-        const profileSelect = document.getElementById('profile-select');
+        const profileSelect = $('profile-select');
         let profileOptions = '<option value="-1">--</option>';
         if (profileSelect) {
             for (let i = 0; i < profileSelect.options.length; i++) {
@@ -1991,47 +1219,47 @@ function renderEventsTable() {
         row.innerHTML = `
             <td class="event-name-cell">${eventName}</td>
             <td>
-                <select onchange="updateEventConfig(${index}, 'action_type', parseInt(this.value)); renderEventsTable();" ${!canSwitchProfile ? 'disabled style="display:none"' : ''}>
+                <select onchange="updateEventConfig(${index}, 'at', parseInt(this.value)); renderEventsTable();" ${!canSwitchProfile ? 'disabled style="display:none"' : ''}>
                     ${actionOptions}
                 </select>
             </td>
             <td>
-                <select onchange="updateEventConfig(${index}, 'profile_id', parseInt(this.value))" ${actionType === 0 || !canSwitchProfile ? 'disabled style="display:none"' : ''}>
+                <select onchange="updateEventConfig(${index}, 'pid', parseInt(this.value))" ${actionType === 0 || !canSwitchProfile ? 'disabled style="display:none"' : ''}>
                     ${profileOptions}
                 </select>
             </td>
             <td>
-                <select data-effect-options="true" onchange="updateEventConfig(${index}, 'effect', this.value)" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
+                <select data-effect-options="true" onchange="updateEventConfig(${index}, 'fx', this.value)" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
                     ${effectsList
-                        .filter(effect => !effect.audio_effect)
+                        .filter(effect => !effect.ae)
                         .map(effect =>
-                            `<option value="${effect.id}" data-effect-name="${effect.name}" ${event.effect == effect.id ? 'selected' : ''}>${getEffectName(effect.id)}</option>`
+                            `<option value="${effect.id}" data-effect-name="${effect.n}" ${event.fx == effect.id ? 'selected' : ''}>${getEffectName(effect.id)}</option>`
                         ).join('')}
                 </select>
             </td>
             <td>
-                <input type="number" min="0" max="255" value="${event.brightness}"
-                    onchange="updateEventConfig(${index}, 'brightness', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
+                <input type="number" min="0" max="255" value="${event.br}"
+                    onchange="updateEventConfig(${index}, 'br', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
             </td>
             <td>
-                <input type="number" min="0" max="255" value="${event.speed}"
-                    onchange="updateEventConfig(${index}, 'speed', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
+                <input type="number" min="0" max="255" value="${event.sp}"
+                    onchange="updateEventConfig(${index}, 'sp', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
             </td>
             <td>
-                <input type="color" value="#${event.color.toString(16).padStart(6, '0')}"
-                    onchange="updateEventConfig(${index}, 'color', parseInt(this.value.substring(1), 16))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
+                <input type="color" value="#${event.c1.toString(16).padStart(6, '0')}"
+                    onchange="updateEventConfig(${index}, 'c1', parseInt(this.value.substring(1), 16))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
             </td>
             <td>
-                <input type="number" min="0" max="60000" step="100" value="${event.duration}"
-                    onchange="updateEventConfig(${index}, 'duration', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
+                <input type="number" min="0" max="60000" step="100" value="${event.dur}"
+                    onchange="updateEventConfig(${index}, 'dur', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
             </td>
             <td>
-                <input type="number" min="0" max="255" value="${event.priority}"
-                    onchange="updateEventConfig(${index}, 'priority', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
+                <input type="number" min="0" max="255" value="${event.pri}"
+                    onchange="updateEventConfig(${index}, 'pri', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
             </td>
             <td style="text-align: center;">
-                <input type="checkbox" ${event.enabled ? 'checked' : ''}
-                    onchange="updateEventConfig(${index}, 'enabled', this.checked)">
+                <input type="checkbox" ${event.en ? 'checked' : ''}
+                    onchange="updateEventConfig(${index}, 'en', this.checked)">
             </td>
         `;
         tbody.appendChild(row);
@@ -2042,15 +1270,15 @@ function updateEventConfig(index, field, value) {
     if (field === 'action_type') {
         const event = eventsConfigData[index];
         if (value === 0) {
-            event.profile_id = -1;
+            event.pid = -1;
         } else if (value === 1) {
-            event.effect = getDefaultEffectId();
+            event.fx = getDefaultEffectId();
         } else if (value === 2) {
-            if (event.profile_id === undefined || event.profile_id === null) {
-                event.profile_id = -1;
+            if (event.pid === undefined || event.pid === null) {
+                event.pid = -1;
             }
-            if (!event.effect) {
-                event.effect = getDefaultEffectId();
+            if (!event.fx) {
+                event.fx = getDefaultEffectId();
             }
         }
     }
@@ -2074,8 +1302,8 @@ function buildEventPayload(event) {
         return null;
     }
     const allowedKeys = [
-        'event', 'effect', 'brightness', 'speed', 'color',
-        'duration', 'priority', 'enabled', 'action_type', 'profile_id'
+        'ev', 'fx', 'bri', 'sp', 'c1',
+        'dur', 'pri', 'en', 'at', 'pid', 'csp'
     ];
     const payload = {};
     allowedKeys.forEach(key => {
@@ -2118,14 +1346,14 @@ async function loadHardwareConfig() {
     try {
         const response = await fetch(API_BASE + '/api/config');
         const config = await response.json();
-        if (config.led_count !== undefined) {
-            document.getElementById('led-count').value = config.led_count;
+        if (config.lc !== undefined) {
+            $('led-count').value = config.lc;
         }
-        if (config.data_pin !== undefined) {
-            document.getElementById('data-pin').value = config.data_pin;
+        if (config.dp !== undefined) {
+            $('data-pin').value = config.dp;
         }
-        if (config.strip_reverse !== undefined) {
-            document.getElementById('strip-reverse').checked = config.strip_reverse;
+        if (config.srv !== undefined) {
+            $('strip-reverse').checked = config.srv;
         }
     } catch (e) {
         console.error('Error:', e);
@@ -2134,9 +1362,9 @@ async function loadHardwareConfig() {
 }
 async function saveHardwareConfig() {
     const config = {
-        led_count: parseInt(document.getElementById('led-count').value),
-        data_pin: parseInt(document.getElementById('data-pin').value),
-        strip_reverse: document.getElementById('strip-reverse').checked
+        lc: parseInt($('led-count').value),
+        dp: parseInt($('data-pin').value),
+        srv: $('strip-reverse').checked
     };
     try {
         const response = await fetch(API_BASE + '/api/config', {
@@ -2168,7 +1396,7 @@ async function performFactoryReset() {
             headers: { 'Content-Type': 'application/json' }
         });
         const data = await response.json();
-        if (response.ok && data.status === 'ok') {
+        if (response.ok && data.st === 'ok') {
             showNotification('config-notification', t('config.factoryResetSuccess'), 'success');
             // L'ESP32 va redémarrer, afficher un message
             setTimeout(() => {
@@ -2176,7 +1404,7 @@ async function performFactoryReset() {
                 location.reload();
             }, 2000);
         } else {
-            showNotification('config-notification', data.message || t('config.factoryResetError'), 'error');
+            showNotification('config-notification', data.msg || t('config.factoryResetError'), 'error');
         }
     } catch (e) {
         console.error('Error:', e);
@@ -2188,27 +1416,27 @@ async function loadProfiles() {
     try {
         const response = await fetch(API_BASE + '/api/profiles');
         const data = await response.json();
-        const select = document.getElementById('profile-select');
+        const select = $('profile-select');
         select.innerHTML = '';
         data.profiles.forEach(profile => {
-            const option = document.createElement('option');
+            const option = doc.createElement('option');
             option.value = profile.id;
-            option.textContent = profile.name + (profile.active ? ' ✓' : '');
-            if (profile.active) option.selected = true;
+            option.textContent = profile.n + (profile.ac ? ' ✓' : '');
+            if (profile.ac) option.selected = true;
             select.appendChild(option);
         });
-        document.getElementById('profile-status').textContent = data.active_name;
+        $('profile-status').textContent = data.an;
     } catch (e) {
         console.error('Erreur:', e);
     }
 }
 async function activateProfile() {
-    const profileId = parseInt(document.getElementById('profile-select').value);
+    const profileId = parseInt($('profile-select').value);
     try {
         await fetch(API_BASE + '/api/profile/activate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ profile_id: profileId })
+            body: JSON.stringify({ pid: profileId })
         });
         loadProfiles();
         loadConfig();
@@ -2217,13 +1445,13 @@ async function activateProfile() {
     }
 }
 function showNewProfileDialog() {
-    document.getElementById('newProfileModal').classList.add('active');
+    $('newProfileModal').classList.add('active');
 }
 function hideNewProfileDialog() {
-    document.getElementById('newProfileModal').classList.remove('active');
+    $('newProfileModal').classList.remove('active');
 }
 async function createProfile() {
-    const name = document.getElementById('new-profile-name').value;
+    const name = $('new-profile-name').value;
     if (!name) return;
     try {
         const response = await fetch(API_BASE + '/api/profile/create', {
@@ -2234,11 +1462,11 @@ async function createProfile() {
         const apiResult = await parseApiResponse(response);
         if (apiResult.success) {
             hideNewProfileDialog();
-            document.getElementById('new-profile-name').value = '';
+            $('new-profile-name').value = '';
             loadProfiles();
             showNotification('profiles-notification', t('profiles.create') + ' ' + t('config.saveSuccess'), 'success');
         } else {
-            const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
+            const message = apiResult.data?.msg || apiResult.raw || t('config.saveError');
             showNotification('profiles-notification', message, 'error');
         }
     } catch (e) {
@@ -2247,20 +1475,20 @@ async function createProfile() {
     }
 }
 async function deleteProfile() {
-    const profileId = parseInt(document.getElementById('profile-select').value);
+    const profileId = parseInt($('profile-select').value);
     if (!confirm(t('profiles.deleteConfirm'))) return;
     try {
         const response = await fetch(API_BASE + '/api/profile/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ profile_id: profileId })
+            body: JSON.stringify({ pid: profileId })
         });
         const apiResult = await parseApiResponse(response);
         if (apiResult.success) {
             loadProfiles();
             showNotification('profiles-notification', t('profiles.delete') + ' ' + t('config.saveSuccess'), 'success');
         } else {
-            const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
+            const message = apiResult.data?.msg || apiResult.raw || t('config.saveError');
             showNotification('profiles-notification', message, 'error');
         }
     } catch (e) {
@@ -2269,7 +1497,7 @@ async function deleteProfile() {
     }
 }
 async function exportProfile() {
-    const profileId = parseInt(document.getElementById('profile-select').value);
+    const profileId = parseInt($('profile-select').value);
     if (profileId < 0) {
         showNotification('profiles-notification', t('profiles.selectProfile'), 'error');
         return;
@@ -2279,14 +1507,14 @@ async function exportProfile() {
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const a = doc.createElement('a');
             a.style.display = 'none';
             a.href = url;
             a.download = 'profile_' + profileId + '.json';
-            document.body.appendChild(a);
+            doc.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            doc.body.removeChild(a);
             showNotification('profiles-notification', t('profiles.exportSuccess'), 'success');
         } else {
             showNotification('profiles-notification', t('profiles.exportError'), 'error');
@@ -2297,12 +1525,12 @@ async function exportProfile() {
     }
 }
 function showImportDialog() {
-    const profileId = parseInt(document.getElementById('profile-select').value);
+    const profileId = parseInt($('profile-select').value);
     if (profileId < 0) {
         showNotification('profiles-notification', t('profiles.selectProfile'), 'error');
         return;
     }
-    const input = document.createElement('input');
+    const input = doc.createElement('input');
     input.type = 'file';
     input.accept = '.json';
     input.onchange = async (e) => {
@@ -2321,7 +1549,7 @@ function showImportDialog() {
                     })
                 });
                 const result = await response.json();
-                if (result.status === 'ok') {
+                if (result.st === 'ok') {
                     showNotification('profiles-notification', t('profiles.importSuccess'), 'success');
                     loadProfiles();
                 } else {
@@ -2336,190 +1564,116 @@ function showImportDialog() {
     };
     input.click();
 }
-async function saveProfileSettings() {
-    const profileId = parseInt(document.getElementById('profile-select').value);
-    const autoNightMode = document.getElementById('auto-night-mode').checked;
-    const nightBrightness = percentTo255(parseInt(document.getElementById('night-brightness-slider').value));
-    try {
-        const response = await fetch(API_BASE + '/api/profile/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                profile_id: profileId,
-                auto_night_mode: autoNightMode,
-                night_brightness: nightBrightness
-            })
-        });
-        const apiResult = await parseApiResponse(response);
-        if (apiResult.success) {
-            showNotification('profiles-notification', t('config.saveSuccess'), 'success');
-        } else {
-            const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
-            showNotification('profiles-notification', message, 'error');
-        }
-    } catch (e) {
-        console.error('Error saving profile settings:', e);
-        showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
-    }
-}
-async function saveDefaultEffect(silent = false) {
-    // Attendre que la queue BLE soit vide avant de sauvegarder
+// Fonction unifiée pour sauvegarder le profil (settings + effet par défaut)
+async function saveProfile(params = {}) {
     if (bleTransportInstance && bleTransportInstance.waitForQueue) {
         await bleTransportInstance.waitForQueue();
     }
 
-    const profileId = parseInt(document.getElementById('profile-select').value);
-    const effectId = document.getElementById('default-effect-select').value;
-    const effect = effectIdToEnum(effectId); // Convert string ID to numeric enum
-    const brightness = percentTo255(parseInt(document.getElementById('default-brightness-slider').value));
-    const speed = percentTo255(parseInt(document.getElementById('default-speed-slider').value));
-    const color1 = parseInt(document.getElementById('default-color1').value.substring(1), 16);
+    const profileId = parseInt($('profile-select').value);
+    const payload = { pid: profileId };
 
-    // Audio reactive
-    const audioReactiveCheckbox = document.getElementById('default-audio-reactive');
-    const audioReactive = audioReactiveCheckbox ? audioReactiveCheckbox.checked : false;
+    // Paramètres profil (mode nuit)
+    if (params.settings !== false) {
+        payload.anm = $('auto-night-mode').checked;
+        payload.nbr = percentTo255(parseInt($('night-brightness-slider').value));
+    }
+
+    // Effet par défaut
+    if (params.defaultEffect !== false) {
+        payload.fx = effectIdToEnum($('default-effect-select').value);
+        payload.br = percentTo255(parseInt($('default-brightness-slider').value));
+        payload.sp = percentTo255(parseInt($('default-speed-slider').value));
+        payload.c1 = parseInt($('default-color1').value.substring(1), 16);
+        const audioReactiveCheckbox = $('default-audio-reactive');
+        payload.ar = audioReactiveCheckbox ? audioReactiveCheckbox.checked : false;
+    }
 
     try {
-        const response = await fetch(API_BASE + '/api/profile/update/default', {
+        const response = await fetch(API_BASE + '/api/profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                profile_id: profileId,
-                effect: effect,
-                brightness: brightness,
-                speed: speed,
-                color1: color1,
-                audio_reactive: audioReactive
-            })
+            body: JSON.stringify(payload)
         });
         const apiResult = await parseApiResponse(response);
         if (apiResult.success) {
-            if (!silent) {
-                showNotification('profiles-notification', t('profiles.saveDefault') + ' ' + t('config.saveSuccess'), 'success');
+            if (!params.silent) {
+                const msg = params.defaultEffect !== false
+                    ? t('profiles.saveDefault') + ' ' + t('config.saveSuccess')
+                    : t('config.saveSuccess');
+                showNotification('profiles-notification', msg, 'success');
             }
         } else {
-            const message = apiResult.data?.message || apiResult.raw || t('config.saveError');
+            const message = apiResult.data?.msg || apiResult.raw || t('config.saveError');
             showNotification('profiles-notification', message, 'error');
         }
     } catch (e) {
-        console.error('Error saving default effect:', e);
+        console.error('Error saving profile:', e);
         showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
     }
 }
+// Aliases pour compatibilité
+const saveProfileSettings = () => saveProfile({ defaultEffect: false });
+const saveDefaultEffect = (silent = false) => saveProfile({ settings: false, silent });
 // Appliquer l'effet
-async function applyEffect() {
-    const effectId = parseInt(document.getElementById('effect-select').value);
-    const config = {
-        effect: effectId,
-        brightness: percentTo255(parseInt(document.getElementById('brightness-slider').value)),
-        speed: percentTo255(parseInt(document.getElementById('speed-slider').value)),
-        color1: parseInt(document.getElementById('color1').value.substring(1), 16),
-        color2: 0,
-        color3: 0
-    };
-    try {
-        await fetch(API_BASE + '/api/effect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(config)
-        });
-
-        // Le backend active automatiquement le FFT si l'effet le nécessite
-        // Recharger le statut FFT pour mettre à jour l'affichage
-        await loadFFTStatus();
-    } catch (e) {
-        console.error('Erreur:', e);
-    }
-}
-// Sauvegarder la configuration
-async function saveConfig() {
-    try {
-        await fetch(API_BASE + '/api/save', { method: 'POST' });
-        showNotification('profiles-notification', t('effects.save'), 'success');
-    } catch (e) {
-        console.error('Erreur:', e);
-        showNotification('profiles-notification', t('config.saveError'), 'error');
-    }
-}
-// Assigner un effet à un événement
-async function assignEventEffect() {
-    const data = {
-        event: parseInt(document.getElementById('can-event-select').value),
-        effect: document.getElementById('event-effect-select').value,
-        duration: parseInt(document.getElementById('event-duration').value),
-        priority: parseInt(document.getElementById('event-priority-slider').value),
-        brightness: percentTo255(parseInt(document.getElementById('brightness-slider').value)),
-        speed: percentTo255(parseInt(document.getElementById('speed-slider').value)),
-        color1: parseInt(document.getElementById('color1').value.substring(1), 16)
-    };
-    try {
-        await fetch(API_BASE + '/api/event-effect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        showNotification('events-notification', t('canEvents.assignSuccess'), 'success');
-    } catch (e) {
-        console.error('Erreur:', e);
-        showNotification('events-notification', t('config.saveError'), 'error');
-    }
-}
 // Mise à jour du statut
 async function updateStatus() {
     try {
         const response = await fetch(API_BASE + '/api/status');
         const data = await response.json();
-        document.getElementById('wifi-status').textContent = data.wifi_connected ? t('status.connected') : t('status.ap');
-        document.getElementById('wifi-status').className = 'status-value ' + (data.wifi_connected ? 'status-online' : 'status-offline');
-        document.getElementById('can-bus-status').textContent = data.can_bus_running ? t('status.connected') : t('status.disconnected');
-        document.getElementById('can-bus-status').className = 'status-value ' + (data.can_bus_running ? 'status-online' : 'status-offline');
-        document.getElementById('vehicle-status').textContent = data.vehicle_active ? t('status.active') : t('status.inactive');
-        document.getElementById('vehicle-status').className = 'status-value ' + (data.vehicle_active ? 'status-online' : 'status-offline');
-        if (data.active_profile_name) {
-            document.getElementById('profile-status').textContent = data.active_profile_name;
+        $('wifi-status').textContent = data.wc ? t('status.connected') : t('status.ap');
+        $('wifi-status').className = 'status-value ' + (data.wc ? 'status-online' : 'status-offline');
+        $('can-bus-status').textContent = data.cbr ? t('status.connected') : t('status.disconnected');
+        $('can-bus-status').className = 'status-value ' + (data.cbr ? 'status-online' : 'status-offline');
+        $('vehicle-status').textContent = data.va ? t('status.ac') : t('status.inactive');
+        $('vehicle-status').className = 'status-value ' + (data.va ? 'status-online' : 'status-offline');
+        if (data.pn) {
+            $('profile-status').textContent = data.pn;
         }
         // Données véhicule complètes
-        if (data.vehicle && data.vehicle_active) {
+        if (data.vehicle && data.va) {
             const v = data.vehicle;
             // État général
-            document.getElementById('v-speed').textContent = v.speed.toFixed(1) + ' km/h';
-            document.getElementById('v-gear').textContent = ['--', 'P', 'R', 'N', 'D'][v.gear] || '--';
-            document.getElementById('v-brake').textContent = v.brake_pressed ? t('status.active') : t('status.inactive');
-            document.getElementById('v-locked').textContent = v.locked ? t('vehicle.locked') : t('vehicle.unlocked');
+            $('v-speed').textContent = v.s.toFixed(1) + ' km/h';
+            $('v-gear').textContent = ['--', 'P', 'R', 'N', 'D'][v.g] || '--';
+            $('v-brake').textContent = v.bp ? t('status.ac') : t('status.inactive');
+            $('v-locked').textContent = v.lk ? t('vehicle.locked') : t('vehicle.unlocked');
             // Portes
             if (v.doors) {
-                document.getElementById('v-door-fl').textContent = v.doors.front_left ? t('vehicle.open') : t('vehicle.closed');
-                document.getElementById('v-door-fr').textContent = v.doors.front_right ? t('vehicle.open') : t('vehicle.closed');
-                document.getElementById('v-door-rl').textContent = v.doors.rear_left ? t('vehicle.open') : t('vehicle.closed');
-                document.getElementById('v-door-rr').textContent = v.doors.rear_right ? t('vehicle.open') : t('vehicle.closed');
-                document.getElementById('v-trunk').textContent = v.doors.trunk ? t('vehicle.open') : t('vehicle.closed');
-                document.getElementById('v-frunk').textContent = v.doors.frunk ? t('vehicle.open') : t('vehicle.closed');
+                $('v-door-fl').textContent = v.doors.fl ? t('vehicle.open') : t('vehicle.closed');
+                $('v-door-fr').textContent = v.doors.fr ? t('vehicle.open') : t('vehicle.closed');
+                $('v-door-rl').textContent = v.doors.rl ? t('vehicle.open') : t('vehicle.closed');
+                $('v-door-rr').textContent = v.doors.rr ? t('vehicle.open') : t('vehicle.closed');
+                $('v-trunk').textContent = v.doors.t ? t('vehicle.open') : t('vehicle.closed');
+                $('v-frunk').textContent = v.doors.f ? t('vehicle.open') : t('vehicle.closed');
             }
             // Charge
             if (v.charge) {
-                document.getElementById('v-charging').textContent = v.charge.charging ? t('status.active') : t('status.inactive');
-                document.getElementById('v-charge').textContent = v.charge.percent?.toFixed(1) + '%';
-                document.getElementById('v-charge-power').textContent = v.charge.power_kw?.toFixed(1) + ' kW';
+                $('v-charging').textContent = v.charge.ch ? t('status.ac') : t('status.inactive');
+                $('v-charge').textContent = v.charge.pct?.toFixed(1) + '%';
+                $('v-charge-power').textContent = v.charge.pw?.toFixed(1) + ' kW';
             }
             // Lumières
             if (v.lights) {
-                document.getElementById('v-headlights').textContent = v.lights.headlights ? t('status.active') : t('status.inactive');
-                document.getElementById('v-high-beams').textContent = v.lights.high_beams ? t('status.active') : t('status.inactive');
-                document.getElementById('v-fog-lights').textContent = v.lights.fog_lights ? t('status.active') : t('status.inactive');
-                document.getElementById('v-turn-signal').textContent = v.lights.turn_left ? t('simulation.left'): v.lights.turn_right ? t('simulation.right'): t('vehicle.off')
+                $('v-headlights').textContent = v.lights.h ? t('status.ac') : t('status.inactive');
+                $('v-high-beams').textContent = v.lights.hb ? t('status.ac') : t('status.inactive');
+                $('v-fog-lights').textContent = v.lights.fg ? t('status.ac') : t('status.inactive');
+                $('v-turn-signal').textContent = v.lights.tl ? t('simulation.left'): v.lights.tr ? t('simulation.right'): t('vehicle.off')
             }
             // Batterie et autres
-            document.getElementById('v-battery-lv').textContent = v.battery_lv?.toFixed(2) + ' V';
-            document.getElementById('v-battery-hv').textContent = v.battery_hv?.toFixed(2) + ' V';
-            document.getElementById('v-odometer').textContent = v.odometer_km.toLocaleString() + ' km';
+            $('v-battery-lv').textContent = v.blv?.toFixed(2) + ' V';
+            $('v-battery-hv').textContent = v.bhv?.toFixed(2) + ' V';
+            $('v-odometer').textContent = v.odo.toLocaleString() + ' km';
             // Sécurité
             if (v.safety) {
-                document.getElementById('v-night').textContent = v.safety.night_mode ? t('status.active') : t('status.inactive');
-                document.getElementById('v-brightness').textContent = v.safety.brightness;
-                document.getElementById('v-blindspot-left').textContent = v.safety.blindspot_left ? t('status.active') : t('status.inactive');
-                document.getElementById('v-blindspot-right').textContent = v.safety.blindspot_right ? t('status.active') : t('status.inactive');
+                $('v-night').textContent = v.safety.nm ? t('status.ac') : t('status.inactive');
+                $('v-brightness').textContent = v.safety.br;
+                $('v-blindspot-left-lv1').textContent = v.safety.bl1 ? t('status.ac') : t('status.inactive');
+                $('v-blindspot-left-lv2').textContent = v.safety.bl2 ? t('status.ac') : t('status.inactive');
+                $('v-blindspot-right-lv1').textContent = v.safety.br1 ? t('status.ac') : t('status.inactive');
+                $('v-blindspot-right-lv2').textContent = v.safety.br2 ? t('status.ac') : t('status.inactive');
 
-                const sentryModeEl = document.getElementById('v-sentry-mode');
+                const sentryModeEl = $('v-sentry-mode');
                 if (sentryModeEl) {
                     if (typeof v.safety.sentry_mode === 'boolean') {
                         sentryModeEl.textContent = v.safety.sentry_mode ? t('simulation.sentryOn') : t('simulation.sentryOff');
@@ -2528,7 +1682,7 @@ async function updateStatus() {
                     }
                 }
 
-                const sentryRequestEl = document.getElementById('v-sentry-request');
+                const sentryRequestEl = $('v-sentry-request');
                 if (sentryRequestEl) {
                     const requestMap = {
                         AUTOPILOT_NOMINAL: t('vehicle.sentryNominal'),
@@ -2539,7 +1693,7 @@ async function updateStatus() {
                     sentryRequestEl.textContent = requestState ? (requestMap[requestState] || requestState) : t('vehicle.none');
                 }
 
-                const sentryAlertEl = document.getElementById('v-sentry-alert');
+                const sentryAlertEl = $('v-sentry-alert');
                 if (sentryAlertEl) {
                     if (typeof v.safety.sentry_alert === 'boolean') {
                         sentryAlertEl.textContent = v.safety.sentry_alert ? t('simulation.sentryAlert') : t('vehicle.none');
@@ -2555,11 +1709,13 @@ async function updateStatus() {
                 'v-door-fl', 'v-door-fr', 'v-door-rl', 'v-door-rr', 'v-trunk', 'v-frunk',
                 'v-charging', 'v-charge', 'v-charge-power',
                 'v-headlights', 'v-high-beams', 'v-fog-lights', 'v-turn-signal',
-                'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness', 'v-blindspot-left', 'v-blindspot-right',
+                'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness', 
+                'v-blindspot-left-lv1', 'v-blindspot-right-lv1',
+                'v-blindspot-left-lv2', 'v-blindspot-right-lv2',
                 'v-sentry-mode', 'v-sentry-request', 'v-sentry-alert'
             ];
             fields.forEach(id => {
-                const element = document.getElementById(id);
+                const element = $(id);
                 if (element) element.textContent = '--';
             });
         }
@@ -2578,17 +1734,17 @@ async function loadConfig() {
         const response = await fetch(API_BASE + '/api/config');
         const config = await response.json();
         // Convertir 0-255 en pourcentage
-        const nightBrightnessPercent = to255ToPercent(config.night_brightness);
+        const nightBrightnessPercent = to255ToPercent(config.nbr);
         // Charger uniquement les éléments qui existent encore
-        const autoNightMode = document.getElementById('auto-night-mode');
+        const autoNightMode = $('auto-night-mode');
         if (autoNightMode) {
-            autoNightMode.checked = config.auto_night_mode;
+            autoNightMode.checked = config.anm;
         }
-        const nightBrightnessSlider = document.getElementById('night-brightness-slider');
+        const nightBrightnessSlider = $('night-brightness-slider');
         if (nightBrightnessSlider) {
             nightBrightnessSlider.value = nightBrightnessPercent;
         }
-        const nightBrightnessValue = document.getElementById('night-brightness-value');
+        const nightBrightnessValue = $('night-brightness-value');
         if (nightBrightnessValue) {
             nightBrightnessValue.textContent = nightBrightnessPercent + '%';
         }
@@ -2603,24 +1759,24 @@ async function loadActiveProfileDefaultEffect() {
     try {
         const response = await fetch(API_BASE + '/api/profiles');
         const data = await response.json();
-        const activeProfile = data.profiles.find(p => p.active);
+        const activeProfile = data.profiles.find(p => p.ac);
         if (activeProfile && activeProfile.default_effect) {
             const defaultEffect = activeProfile.default_effect;
             // Convert numeric enum to string ID for the dropdown
-            const effectId = effectEnumToId(defaultEffect.effect);
-            document.getElementById('default-effect-select').value = effectId;
-            const defBrightnessPercent = to255ToPercent(defaultEffect.brightness);
-            const defSpeedPercent = to255ToPercent(defaultEffect.speed);
-            document.getElementById('default-brightness-slider').value = defBrightnessPercent;
-            document.getElementById('default-brightness-value').textContent = defBrightnessPercent + '%';
-            document.getElementById('default-speed-slider').value = defSpeedPercent;
-            document.getElementById('default-speed-value').textContent = defSpeedPercent + '%';
-            document.getElementById('default-color1').value = '#' + defaultEffect.color1.toString(16).padStart(6, '0');
+            const effectId = effectEnumToId(defaultEffect.fx);
+            $('default-effect-select').value = effectId;
+            const defBrightnessPercent = to255ToPercent(defaultEffect.br);
+            const defSpeedPercent = to255ToPercent(defaultEffect.sp);
+            $('default-brightness-slider').value = defBrightnessPercent;
+            $('default-brightness-value').textContent = defBrightnessPercent + '%';
+            $('default-speed-slider').value = defSpeedPercent;
+            $('default-speed-value').textContent = defSpeedPercent + '%';
+            $('default-color1').value = '#' + defaultEffect.c1.toString(16).padStart(6, '0');
 
             // Audio reactive
-            const audioReactiveCheckbox = document.getElementById('default-audio-reactive');
-            if (audioReactiveCheckbox && defaultEffect.audio_reactive !== undefined) {
-                audioReactiveCheckbox.checked = defaultEffect.audio_reactive;
+            const audioReactiveCheckbox = $('default-audio-reactive');
+            if (audioReactiveCheckbox && defaultEffect.ar !== undefined) {
+                audioReactiveCheckbox.checked = defaultEffect.ar;
             }
         }
     } catch (e) {
@@ -2641,23 +1797,23 @@ async function loadAudioStatus() {
         const response = await fetch(API_BASE + '/api/audio/status');
         const data = await response.json();
 
-        audioEnabled = data.enabled;
-        document.getElementById('audio-enable').checked = audioEnabled;
-        document.getElementById('audio-sensitivity').value = data.sensitivity;
-        document.getElementById('audio-sensitivity-value').textContent = data.sensitivity;
-        document.getElementById('audio-gain').value = data.gain;
-        document.getElementById('audio-gain-value').textContent = data.gain;
-        document.getElementById('audio-auto-gain').checked = data.autoGain;
+        audioEnabled = data.en;
+        $('audio-enable').checked = audioEnabled;
+        $('audio-sensitivity').value = data.sen;
+        $('audio-sensitivity-value').textContent = data.sen;
+        $('audio-gain').value = data.gn;
+        $('audio-gain-value').textContent = data.gn;
+        $('audio-auto-gain').checked = data.ag;
 
         // Mettre à jour le statut
-        const statusEl = document.getElementById('audio-status');
+        const statusEl = $('audio-status');
         if (statusEl) {
             statusEl.textContent = t(`audio.${audioEnabled ? 'enabled' : 'disabled'}`);
             statusEl.style.color = audioEnabled ? '#10B981' : 'var(--color-muted)';
         }
 
         // Afficher/masquer les paramètres
-        const settingsEl = document.getElementById('audio-settings');
+        const settingsEl = $('audio-settings');
         if (settingsEl) {
             settingsEl.style.display = audioEnabled ? 'block' : 'none';
         }
@@ -2683,14 +1839,14 @@ async function toggleAudio(enabled) {
             audioEnabled = enabled;
 
             // Mettre à jour le statut
-            const statusEl = document.getElementById('audio-status');
+            const statusEl = $('audio-status');
             if (statusEl) {
                 statusEl.textContent = t(`audio.${enabled ? 'enabled' : 'disabled'}`);
                 statusEl.style.color = enabled ? '#10B981' : 'var(--color-muted)';
             }
 
             // Afficher/masquer les paramètres
-            const settingsEl = document.getElementById('audio-settings');
+            const settingsEl = $('audio-settings');
             if (settingsEl) {
                 settingsEl.style.display = enabled ? 'block' : 'none';
             }
@@ -2711,15 +1867,15 @@ async function toggleAudio(enabled) {
 
 // Mettre à jour les valeurs des sliders
 function updateAudioValue(param, value) {
-    document.getElementById(`audio-${param}-value`).textContent = value;
+    $(`audio-${param}-value`).textContent = value;
 }
 
 // Sauvegarder la configuration audio
 async function saveAudioConfig() {
     const config = {
-        sensitivity: parseInt(document.getElementById('audio-sensitivity').value),
-        gain: parseInt(document.getElementById('audio-gain').value),
-        autoGain: document.getElementById('audio-auto-gain').checked
+        sensitivity: parseInt($('audio-sensitivity').value),
+        gain: parseInt($('audio-gain').value),
+        autoGain: $('audio-auto-gain').checked
         // fftEnabled est géré automatiquement selon l'effet sélectionné
     };
 
@@ -2747,32 +1903,32 @@ async function updateAudioData() {
         const data = await response.json();
 
         // Mise à jour des données audio de base
-        if (data.available !== false) {
-            document.getElementById('audio-amplitude-value').textContent =
-                (data.amplitude * 100).toFixed(0) + '%';
-            document.getElementById('audio-bpm-value').textContent =
+        if (data.av !== false) {
+            $('audio-amplitude-value').textContent =
+                (data.amp * 100).toFixed(0) + '%';
+            $('audio-bpm-value').textContent =
                 data.bpm > 0 ? data.bpm.toFixed(1) : '-';
-            document.getElementById('audio-bass-value').textContent =
-                (data.bass * 100).toFixed(0) + '%';
-            document.getElementById('audio-mid-value').textContent =
-                (data.mid * 100).toFixed(0) + '%';
-            document.getElementById('audio-treble-value').textContent =
-                (data.treble * 100).toFixed(0) + '%';
+            $('audio-bass-value').textContent =
+                (data.ba * 100).toFixed(0) + '%';
+            $('audio-mid-value').textContent =
+                (data.md * 100).toFixed(0) + '%';
+            $('audio-treble-value').textContent =
+                (data.tr * 100).toFixed(0) + '%';
         }
 
         // Mise à jour des données FFT (si disponibles dans la réponse)
-        if (data.fft && data.fft.available) {
+        if (data.fft && data.fft.av) {
             // Update frequency info
-            document.getElementById('fftPeakFreq').textContent = Math.round(data.fft.peakFreq);
-            document.getElementById('fftCentroid').textContent = Math.round(data.fft.spectralCentroid);
+            $('fftPeakFreq').textContent = Math.round(data.fft.pf);
+            $('fftCentroid').textContent = Math.round(data.fft.sc);
 
             // Update detections with icons
             const t = translations[currentLang];
-            document.getElementById('fftKick').innerHTML = data.fft.kickDetected ?
+            $('fftKick').innerHTML = data.fft.kd ?
                 `<span style="color: #4CAF50;">🥁 ${t.fft.detected}</span>` : '-';
-            document.getElementById('fftSnare').innerHTML = data.fft.snareDetected ?
+            $('fftSnare').innerHTML = data.fft.sd ?
                 `<span style="color: #FF9800;">🎵 ${t.fft.detected}</span>` : '-';
-            document.getElementById('fftVocal').innerHTML = data.fft.vocalDetected ?
+            $('fftVocal').innerHTML = data.fft.vd ?
                 `<span style="color: #2196F3;">🎤 ${t.fft.detected}</span>` : '-';
 
             // Draw spectrum
@@ -2797,7 +1953,7 @@ let audioFFTEnabled = false;
 
 // Draw FFT spectrum on canvas
 function drawFFTSpectrum(bands) {
-    const canvas = document.getElementById('fftSpectrumCanvas');
+    const canvas = $('fftSpectrumCanvas');
     if (!canvas) {
         console.warn('Canvas fftSpectrumCanvas not found');
         return;
@@ -2839,11 +1995,11 @@ async function loadFFTStatus() {
         // Charger l'état FFT du backend
         const audioResponse = await fetch(API_BASE + '/api/audio/status');
         const audioData = await audioResponse.json();
-        audioFFTEnabled = audioData.fftEnabled || false;
+        audioFFTEnabled = audioData.ffe || false;
 
         // Le backend décide si le FFT doit être activé selon l'effet
         // Afficher la section FFT uniquement si le FFT est activé
-        const fftBox = document.getElementById('fftStatusBox');
+        const fftBox = $('fftStatusBox');
         if (fftBox) {
             fftBox.style.display = audioFFTEnabled ? 'block' : 'none';
         }
@@ -2860,8 +2016,8 @@ function startAudioDataPolling() {
 
     // En mode BLE, désactiver complètement le polling audio pour économiser la bande passante
     if (bleTransportInstance && bleTransportInstance.shouldUseBle()) {
-        const audioDataBox = document.getElementById('audio-data');
-        const audioFFTDataBox = document.getElementById('audio-fft-data');
+        const audioDataBox = $('audio-data');
+        const audioFFTDataBox = $('audio-fft-data');
         if (audioDataBox) {
           audioDataBox.style.display = 'none';
         }
@@ -2891,18 +2047,12 @@ function stopAudioDataPolling() {
         }
         audioUpdateInterval = null;
         // Réinitialiser l'affichage
-        document.getElementById('audio-amplitude-value').textContent = '-';
-        document.getElementById('audio-bpm-value').textContent = '-';
-        document.getElementById('audio-bass-value').textContent = '-';
-        document.getElementById('audio-mid-value').textContent = '-';
-        document.getElementById('audio-treble-value').textContent = '-';
+        $('audio-amplitude-value').textContent = '-';
+        $('audio-bpm-value').textContent = '-';
+        $('audio-bass-value').textContent = '-';
+        $('audio-mid-value').textContent = '-';
+        $('audio-treble-value').textContent = '-';
     }
-}
-
-// Fonction d'aide pour afficher une notification audio
-function showNotification(section, message, type) {
-    // Utiliser le système de notification existant si disponible
-    console.log(`[${type}] ${section}: ${message}`);
 }
 
 // OTA Functions
@@ -2920,22 +2070,22 @@ async function loadOTAInfo() {
     try {
         const response = await fetch(API_BASE + '/api/ota/info');
         const data = await response.json();
-        document.getElementById('ota-version').textContent = 'v' + data.version;
-        const progressContainer = document.getElementById('ota-progress-container');
-        const progressBar = document.getElementById('ota-progress-bar');
-        const progressPercent = document.getElementById('ota-progress-percent');
-        const statusMessage = document.getElementById('ota-status-message');
-        const uploadBtn = document.getElementById('ota-upload-btn');
-        const restartBtn = document.getElementById('ota-restart-btn');
-        const fileInputEl = document.getElementById('firmware-file');
-        const backendStateKey = getOtaStateKey(data.state);
+        $('ota-version').textContent = 'v' + data.v;
+        const progressContainer = $('ota-progress-container');
+        const progressBar = $('ota-progress-bar');
+        const progressPercent = $('ota-progress-percent');
+        const statusMessage = $('ota-status-message');
+        const uploadBtn = $('ota-upload-btn');
+        const restartBtn = $('ota-restart-btn');
+        const fileInputEl = $('firmware-file');
+        const backendStateKey = getOtaStateKey(data.st);
         if (otaManualUploadRunning && backendStateKey !== 'idle') {
             otaManualUploadRunning = false;
         }
         const stateKey = otaManualUploadRunning ? 'receiving' : backendStateKey;
-        const showProgress = otaManualUploadRunning || (typeof data.state === 'number' && data.state !== 0);
+        const showProgress = otaManualUploadRunning || (typeof data.st === 'number' && data.st !== 0);
         if (progressContainer && progressBar && progressPercent && statusMessage) {
-            const progressValue = Math.max(0, Math.min(100, Number(data.progress) || 0));
+            const progressValue = Math.max(0, Math.min(100, Number(data.pg) || 0));
             if (showProgress || stateKey === 'success' || stateKey === 'error') {
                 progressContainer.style.display = 'block';
                 progressBar.style.width = progressValue + '%';
@@ -2946,8 +2096,8 @@ async function loadOTAInfo() {
                 progressPercent.textContent = '0%';
             }
             let statusText = t('ota.states.' + stateKey);
-            if (stateKey === 'error' && data.error) {
-                statusText += ' - ' + data.error;
+            if (stateKey === 'error' && data.err) {
+                statusText += ' - ' + data.err;
             }
             statusMessage.textContent = statusText;
             if (stateKey === 'success') {
@@ -2982,20 +2132,20 @@ async function loadOTAInfo() {
         if (restartBtn) {
             restartBtn.style.display = stateKey === 'success' ? 'inline-block' : 'none';
         }
-        const rebootCountdownEl = document.getElementById('ota-reboot-countdown');
+        const rebootCountdownEl = $('ota-reboot-countdown');
         if (rebootCountdownEl) {
-            if (typeof data.reboot_countdown === 'number' && data.reboot_countdown >= 0) {
+            if (typeof data.rc === 'number' && data.rc >= 0) {
                 if (progressContainer) {
                     progressContainer.style.display = 'block';
                 }
                 rebootCountdownEl.style.display = 'block';
-                if (data.reboot_countdown === 0) {
+                if (data.rc === 0) {
                     rebootCountdownEl.textContent = t('ota.restarting');
                     scheduleOtaReload(5000);
                 } else {
-                    rebootCountdownEl.textContent = t('ota.autoRestartIn') + ' ' + data.reboot_countdown + 's';
-                    if (data.reboot_countdown <= 5) {
-                        scheduleOtaReload((data.reboot_countdown + 2) * 1000);
+                    rebootCountdownEl.textContent = t('ota.autoRestartIn') + ' ' + data.rc + 's';
+                    if (data.rc <= 5) {
+                        scheduleOtaReload((data.rc + 2) * 1000);
                     }
                 }
             } else {
@@ -3004,34 +2154,34 @@ async function loadOTAInfo() {
         }
     } catch (e) {
         console.error('Erreur:', e);
-        document.getElementById('ota-version').innerHTML = '<span data-i18n="ota.loading">' + t('ota.loading') + '</span>';
-        const rebootCountdownEl = document.getElementById('ota-reboot-countdown');
+        $('ota-version').innerHTML = '<span data-i18n="ota.loading">' + t('ota.loading') + '</span>';
+        const rebootCountdownEl = $('ota-reboot-countdown');
         if (rebootCountdownEl) {
             rebootCountdownEl.style.display = 'none';
         }
     }
 }
 async function uploadFirmware() {
-    const fileInputEl = document.getElementById('firmware-file');
+    const fileInputEl = $('firmware-file');
     const file = fileInputEl.files[0];
     if (!file) {
         showNotification('ota-notification', t('ota.selectFile'), 'error');
         return;
     }
-    if (!file.name.endsWith('.bin')) {
+    if (!file.n.endsWith('.bin')) {
         showNotification('ota-notification', t('ota.wrongExtension'), 'error');
         return;
     }
     if (!confirm(t('ota.confirmUpdate'))) {
         return;
     }
-    const progressTitle = document.getElementById('ota-progress-title');
-    const progressContainer = document.getElementById('ota-progress-container');
-    const progressBar = document.getElementById('ota-progress-bar');
-    const progressPercent = document.getElementById('ota-progress-percent');
-    const statusMessage = document.getElementById('ota-status-message');
-    const uploadBtn = document.getElementById('ota-upload-btn');
-    const restartBtn = document.getElementById('ota-restart-btn');
+    const progressTitle = $('ota-progress-title');
+    const progressContainer = $('ota-progress-container');
+    const progressBar = $('ota-progress-bar');
+    const progressPercent = $('ota-progress-percent');
+    const statusMessage = $('ota-status-message');
+    const uploadBtn = $('ota-upload-btn');
+    const restartBtn = $('ota-restart-btn');
     otaManualUploadRunning = true;
     progressTitle.style.display = 'block';
     progressContainer.style.display = 'block';
@@ -3070,7 +2220,7 @@ async function uploadFirmware() {
                 uploadBtn.style.display = 'none';
                 // L'intervalle continue pour suivre l'écriture en flash
             } else {
-                statusMessage.textContent = t('ota.states.error');
+                statusMessage.textContent = t('ota.states.err');
                 statusMessage.style.color = '#f87171';
                 uploadBtn.disabled = false;
                 uploadBtn.style.display = 'inline-block';
@@ -3086,7 +2236,7 @@ async function uploadFirmware() {
             }
         });
         xhr.addEventListener('error', (e) => {
-            statusMessage.textContent = t('ota.states.error') + (e.message ? ': ' + e.message : '');
+            statusMessage.textContent = t('ota.states.err') + (e.message ? ': ' + e.message : '');
             statusMessage.style.color = '#f87171';
             uploadBtn.disabled = false;
             uploadBtn.style.display = 'inline-block';
@@ -3104,7 +2254,7 @@ async function uploadFirmware() {
         xhr.send(file);
     } catch (e) {
         console.error('Erreur:', e);
-        statusMessage.textContent = t('ota.error') + ': ' + e.message;
+        statusMessage.textContent = t('ota.err') + ': ' + e.message;
         statusMessage.style.color = '#E82127';
         uploadBtn.disabled = false;
         uploadBtn.style.display = 'inline-block';
@@ -3126,11 +2276,11 @@ async function restartDevice() {
     try {
         await fetch(API_BASE + '/api/ota/restart', { method: 'POST' });
         const restartMessage = t('ota.restarting');
-        const otaStatusEl = document.getElementById('ota-status-message');
+        const otaStatusEl = $('ota-status-message');
         if (otaStatusEl) {
             otaStatusEl.textContent = restartMessage;
         }
-        const configNotificationEl = document.getElementById('config-notification');
+        const configNotificationEl = $('config-notification');
         if (configNotificationEl) {
             showNotification('config-notification', restartMessage, 'info', 10000);
         }
@@ -3139,52 +2289,6 @@ async function restartDevice() {
         }, 10000);
     } catch (e) {
         console.error('Erreur:', e);
-    }
-}
-// Simulation des événements CAN
-async function simulateEvent(eventType) {
-    // Attendre que la queue BLE soit vide avant de simuler l'événement
-    if (bleTransportInstance && bleTransportInstance.waitForQueue) {
-        await bleTransportInstance.waitForQueue();
-    }
-
-    try {
-        showNotification('simulation-notification', t('simulation.sendingEvent', getEventName(eventType)), 'info');
-        const response = await fetch(API_BASE + '/api/simulate/event', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event: eventType })
-        });
-        const result = await response.json();
-        if (result.status === 'ok') {
-            showNotification('simulation-notification', t('simulation.eventSimulated', getEventName(eventType)), 'success');
-        } else {
-            showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
-        }
-    } catch (e) {
-        console.error('Erreur:', e);
-        showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
-    }
-}
-// Arrêter l'effet en cours
-async function stopEffect() {
-    try {
-        await fetch(API_BASE + '/api/effect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                effect: 0,
-                brightness: 0,
-                speed: 0,
-                color1: 0,
-                color2: 0,
-                color3: 0
-            })
-        });
-        showNotification('simulation-notification', t('simulation.eventStopped'), 'success');
-    } catch (e) {
-        console.error('Erreur:', e);
-        showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
     }
 }
 // Toggle event on/off
@@ -3197,7 +2301,7 @@ async function toggleEvent(eventType, isEnabled) {
                 console.error('Failed to refresh events config for simulation:', error);
             }
             if (!isSimulationEventEnabled(eventType)) {
-                const checkbox = document.getElementById('toggle-' + eventType);
+                const checkbox = $('toggle-' + eventType);
                 if (checkbox) {
                     checkbox.checked = false;
                 }
@@ -3215,7 +2319,7 @@ async function toggleEvent(eventType, isEnabled) {
                 body: JSON.stringify({ event: eventType })
             });
             const result = await response.json();
-            if (result.status === 'ok') {
+            if (result.st === 'ok') {
                 showNotification('simulation-notification', t('simulation.eventActive', getEventName(eventType)), 'success');
                 simulationTogglesState[eventType] = true;
                 const durationMs = await getSimulationEventDuration(eventType);
@@ -3223,7 +2327,7 @@ async function toggleEvent(eventType, isEnabled) {
                     scheduleSimulationAutoStop(eventType, durationMs);
                 }
             } else {
-                document.getElementById('toggle-' + eventType).checked = false;
+                $('toggle-' + eventType).checked = false;
                 setToggleContainerState(eventType, false);
                 showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
                 simulationTogglesState[eventType] = false;
@@ -3237,13 +2341,13 @@ async function toggleEvent(eventType, isEnabled) {
                 body: JSON.stringify({ event: eventType })
             });
             const result = await response.json();
-            if (result.status === 'ok') {
+            if (result.st === 'ok') {
                 setToggleContainerState(eventType, false);
                 showNotification('simulation-notification', t('simulation.eventDeactivated', getEventName(eventType)), 'success');
                 simulationTogglesState[eventType] = false;
                 cancelSimulationAutoStop(eventType);
             } else {
-                document.getElementById('toggle-' + eventType).checked = true;
+                $('toggle-' + eventType).checked = true;
                 setToggleContainerState(eventType, true);
                 showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
                 simulationTogglesState[eventType] = true;
@@ -3251,14 +2355,14 @@ async function toggleEvent(eventType, isEnabled) {
         }
     } catch (e) {
         console.error('Erreur:', e);
-        document.getElementById('toggle-' + eventType).checked = true;
+        $('toggle-' + eventType).checked = true;
         setToggleContainerState(eventType, true);
         showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
     }
 }
 // Toggle night mode simulation (single switch for ON/OFF)
 async function toggleNightMode(isEnabled) {
-    const toggleContainer = document.getElementById('event-toggle-nightmode');
+    const toggleContainer = $('event-toggle-nightmode');
     const eventType = isEnabled ? 'NIGHT_MODE_ON' : 'NIGHT_MODE_OFF';
     const eventName = isEnabled ? t('canEvents.nightModeOn') : t('canEvents.nightModeOff');
     try {
@@ -3269,27 +2373,46 @@ async function toggleNightMode(isEnabled) {
             body: JSON.stringify({ event: eventType })
         });
         const result = await response.json();
-        if (result.status === 'ok') {
+        if (result.st === 'ok') {
             toggleContainer.classList.toggle('active', isEnabled);
             showNotification('simulation-notification', t('simulation.eventSimulated', eventName), 'success');
             simulationTogglesState['nightmode'] = isEnabled;
         } else {
-            document.getElementById('toggle-nightmode').checked = !isEnabled;
+            $('toggle-nightmode').checked = !isEnabled;
             simulationTogglesState['nightmode'] = !isEnabled;
             showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
         }
     } catch (e) {
         console.error('Erreur:', e);
-        document.getElementById('toggle-nightmode').checked = !isEnabled;
+        $('toggle-nightmode').checked = !isEnabled;
         simulationTogglesState['nightmode'] = !isEnabled;
         showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
     }
 }
+// Mapping des événements vers les clés commonEvents
+const EVENT_TO_COMMON = {
+    'TURN_LEFT': 'turnLeft', 'TURN_RIGHT': 'turnRight', 'TURN_HAZARD': 'hazard',
+    'CHARGING': 'charging', 'CHARGE_COMPLETE': 'chargeComplete',
+    'DOOR_OPEN': 'doorOpen', 'DOOR_CLOSE': 'doorClose',
+    'LOCKED': 'locked', 'UNLOCKED': 'unlocked',
+    'BRAKE_ON': 'brakeOn', 'BRAKE_OFF': 'brakeOff',
+    'BLINDSPOT_LEFT_LV1': 'blindspotLeftLv1', 'BLINDSPOT_LEFT_LV2': 'blindspotLeftLv2',
+    'BLINDSPOT_RIGHT_LV1': 'blindspotRightLv1', 'BLINDSPOT_RIGHT_LV2': 'blindspotRightLv2',
+    'NIGHT_MODE_ON': 'nightModeOn', 'NIGHT_MODE_OFF': 'nightModeOff',
+    'SPEED_THRESHOLD': 'speedThreshold'
+};
 function translateEventId(eventId) {
     if (!eventId) return null;
-    const map = translations[currentLang] && translations[currentLang].eventNames;
-    if (map && map[eventId]) {
-        return map[eventId];
+    const lang = translations[currentLang];
+    if (!lang) return null;
+    // Chercher d'abord dans commonEvents
+    const commonKey = EVENT_TO_COMMON[eventId];
+    if (commonKey && lang.commonEvents && lang.commonEvents[commonKey]) {
+        return lang.commonEvents[commonKey];
+    }
+    // Sinon dans eventNames
+    if (lang.eventNames && lang.eventNames[eventId]) {
+        return lang.eventNames[eventId];
     }
     return null;
 }
@@ -3311,11 +2434,11 @@ function getEventName(eventId) {
         const stringId = typeof eventId === 'string' ? eventId : String(eventId);
         const eventById = eventTypesList.find(e => e.id === stringId);
         if (eventById) {
-            return eventById.name;
+            return eventById.n;
         }
         const numericIndex = typeof eventId === 'number' ? eventId : parseInt(eventId, 10);
         if (!Number.isNaN(numericIndex) && eventTypesList[numericIndex]) {
-            return eventTypesList[numericIndex].name;
+            return eventTypesList[numericIndex].n;
         }
     }
     return t('eventNames.unknown', eventId);
@@ -3328,7 +2451,7 @@ function getEffectName(effectId) {
     }
     if (effectsList.length > 0) {
         const effect = effectsList.find(e => e.id === effectId);
-        return effect ? translateEffectId(effect.id) || effect.name : t('effectNames.unknown', effectId);
+        return effect ? translateEffectId(effect.id) || effect.n : t('effectNames.unknown', effectId);
     }
     return t('effectNames.unknown', effectId);
 }
@@ -3353,9 +2476,9 @@ async function loadEffects() {
         effectsList = data.effects;
         // Mettre à jour tous les dropdowns d'effets
         const effectSelects = [
-            document.getElementById('default-effect-select'),
-            document.getElementById('effect-select'),
-            document.getElementById('event-effect-select')
+            $('default-effect-select'),
+            $('effect-select'),
+            $('event-effect-select')
         ];
         effectSelects.forEach(select => {
             if (select) {
@@ -3368,17 +2491,17 @@ async function loadEffects() {
                 const isEventSelector = select.id === 'event-effect-select';
                 effectsList.forEach(effect => {
                     // Filtrer les effets CAN si ce n'est pas le sélecteur d'événement
-                    if (!isEventSelector && effect.can_required) {
+                    if (!isEventSelector && effect.cr) {
                         return; // Skip cet effet
                     }
                     // Filtrer les effets audio si c'est le sélecteur d'événement
-                    if (isEventSelector && effect.audio_effect) {
+                    if (isEventSelector && effect.ae) {
                         return; // Skip cet effet audio
                     }
-                    const option = document.createElement('option');
+                    const option = doc.createElement('option');
                     option.value = effect.id;
-                    option.textContent = translateEffectId(effect.id) || effect.name;
-                    option.setAttribute('data-effect-name', effect.name);
+                    option.textContent = translateEffectId(effect.id) || effect.n;
+                    option.setAttribute('data-effect-name', effect.n);
                     select.appendChild(option);
                 });
                 // Restaurer la valeur sélectionnée si elle existe encore

@@ -14,7 +14,7 @@ if (!fs.existsSync('package.json')) {
 
 // Vérifier que les fichiers source existent
 const webSourceDir = path.join(__dirname, '..', 'data');
-const requiredSources = ['index.html', 'script.js', 'style.css', 'carlightsync.png'];
+const requiredSources = ['index.html', 'i18n.js', 'script.js', 'style.css', 'carlightsync.png', 'carlightsync64.png'];
 for (const fileName of requiredSources) {
     const sourcePath = path.join(webSourceDir, fileName);
     if (!fs.existsSync(sourcePath)) {

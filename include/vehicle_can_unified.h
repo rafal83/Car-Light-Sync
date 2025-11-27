@@ -59,10 +59,11 @@ typedef struct {
   float battery_voltage_LV;
   float battery_voltage_HV;
   float odometer_km;
-  uint8_t blindspot_left;
-  uint8_t blindspot_right;
-  uint8_t blindspot_warning;
-  uint8_t forward_colission;
+  uint8_t blindspot_left_lv1;
+  uint8_t blindspot_left_lv2;
+  uint8_t blindspot_right_lv1;
+  uint8_t blindspot_right_lv2;
+  uint8_t forward_collision;
   uint8_t night_mode;
   float brightness;
   uint8_t autopilot;

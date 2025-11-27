@@ -22,7 +22,7 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 ### Connectivité & Interface
 - **WiFi Dual Mode** : Point d'accès (configuration) + Client (connexion réseau)
 - **Interface Web Moderne** : Interface responsive avec gestion complète des profils et événements
-- **API REST Complète** : Contrôle programmatique via HTTP avec 30+ endpoints
+- **API REST Optimisée** : Contrôle programmatique via HTTP avec 30+ endpoints, JSON compressé avec clés courtes
 - **OTA Updates** : Mise à jour firmware over-the-air via interface web
 - **Support BLE** : API BLE pour configuration mobile (optionnel)
 
@@ -446,6 +446,35 @@ POST /api/ota/update
 Content-Type: multipart/form-data
 ```
 
+### 🔄 Optimisation JSON
+
+L'API utilise des **clés JSON courtes** pour réduire la taille des réponses et améliorer les performances sur ESP32.
+
+**Exemple de mapping des clés :**
+
+| Clé longue | Clé courte | Type | Description |
+|-----------|-----------|------|-------------|
+| `wifi_connected` | `wc` | bool | État connexion WiFi |
+| `can_bus_running` | `cbr` | bool | État bus CAN |
+| `vehicle_active` | `va` | bool | Véhicule actif |
+| `effect` | `fx` | string | Effet LED actuel |
+| `brightness` | `br` | number | Luminosité (0-255) |
+| `speed` | `sp` | number | Vitesse effet |
+| `color1/2/3` | `c1/c2/c3` | number | Couleurs RGB |
+| `enabled` | `en` | bool | Activé/désactivé |
+| `sensitivity` | `sen` | number | Sensibilité audio |
+| `amplitude` | `amp` | number | Amplitude audio |
+| `status` | `st` | string | Statut réponse API |
+| `message` | `msg` | string | Message réponse |
+
+**Bénéfices :**
+- Réduction de ~30-40% de la taille des JSON
+- Amélioration de la vitesse de traitement
+- Économie de mémoire RAM sur ESP32
+- Réduction de la bande passante réseau
+
+**Note :** Le client web (script.js) utilise automatiquement les clés courtes.
+
 ## ⚡ Performances & Spécifications
 
 ### Performances Système
@@ -511,6 +540,7 @@ Content-Type: multipart/form-data
 - [x] ~~Support BLE pour configuration mobile~~
 - [x] ~~Application mobile iOS/Android~~
 - [x] ~~Mode musique avec micro I2S INMP441~~
+- [x] ~~Optimisation JSON avec clés courtes~~
 - [ ] Support de plusieurs rubans LED (ESP-Now)
 - [ ] FFT temps réel pour analyse spectrale avancée
 - [ ] Enregistrement d'effets personnalisés via interface web
@@ -572,4 +602,4 @@ Si ce projet vous est utile et que vous souhaitez soutenir son développement, v
 
 **Développé avec ❤️ pour la communauté automobile**
 
-Version actuelle : **v2.2.0** | Dernière mise à jour : 2025-11-20
+Version actuelle : **v2.3.0** | Dernière mise à jour : 2025-11-27

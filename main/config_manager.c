@@ -45,10 +45,11 @@ static const char *event_names[] = {"None",
                                     "Unlocked",
                                     "Brake On",
                                     "Brake Off",
-                                    "Blindspot Left",
-                                    "Blindspot Right",
-                                    "Blindspot Warning",
-                                    "Forward Colission",
+                                    "Blindspot Left lv1",
+                                    "Blindspot Left lv2",
+                                    "Blindspot Right lv1",
+                                    "Blindspot Right lv2",
+                                    "Forward Collision",
                                     "Night Mode On",
                                     "Night Mode Off",
                                     "Speed Threshold",
@@ -511,55 +512,66 @@ void config_manager_create_default_profile(config_profile_t *profile,
   profile->event_effects[CAN_EVENT_CHARGING].enabled = true;
 
   // Blindspot
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].event =
-      CAN_EVENT_BLINDSPOT_LEFT;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].action_type =
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].event =
+      CAN_EVENT_BLINDSPOT_LEFT_LV1;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].action_type =
       EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].profile_id = -1;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.effect =
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].profile_id = -1;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.effect =
       EFFECT_BLINDSPOT_FLASH;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.brightness =
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.brightness =
       255;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.speed = 255;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.color1 =
-      0xFF0000;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.reverse =
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.speed = 255;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.color1 =
+      0xFFFF00;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.reverse =
       true; // Animation depuis centre vers gauche
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].duration_ms = 0;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].priority = 250;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].enabled = true;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].duration_ms = 0;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].priority = 230;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].enabled = true;
 
   // Blindspot droite (identique)
-  memcpy(&profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT],
-         &profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT],
+  memcpy(&profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT_LV1],
+         &profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1],
          sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT].event =
-      CAN_EVENT_BLINDSPOT_RIGHT;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT].effect_config.reverse =
+  profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT_LV1].event =
+      CAN_EVENT_BLINDSPOT_RIGHT_LV1;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT_LV1].effect_config.reverse =
       false; // Animation depuis centre vers droite
 
-  // Blind spot warning
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].event =
-      CAN_EVENT_BLINDSPOT_WARNING;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].action_type =
-      EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].profile_id = -1;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.effect =
-      EFFECT_HAZARD;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.brightness =
-      255;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.speed = 100;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].effect_config.color1 =
-      0xFF0000;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].duration_ms = 0;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].priority = 220;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING].enabled = false;
-
-  memcpy(&profile->event_effects[CAN_EVENT_FORWARD_COLISSION],
-         &profile->event_effects[CAN_EVENT_BLINDSPOT_WARNING],
+  memcpy(&profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2],
+         &profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1],
          sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_FORWARD_COLISSION].event =
-      CAN_EVENT_FORWARD_COLISSION;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].event =
+  CAN_EVENT_BLINDSPOT_LEFT_LV2;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].effect_config.color1 =
+      0xFF00;  
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].priority = 250;
+
+  memcpy(&profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT_LV2],
+         &profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2],
+         sizeof(can_event_effect_t));
+  profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT_LV2].event =
+  CAN_EVENT_BLINDSPOT_RIGHT_LV2;         
+  profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT_LV2].effect_config.reverse =
+      false; // Animation depuis centre vers droite
+
+  // Forward colission
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].event =
+      CAN_EVENT_FORWARD_COLLISION;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].action_type =
+      EVENT_ACTION_APPLY_EFFECT;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].profile_id = -1;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.effect =
+      EFFECT_HAZARD;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.brightness =
+      255;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.speed = 100;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.color1 =
+      0xFF0000;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].duration_ms = 0;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].priority = 220;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].enabled = false;
 
   // Hazard/Warning (clignotants de détresse)
   profile->event_effects[CAN_EVENT_TURN_HAZARD].event = CAN_EVENT_TURN_HAZARD;
@@ -910,11 +922,13 @@ bool config_manager_process_can_event(can_event_type_t event) {
     // toujours leur latéralité
     switch (event) {
     case CAN_EVENT_TURN_LEFT:
-    case CAN_EVENT_BLINDSPOT_LEFT:
+    case CAN_EVENT_BLINDSPOT_LEFT_LV1:
+    case CAN_EVENT_BLINDSPOT_LEFT_LV2:
       effect_to_apply.zone = LED_ZONE_LEFT;
       break;
     case CAN_EVENT_TURN_RIGHT:
-    case CAN_EVENT_BLINDSPOT_RIGHT:
+    case CAN_EVENT_BLINDSPOT_RIGHT_LV1:
+    case CAN_EVENT_BLINDSPOT_RIGHT_LV2:
       effect_to_apply.zone = LED_ZONE_RIGHT;
       break;
     default:
@@ -1179,14 +1193,16 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
     return EVENT_ID_BRAKE_ON;
   case CAN_EVENT_BRAKE_OFF:
     return EVENT_ID_BRAKE_OFF;
-  case CAN_EVENT_BLINDSPOT_LEFT:
-    return EVENT_ID_BLINDSPOT_LEFT;
-  case CAN_EVENT_BLINDSPOT_RIGHT:
-    return EVENT_ID_BLINDSPOT_RIGHT;
-  case CAN_EVENT_BLINDSPOT_WARNING:
-    return EVENT_ID_BLINDSPOT_WARNING;
-  case CAN_EVENT_FORWARD_COLISSION:
-    return EVENT_ID_EVENT_FORWARD_COLISSION;
+  case CAN_EVENT_BLINDSPOT_LEFT_LV1:
+    return EVENT_ID_BLINDSPOT_LEFT_LV1;
+  case CAN_EVENT_BLINDSPOT_LEFT_LV2:
+    return EVENT_ID_BLINDSPOT_LEFT_LV2;
+  case CAN_EVENT_BLINDSPOT_RIGHT_LV1:
+    return EVENT_ID_BLINDSPOT_RIGHT_LV1;
+  case CAN_EVENT_BLINDSPOT_RIGHT_LV2:
+    return EVENT_ID_BLINDSPOT_RIGHT_LV2;
+  case CAN_EVENT_FORWARD_COLLISION:
+    return EVENT_ID_EVENT_FORWARD_COLLISION;
   case CAN_EVENT_NIGHT_MODE_ON:
     return EVENT_ID_NIGHT_MODE_ON;
   case CAN_EVENT_NIGHT_MODE_OFF:
@@ -1255,14 +1271,16 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_BRAKE_ON;
   if (strcmp(id, EVENT_ID_BRAKE_OFF) == 0)
     return CAN_EVENT_BRAKE_OFF;
-  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT) == 0)
-    return CAN_EVENT_BLINDSPOT_LEFT;
-  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)
-    return CAN_EVENT_BLINDSPOT_RIGHT;
-  if (strcmp(id, EVENT_ID_BLINDSPOT_WARNING) == 0)
-    return CAN_EVENT_BLINDSPOT_WARNING;
-  if (strcmp(id, EVENT_ID_EVENT_FORWARD_COLISSION) == 0)
-    return CAN_EVENT_FORWARD_COLISSION;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT_LV1) == 0)
+    return CAN_EVENT_BLINDSPOT_LEFT_LV1;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT_LV2) == 0)
+    return CAN_EVENT_BLINDSPOT_LEFT_LV2;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT_LV1) == 0)
+      return CAN_EVENT_BLINDSPOT_RIGHT_LV1;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT_LV2) == 0)
+    return CAN_EVENT_BLINDSPOT_RIGHT_LV2;
+  if (strcmp(id, EVENT_ID_EVENT_FORWARD_COLLISION) == 0)
+    return CAN_EVENT_FORWARD_COLLISION;
   if (strcmp(id, EVENT_ID_NIGHT_MODE_ON) == 0)
     return CAN_EVENT_NIGHT_MODE_ON;
   if (strcmp(id, EVENT_ID_NIGHT_MODE_OFF) == 0)
@@ -1307,7 +1325,7 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
   case CAN_EVENT_AUTOPILOT_ENGAGED:
   case CAN_EVENT_AUTOPILOT_DISENGAGED:
   case CAN_EVENT_AUTOPILOT_ABORTING:
-  case CAN_EVENT_FORWARD_COLISSION:
+  case CAN_EVENT_FORWARD_COLLISION:
   case CAN_EVENT_GEAR_DRIVE:
   case CAN_EVENT_GEAR_REVERSE:
   case CAN_EVENT_GEAR_PARK:

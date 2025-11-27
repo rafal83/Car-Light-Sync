@@ -194,21 +194,19 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
                   return;
                 }
                 if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
-                  state->forward_colission = value == 1 ? 1 : 0;
+                  state->forward_collision = value == 1 ? 1 : 0;
                   return;
                 }
                 if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
                   int v = (int)(value + 0.5f);
-                  state->blindspot_left = (v >= 1) ? 1 : 0;
-                  if (state->blindspot_left)
-                    state->blindspot_warning = 1;
+                  state->blindspot_left_lv1 = (v == 1) ? 1 : 0;
+                  state->blindspot_left_lv2 = (v == 2) ? 1 : 0;
                   return;
                 }
                 if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
                   int v = (int)(value + 0.5f);
-                  state->blindspot_right = (v >= 1) ? 1 : 0;
-                  if (state->blindspot_right)
-                    state->blindspot_warning = 1;
+                  state->blindspot_right_lv1 = (v == 1) ? 1 : 0;
+                  state->blindspot_right_lv2 = (v == 2) ? 1 : 0;
                   return;
                 }
               } else if (id == 0x334) {

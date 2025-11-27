@@ -37,7 +37,7 @@ This is an embedded project for ESP32 microcontrollers designed to control an LE
 
 ### 3. Modifying the Web Interface
 
-- The web interface now lives in three source files: `data/index.html`, `data/script.js`, and `data/style.css`.
+- The web interface now lives in three source files: `data/index.html`, `data/i18n.js`, `data/script.js`, and `data/style.css`.
 - Before building the firmware, each file is automatically compressed (`.gz`) by the `tools/tools-build/compress_html.py` script, which is triggered by the PlatformIO build process.
 - **Instruction:** After modifying any of the files in `data/`, simply run the standard build command. The compression is handled automatically.
 

@@ -4,7 +4,7 @@ const path = require('path');
 const SOURCE_DIR = path.join(__dirname, '..', 'data');
 const DEST_DIR = path.join(__dirname, 'www');
 const HTML_FILENAME = 'index.html';
-const REQUIRED_ASSETS = ['script.js', 'style.css', 'carlightsync.png'];
+const REQUIRED_ASSETS = ['i18n.js', 'script.js', 'style.css', 'carlightsync.png', 'carlightsync64.png'];
 const OPTIONAL_ASSETS = [];
 
 function ensureFileExists(filePath, label) {
