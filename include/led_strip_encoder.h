@@ -6,6 +6,8 @@
 extern "C" {
 #endif
 
+#define TAG_LED_ENCODER "led_encoder"
+
 /**
  * @brief Configuration pour l'encodeur LED strip
  */

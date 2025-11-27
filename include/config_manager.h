@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define TAG_CONFIG "ConfigMgr"
 #define MAX_PROFILES 10
 #define PROFILE_NAME_MAX_LEN 32
 

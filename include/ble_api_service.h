@@ -3,6 +3,16 @@
 #include "esp_err.h"
 #include <stdbool.h>
 
+#define TAG_BLE_API "BLE_API"
+#define BLE_API_DEVICE_NAME                                                    \
+  "CarLightSync" // Sera remplacé par g_device_name_with_suffix
+#define BLE_HTTP_LOCAL_BASE_URL "http://127.0.0.1"
+#define BLE_MAX_REQUEST_LEN 16384
+#define BLE_MAX_RESPONSE_BODY 8192
+#define BLE_NOTIFY_CHUNK_MAX 512
+#define BLE_REQUEST_QUEUE_LENGTH 3
+#define BLE_HTTP_TIMEOUT_MS 4000
+
 #ifdef __cplusplus
 extern "C" {
 #endif

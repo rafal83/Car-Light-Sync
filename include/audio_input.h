@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define TAG_AUDIO "Audio"
+
 // Configuration par défaut du micro INMP441
 #define AUDIO_I2S_SCK_PIN 12      // Serial Clock
 #define AUDIO_I2S_WS_PIN 13       // Word Select (LRCK)

@@ -10,8 +10,6 @@
 #include <string.h>
 #include <time.h>
 
-static const char *TAG = "ConfigMgr";
-
 static config_profile_t profiles[MAX_PROFILES];
 static int active_profile_id = -1;
 
@@ -70,7 +68,7 @@ bool config_manager_init(void) {
 
   // Charger les profils depuis NVS
   int loaded = config_manager_load_profiles();
-  ESP_LOGI(TAG, "%d profil(s) chargé(s)", loaded);
+  ESP_LOGI(TAG_CONFIG, "%d profil(s) chargé(s)", loaded);
 
   // Si aucun profil, créer un profil par défaut
   if (loaded == 0) {
@@ -78,30 +76,30 @@ bool config_manager_init(void) {
     config_profile_t *default_profile =
         (config_profile_t *)malloc(sizeof(config_profile_t));
     if (default_profile == NULL) {
-      ESP_LOGE(TAG, "Erreur allocation mémoire pour profil par défaut");
+      ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour profil par défaut");
       return false;
     }
     config_manager_create_default_profile(default_profile, "Default");
     config_manager_save_profile(0, default_profile);
     free(default_profile);
     config_manager_activate_profile(0);
-    ESP_LOGI(TAG, "Profil par défaut créé");
+    ESP_LOGI(TAG_CONFIG, "Profil par défaut créé");
   } else {
     // Appliquer le profil actif chargé depuis NVS
     if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
-      ESP_LOGI(TAG, "Application du profil actif %d: %s", active_profile_id,
+      ESP_LOGI(TAG_CONFIG, "Application du profil actif %d: %s", active_profile_id,
                profiles[active_profile_id].name);
       led_effects_set_config(&profiles[active_profile_id].default_effect);
       // Ne pas activer le mode nuit au démarrage, il sera activé par
       // l'événement CAN si auto_night_mode est activé
       led_effects_set_night_mode(false,
                                  profiles[active_profile_id].night_brightness);
-      ESP_LOGI(TAG, "Auto night mode: %s (will respond to CAN events)",
+      ESP_LOGI(TAG_CONFIG, "Auto night mode: %s (will respond to CAN events)",
                profiles[active_profile_id].auto_night_mode ? "ENABLED"
                                                            : "DISABLED");
       effect_override_active = false;
     } else {
-      ESP_LOGW(TAG, "Aucun profil actif trouvé, activation du profil 0");
+      ESP_LOGW(TAG_CONFIG, "Aucun profil actif trouvé, activation du profil 0");
       config_manager_activate_profile(0);
     }
   }
@@ -114,7 +112,7 @@ int config_manager_load_profiles(void) {
   esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
 
   if (err != ESP_OK) {
-    ESP_LOGW(TAG, "Impossible d'ouvrir NVS profiles");
+    ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS profiles");
     return 0;
   }
 
@@ -130,7 +128,7 @@ int config_manager_load_profiles(void) {
     if (err == ESP_OK) {
       // Vérifier que la taille correspond à la structure actuelle
       if (required_size != sizeof(config_profile_t)) {
-        ESP_LOGW(TAG,
+        ESP_LOGW(TAG_CONFIG,
                  "Profile %d a une taille incompatible (%d vs %d) - ignoré", i,
                  required_size, sizeof(config_profile_t));
         continue;
@@ -159,7 +157,7 @@ int config_manager_load_profiles(void) {
 
   // Si aucun profil compatible n'a été chargé, avertir l'utilisateur
   if (count == 0) {
-    ESP_LOGW(TAG, "Aucun profil compatible trouvé - un factory reset peut être "
+    ESP_LOGW(TAG_CONFIG, "Aucun profil compatible trouvé - un factory reset peut être "
                   "nécessaire");
   }
 
@@ -176,7 +174,7 @@ bool config_manager_save_profile(uint8_t profile_id,
   esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG_CONFIG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
     return false;
   }
 
@@ -187,7 +185,7 @@ bool config_manager_save_profile(uint8_t profile_id,
   config_profile_t *profile_copy =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile_copy == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
     nvs_close(nvs_handle);
     return false;
   }
@@ -198,7 +196,7 @@ bool config_manager_save_profile(uint8_t profile_id,
 
   err = nvs_set_blob(nvs_handle, key, profile_copy, sizeof(config_profile_t));
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur sauvegarde profil: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde profil: %s", esp_err_to_name(err));
     free(profile_copy);
     nvs_close(nvs_handle);
     return false;
@@ -211,7 +209,7 @@ bool config_manager_save_profile(uint8_t profile_id,
   memcpy(&profiles[profile_id], profile_copy, sizeof(config_profile_t));
   free(profile_copy);
 
-  ESP_LOGI(TAG, "Profil %d sauvegardé: %s", profile_id, profile->name);
+  ESP_LOGI(TAG_CONFIG, "Profil %d sauvegardé: %s", profile_id, profile->name);
   return true;
 }
 
@@ -241,7 +239,7 @@ bool config_manager_load_profile(uint8_t profile_id,
 
   // Vérifier que la taille correspond à la structure actuelle
   if (required_size != sizeof(config_profile_t)) {
-    ESP_LOGW(TAG, "Profile %d a une taille incompatible (%d vs %d) - ignoré",
+    ESP_LOGW(TAG_CONFIG, "Profile %d a une taille incompatible (%d vs %d) - ignoré",
              profile_id, required_size, sizeof(config_profile_t));
     nvs_close(nvs_handle);
     return false;
@@ -268,7 +266,7 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     for (int e = 0; e < CAN_EVENT_MAX; e++) {
       if ((profiles[p].event_effects[e].profile_id == profile_id) &&
           (profile_id != p)) {
-        ESP_LOGW(TAG,
+        ESP_LOGW(TAG_CONFIG,
                  "Cannot delete profile %d: used by event %d in profile %d",
                  profile_id, e, p);
         return false;
@@ -306,7 +304,7 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   }
 
   if (needs_compression) {
-    ESP_LOGI(TAG,
+    ESP_LOGI(TAG_CONFIG,
              "Compression des IDs de profils après suppression du profil %d",
              profile_id);
 
@@ -330,7 +328,7 @@ bool config_manager_delete_profile(uint8_t profile_id) {
         // Effacer l'ancien emplacement
         nvs_erase_key(nvs_handle, next_key);
 
-        ESP_LOGI(TAG, "Profil %d déplacé vers ID %d", i + 1, i);
+        ESP_LOGI(TAG_CONFIG, "Profil %d déplacé vers ID %d", i + 1, i);
       } else {
         // Plus de profils à décaler
         memset(&profiles[i], 0, sizeof(config_profile_t));
@@ -342,17 +340,17 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     if (active_profile_id > profile_id) {
       active_profile_id--;
       nvs_set_i32(nvs_handle, "active_id", active_profile_id);
-      ESP_LOGI(TAG, "ID du profil actif mis à jour: %d", active_profile_id);
+      ESP_LOGI(TAG_CONFIG, "ID du profil actif mis à jour: %d", active_profile_id);
     } else if (active_profile_id == profile_id) {
       // Le profil actif a été supprimé, activer le profil 0 s'il existe
       if (profiles[0].name[0] != '\0') {
         active_profile_id = 0;
         nvs_set_i32(nvs_handle, "active_id", 0);
-        ESP_LOGI(TAG, "Profil actif supprimé, activation du profil 0");
+        ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, activation du profil 0");
       } else {
         active_profile_id = -1;
         nvs_erase_key(nvs_handle, "active_id");
-        ESP_LOGI(TAG, "Profil actif supprimé, aucun profil disponible");
+        ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, aucun profil disponible");
       }
     }
   } else {
@@ -364,14 +362,14 @@ bool config_manager_delete_profile(uint8_t profile_id) {
         if (profiles[i].name[0] != '\0') {
           active_profile_id = i;
           nvs_set_i32(nvs_handle, "active_id", i);
-          ESP_LOGI(TAG, "Activation automatique du profil %d", i);
+          ESP_LOGI(TAG_CONFIG, "Activation automatique du profil %d", i);
           break;
         }
       }
 
       if (active_profile_id == -1) {
         nvs_erase_key(nvs_handle, "active_id");
-        ESP_LOGI(TAG, "Aucun profil disponible");
+        ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
       }
     }
   }
@@ -379,7 +377,7 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   nvs_commit(nvs_handle);
   nvs_close(nvs_handle);
 
-  ESP_LOGI(TAG, "Profil %d supprimé avec succès", profile_id);
+  ESP_LOGI(TAG_CONFIG, "Profil %d supprimé avec succès", profile_id);
   return true;
 }
 
@@ -392,7 +390,7 @@ bool config_manager_activate_profile(uint8_t profile_id) {
   if (profiles[profile_id].name[0] == '\0') {
     // Profil vide, essayer de charger depuis NVS
     if (!config_manager_load_profile(profile_id, &profiles[profile_id])) {
-      ESP_LOGE(TAG, "Profil %d inexistant", profile_id);
+      ESP_LOGE(TAG_CONFIG, "Profil %d inexistant", profile_id);
       return false;
     }
   }
@@ -422,7 +420,7 @@ bool config_manager_activate_profile(uint8_t profile_id) {
   led_effects_set_night_mode(false, profiles[profile_id].night_brightness);
   effect_override_active = false;
 
-  ESP_LOGI(TAG, "Profil %d activé: %s (auto night mode: %s, brightness: %d)",
+  ESP_LOGI(TAG_CONFIG, "Profil %d activé: %s (auto night mode: %s, brightness: %d)",
            profile_id, profiles[profile_id].name,
            profiles[profile_id].auto_night_mode ? "ENABLED" : "DISABLED",
            profiles[profile_id].night_brightness);
@@ -892,7 +890,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
     // EVENT_ACTION_SWITCH_PROFILE
     if (event_effect->profile_id >= 0 &&
         event_effect->profile_id < MAX_PROFILES) {
-      ESP_LOGI(TAG, "Event %d: Switching to profile %d", event,
+      ESP_LOGI(TAG_CONFIG, "Event %d: Switching to profile %d", event,
                event_effect->profile_id);
       config_manager_activate_profile(event_effect->profile_id);
 
@@ -965,10 +963,10 @@ bool config_manager_process_can_event(can_event_type_t event) {
 
       if (lowest_priority_slot >= 0) {
         slot = lowest_priority_slot;
-        ESP_LOGI(TAG, "Écrasement événement priorité %d par priorité %d",
+        ESP_LOGI(TAG_CONFIG, "Écrasement événement priorité %d par priorité %d",
                  lowest_priority, priority);
       } else {
-        // ESP_LOGW(TAG, "Événement '%s' ignoré (pas de slot disponible)",
+        // ESP_LOGW(TAG_CONFIG, "Événement '%s' ignoré (pas de slot disponible)",
         // config_manager_get_event_name(event));
         return false;
       }
@@ -987,16 +985,16 @@ bool config_manager_process_can_event(can_event_type_t event) {
     effect_override_active = true;
 
     if (duration_ms > 0) {
-      ESP_LOGI(TAG, "Effet '%s' activé pour %dms (priorité %d)",
+      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé pour %dms (priorité %d)",
                config_manager_get_event_name(event), duration_ms, priority);
     } else {
-      ESP_LOGI(TAG, "Effet '%s' activé (permanent, priorité %d)",
+      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé (permanent, priorité %d)",
                config_manager_get_event_name(event), priority);
     }
 
     return true;
   } else {
-    // ESP_LOGW(TAG, "Effet par défaut ignoré pour '%s'",
+    // ESP_LOGW(TAG_CONFIG, "Effet par défaut ignoré pour '%s'",
     //         config_manager_get_event_name(event));
   }
 
@@ -1012,7 +1010,7 @@ void config_manager_stop_event(can_event_type_t event) {
   // Désactiver tous les slots qui correspondent à cet événement
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (active_events[i].active && active_events[i].event == event) {
-      ESP_LOGI(TAG, "Arrêt manuel de l'événement '%s'",
+      ESP_LOGI(TAG_CONFIG, "Arrêt manuel de l'événement '%s'",
                config_manager_get_event_name(event));
       active_events[i].active = false;
     }
@@ -1022,7 +1020,7 @@ void config_manager_stop_event(can_event_type_t event) {
 void config_manager_stop_all_events(void) {
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (active_events[i].active) {
-      ESP_LOGI(TAG, "Arret global de l'evenement '%s'",
+      ESP_LOGI(TAG_CONFIG, "Arret global de l'evenement '%s'",
                config_manager_get_event_name(active_events[i].event));
       active_events[i].active = false;
     }
@@ -1042,7 +1040,7 @@ void config_manager_update(void) {
     if (active_events[i].duration_ms > 0) {
       uint32_t elapsed = now - active_events[i].start_time;
       if (elapsed >= pdMS_TO_TICKS(active_events[i].duration_ms)) {
-        ESP_LOGD(TAG, "Événement '%s' terminé",
+        ESP_LOGD(TAG_CONFIG, "Événement '%s' terminé",
                  config_manager_get_event_name(active_events[i].event));
         active_events[i].active = false;
         continue;
@@ -1089,7 +1087,7 @@ void config_manager_update(void) {
     // Priorité au FULL si présent, sinon combiner LEFT/RIGHT
     if (full_active) {
       // Effet FULL avec la plus haute priorité
-      ESP_LOGI(TAG, "Événement '%s' actif écrase l'effet par défaut (priorité=%d)",
+      ESP_LOGI(TAG_CONFIG, "Événement '%s' actif écrase l'effet par défaut (priorité=%d)",
                config_manager_get_event_name(active_events[full_slot].event),
                active_events[full_slot].priority);
       led_effects_set_config(&active_events[full_slot].effect_config);
@@ -1133,7 +1131,7 @@ void config_manager_update(void) {
       led_effects_set_config(&profiles[active_profile_id].default_effect);
     }
     effect_override_active = false;
-    ESP_LOGD(TAG, "Retour à l'effet par défaut");
+    ESP_LOGD(TAG_CONFIG, "Retour à l'effet par défaut");
   }
 }
 
@@ -1290,7 +1288,7 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
   if (strcmp(id, EVENT_ID_SENTRY_ALERT) == 0)
     return CAN_EVENT_SENTRY_ALERT;
 
-  ESP_LOGW(TAG, "ID d'événement inconnu: %s", id);
+  ESP_LOGW(TAG_CONFIG, "ID d'événement inconnu: %s", id);
   return CAN_EVENT_NONE;
 }
 
@@ -1323,20 +1321,20 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
 
 // Réinitialisation usine complète
 bool config_manager_factory_reset(void) {
-  ESP_LOGI(TAG, "Factory reset: Erasing all profiles and settings...");
+  ESP_LOGI(TAG_CONFIG, "Factory reset: Erasing all profiles and settings...");
 
   nvs_handle_t nvs_handle;
   esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to open NVS for factory reset");
+    ESP_LOGE(TAG_CONFIG, "Failed to open NVS for factory reset");
     return false;
   }
 
   // Effacer tout le namespace "profiles"
   err = nvs_erase_all(nvs_handle);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to erase profiles namespace");
+    ESP_LOGE(TAG_CONFIG, "Failed to erase profiles namespace");
     nvs_close(nvs_handle);
     return false;
   }
@@ -1345,7 +1343,7 @@ bool config_manager_factory_reset(void) {
   nvs_close(nvs_handle);
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to commit profile erasure");
+    ESP_LOGE(TAG_CONFIG, "Failed to commit profile erasure");
     return false;
   }
 
@@ -1366,7 +1364,7 @@ bool config_manager_factory_reset(void) {
   config_profile_t *default_profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (default_profile == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire pour profil par défaut");
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour profil par défaut");
     return false;
   }
   config_manager_create_default_profile(default_profile, "Default");
@@ -1375,7 +1373,7 @@ bool config_manager_factory_reset(void) {
   free(default_profile);
   config_manager_activate_profile(0);
 
-  ESP_LOGI(TAG, "Factory reset complete. Default profile created.");
+  ESP_LOGI(TAG_CONFIG, "Factory reset complete. Default profile created.");
   return true;
 }
 
@@ -1389,7 +1387,7 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer,
 
   // Vérifier que le profil existe
   if (profile->name[0] == '\0') {
-    ESP_LOGW(TAG, "Profil %d inexistant, impossible d'exporter", profile_id);
+    ESP_LOGW(TAG_CONFIG, "Profil %d inexistant, impossible d'exporter", profile_id);
     return false;
   }
 
@@ -1492,11 +1490,11 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer,
       strcpy(json_buffer, json_str);
       free(json_str);
       cJSON_Delete(root);
-      ESP_LOGI(TAG, "Profil %d exporté avec succès (%d octets)", profile_id,
+      ESP_LOGI(TAG_CONFIG, "Profil %d exporté avec succès (%d octets)", profile_id,
                len);
       return true;
     } else {
-      ESP_LOGE(TAG, "Buffer trop petit: %d nécessaires, %d disponibles",
+      ESP_LOGE(TAG_CONFIG, "Buffer trop petit: %d nécessaires, %d disponibles",
                len + 1, buffer_size);
       free(json_str);
     }
@@ -1514,7 +1512,7 @@ bool config_manager_import_profile(uint8_t profile_id,
 
   cJSON *root = cJSON_Parse(json_string);
   if (!root) {
-    ESP_LOGE(TAG, "Erreur parsing JSON");
+    ESP_LOGE(TAG_CONFIG, "Erreur parsing JSON");
     return false;
   }
 
@@ -1522,7 +1520,7 @@ bool config_manager_import_profile(uint8_t profile_id,
   config_profile_t *imported_profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (imported_profile == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
     cJSON_Delete(root);
     return false;
   }
@@ -1534,7 +1532,7 @@ bool config_manager_import_profile(uint8_t profile_id,
     strncpy(imported_profile->name, name->valuestring,
             PROFILE_NAME_MAX_LEN - 1);
   } else {
-    ESP_LOGE(TAG, "Champ 'name' manquant ou invalide");
+    ESP_LOGE(TAG_CONFIG, "Champ 'name' manquant ou invalide");
     cJSON_Delete(root);
     free(imported_profile);
     return false;
@@ -1695,10 +1693,10 @@ bool config_manager_import_profile(uint8_t profile_id,
   // Sauvegarder le profil importé
   bool success = config_manager_save_profile(profile_id, imported_profile);
   if (success) {
-    ESP_LOGI(TAG, "Profil %d importé avec succès: %s", profile_id,
+    ESP_LOGI(TAG_CONFIG, "Profil %d importé avec succès: %s", profile_id,
              imported_profile->name);
   } else {
-    ESP_LOGE(TAG, "Erreur lors de la sauvegarde du profil %d", profile_id);
+    ESP_LOGE(TAG_CONFIG, "Erreur lors de la sauvegarde du profil %d", profile_id);
   }
 
   free(imported_profile);
@@ -1758,12 +1756,12 @@ uint8_t config_manager_get_led_pin(void) {
 bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin) {
   // Validation
   if (led_count < 1 || led_count > 1000) {
-    ESP_LOGE(TAG, "Nombre de LEDs invalide: %d (1-1000)", led_count);
+    ESP_LOGE(TAG_CONFIG, "Nombre de LEDs invalide: %d (1-1000)", led_count);
     return false;
   }
 
   if (data_pin > 39) {
-    ESP_LOGE(TAG, "Pin GPIO invalide: %d (0-39)", data_pin);
+    ESP_LOGE(TAG_CONFIG, "Pin GPIO invalide: %d (0-39)", data_pin);
     return false;
   }
 
@@ -1771,20 +1769,20 @@ bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin) {
   esp_err_t err = nvs_open("led_hw", NVS_READWRITE, &nvs_handle);
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG_CONFIG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
     return false;
   }
 
   err = nvs_set_u16(nvs_handle, "led_count", led_count);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur sauvegarde led_count: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde led_count: %s", esp_err_to_name(err));
     nvs_close(nvs_handle);
     return false;
   }
 
   err = nvs_set_u8(nvs_handle, "data_pin", data_pin);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur sauvegarde data_pin: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde data_pin: %s", esp_err_to_name(err));
     nvs_close(nvs_handle);
     return false;
   }
@@ -1792,7 +1790,7 @@ bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin) {
   nvs_commit(nvs_handle);
   nvs_close(nvs_handle);
 
-  ESP_LOGI(TAG, "Configuration matérielle LED sauvegardée: %d LEDs, GPIO %d",
+  ESP_LOGI(TAG_CONFIG, "Configuration matérielle LED sauvegardée: %d LEDs, GPIO %d",
            led_count, data_pin);
   return true;
 }

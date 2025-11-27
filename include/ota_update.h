@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define TAG_OTA "OTA"
+
 /**
  * @brief État de la mise à jour OTA
  */

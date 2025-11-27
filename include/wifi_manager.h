@@ -5,6 +5,8 @@
 #include "esp_wifi.h"
 #include <stdbool.h>
 
+#define TAG_WIFI "WiFi"
+
 // État de la connexion
 typedef struct {
   bool ap_started;

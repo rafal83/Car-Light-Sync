@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *TAG = "LED";
 #define MAX_LED_COUNT 1000 // Align with config_manager_set_led_hardware validation
 
 // Handles pour la nouvelle API RMT
@@ -235,12 +234,12 @@ static void apply_zone_mask(led_zone_t zone) {
 // Envoie les données aux LEDs via RMT
 static void led_strip_show(void) {
   if (led_chan == NULL || led_encoder == NULL) {
-    ESP_LOGE(TAG, "RMT non initialisé");
+    ESP_LOGE(TAG_LED, "RMT non initialisé");
     return;
   }
 
   if (led_count == 0) {
-    ESP_LOGW(TAG, "Aucune LED configurée, affichage ignoré");
+    ESP_LOGW(TAG_LED, "Aucune LED configurée, affichage ignoré");
     return;
   }
 
@@ -271,30 +270,30 @@ static void led_strip_show(void) {
   portEXIT_CRITICAL(&mux);
 
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur transmission RMT: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur transmission RMT: %s", esp_err_to_name(ret));
     return;
   }
 
   // Attendre la fin de la transmission (sans section critique)
   ret = rmt_tx_wait_all_done(led_chan, pdMS_TO_TICKS(200));
   if (ret == ESP_ERR_TIMEOUT) {
-    ESP_LOGE(TAG, "Timeout transmission RMT");
+    ESP_LOGE(TAG_LED, "Timeout transmission RMT");
     rmt_disable(led_chan);
     rmt_enable(led_chan);
   } else if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur rmt_tx_wait_all_done: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur rmt_tx_wait_all_done: %s", esp_err_to_name(ret));
   }
 }
 
 static uint16_t sanitize_led_count(uint16_t requested) {
   if (requested == 0) {
-    ESP_LOGW(TAG, "Configuration LED vide, retour à %d LEDs par défaut",
+    ESP_LOGW(TAG_LED, "Configuration LED vide, retour à %d LEDs par défaut",
              NUM_LEDS);
     return NUM_LEDS;
   }
 
   if (requested > MAX_LED_COUNT) {
-    ESP_LOGW(TAG, "Configuration LED trop grande (%d), max %d appliqué",
+    ESP_LOGW(TAG_LED, "Configuration LED trop grande (%d), max %d appliqué",
              requested, MAX_LED_COUNT);
     return MAX_LED_COUNT;
   }
@@ -334,7 +333,7 @@ static bool configure_rmt_channel(uint8_t pin) {
 
   esp_err_t ret = rmt_new_tx_channel(&tx_chan_config, &led_chan);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur création canal RMT TX: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur création canal RMT TX: %s", esp_err_to_name(ret));
     return false;
   }
 
@@ -344,14 +343,14 @@ static bool configure_rmt_channel(uint8_t pin) {
 
   ret = rmt_new_led_strip_encoder(&encoder_config, &led_encoder);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur création encodeur LED: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur création encodeur LED: %s", esp_err_to_name(ret));
     cleanup_rmt_channel();
     return false;
   }
 
   ret = rmt_enable(led_chan);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur activation canal RMT: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur activation canal RMT: %s", esp_err_to_name(ret));
     cleanup_rmt_channel();
     return false;
   }
@@ -1317,7 +1316,7 @@ bool led_effects_init(void) {
 
   uint8_t configured_pin = config_manager_get_led_pin();
   if (configured_pin > 39) {
-    ESP_LOGW(TAG, "GPIO LED invalide (%d), utilisation de la valeur par défaut",
+    ESP_LOGW(TAG_LED, "GPIO LED invalide (%d), utilisation de la valeur par défaut",
              configured_pin);
     led_pin = LED_PIN;
   } else {
@@ -1334,7 +1333,7 @@ bool led_effects_init(void) {
   // Charger la config sauvegardée
   led_effects_load_config();
 
-  ESP_LOGI(TAG, "LEDs initialisées (%d LEDs sur GPIO %d)", led_count, led_pin);
+  ESP_LOGI(TAG_LED, "LEDs initialisées (%d LEDs sur GPIO %d)", led_count, led_pin);
   return true;
 }
 
@@ -1345,18 +1344,18 @@ void led_effects_deinit(void) {
 
   cleanup_rmt_channel();
 
-  ESP_LOGI(TAG, "LEDs désinitalisées");
+  ESP_LOGI(TAG_LED, "LEDs désinitalisées");
 }
 
 bool led_effects_apply_hardware_config(uint16_t requested_led_count,
                                        uint8_t requested_pin) {
   if (requested_led_count < 1 || requested_led_count > MAX_LED_COUNT) {
-    ESP_LOGE(TAG, "LED count %d invalide", requested_led_count);
+    ESP_LOGE(TAG_LED, "LED count %d invalide", requested_led_count);
     return false;
   }
 
   if (requested_pin > 39) {
-    ESP_LOGE(TAG, "GPIO %d invalide pour les LEDs", requested_pin);
+    ESP_LOGE(TAG_LED, "GPIO %d invalide pour les LEDs", requested_pin);
     return false;
   }
 
@@ -1370,7 +1369,7 @@ bool led_effects_apply_hardware_config(uint16_t requested_led_count,
   led_count = requested_led_count;
 
   led_pin = requested_pin;
-  ESP_LOGI(TAG, "LED hardware reconfigurée (%d LEDs sur GPIO %d)", led_count,
+  ESP_LOGI(TAG_LED, "LED hardware reconfigurée (%d LEDs sur GPIO %d)", led_count,
            led_pin);
   return true;
 }
@@ -1383,7 +1382,7 @@ void led_effects_set_config(const effect_config_t *config) {
     bool needs_fft = led_effects_requires_fft(current_config.effect);
     audio_input_set_fft_enabled(needs_fft);
 
-    ESP_LOGI(TAG, "Effet configuré: %d, audio_reactive=%d, FFT %s",
+    ESP_LOGI(TAG_LED, "Effet configuré: %d, audio_reactive=%d, FFT %s",
              current_config.effect, current_config.audio_reactive,
              needs_fft ? "activé" : "désactivé");
   }
@@ -1619,7 +1618,7 @@ led_effect_t led_effects_id_to_enum(const char *id) {
   if (desc) {
     return desc->effect;
   }
-  ESP_LOGW(TAG, "ID d'effet inconnu: %s", id ? id : "NULL");
+  ESP_LOGW(TAG_LED, "ID d'effet inconnu: %s", id ? id : "NULL");
   return EFFECT_OFF;
 }
 
@@ -1663,14 +1662,14 @@ bool led_effects_save_config(void) {
   esp_err_t ret = nvs_open("led_config", NVS_READWRITE, &nvs_handle);
 
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur ouverture NVS: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur ouverture NVS: %s", esp_err_to_name(ret));
     return false;
   }
 
   ret = nvs_set_blob(nvs_handle, "config", &current_config,
                      sizeof(effect_config_t));
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur sauvegarde config: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur sauvegarde config: %s", esp_err_to_name(ret));
     nvs_close(nvs_handle);
     return false;
   }
@@ -1678,7 +1677,7 @@ bool led_effects_save_config(void) {
   nvs_commit(nvs_handle);
   nvs_close(nvs_handle);
 
-  ESP_LOGI(TAG, "Configuration sauvegardée");
+  ESP_LOGI(TAG_LED, "Configuration sauvegardée");
   return true;
 }
 
@@ -1687,7 +1686,7 @@ bool led_effects_load_config(void) {
   esp_err_t ret = nvs_open("led_config", NVS_READONLY, &nvs_handle);
 
   if (ret != ESP_OK) {
-    ESP_LOGW(TAG, "Pas de config sauvegardée");
+    ESP_LOGW(TAG_LED, "Pas de config sauvegardée");
     return false;
   }
 
@@ -1696,11 +1695,11 @@ bool led_effects_load_config(void) {
   nvs_close(nvs_handle);
 
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur lecture config: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_LED, "Erreur lecture config: %s", esp_err_to_name(ret));
     return false;
   }
 
-  ESP_LOGI(TAG, "Configuration chargée");
+  ESP_LOGI(TAG_LED, "Configuration chargée");
   return true;
 }
 
@@ -1715,13 +1714,13 @@ void led_effects_reset_config(void) {
   current_config.reverse = false;
   current_config.audio_reactive = false;
 
-  ESP_LOGI(TAG, "Configuration réinitialisée");
+  ESP_LOGI(TAG_LED, "Configuration réinitialisée");
 }
 
 void led_effects_set_night_mode(bool active, uint8_t brightness) {
   night_mode_active = active;
   night_mode_brightness = brightness;
-  ESP_LOGI(TAG, "Night mode: %s, brightness: %d%%", active ? "ON" : "OFF",
+  ESP_LOGI(TAG_LED, "Night mode: %s, brightness: %d%%", active ? "ON" : "OFF",
            (brightness * 100) / 255);
 }
 

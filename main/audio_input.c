@@ -9,8 +9,6 @@
 #include <math.h>
 #include <string.h>
 
-static const char *TAG = "Audio";
-
 // État du module
 static bool initialized = false;
 static bool enabled = false;
@@ -164,7 +162,7 @@ static float calculate_bpm(uint32_t current_time_ms) {
 
 // Tâche de traitement audio
 static void audio_task(void *pvParameters) {
-    ESP_LOGI(TAG, "Tâche audio démarrée");
+    ESP_LOGI(TAG_AUDIO, "Tâche audio démarrée");
 
     size_t bytes_read = 0;
 
@@ -235,7 +233,7 @@ static void audio_task(void *pvParameters) {
 
 bool audio_input_init(void) {
     if (initialized) {
-        ESP_LOGW(TAG, "Module audio déjà initialisé");
+        ESP_LOGW(TAG_AUDIO, "Module audio déjà initialisé");
         return true;
     }
 
@@ -249,7 +247,7 @@ bool audio_input_init(void) {
 
     esp_err_t ret = i2s_new_channel(&chan_cfg, NULL, &rx_handle);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur création canal I2S: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG_AUDIO, "Erreur création canal I2S: %s", esp_err_to_name(ret));
         return false;
     }
 
@@ -273,7 +271,7 @@ bool audio_input_init(void) {
 
     ret = i2s_channel_init_std_mode(rx_handle, &std_cfg);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur init mode standard I2S: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG_AUDIO, "Erreur init mode standard I2S: %s", esp_err_to_name(ret));
         i2s_del_channel(rx_handle);
         rx_handle = NULL;
         return false;
@@ -282,14 +280,14 @@ bool audio_input_init(void) {
     // Créer la tâche de traitement audio
     BaseType_t task_ret = xTaskCreate(audio_task, "audio_task", 4096, NULL, 5, &audio_task_handle);
     if (task_ret != pdPASS) {
-        ESP_LOGE(TAG, "Erreur création tâche audio");
+        ESP_LOGE(TAG_AUDIO, "Erreur création tâche audio");
         i2s_del_channel(rx_handle);
         rx_handle = NULL;
         return false;
     }
 
     initialized = true;
-    ESP_LOGI(TAG, "Module audio initialisé (GPIO: SCK=%d, WS=%d, SD=%d)",
+    ESP_LOGI(TAG_AUDIO, "Module audio initialisé (GPIO: SCK=%d, WS=%d, SD=%d)",
              AUDIO_I2S_SCK_PIN, AUDIO_I2S_WS_PIN, AUDIO_I2S_SD_PIN);
 
     // Activer si configuré
@@ -318,12 +316,12 @@ void audio_input_deinit(void) {
     }
 
     initialized = false;
-    ESP_LOGI(TAG, "Module audio désinitalisé");
+    ESP_LOGI(TAG_AUDIO, "Module audio désinitalisé");
 }
 
 bool audio_input_set_enabled(bool enable) {
     if (!initialized) {
-        ESP_LOGE(TAG, "Module audio non initialisé");
+        ESP_LOGE(TAG_AUDIO, "Module audio non initialisé");
         return false;
     }
 
@@ -334,23 +332,23 @@ bool audio_input_set_enabled(bool enable) {
     if (enable) {
         esp_err_t ret = i2s_channel_enable(rx_handle);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Erreur activation canal I2S: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG_AUDIO, "Erreur activation canal I2S: %s", esp_err_to_name(ret));
             return false;
         }
         enabled = true;
         current_config.enabled = true;
-        ESP_LOGI(TAG, "Micro activé");
+        ESP_LOGI(TAG_AUDIO, "Micro activé");
     } else {
         esp_err_t ret = i2s_channel_disable(rx_handle);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Erreur désactivation canal I2S: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG_AUDIO, "Erreur désactivation canal I2S: %s", esp_err_to_name(ret));
             return false;
         }
         enabled = false;
         current_config.enabled = false;
         audio_data_ready = false;
         memset(&current_audio_data, 0, sizeof(audio_data_t));
-        ESP_LOGI(TAG, "Micro désactivé");
+        ESP_LOGI(TAG_AUDIO, "Micro désactivé");
     }
 
     return true;
@@ -383,17 +381,17 @@ bool audio_input_get_data(audio_data_t *data) {
 
 void audio_input_set_sensitivity(uint8_t sensitivity) {
     current_config.sensitivity = sensitivity;
-    ESP_LOGI(TAG, "Sensibilité: %d", sensitivity);
+    ESP_LOGI(TAG_AUDIO, "Sensibilité: %d", sensitivity);
 }
 
 void audio_input_set_gain(uint8_t gain) {
     current_config.gain = gain;
-    ESP_LOGI(TAG, "Gain: %d", gain);
+    ESP_LOGI(TAG_AUDIO, "Gain: %d", gain);
 }
 
 void audio_input_set_auto_gain(bool enable) {
     current_config.auto_gain = enable;
-    ESP_LOGI(TAG, "Gain auto: %s", enable ? "ON" : "OFF");
+    ESP_LOGI(TAG_AUDIO, "Gain auto: %s", enable ? "ON" : "OFF");
 }
 
 bool audio_input_save_config(void) {
@@ -401,13 +399,13 @@ bool audio_input_save_config(void) {
     esp_err_t ret = nvs_open("audio_config", NVS_READWRITE, &nvs_handle);
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur ouverture NVS: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG_AUDIO, "Erreur ouverture NVS: %s", esp_err_to_name(ret));
         return false;
     }
 
     ret = nvs_set_blob(nvs_handle, "config", &current_config, sizeof(audio_config_t));
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur sauvegarde config: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG_AUDIO, "Erreur sauvegarde config: %s", esp_err_to_name(ret));
         nvs_close(nvs_handle);
         return false;
     }
@@ -415,7 +413,7 @@ bool audio_input_save_config(void) {
     nvs_commit(nvs_handle);
     nvs_close(nvs_handle);
 
-    ESP_LOGI(TAG, "Configuration sauvegardée");
+    ESP_LOGI(TAG_AUDIO, "Configuration sauvegardée");
     return true;
 }
 
@@ -424,7 +422,7 @@ bool audio_input_load_config(void) {
     esp_err_t ret = nvs_open("audio_config", NVS_READONLY, &nvs_handle);
 
     if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Pas de config audio sauvegardée");
+        ESP_LOGW(TAG_AUDIO, "Pas de config audio sauvegardée");
         return false;
     }
 
@@ -433,11 +431,11 @@ bool audio_input_load_config(void) {
     nvs_close(nvs_handle);
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur lecture config: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG_AUDIO, "Erreur lecture config: %s", esp_err_to_name(ret));
         return false;
     }
 
-    ESP_LOGI(TAG, "Configuration chargée");
+    ESP_LOGI(TAG_AUDIO, "Configuration chargée");
     return true;
 }
 
@@ -447,7 +445,7 @@ void audio_input_reset_config(void) {
     current_config.gain = 128;
     current_config.auto_gain = true;
 
-    ESP_LOGI(TAG, "Configuration réinitialisée");
+    ESP_LOGI(TAG_AUDIO, "Configuration réinitialisée");
 }
 
 // ============================================================================
@@ -712,9 +710,9 @@ void audio_input_set_fft_enabled(bool enable) {
     current_config.fft_enabled = enable;
 
     if (enable) {
-        ESP_LOGI(TAG, "Mode FFT activé (coût: ~20KB RAM, ~20%% CPU)");
+        ESP_LOGI(TAG_AUDIO, "Mode FFT activé (coût: ~20KB RAM, ~20%% CPU)");
     } else {
-        ESP_LOGI(TAG, "Mode FFT désactivé");
+        ESP_LOGI(TAG_AUDIO, "Mode FFT désactivé");
         fft_data_ready = false;
         memset(&current_fft_data, 0, sizeof(audio_fft_data_t));
     }

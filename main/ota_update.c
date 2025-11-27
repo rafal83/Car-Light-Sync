@@ -11,7 +11,6 @@
 #include "version_info.h"
 #include <string.h>
 
-static const char *TAG = "OTA";
 static const uint32_t OTA_REBOOT_DELAY_MS = 30000;
 static const uint32_t OTA_WRITE_THROTTLE_MS = 5;
 
@@ -39,7 +38,7 @@ static void ota_schedule_reboot(void) {
                                   NULL) != pdPASS) {
     ota_reboot_scheduled = false;
     ota_reboot_deadline = 0;
-    ESP_LOGE(TAG, "Impossible de lancer la tâche de rédémarrage OTA");
+    ESP_LOGE(TAG_OTA, "Impossible de lancer la tâche de rédémarrage OTA");
   }
 }
 
@@ -49,13 +48,13 @@ esp_err_t ota_init(void) {
   ota_reboot_scheduled = false;
   ota_reboot_deadline = 0;
 
-  ESP_LOGI(TAG, "OTA initialisé, version: %s", APP_VERSION_STRING);
+  ESP_LOGI(TAG_OTA, "OTA initialisé, version: %s", APP_VERSION_STRING);
   return ESP_OK;
 }
 
 esp_err_t ota_begin(size_t total_size) {
   if (ota_in_progress) {
-    ESP_LOGW(TAG, "OTA déjà en cours");
+    ESP_LOGW(TAG_OTA, "OTA déjà en cours");
     return ESP_ERR_INVALID_STATE;
   }
 
@@ -73,7 +72,7 @@ esp_err_t ota_begin(size_t total_size) {
   // Obtenir la partition de mise  jour
   update_partition = esp_ota_get_next_update_partition(NULL);
   if (update_partition == NULL) {
-    ESP_LOGE(TAG, "Impossible de trouver la partition OTA");
+    ESP_LOGE(TAG_OTA, "Impossible de trouver la partition OTA");
     strncpy(current_progress.error_msg, "Partition OTA non trouvée",
             sizeof(current_progress.error_msg) - 1);
     current_progress.state = OTA_STATE_ERROR;
@@ -83,14 +82,14 @@ esp_err_t ota_begin(size_t total_size) {
     return ESP_ERR_NOT_FOUND;
   }
 
-  ESP_LOGI(TAG, "Début OTA vers partition: %s à 0x%08lx",
+  ESP_LOGI(TAG_OTA, "Début OTA vers partition: %s à 0x%08lx",
            update_partition->label, update_partition->address);
 
   // Démarrer l'OTA
   esp_err_t ret =
       esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &ota_handle);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur esp_ota_begin: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_OTA, "Erreur esp_ota_begin: %s", esp_err_to_name(ret));
     snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
              "Erreur démarrage OTA: %s", esp_err_to_name(ret));
     current_progress.state = OTA_STATE_ERROR;
@@ -101,13 +100,13 @@ esp_err_t ota_begin(size_t total_size) {
   }
 
   ota_in_progress = true;
-  ESP_LOGI(TAG, "OTA démarré avec succès");
+  ESP_LOGI(TAG_OTA, "OTA démarré avec succès");
   return ESP_OK;
 }
 
 esp_err_t ota_write(const void *data, size_t size) {
   if (!ota_in_progress) {
-    ESP_LOGE(TAG, "OTA non démarré");
+    ESP_LOGE(TAG_OTA, "OTA non démarré");
     return ESP_ERR_INVALID_STATE;
   }
 
@@ -115,7 +114,7 @@ esp_err_t ota_write(const void *data, size_t size) {
 
   esp_err_t ret = esp_ota_write(ota_handle, data, size);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur esp_ota_write: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_OTA, "Erreur esp_ota_write: %s", esp_err_to_name(ret));
     snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
              "Erreur écriture OTA: %s", esp_err_to_name(ret));
     current_progress.state = OTA_STATE_ERROR;
@@ -140,25 +139,25 @@ esp_err_t ota_write(const void *data, size_t size) {
     vTaskDelay(pdMS_TO_TICKS(OTA_WRITE_THROTTLE_MS));
   }
 
-  ESP_LOGD(TAG, "OTA écrit %d octets, total: %lu", size,
+  ESP_LOGD(TAG_OTA, "OTA écrit %d octets, total: %lu", size,
            current_progress.written_size);
   return ESP_OK;
 }
 
 esp_err_t ota_end(void) {
   if (!ota_in_progress) {
-    ESP_LOGE(TAG, "OTA non démarré");
+    ESP_LOGE(TAG_OTA, "OTA non démarré");
     return ESP_ERR_INVALID_STATE;
   }
 
   esp_err_t ret = esp_ota_end(ota_handle);
   if (ret != ESP_OK) {
     if (ret == ESP_ERR_OTA_VALIDATE_FAILED) {
-      ESP_LOGE(TAG, "Validation de l'image échouée");
+      ESP_LOGE(TAG_OTA, "Validation de l'image échouée");
       strncpy(current_progress.error_msg, "Validation du firmware échouée",
               sizeof(current_progress.error_msg) - 1);
     } else {
-      ESP_LOGE(TAG, "Erreur esp_ota_end: %s", esp_err_to_name(ret));
+      ESP_LOGE(TAG_OTA, "Erreur esp_ota_end: %s", esp_err_to_name(ret));
       snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
                "Erreur fin OTA: %s", esp_err_to_name(ret));
     }
@@ -173,7 +172,7 @@ esp_err_t ota_end(void) {
   // Définir la nouvelle partition comme partition de boot
   ret = esp_ota_set_boot_partition(update_partition);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur esp_ota_set_boot_partition: %s",
+    ESP_LOGE(TAG_OTA, "Erreur esp_ota_set_boot_partition: %s",
              esp_err_to_name(ret));
     snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
              "Erreur configuration boot: %s", esp_err_to_name(ret));
@@ -192,7 +191,7 @@ esp_err_t ota_end(void) {
   led_effects_show_upgrade_ready();
   ota_schedule_reboot();
 
-  ESP_LOGI(TAG, "OTA terminé avec succès! Redémarrage nécessaire.");
+  ESP_LOGI(TAG_OTA, "OTA terminé avec succès! Redémarrage nécessaire.");
   return ESP_OK;
 }
 
@@ -202,7 +201,7 @@ void ota_abort(void) {
     ota_in_progress = false;
     current_progress.state = OTA_STATE_IDLE;
     led_effects_stop_progress_display();
-    ESP_LOGW(TAG, "OTA annulé");
+    ESP_LOGW(TAG_OTA, "OTA annulé");
   }
 }
 
@@ -215,7 +214,7 @@ void ota_get_progress(ota_progress_t *progress) {
 const char *ota_get_current_version(void) { return APP_VERSION_STRING; }
 
 void ota_restart(void) {
-  ESP_LOGI(TAG, "Redémarrage dans 2 secondes...");
+  ESP_LOGI(TAG_OTA, "Redémarrage dans 2 secondes...");
   vTaskDelay(pdMS_TO_TICKS(2000));
   esp_restart();
 }
@@ -229,9 +228,9 @@ esp_err_t ota_validate_current_partition(void) {
       // Première exécution après une mise à jour, valider la nouvelle image
       esp_err_t ret = esp_ota_mark_app_valid_cancel_rollback();
       if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Partition OTA validée");
+        ESP_LOGI(TAG_OTA, "Partition OTA validée");
       } else {
-        ESP_LOGE(TAG, "Erreur validation partition: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG_OTA, "Erreur validation partition: %s", esp_err_to_name(ret));
       }
       return ret;
     }

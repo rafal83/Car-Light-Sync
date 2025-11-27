@@ -17,8 +17,6 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-static const char *TAG = "WebServer";
-
 static httpd_handle_t server = NULL;
 static vehicle_state_t current_vehicle_state = {0};
 static esp_err_t event_single_post_handler(httpd_req_t *req);
@@ -67,7 +65,7 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
 
   esp_err_t err = httpd_resp_send(req, (const char *)route->start, file_size);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur envoi fichier statique pour URI %s: %s", route->uri,
+    ESP_LOGE(TAG_WEBSERVER, "Erreur envoi fichier statique pour URI %s: %s", route->uri,
              esp_err_to_name(err));
   }
   return err;
@@ -85,7 +83,7 @@ static esp_err_t captive_portal_404_handler(httpd_req_t *req,
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
 
-    ESP_LOGD(TAG, "Portail captif: redirection de %s vers index.html",
+    ESP_LOGD(TAG_WEBSERVER, "Portail captif: redirection de %s vers index.html",
              req->uri);
     return httpd_resp_send(req, (const char *)index_html_gz_start, file_size);
   }
@@ -318,10 +316,10 @@ static esp_err_t save_handler(httpd_req_t *req) {
   if (led_success && audio_success) {
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
-    ESP_LOGI(TAG, "Configuration sauvegardée (LED + Audio)");
+    ESP_LOGI(TAG_WEBSERVER, "Configuration sauvegardée (LED + Audio)");
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Save failed");
-    ESP_LOGE(TAG, "Échec sauvegarde - LED: %s, Audio: %s",
+    ESP_LOGE(TAG_WEBSERVER, "Échec sauvegarde - LED: %s, Audio: %s",
              led_success ? "OK" : "FAIL", audio_success ? "OK" : "FAIL");
   }
 
@@ -405,7 +403,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     free((void *)json_string);
     cJSON_Delete(response);
 
-    ESP_LOGI(TAG, "Configuration LED appliquée: %d LEDs, GPIO %d", led_count,
+    ESP_LOGI(TAG_WEBSERVER, "Configuration LED appliquée: %d LEDs, GPIO %d", led_count,
              data_pin);
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
@@ -421,7 +419,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
   config_profile_t *profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire pour profil");
+    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire pour profil");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
                         "Memory allocation failed");
     return ESP_FAIL;
@@ -540,7 +538,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
       (config_profile_t *)malloc(sizeof(config_profile_t));
 
   if (temp == NULL || new_profile == NULL) {
-    ESP_LOGE(TAG, "Échec allocation mémoire pour profil");
+    ESP_LOGE(TAG_WEBSERVER, "Échec allocation mémoire pour profil");
     if (temp)
       free(temp);
     if (new_profile)
@@ -555,7 +553,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
   for (int i = 0; i < MAX_PROFILES; i++) {
     if (!config_manager_load_profile(i, temp)) {
       // Slot libre
-      ESP_LOGI(TAG, "Création profil '%s' dans slot %d", name->valuestring, i);
+      ESP_LOGI(TAG_WEBSERVER, "Création profil '%s' dans slot %d", name->valuestring, i);
       config_manager_create_default_profile(new_profile, name->valuestring);
 
       bool saved = config_manager_save_profile(i, new_profile);
@@ -680,7 +678,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   config_profile_t *profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
                         "Memory allocation failed");
     cJSON_Delete(root);
@@ -714,7 +712,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     // On garde l'état actuel du mode nuit mais on met à jour la luminosité
     bool current_night_mode = led_effects_get_night_mode();
     led_effects_set_night_mode(current_night_mode, profile->night_brightness);
-    ESP_LOGI(TAG,
+    ESP_LOGI(TAG_WEBSERVER,
              "Updated night mode settings (auto: %s, brightness: %d, current "
              "state: %s)",
              profile->auto_night_mode ? "ENABLED" : "DISABLED",
@@ -760,7 +758,7 @@ static esp_err_t profile_update_default_handler(httpd_req_t *req) {
   config_profile_t *profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
                         "Memory allocation failed");
     cJSON_Delete(root);
@@ -809,7 +807,7 @@ static esp_err_t profile_update_default_handler(httpd_req_t *req) {
     // Garder l'état actuel du mode nuit (contrôlé par les événements CAN)
     bool current_night_mode = led_effects_get_night_mode();
     led_effects_set_night_mode(current_night_mode, profile->night_brightness);
-    ESP_LOGI(TAG,
+    ESP_LOGI(TAG_WEBSERVER,
              "Applied default effect (night mode state: %s, brightness=%d)",
              current_night_mode ? "ON" : "OFF", profile->night_brightness);
   }
@@ -1044,7 +1042,7 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
   bool first_chunk = true;
   esp_err_t ret = ESP_OK;
 
-  ESP_LOGI(TAG, "Début upload OTA, taille: %d octets", remaining);
+  ESP_LOGI(TAG_WEBSERVER, "Début upload OTA, taille: %d octets", remaining);
 
   // Démarrer l'OTA
   ret = ota_begin(req->content_len);
@@ -1063,7 +1061,7 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
         // Réessayer
         continue;
       }
-      ESP_LOGE(TAG, "Erreur réception données OTA");
+      ESP_LOGE(TAG_WEBSERVER, "Erreur réception données OTA");
       ota_abort();
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
                           "Upload failed");
@@ -1073,7 +1071,7 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
     // Écrire dans la partition OTA
     ret = ota_write(buf, received);
     if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "Erreur écriture OTA");
+      ESP_LOGE(TAG_WEBSERVER, "Erreur écriture OTA");
       ota_abort();
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Write failed");
       return ESP_FAIL;
@@ -1082,7 +1080,7 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
     remaining -= received;
 
     if (first_chunk) {
-      ESP_LOGI(TAG, "Premier chunk reçu et écrit");
+      ESP_LOGI(TAG_WEBSERVER, "Premier chunk reçu et écrit");
       first_chunk = false;
     }
   }
@@ -1090,12 +1088,12 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
   // Terminer l'OTA
   ret = ota_end();
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur fin OTA");
+    ESP_LOGE(TAG_WEBSERVER, "Erreur fin OTA");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA end failed");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "Upload OTA terminé avec succès");
+  ESP_LOGI(TAG_WEBSERVER, "Upload OTA terminé avec succès");
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, "{\"status\":\"ok\",\"message\":\"Upload successful, "
@@ -1109,7 +1107,7 @@ static esp_err_t ota_restart_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, "{\"status\":\"ok\",\"message\":\"Restarting...\"}");
 
-  ESP_LOGI(TAG, "Redémarrage demandé via API");
+  ESP_LOGI(TAG_WEBSERVER, "Redémarrage demandé via API");
 
   // Redémarrer après un court délai
   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -1266,7 +1264,7 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
   // Traiter l'événement
   bool success = config_manager_process_can_event(event);
 
-  ESP_LOGI(TAG, "Simulation événement CAN: %s (%d)",
+  ESP_LOGI(TAG_WEBSERVER, "Simulation événement CAN: %s (%d)",
            config_manager_get_event_name(event), event);
 
   cJSON *response = cJSON_CreateObject();
@@ -1305,14 +1303,14 @@ static bool apply_event_update_from_json(config_profile_t *profile,
 
   if (event_json == NULL || effect_json == NULL ||
       !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
-    ESP_LOGW(TAG, "Payload d'evenement invalide");
+    ESP_LOGW(TAG_WEBSERVER, "Payload d'evenement invalide");
     return false;
   }
 
   can_event_type_t event_type =
       config_manager_id_to_enum(event_json->valuestring);
   if (event_type <= CAN_EVENT_NONE || event_type >= CAN_EVENT_MAX) {
-    ESP_LOGW(TAG, "Evenement inconnu: %s", event_json->valuestring);
+    ESP_LOGW(TAG_WEBSERVER, "Evenement inconnu: %s", event_json->valuestring);
     return false;
   }
 
@@ -1478,7 +1476,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
   config_profile_t *profile =
       (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
                         "Memory allocation failed");
     cJSON_Delete(root);
@@ -1520,7 +1518,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
   free((void *)json_string);
   cJSON_Delete(response);
 
-  ESP_LOGI(TAG, "%d événements CAN mis à jour", updated_count);
+  ESP_LOGI(TAG_WEBSERVER, "%d événements CAN mis à jour", updated_count);
 
   return ESP_OK;
 }
@@ -1571,7 +1569,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
     bool enable = cJSON_IsTrue(enabled);
     if (audio_input_set_enabled(enable)) {
       audio_input_save_config();
-      ESP_LOGI(TAG, "Micro %s", enable ? "activé" : "désactivé");
+      ESP_LOGI(TAG_WEBSERVER, "Micro %s", enable ? "activé" : "désactivé");
     } else {
       cJSON_Delete(root);
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
@@ -1650,7 +1648,7 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   cJSON_free((void *)json_str);
   cJSON_Delete(response);
 
-  ESP_LOGI(TAG, "Configuration audio mise à jour");
+  ESP_LOGI(TAG_WEBSERVER, "Configuration audio mise à jour");
   return ESP_OK;
 }
 
@@ -1742,7 +1740,7 @@ static esp_err_t audio_fft_enable_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
 
-  ESP_LOGI(TAG, "FFT mode: %s (not saved)", cJSON_IsTrue(enabled) ? "enabled" : "disabled");
+  ESP_LOGI(TAG_WEBSERVER, "FFT mode: %s (not saved)", cJSON_IsTrue(enabled) ? "enabled" : "disabled");
   return ESP_OK;
 }
 
@@ -1802,7 +1800,7 @@ static esp_err_t audio_fft_status_handler(httpd_req_t *req) {
 }
 
 esp_err_t web_server_init(void) {
-  ESP_LOGI(TAG, "Serveur web initialise");
+  ESP_LOGI(TAG_WEBSERVER, "Serveur web initialise");
   return ESP_OK;
 }
 
@@ -1819,7 +1817,7 @@ esp_err_t web_server_start(void) {
   config.recv_wait_timeout = 30;
   config.send_wait_timeout = 30;
 
-  ESP_LOGI(TAG, "Demarrage du serveur web sur port %d", config.server_port);
+  ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 
   if (httpd_start(&server, &config) == ESP_OK) {
     static static_file_route_t static_files[] = {
@@ -2049,12 +2047,12 @@ esp_err_t web_server_start(void) {
     httpd_register_err_handler(server, HTTPD_404_NOT_FOUND,
                                captive_portal_404_handler);
 
-    ESP_LOGI(TAG,
+    ESP_LOGI(TAG_WEBSERVER,
              "Serveur web démarré avec support portail captif (handler 404)");
     return ESP_OK;
   }
 
-  ESP_LOGE(TAG, "Erreur démarrage serveur web");
+  ESP_LOGE(TAG_WEBSERVER, "Erreur démarrage serveur web");
   return ESP_FAIL;
 }
 
@@ -2156,7 +2154,7 @@ esp_err_t web_server_stop(void) {
   if (server) {
     httpd_stop(server);
     server = NULL;
-    ESP_LOGI(TAG, "Serveur web arrêté");
+    ESP_LOGI(TAG_WEBSERVER, "Serveur web arrêté");
   }
   return ESP_OK;
 }

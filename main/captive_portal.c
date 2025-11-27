@@ -9,8 +9,6 @@
 #include "lwip/sys.h"
 #include <string.h>
 
-static const char *TAG = "CaptivePortal";
-
 // Port DNS standard
 #define DNS_PORT 53
 #define DNS_MAX_LEN 512
@@ -64,12 +62,12 @@ static void dns_server_task(void *pvParameters) {
   uint8_t rx_buffer[DNS_MAX_LEN];
   uint8_t tx_buffer[DNS_MAX_LEN];
 
-  ESP_LOGI(TAG, "Démarrage du serveur DNS pour le portail captif");
+  ESP_LOGI(TAG_CAPTIVE_PORTAL, "Démarrage du serveur DNS pour le portail captif");
 
   // Créer le socket UDP
   dns_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (dns_socket < 0) {
-    ESP_LOGE(TAG, "Erreur création socket DNS");
+    ESP_LOGE(TAG_CAPTIVE_PORTAL, "Erreur création socket DNS");
     dns_server_running = false;
     vTaskDelete(NULL);
     return;
@@ -84,7 +82,7 @@ static void dns_server_task(void *pvParameters) {
   // Bind du socket
   if (bind(dns_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) <
       0) {
-    ESP_LOGE(TAG, "Erreur bind socket DNS");
+    ESP_LOGE(TAG_CAPTIVE_PORTAL, "Erreur bind socket DNS");
     close(dns_socket);
     dns_socket = -1;
     dns_server_running = false;
@@ -92,7 +90,7 @@ static void dns_server_task(void *pvParameters) {
     return;
   }
 
-  ESP_LOGI(TAG, "Serveur DNS en écoute sur le port %d", DNS_PORT);
+  ESP_LOGI(TAG_CAPTIVE_PORTAL, "Serveur DNS en écoute sur le port %d", DNS_PORT);
   dns_server_running = true;
 
   while (dns_server_running) {
@@ -116,7 +114,7 @@ static void dns_server_task(void *pvParameters) {
     parse_dns_name(rx_buffer + sizeof(dns_header_t), domain_name,
                    sizeof(domain_name));
 
-    ESP_LOGD(TAG, "Requête DNS pour: %s", domain_name);
+    ESP_LOGD(TAG_CAPTIVE_PORTAL, "Requête DNS pour: %s", domain_name);
 
     // Construire la réponse DNS
     memcpy(tx_buffer, rx_buffer, len);
@@ -163,7 +161,7 @@ static void dns_server_task(void *pvParameters) {
     sendto(dns_socket, tx_buffer, response_len, 0,
            (struct sockaddr *)&client_addr, client_addr_len);
 
-    ESP_LOGD(TAG, "Réponse DNS envoyée: %s -> 192.168.10.1", domain_name);
+    ESP_LOGD(TAG_CAPTIVE_PORTAL, "Réponse DNS envoyée: %s -> 192.168.10.1", domain_name);
   }
 
   if (dns_socket >= 0) {
@@ -171,29 +169,29 @@ static void dns_server_task(void *pvParameters) {
     dns_socket = -1;
   }
 
-  ESP_LOGI(TAG, "Serveur DNS arrêté");
+  ESP_LOGI(TAG_CAPTIVE_PORTAL, "Serveur DNS arrêté");
   vTaskDelete(NULL);
 }
 
 esp_err_t captive_portal_init(void) {
-  ESP_LOGI(TAG, "Initialisation du portail captif");
+  ESP_LOGI(TAG_CAPTIVE_PORTAL, "Initialisation du portail captif");
   return ESP_OK;
 }
 
 esp_err_t captive_portal_start(void) {
   if (dns_server_running) {
-    ESP_LOGW(TAG, "Portail captif déjà actif");
+    ESP_LOGW(TAG_CAPTIVE_PORTAL, "Portail captif déjà actif");
     return ESP_OK;
   }
 
   BaseType_t ret = xTaskCreate(dns_server_task, "dns_server", 4096, NULL, 5,
                                &dns_task_handle);
   if (ret != pdPASS) {
-    ESP_LOGE(TAG, "Erreur création tâche DNS");
+    ESP_LOGE(TAG_CAPTIVE_PORTAL, "Erreur création tâche DNS");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "Portail captif démarré");
+  ESP_LOGI(TAG_CAPTIVE_PORTAL, "Portail captif démarré");
   return ESP_OK;
 }
 
@@ -217,7 +215,7 @@ esp_err_t captive_portal_stop(void) {
     dns_task_handle = NULL;
   }
 
-  ESP_LOGI(TAG, "Portail captif arrêté");
+  ESP_LOGI(TAG_CAPTIVE_PORTAL, "Portail captif arrêté");
   return ESP_OK;
 }
 

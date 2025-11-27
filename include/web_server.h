@@ -5,6 +5,8 @@
 #include "vehicle_can_unified.h"
 #include <stdbool.h>
 
+#define TAG_WEBSERVER "WebServer"
+
 void web_server_update_vehicle_state(const vehicle_state_t *state);
 
 /**

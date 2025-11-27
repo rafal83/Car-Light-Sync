@@ -5,6 +5,8 @@
 #include "vehicle_can_unified.h" // pour can_frame_t
 #include <stdbool.h>
 
+#define TAG_CAN_BUS "CAN_BUS"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define TAG_LED "LED"
+
 // IDs alphanumériques stables pour les effets (ne changent jamais)
 #define EFFECT_ID_OFF "OFF"
 #define EFFECT_ID_SOLID "SOLID"

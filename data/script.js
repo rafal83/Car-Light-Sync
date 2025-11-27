@@ -2860,6 +2860,15 @@ function startAudioDataPolling() {
 
     // En mode BLE, désactiver complètement le polling audio pour économiser la bande passante
     if (bleTransportInstance && bleTransportInstance.shouldUseBle()) {
+        const audioDataBox = document.getElementById('audio-data');
+        const audioFFTDataBox = document.getElementById('audio-fft-data');
+        if (audioDataBox) {
+          audioDataBox.style.display = 'none';
+        }
+        if (audioFFTDataBox) {
+            audioFFTDataBox.style.display = 'none';
+        }
+
         console.log('[Audio] Polling désactivé en mode BLE (économie bande passante)');
         return;
     }

@@ -7,7 +7,6 @@
 // Driver CAN ESP-IDF : selon version, c'est "twai" ou alias "can"
 #include "driver/twai.h"
 
-static const char *TAG = "CAN_BUS";
 
 #ifndef CONFIG_CAN_TX_GPIO
 // À adapter à ton câblage
@@ -26,7 +25,7 @@ static volatile bool s_running = false;
 
 // ---- Tâche de réception ----
 static void can_rx_task(void *pvParameters) {
-  ESP_LOGI(TAG, "Tâche CAN RX démarrée");
+  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX démarrée");
 
   while (s_running) {
     twai_message_t msg;
@@ -53,12 +52,12 @@ static void can_rx_task(void *pvParameters) {
       continue;
     } else {
       s_errors++;
-      ESP_LOGW(TAG, "Erreur twai_receive: %s", esp_err_to_name(ret));
+      ESP_LOGW(TAG_CAN_BUS, "Erreur twai_receive: %s", esp_err_to_name(ret));
       vTaskDelay(pdMS_TO_TICKS(100));
     }
   }
 
-  ESP_LOGI(TAG, "Tâche CAN RX terminée");
+  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX terminée");
   s_rx_task_handle = NULL;
   vTaskDelete(NULL);
 }
@@ -78,11 +77,11 @@ esp_err_t can_bus_init(void) {
 
   esp_err_t ret = twai_driver_install(&g_config, &t_config, &f_config);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "twai_driver_install failed: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_CAN_BUS, "twai_driver_install failed: %s", esp_err_to_name(ret));
     return ret;
   }
 
-  ESP_LOGI(TAG, "Driver CAN installé (TX=%d, RX=%d)", CONFIG_CAN_TX_GPIO,
+  ESP_LOGI(TAG_CAN_BUS, "Driver CAN installé (TX=%d, RX=%d)", CONFIG_CAN_TX_GPIO,
            CONFIG_CAN_RX_GPIO);
 
   s_rx_count = s_tx_count = s_errors = 0;
@@ -94,7 +93,7 @@ esp_err_t can_bus_init(void) {
 esp_err_t can_bus_start(void) {
   esp_err_t ret = twai_start();
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "twai_start failed: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_CAN_BUS, "twai_start failed: %s", esp_err_to_name(ret));
     return ret;
   }
 
@@ -108,7 +107,7 @@ esp_err_t can_bus_start(void) {
     );
   }
 
-  ESP_LOGI(TAG, "Bus CAN démarré");
+  ESP_LOGI(TAG_CAN_BUS, "Bus CAN démarré");
 
   return ESP_OK;
 }
@@ -118,12 +117,12 @@ esp_err_t can_bus_stop(void) {
 
   esp_err_t ret = twai_stop();
   if (ret != ESP_OK) {
-    ESP_LOGW(TAG, "twai_stop: %s", esp_err_to_name(ret));
+    ESP_LOGW(TAG_CAN_BUS, "twai_stop: %s", esp_err_to_name(ret));
   }
 
   ret = twai_driver_uninstall();
   if (ret != ESP_OK) {
-    ESP_LOGW(TAG, "twai_driver_uninstall: %s", esp_err_to_name(ret));
+    ESP_LOGW(TAG_CAN_BUS, "twai_driver_uninstall: %s", esp_err_to_name(ret));
   }
 
   return ESP_OK;
@@ -155,7 +154,7 @@ esp_err_t can_bus_send(const can_frame_t *frame) {
   esp_err_t ret = twai_transmit(&msg, pdMS_TO_TICKS(10));
   if (ret != ESP_OK) {
     s_errors++;
-    ESP_LOGW(TAG, "Erreur twai_transmit: %s", esp_err_to_name(ret));
+    ESP_LOGW(TAG_CAN_BUS, "Erreur twai_transmit: %s", esp_err_to_name(ret));
     return ret;
   }
 

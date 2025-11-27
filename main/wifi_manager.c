@@ -9,8 +9,6 @@
 #include "nvs_flash.h"
 #include <string.h>
 
-static const char *TAG = "WiFi";
-
 static wifi_status_t current_status = {0};
 static bool wifi_initialized = false;
 static esp_netif_t *ap_netif = NULL;
@@ -40,7 +38,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     case WIFI_EVENT_AP_STACONNECTED: {
       wifi_event_ap_staconnected_t *event =
           (wifi_event_ap_staconnected_t *)event_data;
-      ESP_LOGI(TAG, "Client connecté, MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+      ESP_LOGI(TAG_WIFI, "Client connecté, MAC: %02x:%02x:%02x:%02x:%02x:%02x",
                MAC2STR(event->mac));
       current_status.connected_clients++;
       break;
@@ -48,7 +46,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     case WIFI_EVENT_AP_STADISCONNECTED: {
       wifi_event_ap_stadisconnected_t *event =
           (wifi_event_ap_stadisconnected_t *)event_data;
-      ESP_LOGI(TAG, "Client déconnecté, MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+      ESP_LOGI(TAG_WIFI, "Client déconnecté, MAC: %02x:%02x:%02x:%02x:%02x:%02x",
                MAC2STR(event->mac));
       if (current_status.connected_clients > 0) {
         current_status.connected_clients--;
@@ -56,7 +54,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
       break;
     }
     case WIFI_EVENT_STA_START:
-      ESP_LOGI(TAG, "Mode Station démarré");
+      ESP_LOGI(TAG_WIFI, "Mode Station démarré");
       sta_retry_count = 0;
       esp_wifi_connect();
       break;
@@ -64,11 +62,11 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
       current_status.sta_connected = false;
       if (sta_auto_reconnect && sta_retry_count < STA_MAX_RETRY) {
         sta_retry_count++;
-        ESP_LOGI(TAG, "Déconnecté du réseau, tentative %d/%d...",
+        ESP_LOGI(TAG_WIFI, "Déconnecté du réseau, tentative %d/%d...",
                  sta_retry_count, STA_MAX_RETRY);
         esp_wifi_connect();
       } else if (sta_retry_count >= STA_MAX_RETRY) {
-        ESP_LOGW(TAG, "Nombre max de tentatives atteint, arrêt de la "
+        ESP_LOGW(TAG_WIFI, "Nombre max de tentatives atteint, arrêt de la "
                       "reconnexion automatique");
         sta_auto_reconnect = false;
       }
@@ -79,7 +77,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
   } else if (event_base == IP_EVENT) {
     if (event_id == IP_EVENT_STA_GOT_IP) {
       ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-      ESP_LOGI(TAG, "IP obtenue: " IPSTR, IP2STR(&event->ip_info.ip));
+      ESP_LOGI(TAG_WIFI, "IP obtenue: " IPSTR, IP2STR(&event->ip_info.ip));
       snprintf(current_status.sta_ip, sizeof(current_status.sta_ip), IPSTR,
                IP2STR(&event->ip_info.ip));
       current_status.sta_connected = true;
@@ -90,7 +88,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 
 esp_err_t wifi_manager_init(void) {
   if (wifi_initialized) {
-    ESP_LOGW(TAG, "WiFi déjà initialisé");
+    ESP_LOGW(TAG_WIFI, "WiFi déjà initialisé");
     return ESP_OK;
   }
 
@@ -132,13 +130,13 @@ esp_err_t wifi_manager_init(void) {
                                              &wifi_event_handler, NULL));
 
   wifi_initialized = true;
-  ESP_LOGI(TAG, "WiFi initialisé");
+  ESP_LOGI(TAG_WIFI, "WiFi initialisé");
   return ESP_OK;
 }
 
 esp_err_t wifi_manager_start_ap(void) {
   if (!wifi_initialized) {
-    ESP_LOGE(TAG, "WiFi non initialisé");
+    ESP_LOGE(TAG_WIFI, "WiFi non initialisé");
     return ESP_FAIL;
   }
 
@@ -175,16 +173,16 @@ esp_err_t wifi_manager_start_ap(void) {
            IP2STR(&ip_info.ip));
 
   current_status.ap_started = true;
-  ESP_LOGI(TAG, "Point d'accès démarré: %s, IP: %s", g_wifi_ssid_with_suffix,
+  ESP_LOGI(TAG_WIFI, "Point d'accès démarré: %s, IP: %s", g_wifi_ssid_with_suffix,
            current_status.ap_ip);
 
   // Démarrer le portail captif
   esp_err_t portal_ret = captive_portal_start();
   if (portal_ret != ESP_OK) {
-    ESP_LOGW(TAG, "Erreur démarrage portail captif: %s",
+    ESP_LOGW(TAG_WIFI, "Erreur démarrage portail captif: %s",
              esp_err_to_name(portal_ret));
   } else {
-    ESP_LOGI(TAG, "Portail captif activé");
+    ESP_LOGI(TAG_WIFI, "Portail captif activé");
   }
 
   return ESP_OK;
@@ -192,7 +190,7 @@ esp_err_t wifi_manager_start_ap(void) {
 
 esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
   if (!wifi_initialized) {
-    ESP_LOGE(TAG, "WiFi non initialisé");
+    ESP_LOGE(TAG_WIFI, "WiFi non initialisé");
     return ESP_FAIL;
   }
 
@@ -213,7 +211,7 @@ esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
   sta_auto_reconnect = true;
   sta_retry_count = 0;
 
-  ESP_LOGI(TAG, "Connexion à %s... %s", ssid);
+  ESP_LOGI(TAG_WIFI, "Connexion à %s... %s", ssid);
   return ESP_OK;
 }
 
@@ -226,7 +224,7 @@ esp_err_t wifi_manager_disconnect_sta(void) {
   sta_auto_reconnect = false;
   sta_retry_count = 0;
 
-  ESP_LOGI(TAG, "Déconnexion manuelle du réseau WiFi");
+  ESP_LOGI(TAG_WIFI, "Déconnexion manuelle du réseau WiFi");
 
   // Déconnecter et repasser en mode AP uniquement
   esp_wifi_disconnect();
@@ -250,14 +248,14 @@ int wifi_manager_scan_networks(uint32_t scan_time) {
 
   esp_err_t ret = esp_wifi_scan_start(&scan_config, true);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur scan: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_WIFI, "Erreur scan: %s", esp_err_to_name(ret));
     return 0;
   }
 
   uint16_t ap_count = 0;
   esp_wifi_scan_get_ap_num(&ap_count);
 
-  ESP_LOGI(TAG, "%d réseaux trouvés", ap_count);
+  ESP_LOGI(TAG_WIFI, "%d réseaux trouvés", ap_count);
   return ap_count;
 }
 
@@ -282,7 +280,7 @@ esp_err_t wifi_manager_stop(void) {
   current_status.sta_connected = false;
   current_status.connected_clients = 0;
 
-  ESP_LOGI(TAG, "WiFi arrêté");
+  ESP_LOGI(TAG_WIFI, "WiFi arrêté");
   return ESP_OK;
 }
 

@@ -12,6 +12,7 @@
 #include "config.h"
 #include "config_manager.h"
 #include "led_effects.h"
+#include "led_strip_encoder.h"
 #include "ota_update.h"
 #include "sdkconfig.h"
 #include "task_core_utils.h"
@@ -30,7 +31,7 @@
 #include "esp_heap_caps.h"
 #endif
 
-static const char *TAG = "Main";
+#define TAG_MAIN "Main"
 
 static vehicle_state_t last_vehicle_state = {0};
 
@@ -43,7 +44,7 @@ static void vehicle_can_callback(const can_frame_t *frame, void *user_data) {
 
 // Tâche de mise à jour des LEDs
 static void led_task(void *pvParameters) {
-  ESP_LOGI(TAG, "Tâche LED démarrée");
+  ESP_LOGI(TAG_MAIN, "Tâche LED démarrée");
 
   while (1) {
     led_effects_update();
@@ -54,7 +55,7 @@ static void led_task(void *pvParameters) {
 
 // Tâche de traitement des événements CAN
 static void can_event_task(void *pvParameters) {
-  ESP_LOGI(TAG, "Tâche événements CAN démarrée");
+  ESP_LOGI(TAG_MAIN, "Tâche événements CAN démarrée");
 
   // Utiliser static pour éviter de surcharger la stack
   static vehicle_state_t current_state;
@@ -72,7 +73,7 @@ static void can_event_task(void *pvParameters) {
     // Clignotants - IMPORTANT: if séparés pour détecter chaque changement
     // indépendamment
     if (previous_state.hazard != current_state.hazard) {
-      ESP_LOGI(TAG, "Hazard changé: %d -> %d", previous_state.hazard,
+      ESP_LOGI(TAG_MAIN, "Hazard changé: %d -> %d", previous_state.hazard,
                current_state.hazard);
       if (current_state.hazard) {
         config_manager_process_can_event(CAN_EVENT_TURN_HAZARD);
@@ -82,7 +83,7 @@ static void can_event_task(void *pvParameters) {
     }
 
     if (previous_state.turn_left != current_state.turn_left) {
-      ESP_LOGI(TAG, "Turn left changé: %d -> %d", previous_state.turn_left,
+      ESP_LOGI(TAG_MAIN, "Turn left changé: %d -> %d", previous_state.turn_left,
                current_state.turn_left);
       if (current_state.turn_left) {
         config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
@@ -92,7 +93,7 @@ static void can_event_task(void *pvParameters) {
     }
 
     if (previous_state.turn_right != current_state.turn_right) {
-      ESP_LOGI(TAG, "Turn right changé: %d -> %d", previous_state.turn_right,
+      ESP_LOGI(TAG_MAIN, "Turn right changé: %d -> %d", previous_state.turn_right,
                current_state.turn_right);
       if (current_state.turn_right) {
         config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
@@ -255,7 +256,7 @@ static void can_event_task(void *pvParameters) {
     //         if (config_manager_get_active_profile(&profile) &&
     //         profile.auto_night_mode) {
     //             led_effects_set_config(&profile.night_mode_effect);
-    //             ESP_LOGI(TAG, "Mode nuit activé automatiquement");
+    //             ESP_LOGI(TAG_MAIN, "Mode nuit activé automatiquement");
     //         }
     //     } else {
     //         config_manager_process_can_event(CAN_EVENT_NIGHT_MODE_OFF);
@@ -265,7 +266,7 @@ static void can_event_task(void *pvParameters) {
     //         if (config_manager_get_active_profile(&profile) &&
     //         profile.auto_night_mode) {
     //             led_effects_set_config(&profile.default_effect);
-    //             ESP_LOGI(TAG, "Mode nuit désactivé");
+    //             ESP_LOGI(TAG_MAIN, "Mode nuit désactivé");
     //         }
     //     }
     // }
@@ -286,7 +287,7 @@ static void can_event_task(void *pvParameters) {
 
 // Tâche de monitoring
 static void monitor_task(void *pvParameters) {
-  ESP_LOGI(TAG, "Tâche de monitoring démarrée");
+  ESP_LOGI(TAG_MAIN, "Tâche de monitoring démarrée");
 
   TickType_t last_print = 0;
 
@@ -301,30 +302,30 @@ static void monitor_task(void *pvParameters) {
       can_bus_status_t can_status;
       can_bus_get_status(&can_status);
 
-      ESP_LOGI(TAG, "=== Statut ===");
-      ESP_LOGI(TAG, "WiFi AP: %s (IP: %s, Clients: %d)",
+      ESP_LOGI(TAG_MAIN, "=== Statut ===");
+      ESP_LOGI(TAG_MAIN, "WiFi AP: %s (IP: %s, Clients: %d)",
                wifi_status.ap_started ? "Actif" : "Inactif", wifi_status.ap_ip,
                wifi_status.connected_clients);
 
       if (wifi_status.sta_connected) {
-        ESP_LOGI(TAG, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid,
+        ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid,
                  wifi_status.sta_ip);
       }
 
       if (can_status.running) {
-        ESP_LOGI(TAG, "CAN: RX=%lu, TX=%lu, Err=%lu, Running=%s",
+        ESP_LOGI(TAG_MAIN, "CAN: RX=%lu, TX=%lu, Err=%lu, Running=%s",
                  can_status.rx_count, can_status.tx_count, can_status.errors,
                  can_status.running ? "oui" : "non");
       } else {
-        ESP_LOGI(TAG, "CAN Bus: Déconnecté");
+        ESP_LOGI(TAG_MAIN, "CAN Bus: Déconnecté");
       }
 
-      ESP_LOGI(TAG, "Mémoire libre: %lu bytes", esp_get_free_heap_size());
+      ESP_LOGI(TAG_MAIN, "Mémoire libre: %lu bytes", esp_get_free_heap_size());
 #ifdef CONFIG_HAS_PSRAM
-      ESP_LOGI(TAG, "PSRAM libre: %d bytes",
+      ESP_LOGI(TAG_MAIN, "PSRAM libre: %d bytes",
                heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 #endif
-      ESP_LOGI(TAG, "==============");
+      ESP_LOGI(TAG_MAIN, "==============");
 
       last_print = now;
     }
@@ -356,25 +357,26 @@ void app_main(void) {
   esp_log_level_set("esp_netif_handlers", ESP_LOG_ERROR);
 
   // Activer VOS logs
-  esp_log_level_set("Main", ESP_LOG_INFO);
-  esp_log_level_set("CAN_BUS", ESP_LOG_INFO);
-  esp_log_level_set("WiFi", ESP_LOG_INFO); // nos logs du module WiFi
-  esp_log_level_set("WebServer", ESP_LOG_INFO);
-  esp_log_level_set("LEDStrip", ESP_LOG_INFO);
-  esp_log_level_set("ConfigMgr", ESP_LOG_INFO);
-  esp_log_level_set("OTA", ESP_LOG_INFO);
-  esp_log_level_set("Audio", ESP_LOG_INFO);
-  // esp_log_level_set("BLE_API", ESP_LOG_INFO);
+  esp_log_level_set(TAG_MAIN, ESP_LOG_INFO);
+  esp_log_level_set(TAG_CAN_BUS, ESP_LOG_INFO);
+  esp_log_level_set(TAG_WIFI, ESP_LOG_INFO); // nos logs du module WiFi
+  esp_log_level_set(TAG_WEBSERVER, ESP_LOG_INFO);
+  // esp_log_level_set(TAG_LED_ENCODER, ESP_LOG_INFO);
+  // esp_log_level_set(TAG_LED, ESP_LOG_INFO);
+  esp_log_level_set(TAG_CONFIG, ESP_LOG_INFO);
+  // esp_log_level_set(TAG_OTA, ESP_LOG_INFO);
+  // esp_log_level_set(TAG_AUDIO, ESP_LOG_INFO);
+  // esp_log_level_set(TAG_BLE_API, ESP_LOG_INFO);
 
-  ESP_LOGI(TAG, "=================================");
-  ESP_LOGI(TAG, "        Car Light Sync           ");
-  ESP_LOGI(TAG, "       Version %s            ", APP_VERSION_STRING);
-  ESP_LOGI(TAG, "=================================");
+  ESP_LOGI(TAG_MAIN, "=================================");
+  ESP_LOGI(TAG_MAIN, "        Car Light Sync           ");
+  ESP_LOGI(TAG_MAIN, "       Version %s            ", APP_VERSION_STRING);
+  ESP_LOGI(TAG_MAIN, "=================================");
 
   // Initialiser les noms de périphérique avec suffixe MAC
   config_init_device_names();
-  ESP_LOGI(TAG, "WiFi AP SSID: %s", g_wifi_ssid_with_suffix);
-  ESP_LOGI(TAG, "BLE Device Name: %s", g_device_name_with_suffix);
+  ESP_LOGI(TAG_MAIN, "WiFi AP SSID: %s", g_wifi_ssid_with_suffix);
+  ESP_LOGI(TAG_MAIN, "BLE Device Name: %s", g_device_name_with_suffix);
 
   // Initialiser NVS
   esp_err_t ret = nvs_flash_init();
@@ -390,36 +392,36 @@ void app_main(void) {
 
   // Initialiser OTA
   ESP_ERROR_CHECK(ota_init());
-  ESP_LOGI(TAG, "✓ OTA initialisé, version: %s", ota_get_current_version());
+  ESP_LOGI(TAG_MAIN, "✓ OTA initialisé, version: %s", ota_get_current_version());
 
   // Initialiser les modules
-  ESP_LOGI(TAG, "Initialisation des modules...");
+  ESP_LOGI(TAG_MAIN, "Initialisation des modules...");
 
   // CAN direct
   ESP_ERROR_CHECK(can_bus_init());
   ESP_ERROR_CHECK(can_bus_register_callback(vehicle_can_callback, NULL));
   ESP_ERROR_CHECK(can_bus_start());
-  ESP_LOGI(TAG, "✓ CAN direct initialisé");
+  ESP_LOGI(TAG_MAIN, "✓ CAN direct initialisé");
 
   // LEDs
   if (!led_effects_init()) {
-    ESP_LOGE(TAG, "✗ Erreur initialisation LEDs");
+    ESP_LOGE(TAG_MAIN, "✗ Erreur initialisation LEDs");
     return;
   }
-  ESP_LOGI(TAG, "✓ LEDs initialisées");
+  ESP_LOGI(TAG_MAIN, "✓ LEDs initialisées");
 
   // Gestionnaire de configuration
   if (!config_manager_init()) {
-    ESP_LOGE(TAG, "✗ Erreur initialisation config manager");
+    ESP_LOGE(TAG_MAIN, "✗ Erreur initialisation config manager");
     return;
   }
-  ESP_LOGI(TAG, "✓ Gestionnaire de configuration initialisé");
+  ESP_LOGI(TAG_MAIN, "✓ Gestionnaire de configuration initialisé");
 
   // Module audio (micro INMP441)
   if (!audio_input_init()) {
-    ESP_LOGW(TAG, "Module audio non disponible (optionnel)");
+    ESP_LOGW(TAG_MAIN, "Module audio non disponible (optionnel)");
   } else {
-    ESP_LOGI(TAG, "✓ Module audio initialisé");
+    ESP_LOGI(TAG_MAIN, "✓ Module audio initialisé");
   }
 
 #if CONFIG_BT_ENABLED
@@ -427,15 +429,15 @@ void app_main(void) {
   if (ble_init_status == ESP_OK) {
     esp_err_t ble_start_status = ble_api_service_start();
     if (ble_start_status != ESP_OK) {
-      ESP_LOGW(TAG, "Impossible de démarrer le service BLE: %s",
+      ESP_LOGW(TAG_MAIN, "Impossible de démarrer le service BLE: %s",
                esp_err_to_name(ble_start_status));
     }
   } else {
-    ESP_LOGW(TAG, "Service BLE non disponible: %s",
+    ESP_LOGW(TAG_MAIN, "Service BLE non disponible: %s",
              esp_err_to_name(ble_init_status));
   }
 #else
-  ESP_LOGW(TAG,
+  ESP_LOGW(TAG_MAIN,
            "BLE désactivé dans la configuration, Web Bluetooth indisponible");
 #endif
 
@@ -454,36 +456,36 @@ void app_main(void) {
 
 #ifdef WIFI_AUTO_CONNECT
   // Connexion automatique au WiFi domestique si configuré
-  ESP_LOGI(TAG, "Tentative de connexion à %s...", WIFI_HOME_SSID);
+  ESP_LOGI(TAG_MAIN, "Tentative de connexion à %s...", WIFI_HOME_SSID);
   wifi_manager_connect_sta(WIFI_HOME_SSID, WIFI_HOME_PASSWORD);
   vTaskDelay(pdMS_TO_TICKS(5000)); // Attendre 5s pour la connexion
 #endif
 
-  ESP_LOGI(TAG, "✓ WiFi initialisé");
+  ESP_LOGI(TAG_MAIN, "✓ WiFi initialisé");
 
   // Serveur web
   ESP_ERROR_CHECK(web_server_init());
   ESP_ERROR_CHECK(web_server_start());
-  ESP_LOGI(TAG, "✓ Serveur web démarré");
+  ESP_LOGI(TAG_MAIN, "✓ Serveur web démarré");
 
   // Afficher les informations de connexion
   wifi_status_t wifi_status;
   wifi_manager_get_status(&wifi_status);
 
-  ESP_LOGI(TAG, "");
-  ESP_LOGI(TAG, "=================================");
-  ESP_LOGI(TAG, "  Interface Web Disponible");
-  ESP_LOGI(TAG, "  SSID: %s", g_wifi_ssid_with_suffix);
-  ESP_LOGI(TAG, "  Password: %s", WIFI_AP_PASSWORD);
-  ESP_LOGI(TAG, "  URL: http://%s", wifi_status.ap_ip);
-  ESP_LOGI(TAG, "=================================");
-  ESP_LOGI(TAG, "");
+  ESP_LOGI(TAG_MAIN, "");
+  ESP_LOGI(TAG_MAIN, "=================================");
+  ESP_LOGI(TAG_MAIN, "  Interface Web Disponible");
+  ESP_LOGI(TAG_MAIN, "  SSID: %s", g_wifi_ssid_with_suffix);
+  ESP_LOGI(TAG_MAIN, "  Password: %s", WIFI_AP_PASSWORD);
+  ESP_LOGI(TAG_MAIN, "  URL: http://%s", wifi_status.ap_ip);
+  ESP_LOGI(TAG_MAIN, "=================================");
+  ESP_LOGI(TAG_MAIN, "");
 
-  ESP_LOGI(TAG, "Système démarré avec succès !");
+  ESP_LOGI(TAG_MAIN, "Système démarré avec succès !");
 
   // Animation de démarrage désactivée pour éviter les conflits RMT
   // L'animation sera gérée par la tâche LED
 
   // La boucle principale se termine, les tâches FreeRTOS continuent
-  ESP_LOGI(TAG, "app_main terminé, tâches en cours d'exécution");
+  ESP_LOGI(TAG_MAIN, "app_main terminé, tâches en cours d'exécution");
 }
