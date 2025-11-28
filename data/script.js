@@ -1338,7 +1338,7 @@ function scheduleDefaultEffectSave() {
     }
     defaultEffectSaveTimer = setTimeout(() => {
         defaultEffectSaveTimer = null;
-        saveDefaultEffect(true);
+        saveProfile(true);
     }, DEFAULT_EFFECT_DEBOUNCE_MS);
 }
 // Hardware Configuration
@@ -1610,9 +1610,6 @@ async function saveProfile(params = {}) {
         showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
     }
 }
-// Aliases pour compatibilité
-const saveProfileSettings = () => saveProfile({ defaultEffect: false });
-const saveDefaultEffect = (silent = false) => saveProfile({ settings: false, silent });
 // Appliquer l'effet
 // Mise à jour du statut
 async function updateStatus() {
