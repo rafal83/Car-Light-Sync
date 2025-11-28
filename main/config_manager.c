@@ -1010,9 +1010,8 @@ bool config_manager_process_can_event(can_event_type_t event) {
     active_events[slot].priority = priority;
     active_events[slot].active = true;
 
-    // Appliquer immédiatement l'effet de plus haute priorité actif
-    led_effects_set_config(&effect_to_apply);
-    effect_override_active = true;
+    // NE PAS appliquer immédiatement - laisser config_manager_update() le faire
+    // selon la logique de priorité par zone pour éviter le glitch visuel
 
     if (duration_ms > 0) {
       ESP_LOGI(TAG_CONFIG, "Effet '%s' activé pour %dms (priorité %d)",
@@ -1117,16 +1116,24 @@ void config_manager_update(void) {
     bool right_active = (right_slot >= 0);
     bool full_active = (full_slot >= 0);
 
-    // Priorité au FULL si présent, sinon combiner LEFT/RIGHT
+    // Vérifier si FULL a une priorité suffisante pour écraser LEFT/RIGHT
+    bool full_overrides = false;
     if (full_active) {
-      // Effet FULL avec la plus haute priorité
-      ESP_LOGI(TAG_CONFIG, "Événement '%s' actif écrase l'effet par défaut (priorité=%d)",
-               config_manager_get_event_name(active_events[full_slot].event),
-               active_events[full_slot].priority);
+      // FULL écrase tout seulement si sa priorité est >= aux priorités LEFT et RIGHT
+      bool overrides_left = !left_active || (max_priority_full >= max_priority_left);
+      bool overrides_right = !right_active || (max_priority_full >= max_priority_right);
+      full_overrides = overrides_left && overrides_right;
+    }
+
+    if (full_overrides) {
+      // Effet FULL écrase tout (priorité suffisante)
+      // ESP_LOGI(TAG_CONFIG, "Événement '%s' actif écrase l'effet par défaut (priorité=%d)",
+      //          config_manager_get_event_name(active_events[full_slot].event),
+      //          active_events[full_slot].priority);
       led_effects_set_config(&active_events[full_slot].effect_config);
       effect_override_active = true;
     } else if (left_active && right_active) {
-      // Deux effets directionnels avec la même priorité maximale
+      // Deux effets directionnels actifs
       led_effects_set_dual_directional(
           &active_events[left_slot].effect_config,
           &active_events[right_slot].effect_config);
@@ -1138,6 +1145,10 @@ void config_manager_update(void) {
     } else if (right_active) {
       // Seulement droite
       led_effects_set_config(&active_events[right_slot].effect_config);
+      effect_override_active = true;
+    } else if (full_active) {
+      // FULL actif mais sans LEFT/RIGHT à écraser
+      led_effects_set_config(&active_events[full_slot].effect_config);
       effect_override_active = true;
     } else {
       // Pas d'effets avec la priorité maximale (?), appliquer le premier actif
@@ -1459,6 +1470,8 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer,
   cJSON_AddNumberToObject(default_effect, "zone", profile->default_effect.zone);
   cJSON_AddBoolToObject(default_effect, "reverse",
                         profile->default_effect.reverse);
+  cJSON_AddBoolToObject(default_effect, "audio_reactive",
+                        profile->default_effect.audio_reactive);
   cJSON_AddItemToObject(root, "default_effect", default_effect);
 
   // Effet mode nuit
@@ -1479,6 +1492,8 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer,
                           profile->night_mode_effect.zone);
   cJSON_AddBoolToObject(night_effect, "reverse",
                         profile->night_mode_effect.reverse);
+  cJSON_AddBoolToObject(night_effect, "audio_reactive",
+                        profile->night_mode_effect.audio_reactive);
   cJSON_AddItemToObject(root, "night_mode_effect", night_effect);
 
   // Événements CAN
@@ -1624,6 +1639,9 @@ bool config_manager_import_profile(uint8_t profile_id,
     if ((item = cJSON_GetObjectItem(default_effect, "reverse")) &&
         cJSON_IsBool(item))
       imported_profile->default_effect.reverse = cJSON_IsTrue(item);
+    if ((item = cJSON_GetObjectItem(default_effect, "audio_reactive")) &&
+        cJSON_IsBool(item))
+      imported_profile->default_effect.audio_reactive = cJSON_IsTrue(item);
   }
 
   // Effet mode nuit
@@ -1654,6 +1672,9 @@ bool config_manager_import_profile(uint8_t profile_id,
     if ((item = cJSON_GetObjectItem(night_effect, "reverse")) &&
         cJSON_IsBool(item))
       imported_profile->night_mode_effect.reverse = cJSON_IsTrue(item);
+    if ((item = cJSON_GetObjectItem(night_effect, "audio_reactive")) &&
+        cJSON_IsBool(item))
+      imported_profile->night_mode_effect.audio_reactive = cJSON_IsTrue(item);
   }
 
   // Événements CAN
@@ -1798,4 +1819,16 @@ bool config_manager_set_led_count(uint16_t led_count) {
 
   ESP_LOGI(TAG_CONFIG, "Configuration LED sauvegardée: %d LEDs", led_count);
   return true;
+}
+
+void config_manager_reapply_default_effect(void) {
+  if (active_profile_id < 0 || active_profile_id >= MAX_PROFILES) {
+    ESP_LOGW(TAG_CONFIG, "Aucun profil actif, impossible de réappliquer l'effet");
+    return;
+  }
+
+  // Réappliquer l'effet par défaut du profil actif
+  led_effects_set_config(&profiles[active_profile_id].default_effect);
+  ESP_LOGI(TAG_CONFIG, "Effet par défaut réappliqué (audio_reactive=%d)",
+           profiles[active_profile_id].default_effect.audio_reactive);
 }

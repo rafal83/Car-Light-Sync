@@ -452,6 +452,9 @@ void app_main(void) {
     ESP_LOGW(TAG_MAIN, "Module audio non disponible (optionnel)");
   } else {
     ESP_LOGI(TAG_MAIN, "✓ Module audio initialisé");
+    // Réappliquer l'effet par défaut pour activer l'audio si nécessaire
+    // (car l'effet a été appliqué avant l'init audio)
+    config_manager_reapply_default_effect();
   }
 
 #if CONFIG_BT_ENABLED

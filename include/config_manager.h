@@ -314,4 +314,10 @@ bool config_manager_event_can_switch_profile(can_event_type_t event);
  */
 bool config_manager_factory_reset(void);
 
+/**
+ * @brief Réapplique l'effet par défaut du profil actif
+ * Utile après l'initialisation du module audio pour activer les effets audio
+ */
+void config_manager_reapply_default_effect(void);
+
 #endif // CONFIG_MANAGER_H
