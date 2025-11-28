@@ -7,33 +7,58 @@
 // Driver CAN ESP-IDF : selon version, c'est "twai" ou alias "can"
 #include "driver/twai.h"
 
-
-#ifndef CONFIG_CAN_TX_GPIO
-// À adapter à ton câblage
-#define CONFIG_CAN_TX_GPIO GPIO_NUM_8
-#define CONFIG_CAN_RX_GPIO GPIO_NUM_7
+// Structure pour gérer chaque bus CAN
+typedef struct {
+  int tx_gpio;
+  int rx_gpio;
+  TaskHandle_t rx_task_handle;
+  volatile uint32_t rx_count;
+  volatile uint32_t tx_count;
+  volatile uint32_t errors;
+  volatile bool running;
+  volatile bool initialized;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+  twai_handle_t bus_handle;  // Handle pour TWAI v2
 #endif
+} can_bus_context_t;
 
+// Contextes pour chaque bus CAN
+static can_bus_context_t s_can_buses[CAN_BUS_COUNT] = {0};
+
+// Callback partagé pour tous les bus
 static can_bus_callback_t s_callback = NULL;
 static void *s_cb_user_data = NULL;
-static TaskHandle_t s_rx_task_handle = NULL;
 
-static volatile uint32_t s_rx_count = 0;
-static volatile uint32_t s_tx_count = 0;
-static volatile uint32_t s_errors = 0;
-static volatile bool s_running = false;
+// Structure passée aux tâches de réception
+typedef struct {
+  can_bus_type_t bus_type;
+} can_rx_task_params_t;
 
 // ---- Tâche de réception ----
 static void can_rx_task(void *pvParameters) {
-  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX démarrée");
+  can_rx_task_params_t *params = (can_rx_task_params_t *)pvParameters;
+  can_bus_type_t bus_type = params->bus_type;
 
-  while (s_running) {
+  // Libérer les paramètres alloués
+  free(params);
+
+  can_bus_context_t *ctx = &s_can_buses[bus_type];
+  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+
+  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX démarrée pour bus %s (GPIO TX=%d RX=%d)",
+           bus_name, ctx->tx_gpio, ctx->rx_gpio);
+
+  while (ctx->running) {
     twai_message_t msg;
     // Bloque jusqu'à réception
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2
+    esp_err_t ret = twai_receive_v2(ctx->bus_handle, &msg, pdMS_TO_TICKS(1000));
+#else
     esp_err_t ret = twai_receive(&msg, pdMS_TO_TICKS(1000));
+#endif
 
     if (ret == ESP_OK) {
-      s_rx_count++;
+      ctx->rx_count++;
       if (s_callback) {
         can_frame_t frame = {0};
         frame.id = msg.identifier;
@@ -45,85 +70,192 @@ static void can_rx_task(void *pvParameters) {
         }
         frame.timestamp_ms = xTaskGetTickCount();
 
-        s_callback(&frame, s_cb_user_data);
+        s_callback(&frame, bus_type, s_cb_user_data);
       }
     } else if (ret == ESP_ERR_TIMEOUT) {
-      // Log toutes les 10 secondes pour debug
       continue;
     } else {
-      s_errors++;
-      ESP_LOGW(TAG_CAN_BUS, "Erreur twai_receive: %s", esp_err_to_name(ret));
+      ctx->errors++;
+      ESP_LOGW(TAG_CAN_BUS, "[%s] Erreur twai_receive: %s", bus_name, esp_err_to_name(ret));
       vTaskDelay(pdMS_TO_TICKS(100));
     }
   }
 
-  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX terminée");
-  s_rx_task_handle = NULL;
+  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX terminée pour bus %s", bus_name);
+  ctx->rx_task_handle = NULL;
   vTaskDelete(NULL);
 }
 
 // ---- API publique ----
 
-esp_err_t can_bus_init(void) {
-  // Config générale : mode normal, pins, pas d’auto-recovery exotique
-  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(
-      CONFIG_CAN_TX_GPIO, CONFIG_CAN_RX_GPIO, TWAI_MODE_NORMAL);
+esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
+  if (bus_type >= CAN_BUS_COUNT) {
+    return ESP_ERR_INVALID_ARG;
+  }
 
-  // Vitesse 500 kbit/s (chassis Tesla)
+  can_bus_context_t *ctx = &s_can_buses[bus_type];
+  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+
+  if (ctx->initialized) {
+    ESP_LOGW(TAG_CAN_BUS, "Bus %s déjà initialisé", bus_name);
+    return ESP_ERR_INVALID_STATE;
+  }
+
+  ctx->tx_gpio = tx_gpio;
+  ctx->rx_gpio = rx_gpio;
+  ctx->rx_count = ctx->tx_count = ctx->errors = 0;
+  ctx->running = false;
+  ctx->rx_task_handle = NULL;
+
+  // Config générale : mode normal, pins
+  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(
+      tx_gpio, rx_gpio, TWAI_MODE_LISTEN_ONLY);
+
+  // Vitesse 500 kbit/s (Tesla)
   twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
 
   // Filtre : accepte toutes les trames
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
-  esp_err_t ret = twai_driver_install(&g_config, &t_config, &f_config);
+  esp_err_t ret;
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2
+  // ESP-IDF 5.2.0+ avec support multi-contrôleur
+  g_config.controller_id = bus_type;
+
+  ret = twai_driver_install_v2(&g_config, &t_config, &f_config, &ctx->bus_handle);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_CAN_BUS, "twai_driver_install failed: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_CAN_BUS, "[%s] twai_driver_install_v2 failed: %s",
+             bus_name, esp_err_to_name(ret));
     return ret;
   }
+  ESP_LOGI(TAG_CAN_BUS, "Driver CAN %s installé avec TWAI v2 (TX=%d, RX=%d, ID=%d)",
+           bus_name, tx_gpio, rx_gpio, bus_type);
+#else
+  // Anciennes versions ESP-IDF : un seul contrôleur supporté
+  if (bus_type == CAN_BUS_BODY) {
+    ESP_LOGW(TAG_CAN_BUS, "[%s] Le deuxième bus CAN nécessite ESP-IDF 5.2.0+ ou un contrôleur externe", bus_name);
+    ESP_LOGW(TAG_CAN_BUS, "[%s] Fonctionnalité désactivée", bus_name);
+    ctx->initialized = true;
+    return ESP_OK;
+  }
 
-  ESP_LOGI(TAG_CAN_BUS, "Driver CAN installé (TX=%d, RX=%d)", CONFIG_CAN_TX_GPIO,
-           CONFIG_CAN_RX_GPIO);
+  ret = twai_driver_install(&g_config, &t_config, &f_config);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG_CAN_BUS, "[%s] twai_driver_install failed: %s",
+             bus_name, esp_err_to_name(ret));
+    return ret;
+  }
+  ESP_LOGI(TAG_CAN_BUS, "Driver CAN %s installé (TX=%d, RX=%d)",
+           bus_name, tx_gpio, rx_gpio);
+#endif
 
-  s_rx_count = s_tx_count = s_errors = 0;
-  s_running = false;
-
+  ctx->initialized = true;
   return ESP_OK;
 }
 
-esp_err_t can_bus_start(void) {
-  esp_err_t ret = twai_start();
+esp_err_t can_bus_start(can_bus_type_t bus_type) {
+  if (bus_type >= CAN_BUS_COUNT) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  can_bus_context_t *ctx = &s_can_buses[bus_type];
+  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+
+  if (!ctx->initialized) {
+    ESP_LOGE(TAG_CAN_BUS, "[%s] Bus non initialisé", bus_name);
+    return ESP_ERR_INVALID_STATE;
+  }
+
+  if (ctx->running) {
+    ESP_LOGW(TAG_CAN_BUS, "[%s] Bus déjà démarré", bus_name);
+    return ESP_OK;
+  }
+
+#if !(ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2)
+  // Skip pour le bus BODY si pas de support multi-contrôleur
+  if (bus_type == CAN_BUS_BODY) {
+    ESP_LOGW(TAG_CAN_BUS, "[%s] Bus désactivé (nécessite ESP-IDF 5.2.0+)", bus_name);
+    return ESP_OK;
+  }
+#endif
+
+  esp_err_t ret;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2
+  ret = twai_start_v2(ctx->bus_handle);
+#else
+  ret = twai_start();
+#endif
+
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_CAN_BUS, "twai_start failed: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_CAN_BUS, "[%s] twai_start failed: %s", bus_name, esp_err_to_name(ret));
     return ret;
   }
 
-  s_running = true;
+  ctx->running = true;
 
-  // Tâche de réception
-  if (s_rx_task_handle == NULL) {
-    xTaskCreatePinnedToCore(can_rx_task, "can_rx_task", 4096, NULL, 10,
-                            &s_rx_task_handle,
+  // Créer la tâche de réception
+  if (ctx->rx_task_handle == NULL) {
+    can_rx_task_params_t *params = malloc(sizeof(can_rx_task_params_t));
+    if (!params) {
+      ESP_LOGE(TAG_CAN_BUS, "[%s] Erreur allocation mémoire", bus_name);
+      return ESP_ERR_NO_MEM;
+    }
+    params->bus_type = bus_type;
+
+    char task_name[20];
+    snprintf(task_name, sizeof(task_name), "can_rx_%s", bus_name);
+
+    xTaskCreatePinnedToCore(can_rx_task, task_name, 4096, params, 10,
+                            &ctx->rx_task_handle,
                             0 // core général
     );
   }
 
-  ESP_LOGI(TAG_CAN_BUS, "Bus CAN démarré");
+  ESP_LOGI(TAG_CAN_BUS, "Bus CAN %s démarré", bus_name);
 
   return ESP_OK;
 }
 
-esp_err_t can_bus_stop(void) {
-  s_running = false;
+esp_err_t can_bus_stop(can_bus_type_t bus_type) {
+  if (bus_type >= CAN_BUS_COUNT) {
+    return ESP_ERR_INVALID_ARG;
+  }
 
-  esp_err_t ret = twai_stop();
+  can_bus_context_t *ctx = &s_can_buses[bus_type];
+  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+
+  ctx->running = false;
+
+  // Attendre que la tâche se termine
+  if (ctx->rx_task_handle) {
+    vTaskDelay(pdMS_TO_TICKS(100)); // Laisser le temps à la tâche de se terminer
+  }
+
+  esp_err_t ret;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2
+  ret = twai_stop_v2(ctx->bus_handle);
   if (ret != ESP_OK) {
-    ESP_LOGW(TAG_CAN_BUS, "twai_stop: %s", esp_err_to_name(ret));
+    ESP_LOGW(TAG_CAN_BUS, "[%s] twai_stop_v2: %s", bus_name, esp_err_to_name(ret));
+  }
+
+  ret = twai_driver_uninstall_v2(ctx->bus_handle);
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG_CAN_BUS, "[%s] twai_driver_uninstall_v2: %s", bus_name, esp_err_to_name(ret));
+  }
+#else
+  ret = twai_stop();
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG_CAN_BUS, "[%s] twai_stop: %s", bus_name, esp_err_to_name(ret));
   }
 
   ret = twai_driver_uninstall();
   if (ret != ESP_OK) {
-    ESP_LOGW(TAG_CAN_BUS, "twai_driver_uninstall: %s", esp_err_to_name(ret));
+    ESP_LOGW(TAG_CAN_BUS, "[%s] twai_driver_uninstall: %s", bus_name, esp_err_to_name(ret));
   }
+#endif
+
+  ctx->initialized = false;
 
   return ESP_OK;
 }
@@ -134,9 +266,16 @@ esp_err_t can_bus_register_callback(can_bus_callback_t cb, void *user_data) {
   return ESP_OK;
 }
 
-esp_err_t can_bus_send(const can_frame_t *frame) {
-  if (!frame)
+esp_err_t can_bus_send(can_bus_type_t bus_type, const can_frame_t *frame) {
+  if (bus_type >= CAN_BUS_COUNT || !frame) {
     return ESP_ERR_INVALID_ARG;
+  }
+
+  can_bus_context_t *ctx = &s_can_buses[bus_type];
+
+  if (!ctx->running) {
+    return ESP_ERR_INVALID_STATE;
+  }
 
   twai_message_t msg = {0};
   msg.identifier = frame->id;
@@ -151,23 +290,34 @@ esp_err_t can_bus_send(const can_frame_t *frame) {
     msg.data[i] = frame->data[i];
   }
 
-  esp_err_t ret = twai_transmit(&msg, pdMS_TO_TICKS(10));
+  esp_err_t ret;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2
+  ret = twai_transmit_v2(ctx->bus_handle, &msg, pdMS_TO_TICKS(10));
+#else
+  ret = twai_transmit(&msg, pdMS_TO_TICKS(10));
+#endif
+
   if (ret != ESP_OK) {
-    s_errors++;
-    ESP_LOGW(TAG_CAN_BUS, "Erreur twai_transmit: %s", esp_err_to_name(ret));
+    ctx->errors++;
+    const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+    ESP_LOGW(TAG_CAN_BUS, "[%s] Erreur twai_transmit: %s", bus_name, esp_err_to_name(ret));
     return ret;
   }
 
-  s_tx_count++;
+  ctx->tx_count++;
   return ESP_OK;
 }
 
-esp_err_t can_bus_get_status(can_bus_status_t *out) {
-  if (!out)
+esp_err_t can_bus_get_status(can_bus_type_t bus_type, can_bus_status_t *out) {
+  if (bus_type >= CAN_BUS_COUNT || !out) {
     return ESP_ERR_INVALID_ARG;
-  out->rx_count = s_rx_count;
-  out->tx_count = s_tx_count;
-  out->errors = s_errors;
-  out->running = s_rx_count > 0; // Il faut au moins recevoir quelque chose
+  }
+
+  can_bus_context_t *ctx = &s_can_buses[bus_type];
+
+  out->rx_count = ctx->rx_count;
+  out->tx_count = ctx->tx_count;
+  out->errors = ctx->errors;
+  out->running = ctx->rx_count > 0; // Il faut au moins recevoir quelque chose
   return ESP_OK;
 }

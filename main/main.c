@@ -35,11 +35,15 @@
 
 static vehicle_state_t last_vehicle_state = {0};
 
-// Callback pour les frames CAN
-static void vehicle_can_callback(const can_frame_t *frame, void *user_data) {
+// Callback pour les frames CAN (des deux bus)
+static void vehicle_can_callback(const can_frame_t *frame, can_bus_type_t bus_type, void *user_data) {
   vehicle_can_process_frame_static(frame, &last_vehicle_state);
   led_effects_update_vehicle_state(&last_vehicle_state);
   web_server_update_vehicle_state(&last_vehicle_state);
+
+  // Log optionnel pour debug
+  // const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+  // ESP_LOGD(TAG_MAIN, "[%s] Frame CAN ID=0x%03lX", bus_name, frame->id);
 }
 
 // Tâche de mise à jour des LEDs
@@ -306,8 +310,9 @@ static void monitor_task(void *pvParameters) {
       wifi_status_t wifi_status;
       wifi_manager_get_status(&wifi_status);
 
-      can_bus_status_t can_status;
-      can_bus_get_status(&can_status);
+      can_bus_status_t can_chassis_status, can_body_status;
+      can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
+      can_bus_get_status(CAN_BUS_BODY, &can_body_status);
 
       ESP_LOGI(TAG_MAIN, "=== Statut ===");
       ESP_LOGI(TAG_MAIN, "WiFi AP: %s (IP: %s, Clients: %d)",
@@ -319,12 +324,20 @@ static void monitor_task(void *pvParameters) {
                  wifi_status.sta_ip);
       }
 
-      if (can_status.running) {
-        ESP_LOGI(TAG_MAIN, "CAN: RX=%lu, TX=%lu, Err=%lu, Running=%s",
-                 can_status.rx_count, can_status.tx_count, can_status.errors,
-                 can_status.running ? "oui" : "non");
+      if (can_chassis_status.running) {
+        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: RX=%lu, TX=%lu, Err=%lu",
+                 can_chassis_status.rx_count, can_chassis_status.tx_count,
+                 can_chassis_status.errors);
       } else {
-        ESP_LOGI(TAG_MAIN, "CAN Bus: Déconnecté");
+        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: Déconnecté");
+      }
+
+      if (can_body_status.running) {
+        ESP_LOGI(TAG_MAIN, "CAN BODY: RX=%lu, TX=%lu, Err=%lu",
+                 can_body_status.rx_count, can_body_status.tx_count,
+                 can_body_status.errors);
+      } else {
+        ESP_LOGI(TAG_MAIN, "CAN BODY: Déconnecté");
       }
 
       ESP_LOGI(TAG_MAIN, "Mémoire libre: %lu bytes", esp_get_free_heap_size());
@@ -404,11 +417,21 @@ void app_main(void) {
   // Initialiser les modules
   ESP_LOGI(TAG_MAIN, "Initialisation des modules...");
 
-  // CAN direct
-  ESP_ERROR_CHECK(can_bus_init());
+  // CAN bus - Chassis
+  ESP_ERROR_CHECK(can_bus_init(CAN_BUS_CHASSIS, CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN));
+  ESP_LOGI(TAG_MAIN, "✓ CAN bus CHASSIS initialisé (GPIO TX=%d, RX=%d)", CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN);
+
+  // CAN bus - Body
+  ESP_ERROR_CHECK(can_bus_init(CAN_BUS_BODY, CAN_TX_BODY_PIN, CAN_RX_BODY_PIN));
+  ESP_LOGI(TAG_MAIN, "✓ CAN bus BODY initialisé (GPIO TX=%d, RX=%d)", CAN_TX_BODY_PIN, CAN_RX_BODY_PIN);
+
+  // Enregistrer le callback partagé pour les deux bus
   ESP_ERROR_CHECK(can_bus_register_callback(vehicle_can_callback, NULL));
-  ESP_ERROR_CHECK(can_bus_start());
-  ESP_LOGI(TAG_MAIN, "✓ CAN direct initialisé");
+
+  // Démarrer les deux bus CAN
+  ESP_ERROR_CHECK(can_bus_start(CAN_BUS_CHASSIS));
+  ESP_ERROR_CHECK(can_bus_start(CAN_BUS_BODY));
+  ESP_LOGI(TAG_MAIN, "✓ Les deux bus CAN sont démarrés");
 
   // LEDs
   if (!led_effects_init()) {

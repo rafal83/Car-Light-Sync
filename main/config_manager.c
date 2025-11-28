@@ -1752,34 +1752,10 @@ uint16_t config_manager_get_led_count(void) {
   return led_count;
 }
 
-uint8_t config_manager_get_led_pin(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("led_hw", NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    return LED_PIN; // Valeur par défaut
-  }
-
-  uint8_t data_pin;
-  err = nvs_get_u8(nvs_handle, "data_pin", &data_pin);
-  nvs_close(nvs_handle);
-
-  if (err != ESP_OK) {
-    return LED_PIN; // Valeur par défaut
-  }
-
-  return data_pin;
-}
-
-bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin) {
+bool config_manager_set_led_count(uint16_t led_count) {
   // Validation
   if (led_count < 1 || led_count > 1000) {
     ESP_LOGE(TAG_CONFIG, "Nombre de LEDs invalide: %d (1-1000)", led_count);
-    return false;
-  }
-
-  if (data_pin > 39) {
-    ESP_LOGE(TAG_CONFIG, "Pin GPIO invalide: %d (0-39)", data_pin);
     return false;
   }
 
@@ -1798,17 +1774,9 @@ bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin) {
     return false;
   }
 
-  err = nvs_set_u8(nvs_handle, "data_pin", data_pin);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde data_pin: %s", esp_err_to_name(err));
-    nvs_close(nvs_handle);
-    return false;
-  }
-
   nvs_commit(nvs_handle);
   nvs_close(nvs_handle);
 
-  ESP_LOGI(TAG_CONFIG, "Configuration matérielle LED sauvegardée: %d LEDs, GPIO %d",
-           led_count, data_pin);
+  ESP_LOGI(TAG_CONFIG, "Configuration LED sauvegardée: %d LEDs", led_count);
   return true;
 }

@@ -4,8 +4,40 @@
 #include <stdint.h>
 
 // Configuration GPIO
-#define LED_PIN 5
 #define NUM_LEDS 112
+
+#ifdef CONFIG_IDF_TARGET_ESP32C6
+// Configuration ESP32-C6
+#define LED_PIN 5
+
+// Pins I2S pour microphone INMP441
+#define I2S_WS_PIN 20
+#define I2S_SCK_PIN 19
+#define I2S_SD_PIN 18
+
+// Pins TWAI (CAN)
+// Note: Sur ESP32-C6, les pins TWAI peuvent être mappées sur n'importe quel GPIO
+#define CAN_TX_BODY_PIN 15
+#define CAN_RX_BODY_PIN 14
+#define CAN_TX_CHASSIS_PIN 6
+#define CAN_RX_CHASSIS_PIN 7
+
+#else
+// Configuration ESP32-S3 (défaut)
+#define LED_PIN 5
+
+// Pins I2S pour microphone INMP441
+#define I2S_WS_PIN 13
+#define I2S_SCK_PIN 12
+#define I2S_SD_PIN 11
+
+// Pins TWAI (CAN)
+#define CAN_TX_CHASSIS_PIN 8
+#define CAN_RX_CHASSIS_PIN 7
+#define CAN_TX_BODY_PIN 10
+#define CAN_RX_BODY_PIN 9
+
+#endif
 
 // Configuration WiFi
 #define WIFI_AP_SSID_BASE "CarLightSync"

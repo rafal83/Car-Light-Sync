@@ -280,18 +280,11 @@ bool config_manager_get_effect_for_event(can_event_type_t event,
 uint16_t config_manager_get_led_count(void);
 
 /**
- * @brief Obtient le pin GPIO pour les LEDs
- * @return Numéro du pin GPIO
- */
-uint8_t config_manager_get_led_pin(void);
-
-/**
- * @brief Définit la configuration matérielle des LEDs
+ * @brief Définit le nombre de LEDs
  * @param led_count Nombre de LEDs (1-1000)
- * @param data_pin Pin GPIO pour les données (0-39)
  * @return true si succès et sauvegardé en NVS
  */
-bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin);
+bool config_manager_set_led_count(uint16_t led_count);
 
 /**
  * @brief Convertit un enum d'événement en ID alphanumérique

@@ -285,11 +285,10 @@ void led_effects_show_upgrade_ready(void);
 void led_effects_show_upgrade_error(void);
 
 /**
- * @brief Applique une nouvelle configuration matérielle LED à chaud
+ * @brief Modifie le nombre de LEDs
  * @param led_count Nombre de LEDs
- * @param data_pin GPIO pour les données LED
- * @return true si la reconfiguration a réussi
+ * @return true si la modification a réussi
  */
-bool led_effects_apply_hardware_config(uint16_t led_count, uint8_t data_pin);
+bool led_effects_set_led_count(uint16_t led_count);
 
 #endif // LED_EFFECTS_H

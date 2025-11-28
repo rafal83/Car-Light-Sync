@@ -1349,9 +1349,6 @@ async function loadHardwareConfig() {
         if (config.lc !== undefined) {
             $('led-count').value = config.lc;
         }
-        if (config.dp !== undefined) {
-            $('data-pin').value = config.dp;
-        }
         if (config.srv !== undefined) {
             $('strip-reverse').checked = config.srv;
         }
@@ -1363,7 +1360,6 @@ async function loadHardwareConfig() {
 async function saveHardwareConfig() {
     const config = {
         lc: parseInt($('led-count').value),
-        dp: parseInt($('data-pin').value),
         srv: $('strip-reverse').checked
     };
     try {
@@ -1623,8 +1619,24 @@ async function updateStatus() {
         const data = await response.json();
         $('wifi-status').textContent = data.wc ? t('status.connected') : t('status.ap');
         $('wifi-status').className = 'status-value ' + (data.wc ? 'status-online' : 'status-offline');
-        $('can-bus-status').textContent = data.cbr ? t('status.connected') : t('status.disconnected');
-        $('can-bus-status').className = 'status-value ' + (data.cbr ? 'status-online' : 'status-offline');
+
+        // CAN Chassis status
+        if (data.cbc) {
+            const chassisStatus = data.cbc.r ?
+                `${t('status.connected')} (RX:${data.cbc.rx}, TX:${data.cbc.tx})` :
+                t('status.disconnected');
+            $('can-chassis-status').textContent = chassisStatus;
+            $('can-chassis-status').className = 'status-value ' + (data.cbc.r ? 'status-online' : 'status-offline');
+        }
+
+        // CAN Body status
+        if (data.cbb) {
+            const bodyStatus = data.cbb.r ?
+                `${t('status.connected')} (RX:${data.cbb.rx}, TX:${data.cbb.tx})` :
+                t('status.disconnected');
+            $('can-body-status').textContent = bodyStatus;
+            $('can-body-status').className = 'status-value ' + (data.cbb.r ? 'status-online' : 'status-offline');
+        }
         $('vehicle-status').textContent = data.va ? t('status.ac') : t('status.inactive');
         $('vehicle-status').className = 'status-value ' + (data.va ? 'status-online' : 'status-offline');
         if (data.pn) {

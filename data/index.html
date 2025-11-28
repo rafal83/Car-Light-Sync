@@ -48,8 +48,12 @@
                 <div class="status-value" id="wifi-status">...</div>
             </div>
             <div class="status-item">
-                <div class="status-label" data-i18n="status.can-bus">CAN Bus</div>
-                <div class="status-value" id="can-bus-status">...</div>
+                <div class="status-label" data-i18n="status.can-chassis">CAN Chassis</div>
+                <div class="status-value" id="can-chassis-status">...</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label" data-i18n="status.can-body">CAN Body</div>
+                <div class="status-value" id="can-body-status">...</div>
             </div>
             <div class="status-item">
                 <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
@@ -162,6 +166,27 @@
                 </div>
             </div>
             <!-- Section: Autres -->
+            <div class="section-subtitle" data-i18n="vehicle.blindspot">Angle mort</div>
+            <div class="vehicle-grid">
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft_lv1">Gauche Niv1</div>
+                    <div class="vehicle-value" id="v-blindspot-left-lv1">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft_lv2">Gauche  Niv2</div>
+                    <div class="vehicle-value" id="v-blindspot-left-lv2">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight_lv1">Droit Niv1</div>
+                    <div class="vehicle-value" id="v-blindspot-right-lv1">--</div>
+                </div>
+                <div class="vehicle-item">
+                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight_lv2">Droit Niv2</div>
+                    <div class="vehicle-value" id="v-blindspot-right-lv2">--</div>
+                </div>              
+            </div>
+            
+            <!-- Section: Autres -->
             <div class="section-subtitle" data-i18n="vehicle.othersTitle">Autres</div>
             <div class="vehicle-grid">
                 <div class="vehicle-item">
@@ -183,22 +208,6 @@
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.brightness">Luminosité</div>
                     <div class="vehicle-value" id="v-brightness">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft_lv1">Angle Mort G Niv1</div>
-                    <div class="vehicle-value" id="v-blindspot-left-lv1">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft_lv2">Angle Mort G Niv2</div>
-                    <div class="vehicle-value" id="v-blindspot-left-lv2">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight_lv1">Angle Mort D Niv1</div>
-                    <div class="vehicle-value" id="v-blindspot-right-lv1">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight_lv2">Angle Mort D Niv2</div>
-                    <div class="vehicle-value" id="v-blindspot-right-lv2">--</div>
                 </div>
             </div>
             <div class="section-subtitle" data-i18n="vehicle.sentryTitle">Mode Sentry</div>
@@ -345,10 +354,6 @@
             <div class="control-group">
                 <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
                 <input type="number" id="led-count" value="" min="1" max="1000">
-            </div>
-            <div class="control-group">
-                <label class="control-label" data-i18n="config.dataPin">Pin de Données</label>
-                <input type="number" id="data-pin" value="" min="0" max="39">
             </div>
             <div class="checkbox-container" style="margin-top: 20px;">
                 <input type="checkbox" id="strip-reverse">

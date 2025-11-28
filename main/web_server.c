@@ -149,10 +149,25 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddBoolToObject(root, "wc", wifi_status.sta_connected);
   cJSON_AddStringToObject(root, "wip", wifi_status.sta_ip);
 
-  // Statut CAN Bus
-  can_bus_status_t can_status;
-  can_bus_get_status(&can_status);
-  cJSON_AddBoolToObject(root, "cbr", can_status.running);
+  // Statut CAN Bus - Chassis
+  can_bus_status_t can_chassis_status;
+  can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
+  cJSON *can_chassis = cJSON_CreateObject();
+  cJSON_AddBoolToObject(can_chassis, "r", can_chassis_status.running);
+  cJSON_AddNumberToObject(can_chassis, "rx", can_chassis_status.rx_count);
+  cJSON_AddNumberToObject(can_chassis, "tx", can_chassis_status.tx_count);
+  cJSON_AddNumberToObject(can_chassis, "er", can_chassis_status.errors);
+  cJSON_AddItemToObject(root, "cbc", can_chassis);
+
+  // Statut CAN Bus - Body
+  can_bus_status_t can_body_status;
+  can_bus_get_status(CAN_BUS_BODY, &can_body_status);
+  cJSON *can_body = cJSON_CreateObject();
+  cJSON_AddBoolToObject(can_body, "r", can_body_status.running);
+  cJSON_AddNumberToObject(can_body, "rx", can_body_status.rx_count);
+  cJSON_AddNumberToObject(can_body, "tx", can_body_status.tx_count);
+  cJSON_AddNumberToObject(can_body, "er", can_body_status.errors);
+  cJSON_AddItemToObject(root, "cbb", can_body);
 
   // Statut véhicule
   uint32_t now = xTaskGetTickCount();
@@ -284,7 +299,6 @@ static esp_err_t config_handler(httpd_req_t *req) {
 
   // Ajouter la configuration matérielle LED
   cJSON_AddNumberToObject(root, "lc", config_manager_get_led_count());
-  cJSON_AddNumberToObject(root, "dp", config_manager_get_led_pin());
 
   // Ajouter la configuration du sens de la strip
   cJSON_AddBoolToObject(root, "srv", led_effects_get_reverse());
@@ -396,18 +410,15 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
   }
 
   const cJSON *led_count_json = cJSON_GetObjectItem(root, "lc");
-  const cJSON *data_pin_json = cJSON_GetObjectItem(root, "dp");
   const cJSON *strip_reverse_json = cJSON_GetObjectItem(root, "srv");
 
-  if (led_count_json == NULL || data_pin_json == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                        "Missing led_count or data_pin");
+  if (led_count_json == NULL) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing led_count");
     cJSON_Delete(root);
     return ESP_FAIL;
   }
 
   uint16_t led_count = (uint16_t)led_count_json->valueint;
-  uint8_t data_pin = (uint8_t)data_pin_json->valueint;
 
   // Appliquer le strip_reverse si présent
   if (strip_reverse_json != NULL) {
@@ -421,21 +432,15 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  if (data_pin > 39) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "data_pin must be 0-39");
-    cJSON_Delete(root);
-    return ESP_FAIL;
-  }
-
-  // Sauvegarder en NVS
-  bool success = config_manager_set_led_hardware(led_count, data_pin);
+  // Sauvegarder en NVS (seulement le nombre de LEDs)
+  bool success = config_manager_set_led_count(led_count);
 
   cJSON_Delete(root);
 
   if (success) {
-    if (!led_effects_apply_hardware_config(led_count, data_pin)) {
+    if (!led_effects_set_led_count(led_count)) {
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                          "Failed to apply new hardware configuration");
+                          "Failed to apply new LED count");
       return ESP_FAIL;
     }
 
@@ -453,7 +458,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     cJSON_Delete(response);
 
     ESP_LOGI(TAG_WEBSERVER, "Configuration LED appliquée: %d LEDs, GPIO %d", led_count,
-             data_pin);
+             LED_PIN);
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
                         "Failed to save configuration");

@@ -3,13 +3,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "config.h"
 
 #define TAG_AUDIO "Audio"
 
-// Configuration par défaut du micro INMP441
-#define AUDIO_I2S_SCK_PIN 12      // Serial Clock
-#define AUDIO_I2S_WS_PIN 13       // Word Select (LRCK)
-#define AUDIO_I2S_SD_PIN 11        // Serial Data
+// Configuration par défaut du micro INMP441 (ESP32-C6)
+#define AUDIO_I2S_SCK_PIN I2S_SCK_PIN      // Serial Clock
+#define AUDIO_I2S_WS_PIN I2S_WS_PIN       // Word Select (LRCK)
+#define AUDIO_I2S_SD_PIN I2S_SD_PIN        // Serial Data
 #define AUDIO_SAMPLE_RATE 44100   // Taux d'échantillonnage
 #define AUDIO_BUFFER_SIZE 1024    // Taille du buffer audio
 #define AUDIO_DMA_BUFFER_COUNT 2  // Nombre de buffers DMA

@@ -60,10 +60,9 @@ static effect_config_t right_directional_config;
 // Global LED strip direction (false = normal, true = reversed)
 static bool global_reverse_direction = true;
 static uint16_t led_count = NUM_LEDS;
-static uint8_t led_pin = LED_PIN;
 
 static void cleanup_rmt_channel(void);
-static bool configure_rmt_channel(uint8_t pin);
+static bool configure_rmt_channel(void);
 static uint16_t sanitize_led_count(uint16_t requested);
 
 // Conversion couleur 0xRRGGBB vers rgb_t
@@ -314,12 +313,12 @@ static void cleanup_rmt_channel(void) {
   }
 }
 
-static bool configure_rmt_channel(uint8_t pin) {
+static bool configure_rmt_channel(void) {
   cleanup_rmt_channel();
 
   rmt_tx_channel_config_t tx_chan_config = {
       .clk_src = RMT_CLK_SRC_DEFAULT,
-      .gpio_num = pin,
+      .gpio_num = LED_PIN,
       .mem_block_symbols = 256,
       .resolution_hz = 10000000,
       .trans_queue_depth = 4,
@@ -1314,16 +1313,7 @@ bool led_effects_init(void) {
   uint16_t configured_leds = config_manager_get_led_count();
   led_count = sanitize_led_count(configured_leds);
 
-  uint8_t configured_pin = config_manager_get_led_pin();
-  if (configured_pin > 39) {
-    ESP_LOGW(TAG_LED, "GPIO LED invalide (%d), utilisation de la valeur par défaut",
-             configured_pin);
-    led_pin = LED_PIN;
-  } else {
-    led_pin = configured_pin;
-  }
-
-  if (!configure_rmt_channel(led_pin)) {
+  if (!configure_rmt_channel()) {
     return false;
   }
 
@@ -1333,7 +1323,7 @@ bool led_effects_init(void) {
   // Charger la config sauvegardée
   led_effects_load_config();
 
-  ESP_LOGI(TAG_LED, "LEDs initialisées (%d LEDs sur GPIO %d)", led_count, led_pin);
+  ESP_LOGI(TAG_LED, "LEDs initialisées (%d LEDs sur GPIO %d)", led_count, LED_PIN);
   return true;
 }
 
@@ -1347,30 +1337,14 @@ void led_effects_deinit(void) {
   ESP_LOGI(TAG_LED, "LEDs désinitalisées");
 }
 
-bool led_effects_apply_hardware_config(uint16_t requested_led_count,
-                                       uint8_t requested_pin) {
+bool led_effects_set_led_count(uint16_t requested_led_count) {
   if (requested_led_count < 1 || requested_led_count > MAX_LED_COUNT) {
     ESP_LOGE(TAG_LED, "LED count %d invalide", requested_led_count);
     return false;
   }
 
-  if (requested_pin > 39) {
-    ESP_LOGE(TAG_LED, "GPIO %d invalide pour les LEDs", requested_pin);
-    return false;
-  }
-
-  bool reconfigure = (requested_pin != led_pin) || (led_chan == NULL);
-  if (reconfigure) {
-    if (!configure_rmt_channel(requested_pin)) {
-      return false;
-    }
-  }
-
   led_count = requested_led_count;
-
-  led_pin = requested_pin;
-  ESP_LOGI(TAG_LED, "LED hardware reconfigurée (%d LEDs sur GPIO %d)", led_count,
-           led_pin);
+  ESP_LOGI(TAG_LED, "Nombre de LEDs mis à jour: %d", led_count);
   return true;
 }
 
