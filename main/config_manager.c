@@ -1501,7 +1501,9 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer,
   for (int i = 0; i < CAN_EVENT_MAX; i++) {
     if (profile->event_effects[i].enabled) {
       cJSON *event = cJSON_CreateObject();
-      cJSON_AddNumberToObject(event, "event", profile->event_effects[i].event);
+      // Utiliser l'ID alphanumérique au lieu de l'enum pour compatibilité
+      const char *event_id = config_manager_enum_to_id(profile->event_effects[i].event);
+      cJSON_AddStringToObject(event, "event_id", event_id);
       cJSON_AddBoolToObject(event, "enabled",
                             profile->event_effects[i].enabled);
       cJSON_AddNumberToObject(event, "priority",
@@ -1527,6 +1529,8 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer,
                               profile->event_effects[i].effect_config.zone);
       cJSON_AddBoolToObject(event_effect, "reverse",
                             profile->event_effects[i].effect_config.reverse);
+      cJSON_AddBoolToObject(event_effect, "audio_reactive",
+                            profile->event_effects[i].effect_config.audio_reactive);
       cJSON_AddItemToObject(event, "effect_config", event_effect);
 
       cJSON_AddItemToArray(events, event);
@@ -1682,11 +1686,21 @@ bool config_manager_import_profile(uint8_t profile_id,
   if (events && cJSON_IsArray(events)) {
     const cJSON *event = NULL;
     cJSON_ArrayForEach(event, events) {
-      const cJSON *event_type = cJSON_GetObjectItem(event, "event");
-      if (!event_type || !cJSON_IsNumber(event_type))
-        continue;
+      // Nouveau format : utiliser event_id (string alphanumérique)
+      const cJSON *event_id_obj = cJSON_GetObjectItem(event, "event_id");
+      int evt = -1;
 
-      int evt = event_type->valueint;
+      if (event_id_obj && cJSON_IsString(event_id_obj)) {
+        // Format nouveau avec ID alphanumérique
+        evt = config_manager_id_to_enum(event_id_obj->valuestring);
+      } else {
+        // Format ancien avec numéro d'enum (rétrocompatibilité)
+        const cJSON *event_type = cJSON_GetObjectItem(event, "event");
+        if (event_type && cJSON_IsNumber(event_type)) {
+          evt = event_type->valueint;
+        }
+      }
+
       if (evt < 0 || evt >= CAN_EVENT_MAX)
         continue;
 
@@ -1741,6 +1755,10 @@ bool config_manager_import_profile(uint8_t profile_id,
         if ((item = cJSON_GetObjectItem(effect_config, "reverse")) &&
             cJSON_IsBool(item))
           imported_profile->event_effects[evt].effect_config.reverse =
+              cJSON_IsTrue(item);
+        if ((item = cJSON_GetObjectItem(effect_config, "audio_reactive")) &&
+            cJSON_IsBool(item))
+          imported_profile->event_effects[evt].effect_config.audio_reactive =
               cJSON_IsTrue(item);
       }
     }
