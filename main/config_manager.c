@@ -971,15 +971,23 @@ bool config_manager_process_can_event(can_event_type_t event) {
 
     if (slot < 0) {
       // Pas de slot libre, vérifier si on peut écraser un événement de priorité
-      // inférieure
+      // inférieure MAIS seulement si c'est la même zone ou si le nouvel événement est FULL
       int lowest_priority_slot = -1;
       uint8_t lowest_priority = 255;
 
       for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
         if (active_events[i].active && active_events[i].priority < priority &&
             active_events[i].priority < lowest_priority) {
-          lowest_priority = active_events[i].priority;
-          lowest_priority_slot = i;
+          // Vérifier si on peut écraser cet événement :
+          // - Si le nouvel événement est FULL, il peut écraser n'importe quelle zone
+          // - Sinon, on ne peut écraser que si c'est la même zone
+          bool can_override = (effect_to_apply.zone == LED_ZONE_FULL) ||
+                              (active_events[i].effect_config.zone == effect_to_apply.zone);
+
+          if (can_override) {
+            lowest_priority = active_events[i].priority;
+            lowest_priority_slot = i;
+          }
         }
       }
 
@@ -1074,37 +1082,40 @@ void config_manager_update(void) {
 
   // Si des événements sont actifs
   if (any_active) {
-    // Trouver la priorité maximale parmi tous les événements actifs
-    int max_priority = -1;
-    for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-      if (active_events[i].active && active_events[i].priority > max_priority) {
-        max_priority = active_events[i].priority;
-      }
-    }
-
-    // Chercher les effets avec la priorité maximale
-    bool left_active = false;
-    bool right_active = false;
-    bool full_active = false;
+    // Trouver la priorité maximale PAR ZONE (et non globale)
+    int max_priority_left = -1;
+    int max_priority_right = -1;
+    int max_priority_full = -1;
     int left_slot = -1;
     int right_slot = -1;
     int full_slot = -1;
 
+    // Parcourir tous les événements actifs et trouver le max par zone
     for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-      if (!active_events[i].active || active_events[i].priority != max_priority)
+      if (!active_events[i].active)
         continue;
 
       if (active_events[i].effect_config.zone == LED_ZONE_LEFT) {
-        left_active = true;
-        left_slot = i;
+        if (active_events[i].priority > max_priority_left) {
+          max_priority_left = active_events[i].priority;
+          left_slot = i;
+        }
       } else if (active_events[i].effect_config.zone == LED_ZONE_RIGHT) {
-        right_active = true;
-        right_slot = i;
+        if (active_events[i].priority > max_priority_right) {
+          max_priority_right = active_events[i].priority;
+          right_slot = i;
+        }
       } else if (active_events[i].effect_config.zone == LED_ZONE_FULL) {
-        full_active = true;
-        full_slot = i;
+        if (active_events[i].priority > max_priority_full) {
+          max_priority_full = active_events[i].priority;
+          full_slot = i;
+        }
       }
     }
+
+    bool left_active = (left_slot >= 0);
+    bool right_active = (right_slot >= 0);
+    bool full_active = (full_slot >= 0);
 
     // Priorité au FULL si présent, sinon combiner LEFT/RIGHT
     if (full_active) {
