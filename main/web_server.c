@@ -616,6 +616,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
       cJSON_Delete(root);
 
       if (saved) {
+        config_manager_activate_profile(i);
         httpd_resp_set_type(req, "application/json");
         httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
         return ESP_OK;
@@ -660,6 +661,8 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
     if (!success) {
       cJSON_AddStringToObject(response, "msg",
                               "Profile in use by an event or deletion failed");
+    } else {
+      config_manager_activate_profile(0);
     }
     const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");

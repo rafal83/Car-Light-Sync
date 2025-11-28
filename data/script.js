@@ -1459,7 +1459,8 @@ async function createProfile() {
         if (apiResult.success) {
             hideNewProfileDialog();
             $('new-profile-name').value = '';
-            loadProfiles();
+            await loadProfiles();
+            await activateProfile();
             showNotification('profiles-notification', t('profiles.create') + ' ' + t('config.saveSuccess'), 'success');
         } else {
             const message = apiResult.data?.msg || apiResult.raw || t('config.saveError');
@@ -1481,7 +1482,8 @@ async function deleteProfile() {
         });
         const apiResult = await parseApiResponse(response);
         if (apiResult.success) {
-            loadProfiles();
+            await loadProfiles();
+            await activateProfile();
             showNotification('profiles-notification', t('profiles.delete') + ' ' + t('config.saveSuccess'), 'success');
         } else {
             const message = apiResult.data?.msg || apiResult.raw || t('config.saveError');

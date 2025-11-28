@@ -265,6 +265,14 @@ bool config_manager_delete_profile(uint8_t profile_id) {
       continue; // Profil vide
 
     for (int e = 0; e < CAN_EVENT_MAX; e++) {
+      // Ignorer les événements qui ne changent pas de profil
+      if (profiles[p].event_effects[e].action_type != EVENT_ACTION_SWITCH_PROFILE)
+        continue;
+
+      // Ignorer les événements sans profil associé valide
+      if (profiles[p].event_effects[e].profile_id < 0)
+        continue;
+
       if ((profiles[p].event_effects[e].profile_id == profile_id) &&
           (profile_id != p)) {
         ESP_LOGW(TAG_CONFIG,
