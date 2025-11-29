@@ -2788,10 +2788,12 @@ function updateLoadingBleButton() {
     // Afficher le bouton BLE si:
     // 1. BLE est supporté
     // 2. Pas de WiFi
-    // 3. BLE n'est pas connecté
+    // 3. BLE n'est ni connecté ni en cours de connexion
+    const status = bleTransport.getStatus();
     const shouldShow = bleTransport.isSupported() &&
                       !wifiOnline &&
-                      bleTransport.getStatus() !== 'connected';
+                      status !== 'connected' &&
+                      status !== 'connecting';
     bleButton.style.display = shouldShow ? 'block' : 'none';
 }
 
