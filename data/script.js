@@ -83,6 +83,10 @@ function registerBleAutoConnectGestureHandler() {
         return;
     }
     bleAutoConnectGestureHandlerRegistered = true;
+    // Mettre à jour l'overlay de chargement pour afficher le message BLE et le bouton
+    updateLoadingProgress(0, t('ble.tapToAuthorize'));
+    updateLoadingBleButton();
+
     const unlock = () => {
         doc.removeEventListener('pointerdown', unlock);
         doc.removeEventListener('keydown', unlock);
@@ -130,12 +134,21 @@ function maybeAutoConnectBle(fromGesture = false) {
             bleAutoConnectAwaitingGesture = true;
             registerBleAutoConnectGestureHandler();
             updateConnectionOverlay();
+        } else if (error && (error.name === 'NotFoundError' || /User cancelled/i.test(error.message || ''))) {
+            console.warn('BLE connection cancelled by user');
+            // L'utilisateur a annulé - afficher le bouton pour lui permettre de réessayer
+            bleAutoConnectGestureCaptured = true;
+            updateLoadingProgress(0, t('loading.connecting'));
+            updateLoadingBleButton();
         } else {
             console.warn('BLE auto-connect failed', error);
+            // Autres erreurs - afficher aussi le bouton
+            updateLoadingBleButton();
         }
     }).finally(() => {
         bleAutoConnectInProgress = false;
         updateConnectionOverlay();
+        updateLoadingBleButton();
     });
 }
 function updateConnectionOverlay() {
@@ -576,11 +589,19 @@ bleTransport.onStatusChange((status) => {
         updateApiConnectionState();
     } else if (status === 'disconnected' && lastBleStatus === 'connected') {
         showNotification('ble-notification', t('ble.toastDisconnected'), 'info');
+        // Réafficher l'overlay de chargement lors de la déconnexion BLE
+        if (!wifiOnline) {
+            initialDataLoaded = false;
+            initialDataLoadPromise = null;
+            showLoadingOverlay();
+        }
         updateApiConnectionState();
     } else if (status === 'connecting') {
         updateApiConnectionState();
     }
     lastBleStatus = status;
+    // Mettre à jour le bouton BLE sur l'overlay de chargement
+    updateLoadingBleButton();
 });
 const simulationSections = [
     {
@@ -2741,6 +2762,11 @@ function updateLoadingProgress(percentage, message) {
     if (statusText && message) {
         statusText.textContent = message;
     }
+    // Si on est en attente d'un geste BLE, afficher un message explicite
+    if (bleAutoConnectAwaitingGesture && statusText) {
+        statusText.textContent = t('ble.tapToAuthorize');
+        statusText.dataset.i18n = 'ble.tapToAuthorize';
+    }
 }
 
 function hideLoadingOverlay() {
@@ -2750,6 +2776,66 @@ function hideLoadingOverlay() {
         setTimeout(() => {
             overlay.style.display = 'none';
         }, 500);
+    }
+}
+
+function showLoadingOverlay() {
+    const overlay = $('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.classList.remove('hidden');
+        // Réinitialiser la barre de progression
+        updateLoadingProgress(0, t('loading.connecting'));
+        // Masquer l'erreur si elle était affichée
+        const errorEl = $('loading-error');
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+        // Afficher le bouton BLE si nécessaire
+        updateLoadingBleButton();
+    }
+}
+
+function updateLoadingBleButton() {
+    const bleButton = $('loading-ble-button');
+    if (!bleButton) {
+        return;
+    }
+    // Afficher le bouton BLE si:
+    // 1. BLE est supporté
+    // 2. Pas de WiFi
+    // 3. BLE n'est pas connecté
+    const shouldShow = bleTransport.isSupported() &&
+                      !wifiOnline &&
+                      bleTransport.getStatus() !== 'connected';
+    bleButton.style.display = shouldShow ? 'block' : 'none';
+}
+
+async function manualBleConnect() {
+    const statusText = $('loading-status');
+    const bleButton = $('loading-ble-button');
+
+    try {
+        if (statusText) {
+            statusText.textContent = t('ble.connecting');
+            statusText.dataset.i18n = 'ble.connecting';
+        }
+        if (bleButton) {
+            bleButton.style.display = 'none';
+        }
+
+        // Forcer la capture du geste
+        bleAutoConnectGestureCaptured = true;
+        bleAutoConnectAwaitingGesture = false;
+
+        await bleTransport.connect();
+    } catch (error) {
+        console.error('Manual BLE connect error', error);
+        if (statusText) {
+            statusText.textContent = t('loading.connecting');
+            statusText.dataset.i18n = 'loading.connecting';
+        }
+        updateLoadingBleButton();
     }
 }
 

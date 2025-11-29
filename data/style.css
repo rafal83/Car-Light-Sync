@@ -846,6 +846,18 @@ button {
     margin-bottom: 0.5rem;
 }
 
+.loading-ble-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.loading-ble-actions button {
+    min-width: 200px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
 .loading-error {
     margin-top: 2rem;
     padding: 1rem;

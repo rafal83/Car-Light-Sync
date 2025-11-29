@@ -17,6 +17,9 @@
                 <div id="loading-progress-bar" class="loading-progress-bar"></div>
             </div>
             <p id="loading-status" data-i18n="loading.connecting">Connexion...</p>
+            <div id="loading-ble-button" class="loading-ble-actions" style="display: none;">
+                <button onclick="manualBleConnect()" class="btn-primary" data-i18n="loading.connectBle">Se connecter en BLE</button>
+            </div>
             <div id="loading-error" class="loading-error" style="display: none;">
                 <p id="loading-error-message"></p>
                 <div class="loading-error-actions">

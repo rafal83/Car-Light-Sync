@@ -35,7 +35,8 @@ const translations = {
             errorMessage: "Impossible de charger les données. Vérifiez la connexion.",
             restart: "Redémarrer ESP32",
             factoryReset: "Reset usine",
-            retry: "Réessayer"
+            retry: "Réessayer",
+            connectBle: "Se connecter en BLE"
         },
         status: {
             wifi: "WiFi",
@@ -433,7 +434,8 @@ en: {
             errorMessage: "Unable to load data. Check connection.",
             restart: "Restart ESP32",
             factoryReset: "Factory reset",
-            retry: "Retry"
+            retry: "Retry",
+            connectBle: "Connect via BLE"
         },
         status: {
             wifi: "WiFi",
