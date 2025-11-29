@@ -151,23 +151,6 @@ body {
 .app-wrapper {
     position: relative;
 }
-.app-content.disabled {
-    pointer-events: none;
-    filter: blur(2px);
-    opacity: 0.4;
-}
-.connection-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    color: var(--color-text);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 20px;
-    z-index: 500;
-}
 .header-control {
     display: flex;
     flex-direction: column;

@@ -64,7 +64,6 @@ function updateApiConnectionState() {
     } else if (!ready) {
         apiConnectionReady = false;
     }
-    updateConnectionOverlay();
     if (!ready) {
         maybeAutoConnectBle();
     }
@@ -95,8 +94,6 @@ function registerBleAutoConnectGestureHandler() {
         bleAutoConnectAwaitingGesture = false;
         if (!wifiOnline) {
             maybeAutoConnectBle(true);
-        } else {
-            updateConnectionOverlay();
         }
     };
     doc.addEventListener('pointerdown', unlock, { once: true });
@@ -119,7 +116,6 @@ function maybeAutoConnectBle(fromGesture = false) {
     if (!fromGesture && !bleAutoConnectGestureCaptured) {
         bleAutoConnectAwaitingGesture = true;
         registerBleAutoConnectGestureHandler();
-        updateConnectionOverlay();
         return;
     }
     if (bleAutoConnectInProgress) {
@@ -133,7 +129,6 @@ function maybeAutoConnectBle(fromGesture = false) {
             bleAutoConnectGestureCaptured = false;
             bleAutoConnectAwaitingGesture = true;
             registerBleAutoConnectGestureHandler();
-            updateConnectionOverlay();
         } else if (error && (error.name === 'NotFoundError' || /User cancelled/i.test(error.message || ''))) {
             console.warn('BLE connection cancelled by user');
             // L'utilisateur a annulé - afficher le bouton pour lui permettre de réessayer
@@ -147,33 +142,8 @@ function maybeAutoConnectBle(fromGesture = false) {
         }
     }).finally(() => {
         bleAutoConnectInProgress = false;
-        updateConnectionOverlay();
         updateLoadingBleButton();
     });
-}
-function updateConnectionOverlay() {
-    const overlay = $('connection-overlay');
-    const message = $('connection-overlay-message');
-    const content = $('app-content');
-    const ready = isApiConnectionReady();
-    if (overlay) {
-        overlay.style.display = ready ? 'none' : 'flex';
-    }
-    if (message) {
-        if (!ready && bleAutoConnectAwaitingGesture) {
-            message.textContent = t('ble.tapToAuthorize');
-            message.dataset.i18n = 'ble.tapToAuthorize';
-        } else {
-            message.textContent = t('app.waitingConnection');
-            message.dataset.i18n = 'app.waitingConnection';
-        }
-    }
-    if (content) {
-        content.classList.toggle('disabled', !ready);
-    }
-    if (!ready && activeTabName !== 'vehicle') {
-        switchTab('vehicle');
-    }
 }
 function scheduleInitialDataLoad() {
     if (initialDataLoaded || initialDataLoadPromise) {
@@ -706,7 +676,6 @@ function updateBleUiState() {
         statusValue.className = 'status-value status-offline';
         statusValue.dataset.i18n = 'ble.statusUnsupported';
         statusValue.textContent = t('ble.statusUnsupported');
-        updateConnectionOverlay();
         return;
     }
     const status = bleTransport.getStatus();
@@ -736,7 +705,6 @@ function updateBleUiState() {
         statusValue.textContent = t('ble.disconnected');
     }
     updateOtaBleNote();
-    updateConnectionOverlay();
 }
 function updateOtaBleNote() {
     const note = $('ota-ble-note');
@@ -2952,6 +2920,5 @@ applyTranslations();
 applyTheme();
 updateLanguageSelector();
 updateBleUiState();
-updateConnectionOverlay();
 updateApiConnectionState();
 scheduleInitialDataLoad();

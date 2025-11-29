@@ -2,8 +2,7 @@ const translations = {
     fr: {
         app: {
             title: "Car Light Sync",
-            subtitle: "Contrôle RGB synchronisé avec votre voiture",
-            waitingConnection: "Connectez-vous en WiFi ou BLE pour continuer."
+            subtitle: "Contrôle RGB synchronisé avec votre voiture"
         },
         // Traductions communes pour les événements (utilisées par canEvents et eventNames)
         commonEvents: {
@@ -400,8 +399,7 @@ const translations = {
 en: {
         app: {
             title: "Car Light Sync",
-            subtitle: "RGB Control Synchronized with your Car",
-            waitingConnection: "Connect via WiFi or BLE to continue."
+            subtitle: "RGB Control Synchronized with your Car"
         },
         // Common translations for events (used by canEvents and eventNames)
         commonEvents: {
