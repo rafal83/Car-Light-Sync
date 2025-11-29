@@ -48,6 +48,7 @@ let initialDataLoaded = false;
 let initialDataLoadPromise = null;
 let activeTabName = 'vehicle';
 let statusIntervalHandle = null;
+let isApMode = false; // Mode AP de l'ESP32 (plus lent)
 function isApiConnectionReady() {
     return wifiOnline || (bleTransportInstance && bleTransportInstance.isConnected());
 }
@@ -1811,6 +1812,10 @@ async function updateStatus() {
     try {
         const response = await fetch(API_BASE + '/api/status');
         const data = await response.json();
+
+        // Détecter le mode AP (pas de connexion WiFi station)
+        isApMode = !data.wc;
+
         $('wifi-status').textContent = data.wc ? t('status.connected') : t('status.ap');
         $('wifi-status').className = 'status-value ' + (data.wc ? 'status-online' : 'status-offline');
 
@@ -2877,42 +2882,73 @@ async function loadInitialData() {
     };
 
     try {
-        // Étape 1-3: Chargement des données essentielles (en parallèle)
+        // Détecter le mode AP dès le début
+        try {
+            const statusResponse = await fetch(API_BASE + '/api/status');
+            const statusData = await statusResponse.json();
+            isApMode = !statusData.wc;
+        } catch (e) {
+            console.log('Failed to detect AP mode, assuming normal mode');
+        }
+
+        // Adapter les délais selon le mode
+        const baseDelay = isApMode ? 300 : 100;
+        const longDelay = isApMode ? 500 : 150;
+
+        // Étape 1-3: Chargement des données essentielles
         updateProgress(1, t('loading.loadingEffects'));
-        await Promise.all([
-            loadEffects(),
-            loadEventTypes(),
-            ensureEventsConfigData().catch(() => null)
-        ]);
-        await delay(100); // Petit délai pour soulager l'ESP32
+        if (isApMode) {
+            // Mode AP: séquentialiser pour ne pas saturer le serveur
+            await loadEffects();
+            await delay(baseDelay);
+            await loadEventTypes();
+            await delay(baseDelay);
+            await ensureEventsConfigData().catch(() => null);
+        } else {
+            // Mode Station: paralléliser
+            await Promise.all([
+                loadEffects(),
+                loadEventTypes(),
+                ensureEventsConfigData().catch(() => null)
+            ]);
+        }
+        await delay(baseDelay);
 
         // Étape 4: Rendu des sections
         updateProgress(4, t('loading.loadingConfig'));
         renderSimulationSections();
-        await delay(100);
+        await delay(baseDelay);
 
         // Étape 5: Profils
         updateProgress(5, t('loading.loadingProfiles'));
         await loadProfiles();
-        await delay(150);
+        await delay(longDelay);
 
         // Étape 6: Configuration
         updateProgress(6, t('loading.loadingConfig'));
         await loadConfig();
-        await delay(150);
+        await delay(longDelay);
 
         // Étape 7: Configuration matérielle
         updateProgress(7, t('loading.loadingConfig'));
         await loadHardwareConfig();
-        await delay(100);
+        await delay(baseDelay);
 
         // Étape 8: Audio et FFT
         updateProgress(8, t('loading.loadingConfig'));
-        await Promise.all([
-            loadAudioStatus(),
-            loadFFTStatus()
-        ]);
-        await delay(100);
+        if (isApMode) {
+            // Mode AP: séquentialiser
+            await loadAudioStatus();
+            await delay(baseDelay);
+            await loadFFTStatus();
+        } else {
+            // Mode Station: paralléliser
+            await Promise.all([
+                loadAudioStatus(),
+                loadFFTStatus()
+            ]);
+        }
+        await delay(baseDelay);
 
         // Étape 9: OTA
         updateProgress(9, t('loading.loadingConfig'));
