@@ -76,45 +76,68 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
   // Fermer la connexion après l'envoi (désactive keep-alive pour cette requête)
   httpd_resp_set_hdr(req, "Connection", "close");
 
-  // Pour les fichiers > 8KB, envoyer par chunks pour éviter EAGAIN
-  #define CHUNK_SIZE 4096
-  if (file_size > 8192) {
-    const uint8_t *data = route->start;
-    size_t remaining = file_size;
-    esp_err_t err = ESP_OK;
+  // Toujours envoyer par chunks pour éviter EAGAIN, même pour petits fichiers
+  #define CHUNK_SIZE 1024  // Réduit à 1KB pour éviter buffer overflow
+  #define MAX_RETRIES 10   // Augmenté à 10 retries
 
-    while (remaining > 0 && err == ESP_OK) {
-      size_t chunk_size = (remaining > CHUNK_SIZE) ? CHUNK_SIZE : remaining;
+  const uint8_t *data = route->start;
+  size_t remaining = file_size;
+  esp_err_t err = ESP_OK;
+
+  ESP_LOGD(TAG_WEBSERVER, "Envoi fichier %s (%d bytes)", route->uri, file_size);
+
+  while (remaining > 0) {
+    size_t chunk_size = (remaining > CHUNK_SIZE) ? CHUNK_SIZE : remaining;
+
+    // Réessayer jusqu'à MAX_RETRIES fois en cas d'EAGAIN
+    int retries = 0;
+    while (retries < MAX_RETRIES) {
       err = httpd_resp_send_chunk(req, (const char *)data, chunk_size);
-      if (err != ESP_OK) {
+
+      if (err == ESP_OK) {
+        break; // Succès
+      }
+
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        retries++;
+        // Délai exponentiel: 20ms, 40ms, 80ms, etc.
+        int delay_ms = 20 * (1 << (retries - 1));
+        if (delay_ms > 500) delay_ms = 500; // Max 500ms
+        ESP_LOGD(TAG_WEBSERVER, "EAGAIN pour %s, retry %d/%d (wait %dms)",
+                 route->uri, retries, MAX_RETRIES, delay_ms);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+      } else {
+        // Autre erreur, abandonner
         ESP_LOGW(TAG_WEBSERVER, "Erreur envoi chunk pour %s: %s (errno: %d)",
                  route->uri, esp_err_to_name(err), errno);
-        break;
-      }
-      data += chunk_size;
-      remaining -= chunk_size;
-      // Petit délai pour laisser le buffer TCP se vider
-      if (remaining > 0) {
-        vTaskDelay(pdMS_TO_TICKS(1));
+        return err;
       }
     }
-    // Terminer l'envoi chunké
-    if (err == ESP_OK) {
-      err = httpd_resp_send_chunk(req, NULL, 0);
+
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG_WEBSERVER, "Échec envoi après %d retries pour %s",
+               MAX_RETRIES, route->uri);
+      return err;
     }
-    return err;
+
+    data += chunk_size;
+    remaining -= chunk_size;
+
+    // Petit délai entre chunks pour laisser le buffer TCP se vider
+    if (remaining > 0) {
+      vTaskDelay(pdMS_TO_TICKS(2));
+    }
   }
 
-  // Pour les petits fichiers, envoi normal
-  esp_err_t err = httpd_resp_send(req, (const char *)route->start, file_size);
+  // Terminer l'envoi chunké
+  err = httpd_resp_send_chunk(req, NULL, 0);
   if (err != ESP_OK) {
-    ESP_LOGW(TAG_WEBSERVER, "Erreur envoi fichier statique pour URI %s: %s (errno: %d)",
-             route->uri, esp_err_to_name(err), errno);
-    // Ne pas considérer EAGAIN comme une erreur fatale
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      ESP_LOGW(TAG_WEBSERVER, "Socket bloquée, connexion sera fermée");
-    }
+    ESP_LOGW(TAG_WEBSERVER, "Erreur fin chunk pour %s: %s",
+             route->uri, esp_err_to_name(err));
+  } else {
+    ESP_LOGD(TAG_WEBSERVER, "Fichier %s envoyé avec succès", route->uri);
   }
+
   return err;
 }
 
@@ -1815,9 +1838,13 @@ esp_err_t web_server_start(void) {
   config.stack_size = 16384;
 #endif
   config.recv_wait_timeout = 10; // Réduit de 30 à 10 secondes
-  config.send_wait_timeout = 10; // Réduit de 30 à 10 secondes
+  config.send_wait_timeout = 30; // Augmenté à 30 secondes pour les gros fichiers .gz
   config.close_fn = NULL; // Permet de fermer proprement les connexions
   config.keep_alive_enable = false; // Désactive keep-alive pour libérer les connexions plus rapidement
+
+  // Configuration TCP pour améliorer la transmission de gros fichiers
+  config.backlog_conn = 5;
+  config.core_id = tskNO_AFFINITY;
 
   ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 
