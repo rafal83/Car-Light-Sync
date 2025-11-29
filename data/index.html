@@ -297,27 +297,9 @@
                 <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="eventsConfig.description">
                     Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
                 </p>
-                <div class="events-table-wrapper">
-                    <div class="events-table-container">
-                        <table class="events-table">
-                            <thead>
-                                <tr>
-                                    <th data-i18n="eventsConfig.eventName">Événement</th>
-                                    <th data-i18n="eventsConfig.action">Action</th>
-                                    <th data-i18n="eventsConfig.profile">Profil</th>
-                                    <th data-i18n="eventsConfig.effect">Effet</th>
-                                    <th data-i18n="eventsConfig.brightness">Luminosité</th>
-                                    <th data-i18n="eventsConfig.speed">Vitesse</th>
-                                    <th data-i18n="eventsConfig.color">Couleur</th>
-                                    <th data-i18n="eventsConfig.duration">Durée (ms)</th>
-                                    <th data-i18n="eventsConfig.priority">Priorité</th>
-                                    <th data-i18n="eventsConfig.enabled">Activé</th>
-                                </tr>
-                            </thead>
-                            <tbody id="events-table-body">
-                                <!-- Will be populated dynamically -->
-                            </tbody>
-                        </table>
+                <div class="events-accordion-wrapper">
+                    <div id="events-accordion-container">
+                        <!-- Will be populated dynamically with accordion items -->
                     </div>
                 </div>
                 <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>

@@ -1163,8 +1163,12 @@ async function loadEventsConfig() {
     }
 }
 function renderEventsTable() {
-    const tbody = $('events-table-body');
-    tbody.innerHTML = '';
+    const container = $('events-accordion-container');
+    if (!container) {
+        console.error('events-accordion-container not found in DOM');
+        return;
+    }
+    container.innerHTML = '';
     // If no data from API, create default rows for all events
     if (eventsConfigData.length === 0) {
         const defaultEffectId =
@@ -1178,7 +1182,7 @@ function renderEventsTable() {
                     eventsConfigData.push({
                         ev: evt.id,
                         fx: defaultEffectId,
-                        bri: 128,
+                        br: 128,
                         sp: 128,
                         c1: 0xFF0000,
                         dur: 0,
@@ -1196,17 +1200,18 @@ function renderEventsTable() {
         if (event.ev === 'NONE') {
             return;
         }
-        const row = doc.createElement('tr');
         const eventName = getEventName(event.ev);
         const actionType = event.at !== undefined ? event.at : 0;
         const canSwitchProfile = event.csp || false;
         const profileId = event.pid !== undefined ? event.pid : -1;
+
         // Générer les options d'action
         let actionOptions = '';
         actionOptions += `<option value="0" ${actionType === 0 ? 'selected' : ''}>${t('eventsConfig.applyEffect')}</option>`;
         if (canSwitchProfile) {
             actionOptions += `<option value="1" ${actionType === 1 ? 'selected' : ''}>${t('eventsConfig.switchProfile')}</option>`;
         }
+
         // Générer les options de profil
         const profileSelect = $('profile-select');
         let profileOptions = '<option value="-1">--</option>';
@@ -1216,53 +1221,118 @@ function renderEventsTable() {
                 profileOptions += `<option value="${opt.value}" ${profileId == opt.value ? 'selected' : ''}>${opt.text}</option>`;
             }
         }
-        row.innerHTML = `
-            <td class="event-name-cell">${eventName}</td>
-            <td>
-                <select onchange="updateEventConfig(${index}, 'at', parseInt(this.value)); renderEventsTable();" ${!canSwitchProfile ? 'disabled style="display:none"' : ''}>
-                    ${actionOptions}
-                </select>
-            </td>
-            <td>
-                <select onchange="updateEventConfig(${index}, 'pid', parseInt(this.value))" ${actionType === 0 || !canSwitchProfile ? 'disabled style="display:none"' : ''}>
-                    ${profileOptions}
-                </select>
-            </td>
-            <td>
-                <select data-effect-options="true" onchange="updateEventConfig(${index}, 'fx', this.value)" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
-                    ${effectsList
-                        .filter(effect => !effect.ae)
-                        .map(effect =>
-                            `<option value="${effect.id}" data-effect-name="${effect.n}" ${event.fx == effect.id ? 'selected' : ''}>${getEffectName(effect.id)}</option>`
-                        ).join('')}
-                </select>
-            </td>
-            <td>
-                <input type="number" min="0" max="255" value="${event.br}"
-                    onchange="updateEventConfig(${index}, 'br', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
-            </td>
-            <td>
-                <input type="number" min="0" max="255" value="${event.sp}"
-                    onchange="updateEventConfig(${index}, 'sp', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
-            </td>
-            <td>
-                <input type="color" value="#${event.c1.toString(16).padStart(6, '0')}"
-                    onchange="updateEventConfig(${index}, 'c1', parseInt(this.value.substring(1), 16))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
-            </td>
-            <td>
-                <input type="number" min="0" max="60000" step="100" value="${event.dur}"
-                    onchange="updateEventConfig(${index}, 'dur', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
-            </td>
-            <td>
-                <input type="number" min="0" max="255" value="${event.pri}"
-                    onchange="updateEventConfig(${index}, 'pri', parseInt(this.value))" ${actionType === 1 ? 'disabled style="display:none"' : ''}>
-            </td>
-            <td style="text-align: center;">
-                <input type="checkbox" ${event.en ? 'checked' : ''}
-                    onchange="updateEventConfig(${index}, 'en', this.checked)">
-            </td>
+
+        // Générer le résumé pour le mode comprimé (activé en premier)
+        let summaryHTML = `
+            <div class="event-accordion-summary-item enabled-item">
+                <span class="event-accordion-summary-label">${t('eventsConfig.enabled')}:</span>
+                <span class="event-accordion-summary-value">${event.en ? '✓' : '✗'}</span>
+            </div>
         `;
-        tbody.appendChild(row);
+
+        if (actionType === 0) {
+            // Apply Effect
+            const effectName = getEffectName(event.fx);
+            const colorHex = '#' + event.c1.toString(16).padStart(6, '0');
+            summaryHTML += `
+                <div class="event-accordion-summary-item effect-item">
+                    <span class="event-accordion-summary-label">${t('eventsConfig.effect')}:</span>
+                    <span class="event-accordion-summary-value">${effectName}</span>
+                </div>
+                <div class="event-accordion-summary-item color-item">
+                    <span class="event-accordion-summary-label">${t('eventsConfig.color')}:</span>
+                    <span class="event-accordion-color-preview" style="background-color: ${colorHex};"></span>
+                </div>
+            `;
+        } else {
+            // Switch Profile
+            const profileName = profileSelect && profileId >= 0 ?
+                profileSelect.options[Array.from(profileSelect.options).findIndex(opt => opt.value == profileId)]?.text || '--' :
+                '--';
+            summaryHTML += `
+                <div class="event-accordion-summary-item effect-item">
+                    <span class="event-accordion-summary-label">${t('eventsConfig.profile')}:</span>
+                    <span class="event-accordion-summary-value">${profileName}</span>
+                </div>
+            `;
+        }
+
+        // Créer l'élément accordéon
+        const accordionItem = doc.createElement('div');
+        accordionItem.className = 'event-accordion-item ' + (event.en ? 'enabled' : 'disabled');
+        accordionItem.id = 'event-accordion-item-' + index;
+        accordionItem.innerHTML = `
+            <div class="event-accordion-header" onclick="toggleEventAccordion(${index})">
+                <div class="event-accordion-title">${eventName}</div>
+                <div class="event-accordion-summary">
+                    ${summaryHTML}
+                </div>
+                <div class="event-accordion-toggle">▼</div>
+            </div>
+            <div class="event-accordion-content" id="event-accordion-content-${index}">
+                <div class="event-accordion-form" id="event-accordion-form-${index}">
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.enabled">${t('eventsConfig.enabled')}</label>
+                        <input type="checkbox" id="event-enabled-${index}" ${event.en ? 'checked' : ''}
+                            onchange="updateEventConfig(${index}, 'en', this.checked); toggleEventFormFields(${index});">
+                    </div>
+                    ${canSwitchProfile ? `
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.action">${t('eventsConfig.action')}</label>
+                        <select onchange="updateEventConfig(${index}, 'at', parseInt(this.value)); renderEventsTable();" ${!event.en ? 'disabled' : ''}>
+                            ${actionOptions}
+                        </select>
+                    </div>
+                    ` : ''}
+                    ${actionType === 1 && canSwitchProfile ? `
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.profile">${t('eventsConfig.profile')}</label>
+                        <select onchange="updateEventConfig(${index}, 'pid', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                            ${profileOptions}
+                        </select>
+                    </div>
+                    ` : ''}
+                    ${actionType === 0 ? `
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.effect">${t('eventsConfig.effect')}</label>
+                        <select data-effect-options="true" onchange="updateEventConfig(${index}, 'fx', this.value)" ${!event.en ? 'disabled' : ''}>
+                            ${effectsList
+                                .filter(effect => !effect.ae)
+                                .map(effect =>
+                                    `<option value="${effect.id}" data-effect-name="${effect.n}" ${event.fx == effect.id ? 'selected' : ''}>${getEffectName(effect.id)}</option>`
+                                ).join('')}
+                        </select>
+                    </div>
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.brightness">${t('eventsConfig.brightness')}</label>
+                        <input type="number" min="0" max="255" value="${event.br}"
+                            onchange="updateEventConfig(${index}, 'br', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                    </div>
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.speed">${t('eventsConfig.speed')}</label>
+                        <input type="number" min="0" max="255" value="${event.sp}"
+                            onchange="updateEventConfig(${index}, 'sp', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                    </div>
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.color">${t('eventsConfig.color')}</label>
+                        <input type="color" value="#${event.c1.toString(16).padStart(6, '0')}"
+                            onchange="updateEventConfig(${index}, 'c1', parseInt(this.value.substring(1), 16))" ${!event.en ? 'disabled' : ''}>
+                    </div>
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.duration">${t('eventsConfig.duration')}</label>
+                        <input type="number" min="0" max="60000" step="100" value="${event.dur}"
+                            onchange="updateEventConfig(${index}, 'dur', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                    </div>
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.priority">${t('eventsConfig.priority')}</label>
+                        <input type="number" min="0" max="255" value="${event.pri}"
+                            onchange="updateEventConfig(${index}, 'pri', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        container.appendChild(accordionItem);
     });
 }
 function updateEventConfig(index, field, value) {
@@ -1282,7 +1352,127 @@ function updateEventConfig(index, field, value) {
             }
         }
     }
+
+    // Mettre à jour le résumé dans le header
+    updateEventSummary(index);
+
     scheduleEventAutoSave(index);
+}
+function toggleEventAccordion(index) {
+    const headers = doc.querySelectorAll('.event-accordion-header');
+    const header = headers[index];
+    const content = $('event-accordion-content-' + index);
+
+    if (!header || !content) {
+        return;
+    }
+
+    const isActive = header.classList.contains('active');
+
+    if (isActive) {
+        // Fermer l'accordéon
+        header.classList.remove('active');
+        content.classList.remove('active');
+    } else {
+        // Fermer tous les autres accordéons
+        headers.forEach((h, i) => {
+            if (i !== index) {
+                h.classList.remove('active');
+                const otherContent = $('event-accordion-content-' + i);
+                if (otherContent) {
+                    otherContent.classList.remove('active');
+                }
+            }
+        });
+
+        // Ouvrir l'accordéon sélectionné
+        header.classList.add('active');
+        content.classList.add('active');
+    }
+}
+function toggleEventFormFields(index) {
+    const enabled = $('event-enabled-' + index)?.checked;
+    const form = $('event-accordion-form-' + index);
+    const item = $('event-accordion-item-' + index);
+
+    if (!form) {
+        return;
+    }
+
+    // Désactiver/activer tous les champs sauf la checkbox "enabled"
+    const inputs = form.querySelectorAll('input:not(#event-enabled-' + index + '), select');
+    inputs.forEach(input => {
+        input.disabled = !enabled;
+    });
+
+    // Mettre à jour la classe CSS de l'item pour le style visuel
+    if (item) {
+        if (enabled) {
+            item.classList.remove('disabled');
+            item.classList.add('enabled');
+        } else {
+            item.classList.remove('enabled');
+            item.classList.add('disabled');
+        }
+    }
+
+    // Mettre à jour le résumé dans le header
+    updateEventSummary(index);
+}
+function updateEventSummary(index) {
+    const event = eventsConfigData[index];
+    if (!event) {
+        return;
+    }
+
+    const headers = doc.querySelectorAll('.event-accordion-header');
+    const header = headers[index];
+    if (!header) {
+        return;
+    }
+
+    const summary = header.querySelector('.event-accordion-summary');
+    if (!summary) {
+        return;
+    }
+
+    const actionType = event.at !== undefined ? event.at : 0;
+    const profileId = event.pid !== undefined ? event.pid : -1;
+    const profileSelect = $('profile-select');
+
+    let summaryHTML = `
+        <div class="event-accordion-summary-item enabled-item">
+            <span class="event-accordion-summary-label">${t('eventsConfig.enabled')}:</span>
+            <span class="event-accordion-summary-value">${event.en ? '✓' : '✗'}</span>
+        </div>
+    `;
+
+    if (actionType === 0) {
+        const effectName = getEffectName(event.fx);
+        const colorHex = '#' + event.c1.toString(16).padStart(6, '0');
+        summaryHTML += `
+            <div class="event-accordion-summary-item effect-item">
+                <span class="event-accordion-summary-label">${t('eventsConfig.effect')}:</span>
+                <span class="event-accordion-summary-value">${effectName}</span>
+            </div>
+            <div class="event-accordion-summary-item color-item">
+                <span class="event-accordion-summary-label">${t('eventsConfig.color')}:</span>
+                <span class="event-accordion-color-preview" style="background-color: ${colorHex};"></span>
+            </div>
+        `;
+    } else {
+        const profileName = profileSelect && profileId >= 0 ?
+            profileSelect.options[Array.from(profileSelect.options).findIndex(opt => opt.value == profileId)]?.text || '--' :
+            '--';
+        summaryHTML += `
+            <div class="event-accordion-summary-item effect-item">
+                <span class="event-accordion-summary-label">${t('eventsConfig.profile')}:</span>
+                <span class="event-accordion-summary-value">${profileName}</span>
+            </div>
+        `;
+    }
+
+    summary.innerHTML = summaryHTML;
 }
 function scheduleEventAutoSave(index) {
     if (!eventsConfigData[index]) {
@@ -1302,7 +1492,7 @@ function buildEventPayload(event) {
         return null;
     }
     const allowedKeys = [
-        'ev', 'fx', 'bri', 'sp', 'c1',
+        'ev', 'fx', 'br', 'sp', 'c1',
         'dur', 'pri', 'en', 'at', 'pid', 'csp'
     ];
     const payload = {};
