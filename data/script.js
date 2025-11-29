@@ -92,6 +92,14 @@ function registerBleAutoConnectGestureHandler() {
         bleAutoConnectGestureHandlerRegistered = false;
         bleAutoConnectGestureCaptured = true;
         bleAutoConnectAwaitingGesture = false;
+
+        // Feedback immédiat : changer le message et masquer le bouton
+        updateLoadingProgress(0, t('ble.connecting'));
+        const bleButton = $('loading-ble-button');
+        if (bleButton) {
+            bleButton.style.display = 'none';
+        }
+
         if (!wifiOnline) {
             maybeAutoConnectBle(true);
         }
