@@ -1809,24 +1809,25 @@ async function updateStatus() {
         $('wifi-status').textContent = data.wc ? t('status.connected') : t('status.ap');
         $('wifi-status').className = 'status-value ' + (data.wc ? 'status-online' : 'status-offline');
 
+
+        // CAN Body status
+        if (data.cbb) {
+            const bodyStatus = data.cbb.r ?
+                `${t('status.connected')}` : // (RX:${data.cbb.rx}, TX:${data.cbb.tx})` :
+                t('status.disconnected');
+            $('can-body-status').textContent = bodyStatus;
+            $('can-body-status').className = 'status-value ' + (data.cbb.r ? 'status-online' : 'status-offline');
+        }        
         // CAN Chassis status
         if (data.cbc) {
             const chassisStatus = data.cbc.r ?
-                `${t('status.connected')} (RX:${data.cbc.rx}, TX:${data.cbc.tx})` :
+                `${t('status.connected')}` : // (RX:${data.cbc.rx}, TX:${data.cbc.tx})` :
                 t('status.disconnected');
             $('can-chassis-status').textContent = chassisStatus;
             $('can-chassis-status').className = 'status-value ' + (data.cbc.r ? 'status-online' : 'status-offline');
         }
 
-        // CAN Body status
-        if (data.cbb) {
-            const bodyStatus = data.cbb.r ?
-                `${t('status.connected')} (RX:${data.cbb.rx}, TX:${data.cbb.tx})` :
-                t('status.disconnected');
-            $('can-body-status').textContent = bodyStatus;
-            $('can-body-status').className = 'status-value ' + (data.cbb.r ? 'status-online' : 'status-offline');
-        }
-        $('vehicle-status').textContent = data.va ? t('status.ac') : t('status.inactive');
+        $('vehicle-status').textContent = data.va ? t('status.active') : t('status.inactive');
         $('vehicle-status').className = 'status-value ' + (data.va ? 'status-online' : 'status-offline');
         if (data.pn) {
             $('profile-status').textContent = data.pn;
@@ -1837,7 +1838,7 @@ async function updateStatus() {
             // État général
             $('v-speed').textContent = v.s.toFixed(1) + ' km/h';
             $('v-gear').textContent = ['--', 'P', 'R', 'N', 'D'][v.g] || '--';
-            $('v-brake').textContent = v.bp ? t('status.ac') : t('status.inactive');
+            $('v-brake').textContent = v.bp ? t('status.active') : t('status.inactive');
             $('v-locked').textContent = v.lk ? t('vehicle.locked') : t('vehicle.unlocked');
             // Portes
             if (v.doors) {
@@ -1850,15 +1851,15 @@ async function updateStatus() {
             }
             // Charge
             if (v.charge) {
-                $('v-charging').textContent = v.charge.ch ? t('status.ac') : t('status.inactive');
+                $('v-charging').textContent = v.charge.ch ? t('status.active') : t('status.inactive');
                 $('v-charge').textContent = v.charge.pct?.toFixed(1) + '%';
                 $('v-charge-power').textContent = v.charge.pw?.toFixed(1) + ' kW';
             }
             // Lumières
             if (v.lights) {
-                $('v-headlights').textContent = v.lights.h ? t('status.ac') : t('status.inactive');
-                $('v-high-beams').textContent = v.lights.hb ? t('status.ac') : t('status.inactive');
-                $('v-fog-lights').textContent = v.lights.fg ? t('status.ac') : t('status.inactive');
+                $('v-headlights').textContent = v.lights.h ? t('status.active') : t('status.inactive');
+                $('v-high-beams').textContent = v.lights.hb ? t('status.active') : t('status.inactive');
+                $('v-fog-lights').textContent = v.lights.fg ? t('status.active') : t('status.inactive');
                 $('v-turn-signal').textContent = v.lights.tl ? t('simulation.left'): v.lights.tr ? t('simulation.right'): t('vehicle.off')
             }
             // Batterie et autres
@@ -1867,17 +1868,17 @@ async function updateStatus() {
             $('v-odometer').textContent = v.odo.toLocaleString() + ' km';
             // Sécurité
             if (v.safety) {
-                $('v-night').textContent = v.safety.nm ? t('status.ac') : t('status.inactive');
-                $('v-brightness').textContent = v.safety.br;
-                $('v-blindspot-left-lv1').textContent = v.safety.bl1 ? t('status.ac') : t('status.inactive');
-                $('v-blindspot-left-lv2').textContent = v.safety.bl2 ? t('status.ac') : t('status.inactive');
-                $('v-blindspot-right-lv1').textContent = v.safety.br1 ? t('status.ac') : t('status.inactive');
-                $('v-blindspot-right-lv2').textContent = v.safety.br2 ? t('status.ac') : t('status.inactive');
+                $('v-night').textContent = v.safety.nm ? t('status.active') : t('status.inactive');
+                $('v-brightness').textContent = v.safety.br + '%';
+                $('v-blindspot-left-lv1').textContent = v.safety.bl1 ? t('status.active') : t('status.inactive');
+                $('v-blindspot-left-lv2').textContent = v.safety.bl2 ? t('status.active') : t('status.inactive');
+                $('v-blindspot-right-lv1').textContent = v.safety.br1 ? t('status.active') : t('status.inactive');
+                $('v-blindspot-right-lv2').textContent = v.safety.br2 ? t('status.active') : t('status.inactive');
 
                 const sentryModeEl = $('v-sentry-mode');
                 if (sentryModeEl) {
-                    if (typeof v.safety.sentry_mode === 'boolean') {
-                        sentryModeEl.textContent = v.safety.sentry_mode ? t('simulation.sentryOn') : t('simulation.sentryOff');
+                    if (typeof v.safety.sm === 'boolean') {
+                        sentryModeEl.textContent = v.safety.sm ? t('simulation.sentryOn') : t('simulation.sentryOff');
                     } else {
                         sentryModeEl.textContent = t('vehicle.none');
                     }
@@ -1890,14 +1891,14 @@ async function updateStatus() {
                         AUTOPILOT_SENTRY: t('simulation.sentryOn'),
                         AUTOPILOT_SUSPEND: t('vehicle.sentrySuspend')
                     };
-                    const requestState = v.safety.sentry_request;
+                    const requestState = v.safety.sr;
                     sentryRequestEl.textContent = requestState ? (requestMap[requestState] || requestState) : t('vehicle.none');
                 }
 
                 const sentryAlertEl = $('v-sentry-alert');
                 if (sentryAlertEl) {
-                    if (typeof v.safety.sentry_alert === 'boolean') {
-                        sentryAlertEl.textContent = v.safety.sentry_alert ? t('simulation.sentryAlert') : t('vehicle.none');
+                    if (typeof v.safety.sa === 'boolean') {
+                        sentryAlertEl.textContent = v.safety.sa ? t('simulation.sentryAlert') : t('vehicle.none');
                     } else {
                         sentryAlertEl.textContent = t('vehicle.none');
                     }

@@ -2,11 +2,12 @@
 #ifndef VEHICLE_CAN_MAPPING_H
 #define VEHICLE_CAN_MAPPING_H
 
-#include "vehicle_can_mapping.h"
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
 
 #include <stdint.h>
+
+#define TAG_CAN "CAN"
 
 #ifdef __cplusplus
 extern "C" {

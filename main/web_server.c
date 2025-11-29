@@ -171,26 +171,26 @@ static esp_err_t status_handler(httpd_req_t *req) {
   wifi_manager_get_status(&wifi_status);
   cJSON_AddBoolToObject(root, "wc", wifi_status.sta_connected);
   cJSON_AddStringToObject(root, "wip", wifi_status.sta_ip);
+  
+  // Statut CAN Bus - Body
+  can_bus_status_t can_body_status;
+  can_bus_get_status(CAN_BUS_BODY, &can_body_status);
+  cJSON *can_body = cJSON_CreateObject();
+  cJSON_AddBoolToObject(can_body, "r", can_body_status.running);
+  // cJSON_AddNumberToObject(can_body, "rx", can_body_status.rx_count);
+  // cJSON_AddNumberToObject(can_body, "tx", can_body_status.tx_count);
+  cJSON_AddNumberToObject(can_body, "er", can_body_status.errors);
+  cJSON_AddItemToObject(root, "cbb", can_body);
 
   // Statut CAN Bus - Chassis
   can_bus_status_t can_chassis_status;
   can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
   cJSON *can_chassis = cJSON_CreateObject();
   cJSON_AddBoolToObject(can_chassis, "r", can_chassis_status.running);
-  cJSON_AddNumberToObject(can_chassis, "rx", can_chassis_status.rx_count);
-  cJSON_AddNumberToObject(can_chassis, "tx", can_chassis_status.tx_count);
+  // cJSON_AddNumberToObject(can_chassis, "rx", can_chassis_status.rx_count);
+  // cJSON_AddNumberToObject(can_chassis, "tx", can_chassis_status.tx_count);
   cJSON_AddNumberToObject(can_chassis, "er", can_chassis_status.errors);
   cJSON_AddItemToObject(root, "cbc", can_chassis);
-
-  // Statut CAN Bus - Body
-  can_bus_status_t can_body_status;
-  can_bus_get_status(CAN_BUS_BODY, &can_body_status);
-  cJSON *can_body = cJSON_CreateObject();
-  cJSON_AddBoolToObject(can_body, "r", can_body_status.running);
-  cJSON_AddNumberToObject(can_body, "rx", can_body_status.rx_count);
-  cJSON_AddNumberToObject(can_body, "tx", can_body_status.tx_count);
-  cJSON_AddNumberToObject(can_body, "er", can_body_status.errors);
-  cJSON_AddItemToObject(root, "cbb", can_body);
 
   // Statut véhicule
   uint32_t now = xTaskGetTickCount();
@@ -264,6 +264,12 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddBoolToObject(safety, "nm", current_vehicle_state.night_mode);
   cJSON_AddNumberToObject(safety, "br",
                           current_vehicle_state.brightness);
+  cJSON_AddBoolToObject(safety, "sm",
+                          current_vehicle_state.sentry_mode);
+  cJSON_AddNumberToObject(safety, "sr",
+                          current_vehicle_state.autopilot);
+  cJSON_AddBoolToObject(safety, "sa",
+                          current_vehicle_state.sentry_alert);
   cJSON_AddItemToObject(vehicle, "safety", safety);
 
   cJSON_AddItemToObject(root, "vehicle", vehicle);

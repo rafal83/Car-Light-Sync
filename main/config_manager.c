@@ -713,23 +713,7 @@ void config_manager_create_default_profile(config_profile_t *profile,
   profile->event_effects[CAN_EVENT_BRAKE_ON].priority = 180;
   profile->event_effects[CAN_EVENT_BRAKE_ON].enabled = true;
 
-  // Frein relâché
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].event = CAN_EVENT_BRAKE_OFF;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].action_type =
-      EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].profile_id = -1;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.effect =
-      EFFECT_FADE;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.brightness = 100;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.speed = 150;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.color1 = 0xFF0000;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].duration_ms = 500; // 0.5 seconde
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].priority = 170;
-  profile->event_effects[CAN_EVENT_BRAKE_OFF].enabled =
-      false; // Désactivé par défaut
-
-  // Mode nuit activé - DÉSACTIVÉ par défaut (le mode nuit est géré globalement,
-  // pas comme un effet)
+  // Mode nuit activé - DÉSACTIVÉ par défaut
   profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].event =
       CAN_EVENT_NIGHT_MODE_ON;
   profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].action_type =
@@ -746,8 +730,7 @@ void config_manager_create_default_profile(config_profile_t *profile,
   profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].enabled =
       false; // Toujours désactivé
 
-  // Mode nuit désactivé - DÉSACTIVÉ par défaut (le mode nuit est géré
-  // globalement, pas comme un effet)
+  // Mode nuit désactivé - DÉSACTIVÉ par défaut
   profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].event =
       CAN_EVENT_NIGHT_MODE_OFF;
   profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].action_type =
@@ -1221,8 +1204,6 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
     return EVENT_ID_UNLOCKED;
   case CAN_EVENT_BRAKE_ON:
     return EVENT_ID_BRAKE_ON;
-  case CAN_EVENT_BRAKE_OFF:
-    return EVENT_ID_BRAKE_OFF;
   case CAN_EVENT_BLINDSPOT_LEFT_LV1:
     return EVENT_ID_BLINDSPOT_LEFT_LV1;
   case CAN_EVENT_BLINDSPOT_LEFT_LV2:
@@ -1299,8 +1280,6 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_UNLOCKED;
   if (strcmp(id, EVENT_ID_BRAKE_ON) == 0)
     return CAN_EVENT_BRAKE_ON;
-  if (strcmp(id, EVENT_ID_BRAKE_OFF) == 0)
-    return CAN_EVENT_BRAKE_OFF;
   if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT_LV1) == 0)
     return CAN_EVENT_BLINDSPOT_LEFT_LV1;
   if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT_LV2) == 0)

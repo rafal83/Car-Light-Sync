@@ -1,5 +1,6 @@
 #include "config_manager.h" // pour can_event_type_t + can_event_trigger
 #include "esp_log.h"
+#include "vehicle_can_mapping.h"
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
 #include <string.h>
@@ -47,6 +48,8 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
   uint32_t id = msg->id;
   const char *name = sig->name ? sig->name : "";
 
+  // ESP_LOGI(TAG_CAN, "%x %s %f", id, name, value);
+
   // ---------------------------------------------------------------------
   // Vitesse véhicule : ID257DIspeed / DI_vehicleSpeed (kph)
   // ---------------------------------------------------------------------
@@ -67,27 +70,19 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
         state->gear = (int8_t)(value + 0.5f);
         return;
       }
-      if (strcmp(name, "DI_brakePedalState") == 0) {
-        // 0=OFF, 1=ON, 2=INVALID
-        if (value != 2) {
-          state->brake_pressed = value;
-        }
-        return;
+    } else if (id == 0x39D) {
+      if (strcmp(name, "IBST_driverBrakeApply") == 0) {
+          // 0=OFF, 1=ON
+          state->brake_pressed = (value == 2) ? 1 : 0;
       }
-    } else if (id == 0x145) {
-      // if (strcmp(name, "ESP_brakeApply") == 0) {
-      //     // 0=OFF, 1=ON, 2=INVALID
-      //     state->brake_pressed = value ; //((int8_t)(value + 0.5f) == 1) ? 1
-      //     : 0; return;
-      // }
     } else
 
       // ---------------------------------------------------------------------
       // Odomètre
       // ---------------------------------------------------------------------
-      if (id == 0x36B) {
-        if (strcmp(name, "Odometer3B6") == 0) {
-          state->odometer_km = value * 0.001f;
+      if (id == 0x3F3) {
+        if (strcmp(name, "UI_odometer") == 0) {
+          state->odometer_km = value;
           return;
         }
       } else
@@ -161,24 +156,21 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
               // Low beams -> headlights_on
               if (strcmp(name, "VCFRONT_lowBeamLeftStatus") == 0 ||
                   strcmp(name, "VCFRONT_lowBeamRightStatus") == 0) {
-                if (value > 0.5f)
-                  state->headlights = 1;
+                state->headlights = (int)(value + 0.5f);
                 return;
               }
 
               // High beams
               if (strcmp(name, "VCFRONT_highBeamLeftStatus") == 0 ||
                   strcmp(name, "VCFRONT_highBeamRightStatus") == 0) {
-                if (value > 0.5f)
-                  state->high_beams = 1;
+                state->high_beams = (int)(value + 0.5f);
                 return;
               }
 
               // Feux de brouillard
               if (strcmp(name, "VCFRONT_fogLeftStatus") == 0 ||
                   strcmp(name, "VCFRONT_fogRightStatus") == 0) {
-                if (value > 0.5f)
-                  state->fog_lights = 1;
+                state->fog_lights = (int)(value + 0.5f);
                 return;
               }
             } else
@@ -189,6 +181,10 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
               //  3=SNA
               // ---------------------------------------------------------------------
               if (id == 0x399) {
+                if(value >0) {
+                  ESP_LOGI(TAG_CAN, "%x %s %f", id, name, value);
+                }
+
                 if (strcmp(name, "DAS_autopilotState") == 0) {
                   state->autopilot = value;
                   return;
@@ -272,15 +268,15 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
                             return;
                           }
                           if (strcmp(name, "UI_displayBrightnessLevel") == 0) {
-                            state->brightness = value / 1.27; // 0-127
+                            state->brightness = (uint8_t)(value / 1.27f); // 0-127
                             return;
                           }
                           if (strcmp(name, "UI_alarmEnabled") == 0) {
-                            // state->sentry_alert = value;
+                            // state->sentry_mode = (value > 0.5f) ? 1 : 0;
                             return;
                           }
                           if (strcmp(name, "UI_intrusionSensorOn") == 0) {
-                            state->sentry_alert = value;
+                            state->sentry_mode = (value > 0.5f) ? 1 : 0;
                             return;
                           }
                           if (strcmp(name, "UI_lockRequest") == 0) {
@@ -299,10 +295,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
                           // Sentry mode : ID284UIvehicleModes / UIsentryMode284
                           // ---------------------------------------------------------------------
                           if (id == 0x284) {
-                            if (strcmp(name, "UIsentryMode284") == 0) {
-                              // state->sentry_mode = (value > 0.5f) ? 1 : 0;
-                              return;
-                            } else if (strcmp(name, "CP_chargeCablePresent") ==
+                            if (strcmp(name, "CP_chargeCablePresent") ==
                                        0) {
                               int v = (int)(value + 0.5f);
                               // 1 = NOT_CONNECTED, 2 = CONNECTED (voir mapping
@@ -325,6 +318,9 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
                             // 1 "BMS_NO_POWER"
                             if (strcmp(name, "BMS_uiChargeStatus") == 0) {
                               state->charge_status = value;
+                              return;
+                            } else if (strcmp(name, "BMS_chgPowerAvailable") == 0) {
+                              state->charge_power_kw = value > 255 ? 0 : value;
                               return;
                             }
                           } else

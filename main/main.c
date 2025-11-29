@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "ble_api_service.h"
+#include "vehicle_can_mapping.h"
 #include "can_bus.h"
 #include "captive_portal.h"
 #include "config.h"
@@ -144,10 +145,12 @@ static void can_event_task(void *pvParameters) {
 
     // Freins
     if (current_state.brake_pressed != previous_state.brake_pressed) {
+      ESP_LOGI(TAG_MAIN, "Brake changé: %d -> %d", previous_state.brake_pressed,
+               current_state.brake_pressed);
       if (current_state.brake_pressed) {
         config_manager_process_can_event(CAN_EVENT_BRAKE_ON);
       } else {
-        config_manager_process_can_event(CAN_EVENT_BRAKE_OFF);
+        config_manager_stop_event(CAN_EVENT_BRAKE_ON);
       }
     }
 
@@ -304,14 +307,14 @@ static void update_status_led_internal(void) {
   wifi_status_t wifi_status;
   wifi_manager_get_status(&wifi_status);
 
-  can_bus_status_t can_chassis_status, can_body_status;
-  can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
+  can_bus_status_t can_body_status, can_chassis_status;
   can_bus_get_status(CAN_BUS_BODY, &can_body_status);
+  can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
 
   // Priorité des états (du plus prioritaire au moins prioritaire)
   if (ble_api_service_is_connected()) {
     status_led_set_state(STATUS_LED_BLE_CONNECTED);
-  } else if (can_chassis_status.running || can_body_status.running) {
+  } else if (can_body_status.running || can_body_status.running) {
     // CAN actif (au moins un bus)
     status_led_set_state(STATUS_LED_CAN_ACTIVE);
   } else if (wifi_status.sta_connected) {
@@ -425,6 +428,7 @@ void app_main(void) {
   // Activer VOS logs
   esp_log_level_set(TAG_MAIN, ESP_LOG_INFO);
   esp_log_level_set(TAG_CAN_BUS, ESP_LOG_INFO);
+  esp_log_level_set(TAG_CAN, ESP_LOG_INFO);
   esp_log_level_set(TAG_WIFI, ESP_LOG_INFO); // nos logs du module WiFi
   esp_log_level_set(TAG_WEBSERVER, ESP_LOG_INFO);
   // esp_log_level_set(TAG_LED_ENCODER, ESP_LOG_INFO);
@@ -480,13 +484,13 @@ void app_main(void) {
     ESP_LOGW(TAG_MAIN, "Erreur init bouton reset");
   }
 
-  // CAN bus - Chassis
-  ESP_ERROR_CHECK(can_bus_init(CAN_BUS_CHASSIS, CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN));
-  ESP_LOGI(TAG_MAIN, "✓ CAN bus CHASSIS initialisé (GPIO TX=%d, RX=%d)", CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN);
-
   // CAN bus - Body
   ESP_ERROR_CHECK(can_bus_init(CAN_BUS_BODY, CAN_TX_BODY_PIN, CAN_RX_BODY_PIN));
   ESP_LOGI(TAG_MAIN, "✓ CAN bus BODY initialisé (GPIO TX=%d, RX=%d)", CAN_TX_BODY_PIN, CAN_RX_BODY_PIN);
+  
+  // CAN bus - Chassis
+  ESP_ERROR_CHECK(can_bus_init(CAN_BUS_CHASSIS, CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN));
+  ESP_LOGI(TAG_MAIN, "✓ CAN bus CHASSIS initialisé (GPIO TX=%d, RX=%d)", CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN);
 
   // Enregistrer le callback partagé pour les deux bus
   ESP_ERROR_CHECK(can_bus_register_callback(vehicle_can_callback, NULL));

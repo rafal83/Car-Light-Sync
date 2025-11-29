@@ -43,7 +43,7 @@ static void can_rx_task(void *pvParameters) {
   free(params);
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
   ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX démarrée pour bus %s (GPIO TX=%d RX=%d)",
            bus_name, ctx->tx_gpio, ctx->rx_gpio);
@@ -94,7 +94,7 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   }
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
   if (ctx->initialized) {
     ESP_LOGW(TAG_CAN_BUS, "Bus %s déjà initialisé", bus_name);
@@ -133,7 +133,7 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
            bus_name, tx_gpio, rx_gpio, bus_type);
 #else
   // Anciennes versions ESP-IDF : un seul contrôleur supporté
-  if (bus_type == CAN_BUS_BODY) {
+  if (bus_type == CAN_BUS_CHASSIS) {
     ESP_LOGW(TAG_CAN_BUS, "[%s] Le deuxième bus CAN nécessite ESP-IDF 5.2.0+ ou un contrôleur externe", bus_name);
     ESP_LOGW(TAG_CAN_BUS, "[%s] Fonctionnalité désactivée", bus_name);
     ctx->initialized = true;
@@ -160,7 +160,7 @@ esp_err_t can_bus_start(can_bus_type_t bus_type) {
   }
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
   if (!ctx->initialized) {
     ESP_LOGE(TAG_CAN_BUS, "[%s] Bus non initialisé", bus_name);
@@ -223,7 +223,7 @@ esp_err_t can_bus_stop(can_bus_type_t bus_type) {
   }
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
   ctx->running = false;
 
