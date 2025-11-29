@@ -1817,7 +1817,7 @@ async function updateStatus() {
         isApMode = !data.wc;
 
         $('wifi-status').textContent = data.wc ? t('status.connected') : t('status.ap');
-        $('wifi-status').className = 'status-value ' + (data.wc ? 'status-online' : 'status-offline');
+        $('wifi-status').className = 'status-value status-online';
 
 
         // CAN Body status

@@ -70,13 +70,18 @@
                 <div class="status-label" data-i18n="status.wifi">WiFi</div>
                 <div class="status-value" id="wifi-status">...</div>
             </div>
-            <div class="status-item">
-                <div class="status-label" data-i18n="status.can-chassis">CAN Chassis</div>
-                <div class="status-value" id="can-chassis-status">...</div>
-            </div>
-            <div class="status-item">
-                <div class="status-label" data-i18n="status.can-body">CAN Body</div>
-                <div class="status-value" id="can-body-status">...</div>
+            <div class="status-item status-item-can">
+                <div class="status-label" data-i18n="status.canBus">CAN Bus</div>
+                <div class="status-can-group">
+                    <div class="status-can-item">
+                        <span class="status-can-label">Chassis:</span>
+                        <span class="status-value" id="can-chassis-status">...</span>
+                    </div>
+                    <div class="status-can-item">
+                        <span class="status-can-label">Body:</span>
+                        <span class="status-value" id="can-body-status">...</span>
+                    </div>
+                </div>
             </div>
             <div class="status-item">
                 <div class="status-label" data-i18n="status.vehicle">Véhicule</div>

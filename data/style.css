@@ -214,6 +214,30 @@ body {
 .status-item-ble .status-label {
     margin-bottom: 0;
 }
+.status-item-can {
+    min-width: 180px;
+}
+.status-can-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+}
+.status-can-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+.status-can-label {
+    color: var(--color-muted);
+    font-size: 11px;
+    min-width: 50px;
+}
+.status-can-item .status-value {
+    font-size: 13px;
+    font-weight: 500;
+}
 .status-online { color: #10b981; }
 .status-offline { color: #E82127; }
 /* Tabs */
