@@ -131,6 +131,14 @@ function maybeAutoConnectBle(fromGesture = false) {
     }
     bleAutoConnectAwaitingGesture = false;
     bleAutoConnectInProgress = true;
+
+    // Feedback immédiat : la connexion démarre
+    updateLoadingProgress(0, t('ble.connecting'));
+    const bleButton = $('loading-ble-button');
+    if (bleButton) {
+        bleButton.style.display = 'none';
+    }
+
     bleTransport.connect().catch(error => {
         if (error && (error.n === 'SecurityError' || /SecurityError/i.test(error.message || ''))) {
             console.warn('BLE auto-connect blocked by browser security, waiting for interaction');
