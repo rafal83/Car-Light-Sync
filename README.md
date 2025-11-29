@@ -32,6 +32,8 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 - **Effets Temporaires** : Durée configurable avec retour automatique à l'effet par défaut
 - **Blindspot Detection** : Alertes visuelles pour détection angle mort (priorité maximale)
 - **Synchronisation Véhicule** : Les LEDs réagissent en temps réel à l'état du véhicule
+- **LED Indicateur de Statut** : LED WS2812 intégrée (GPIO 21 S3 / GPIO 8 C6) avec états visuels
+- **Bouton Reset Physique** : GPIO 4, maintenir 5s = factory reset complet
 
 ## 📋 Prérequis
 
@@ -243,6 +245,43 @@ L'interface expose une API REST complète. Voir section [API REST](#-api-rest) c
 - App iOS/Android (Capacitor) pour contrôler le Car Light Sync en Bluetooth avec connexion auto au démarrage
 - Réutilise les mêmes fichiers `data/index.html`, `data/script.js` et `data/style.css` que l'interface web
 - Guide complet et commandes disponibles : [mobile.app/README.md](mobile.app/README.md)
+
+## 💡 LED Indicateur de Statut
+
+Le système inclut une LED WS2812 intégrée qui indique l'état actuel du système :
+
+### GPIO de la LED
+- **ESP32-S3** : GPIO 21 (LED intégrée)
+- **ESP32-C6** : GPIO 8 (LED intégrée)
+
+### États de la LED (par priorité décroissante)
+
+| État | Couleur/Animation | Description |
+|------|-------------------|-------------|
+| **BLE Connecté** | 🟢 Vert fixe | Un client BLE est connecté |
+| **CAN Actif** | 🟣 Violet pulsant lent | Au moins un bus CAN reçoit des données |
+| **WiFi Station** | 🔵⚪ Cyan/Blanc alterné lent | Connecté à un réseau WiFi en mode station |
+| **WiFi AP** | 🟠 Orange fixe | Mode point d'accès WiFi actif |
+| **Idle** | 🟡 Jaune pulsant lent | Aucune connexion active |
+| **WiFi Connecting** | 🔵 Bleu pulsant | Connexion WiFi en cours |
+| **Boot** | ⚪ Blanc pulsant rapide | Démarrage du système |
+| **Factory Reset** | 🔴⚪ Rouge/Blanc alterné rapide | Reset usine en cours (appui 5s) |
+| **Erreur** | 🔴 Rouge clignotant rapide | Erreur critique |
+
+**Note** : La LED change automatiquement d'état toutes les 5 secondes selon l'activité du système.
+
+## 🔘 Bouton Reset Physique
+
+Un bouton connecté sur **GPIO 4** permet de réinitialiser le système :
+
+- **Appui court** : Aucune action (détecté dans les logs)
+- **Appui 5 secondes** : **Factory Reset**
+  - Efface toutes les configurations (NVS)
+  - Supprime tous les profils sauvegardés
+  - Réinitialise les paramètres WiFi
+  - Redémarre l'ESP32 avec configuration par défaut
+
+**⚠️ Attention** : Le factory reset est irréversible ! Toutes les configurations personnalisées seront perdues.
 
 ## 🔌 Connexion CAN Directe
 

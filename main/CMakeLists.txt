@@ -45,6 +45,8 @@ idf_component_register(
         "ota_update.c"
         "ble_api_service.c"
         "audio_input.c"
+        "status_led.c"
+        "reset_button.c"
     INCLUDE_DIRS
         "."
         "../include"

@@ -2729,23 +2729,134 @@ async function loadEventTypes() {
         console.error('Failed to load event types:', error);
     }
 }
+
+// Gestion de l'écran de chargement
+function updateLoadingProgress(percentage, message) {
+    const progressBar = $('loading-progress-bar');
+    const statusText = $('loading-status');
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
+    if (statusText && message) {
+        statusText.textContent = message;
+    }
+}
+
+function hideLoadingOverlay() {
+    const overlay = $('loading-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 500);
+    }
+}
+
+function showLoadingError(message) {
+    const errorDiv = $('loading-error');
+    const errorMsg = $('loading-error-message');
+    if (errorDiv && errorMsg) {
+        errorMsg.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+}
+
+async function restartESP32() {
+    try {
+        await fetch('/api/system/restart', { method: 'POST' });
+        $('loading-error-message').textContent = t('loading.connecting');
+        setTimeout(() => {
+            location.reload();
+        }, 5000);
+    } catch (error) {
+        console.error('Failed to restart:', error);
+    }
+}
+
+async function factoryResetESP32() {
+    if (!confirm(t('loading.factoryReset') + '?')) return;
+    try {
+        await fetch('/api/system/factory-reset', { method: 'POST' });
+        $('loading-error-message').textContent = t('loading.connecting');
+        setTimeout(() => {
+            location.reload();
+        }, 8000);
+    } catch (error) {
+        console.error('Failed to factory reset:', error);
+    }
+}
+
+function retryLoading() {
+    const errorDiv = $('loading-error');
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+    }
+    location.reload();
+}
+
 async function loadInitialData() {
-    await Promise.all([
-        loadEffects(),
-        loadEventTypes(),
-        ensureEventsConfigData().catch(() => null)
-    ]);
-    renderSimulationSections();
-    loadProfiles();
-    loadConfig();
-    loadHardwareConfig(); // Charger la configuration matérielle LED
-    loadAudioStatus(); // Charger la configuration audio
-    loadFFTStatus(); // Charger l'état FFT
-    loadOTAInfo();
-    // Démarrer le polling de status avec setTimeout auto-régulé
-    if (!statusIntervalHandle) {
-        statusIntervalHandle = 'active'; // Flag pour indiquer que le polling est actif
-        updateStatus(); // Premier appel, puis auto-planification via finally
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    let progress = 0;
+    const totalSteps = 9;
+    const updateProgress = (step, message) => {
+        progress = (step / totalSteps) * 100;
+        updateLoadingProgress(progress, message);
+    };
+
+    try {
+        // Étape 1-3: Chargement des données essentielles (en parallèle)
+        updateProgress(1, t('loading.loadingEffects'));
+        await Promise.all([
+            loadEffects(),
+            loadEventTypes(),
+            ensureEventsConfigData().catch(() => null)
+        ]);
+        await delay(100); // Petit délai pour soulager l'ESP32
+
+        // Étape 4: Rendu des sections
+        updateProgress(4, t('loading.loadingConfig'));
+        renderSimulationSections();
+        await delay(100);
+
+        // Étape 5: Profils
+        updateProgress(5, t('loading.loadingProfiles'));
+        await loadProfiles();
+        await delay(150);
+
+        // Étape 6: Configuration
+        updateProgress(6, t('loading.loadingConfig'));
+        await loadConfig();
+        await delay(150);
+
+        // Étape 7: Configuration matérielle
+        updateProgress(7, t('loading.loadingConfig'));
+        await loadHardwareConfig();
+        await delay(100);
+
+        // Étape 8: Audio et FFT
+        updateProgress(8, t('loading.loadingConfig'));
+        await Promise.all([
+            loadAudioStatus(),
+            loadFFTStatus()
+        ]);
+        await delay(100);
+
+        // Étape 9: OTA
+        updateProgress(9, t('loading.loadingConfig'));
+        await loadOTAInfo();
+
+        // Masquer l'écran de chargement
+        hideLoadingOverlay();
+
+        // Démarrer le polling de status
+        if (!statusIntervalHandle) {
+            statusIntervalHandle = 'active';
+            updateStatus();
+        }
+    } catch (error) {
+        console.error('Initial data load failed:', error);
+        showLoadingError(error.message || t('loading.errorMessage'));
+        throw error;
     }
 }
 // Init

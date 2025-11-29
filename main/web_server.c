@@ -1829,7 +1829,7 @@ esp_err_t web_server_init(void) {
 esp_err_t web_server_start(void) {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.server_port = WEB_SERVER_PORT;
-  config.max_uri_handlers = 45; // Augmenté pour les handlers audio et FFT
+  config.max_uri_handlers = 47; // Augmenté pour les handlers système (restart/factory-reset)
   config.max_open_sockets = 13; // Augmenté pour gérer les rafraîchissements de page (max 7 par défaut)
   config.lru_purge_enable = true;
 #ifndef CONFIG_HAS_PSRAM
@@ -2065,6 +2065,19 @@ esp_err_t web_server_start(void) {
                                       .handler = audio_fft_data_handler,
                                       .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_fft_data_uri);
+
+    // Alias pour les nouveaux endpoints système
+    httpd_uri_t system_restart_uri = {.uri = "/api/system/restart",
+                                      .method = HTTP_POST,
+                                      .handler = ota_restart_handler,
+                                      .user_ctx = NULL};
+    httpd_register_uri_handler(server, &system_restart_uri);
+
+    httpd_uri_t system_factory_reset_uri = {.uri = "/api/system/factory-reset",
+                                            .method = HTTP_POST,
+                                            .handler = factory_reset_handler,
+                                            .user_ctx = NULL};
+    httpd_register_uri_handler(server, &system_factory_reset_uri);
 
     // Enregistrer le handler d'erreur 404 pour le portail captif
     // Toutes les URLs non trouvées seront redirigées vers la page principale

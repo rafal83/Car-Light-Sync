@@ -8,6 +8,26 @@
     <link href="style.css" rel="stylesheet" />
 </head>
 <body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <img src="carlightsync64.png" alt="Logo" class="loading-logo">
+            <h2 data-i18n="loading.title">Chargement...</h2>
+            <div class="loading-progress">
+                <div id="loading-progress-bar" class="loading-progress-bar"></div>
+            </div>
+            <p id="loading-status" data-i18n="loading.connecting">Connexion...</p>
+            <div id="loading-error" class="loading-error" style="display: none;">
+                <p id="loading-error-message"></p>
+                <div class="loading-error-actions">
+                    <button onclick="restartESP32()" class="btn-secondary" data-i18n="loading.restart">Redémarrer ESP32</button>
+                    <button onclick="factoryResetESP32()" class="btn-danger" data-i18n="loading.factoryReset">Reset usine</button>
+                    <button onclick="retryLoading()" class="btn-primary" data-i18n="loading.retry">Réessayer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <div class="header-logo">

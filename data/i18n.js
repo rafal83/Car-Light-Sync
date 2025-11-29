@@ -26,6 +26,18 @@ const translations = {
             nightModeOff: "Mode nuit désactivé",
             speedThreshold: "Seuil de vitesse"
         },
+        loading: {
+            title: "Chargement...",
+            connecting: "Connexion au module...",
+            loadingEffects: "Chargement des effets...",
+            loadingProfiles: "Chargement des profils...",
+            loadingConfig: "Chargement de la configuration...",
+            error: "Erreur de chargement",
+            errorMessage: "Impossible de charger les données. Vérifiez la connexion.",
+            restart: "Redémarrer ESP32",
+            factoryReset: "Reset usine",
+            retry: "Réessayer"
+        },
         status: {
             wifi: "WiFi",
             canBus: "CAN Bus",
@@ -412,6 +424,18 @@ en: {
             nightModeOn: "Night mode on",
             nightModeOff: "Night mode off",
             speedThreshold: "Speed threshold"
+        },
+        loading: {
+            title: "Loading...",
+            connecting: "Connecting to module...",
+            loadingEffects: "Loading effects...",
+            loadingProfiles: "Loading profiles...",
+            loadingConfig: "Loading configuration...",
+            error: "Loading error",
+            errorMessage: "Unable to load data. Check connection.",
+            restart: "Restart ESP32",
+            factoryReset: "Factory reset",
+            retry: "Retry"
         },
         status: {
             wifi: "WiFi",

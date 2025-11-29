@@ -22,6 +22,9 @@
 #include "wifi_credentials.h" // Configuration WiFi optionnelle
 #include "wifi_manager.h"
 #include "audio_input.h"
+#include "status_led.h"
+#include "reset_button.h"
+#include "status_manager.h"
 
 // La config est générée par generate_vehicle_can_config.py
 #include "vehicle_can_unified_config.h"
@@ -296,14 +299,57 @@ static void can_event_task(void *pvParameters) {
   }
 }
 
+// Helper interne pour mettre à jour la LED de statut selon l'activité
+static void update_status_led_internal(void) {
+  wifi_status_t wifi_status;
+  wifi_manager_get_status(&wifi_status);
+
+  can_bus_status_t can_chassis_status, can_body_status;
+  can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
+  can_bus_get_status(CAN_BUS_BODY, &can_body_status);
+
+  // Priorité des états (du plus prioritaire au moins prioritaire)
+  if (ble_api_service_is_connected()) {
+    status_led_set_state(STATUS_LED_BLE_CONNECTED);
+  } else if (can_chassis_status.running || can_body_status.running) {
+    // CAN actif (au moins un bus)
+    status_led_set_state(STATUS_LED_CAN_ACTIVE);
+  } else if (wifi_status.sta_connected) {
+    // WiFi connecté en mode station
+    status_led_set_state(STATUS_LED_WIFI_STATION);
+  } else if (wifi_status.ap_started) {
+    // Mode AP uniquement
+    status_led_set_state(STATUS_LED_WIFI_AP);
+  } else {
+    // Mode idle par défaut (aucune connexion)
+    status_led_set_state(STATUS_LED_IDLE);
+  }
+}
+
+// Fonction publique pour forcer la mise à jour (appelée depuis reset_button.c)
+// FORCE le changement même si la LED est en mode FACTORY_RESET
+void status_manager_update_led_now(void) {
+  update_status_led_internal();
+}
+
 // Tâche de monitoring
 static void monitor_task(void *pvParameters) {
   ESP_LOGI(TAG_MAIN, "Tâche de monitoring démarrée");
 
   TickType_t last_print = 0;
+  TickType_t last_activity_check = 0;
 
   while (1) {
     TickType_t now = xTaskGetTickCount();
+
+    // Mettre à jour la LED de statut toutes les 5 secondes
+    if (now - last_activity_check > pdMS_TO_TICKS(5000)) {
+      // Ne pas changer la LED si elle est en mode FACTORY_RESET (reset en cours)
+      if (status_led_get_state() != STATUS_LED_FACTORY_RESET) {
+        update_status_led_internal();
+      }
+      last_activity_check = now;
+    }
 
     // Afficher les stats toutes les 30 secondes
     if (now - last_print > pdMS_TO_TICKS(30000)) {
@@ -417,6 +463,23 @@ void app_main(void) {
   // Initialiser les modules
   ESP_LOGI(TAG_MAIN, "Initialisation des modules...");
 
+  // LED de statut (WS2812 intégrée)
+  esp_err_t status_led_err = status_led_init();
+  if (status_led_err == ESP_OK) {
+    ESP_LOGI(TAG_MAIN, "✓ LED de statut initialisée");
+    status_led_set_state(STATUS_LED_BOOT);
+  } else if (status_led_err != ESP_ERR_NOT_SUPPORTED) {
+    ESP_LOGW(TAG_MAIN, "Erreur init LED de statut");
+  }
+
+  // Bouton reset
+  esp_err_t reset_btn_err = reset_button_init();
+  if (reset_btn_err == ESP_OK) {
+    ESP_LOGI(TAG_MAIN, "✓ Bouton reset initialisé (GPIO 4, maintenir 5s = factory reset)");
+  } else {
+    ESP_LOGW(TAG_MAIN, "Erreur init bouton reset");
+  }
+
   // CAN bus - Chassis
   ESP_ERROR_CHECK(can_bus_init(CAN_BUS_CHASSIS, CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN));
   ESP_LOGI(TAG_MAIN, "✓ CAN bus CHASSIS initialisé (GPIO TX=%d, RX=%d)", CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN);
@@ -483,6 +546,7 @@ void app_main(void) {
                               NULL);
 
   // WiFi
+  status_led_set_state(STATUS_LED_WIFI_CONNECTING);
   ESP_ERROR_CHECK(wifi_manager_init());
   ESP_ERROR_CHECK(captive_portal_init());
   ESP_ERROR_CHECK(wifi_manager_start_ap());
@@ -495,6 +559,7 @@ void app_main(void) {
 #endif
 
   ESP_LOGI(TAG_MAIN, "✓ WiFi initialisé");
+  status_led_set_state(STATUS_LED_WIFI_AP);
 
   // Serveur web
   ESP_ERROR_CHECK(web_server_init());

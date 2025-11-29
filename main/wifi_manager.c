@@ -109,7 +109,12 @@ esp_err_t wifi_manager_init(void) {
   ap_netif = esp_netif_create_default_wifi_ap();
   sta_netif = esp_netif_create_default_wifi_sta();
 
-  // 🔧 Changer l'IP de l’AP pour éviter le conflit avec le Commander
+  // Configurer le hostname pour mDNS (visible sur le réseau local)
+  // Utilise directement le SSID qui contient déjà le suffixe MAC (ex: "CarLightSync-A1B2C3")
+  ESP_ERROR_CHECK(esp_netif_set_hostname(sta_netif, g_wifi_ssid_with_suffix));
+  ESP_ERROR_CHECK(esp_netif_set_hostname(ap_netif, g_wifi_ssid_with_suffix));
+  ESP_LOGI(TAG_WIFI, "Hostname configuré: %s", g_wifi_ssid_with_suffix);
+
   esp_netif_ip_info_t ip_info;
   IP4_ADDR(&ip_info.ip, 192, 168, 10, 1);
   IP4_ADDR(&ip_info.gw, 192, 168, 10, 1);
