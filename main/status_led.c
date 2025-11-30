@@ -154,7 +154,7 @@ static void status_led_task(void *arg) {
 
             case STATUS_LED_IDLE: {
                 // Jaune pulsant lent
-                float brightness = (sinf(counter * 0.02f) + 1.0f) / 2.0f;
+                float brightness = (sinf(counter * 0.07f) + 1.0f) / 2.0f;
                 uint8_t r = (uint8_t)(brightness * 100);
                 uint8_t g = (uint8_t)(brightness * 80);
                 status_led_set_color(r, g, 0); // Jaune

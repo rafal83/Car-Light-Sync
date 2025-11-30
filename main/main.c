@@ -365,8 +365,8 @@ static void update_status_led_internal(void) {
   } else if (wifi_status.sta_connected) {
     // WiFi connecté en mode station
     status_led_set_state(STATUS_LED_WIFI_STATION);
-  } else if (wifi_status.ap_started) {
-    // Mode AP uniquement
+  } else if (wifi_status.ap_started && wifi_status.connected_clients > 0) {
+    // Mode AP actif (clients connectés)
     status_led_set_state(STATUS_LED_WIFI_AP);
   } else {
     // Mode idle par défaut (aucune connexion)
