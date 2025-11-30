@@ -642,7 +642,8 @@ const simulationSections = [
         titleKey: 'simulation.autopilot',
         events: [
             { id: 'AUTOPILOT_ENGAGED', labelKey: 'simulation.autopilotEngaged' },
-            { id: 'AUTOPILOT_DISENGAGED', labelKey: 'simulation.autopilotDisengaged' }
+            { id: 'AUTOPILOT_DISENGAGED', labelKey: 'simulation.autopilotDisengaged' },
+            { id: 'AUTOPILOT_ABORTING', labelKey: 'simulation.autopilotAborting' }
         ]
     },
     {
@@ -1870,7 +1871,11 @@ async function updateStatus() {
                 $('v-headlights').textContent = v.lights.h ? t('status.active') : t('status.inactive');
                 $('v-high-beams').textContent = v.lights.hb ? t('status.active') : t('status.inactive');
                 $('v-fog-lights').textContent = v.lights.fg ? t('status.active') : t('status.inactive');
-                $('v-turn-signal').textContent = v.lights.tl ? t('simulation.left'): v.lights.tr ? t('simulation.right'): t('vehicle.off')
+                if(v.lights.hz) {
+                  $('v-turn-signal').textContent = t('simulation.hazard');
+                } else {
+                  $('v-turn-signal').textContent = v.lights.tl ? t('simulation.left'): v.lights.tr ? t('simulation.right'): t('vehicle.off')
+                }
             }
             // Batterie et autres
             $('v-battery-lv').textContent = v.blv?.toFixed(2) + ' V';
@@ -1894,15 +1899,21 @@ async function updateStatus() {
                     }
                 }
 
-                const sentryRequestEl = $('v-sentry-request');
-                if (sentryRequestEl) {
+                const autopilotEl = $('v-autopilot');
+                if (autopilotEl) {
                     const requestMap = {
-                        AUTOPILOT_NOMINAL: t('vehicle.sentryNominal'),
-                        AUTOPILOT_SENTRY: t('simulation.sentryOn'),
-                        AUTOPILOT_SUSPEND: t('vehicle.sentrySuspend')
+                      0: t('vehicle.DISABLED'), 
+                      1: t('vehicle.UNAVAILABLE'),
+                      3: t('vehicle.ACTIVE_NOMINAL'), 
+                      4: t('vehicle.ACTIVE_RESTRICTED'), 
+                      5: t('vehicle.ACTIVE_NAV'), 
+                      2: t('vehicle.AVAILABLE'), 
+                      8: t('vehicle.ABORTING'), 
+                      9: t('vehicle.ABORTED'), 
+                      14: t('vehicle.FAULT')
                     };
-                    const requestState = v.safety.sr;
-                    sentryRequestEl.textContent = requestState ? (requestMap[requestState] || requestState) : t('vehicle.none');
+                    const autopilotState = v.safety.ap;
+                    autopilotEl.textContent = autopilotState ? (requestMap[autopilotState] || autopilotState) : t('vehicle.none');
                 }
 
                 const sentryAlertEl = $('v-sentry-alert');
@@ -1924,7 +1935,7 @@ async function updateStatus() {
                 'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness', 
                 'v-blindspot-left-lv1', 'v-blindspot-right-lv1',
                 'v-blindspot-left-lv2', 'v-blindspot-right-lv2',
-                'v-sentry-mode', 'v-sentry-request', 'v-sentry-alert'
+                'v-sentry-mode', 'v-autopilot', 'v-sentry-alert'
             ];
             fields.forEach(id => {
                 const element = $(id);

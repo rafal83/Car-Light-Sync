@@ -176,7 +176,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   can_bus_status_t can_body_status;
   can_bus_get_status(CAN_BUS_BODY, &can_body_status);
   cJSON *can_body = cJSON_CreateObject();
-  cJSON_AddBoolToObject(can_body, "r", can_body_status.running);
+  cJSON_AddBoolToObject(can_body, "r", can_body_status.rx_count > 0); //can_body_status.running);
   // cJSON_AddNumberToObject(can_body, "rx", can_body_status.rx_count);
   // cJSON_AddNumberToObject(can_body, "tx", can_body_status.tx_count);
   cJSON_AddNumberToObject(can_body, "er", can_body_status.errors);
@@ -186,7 +186,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   can_bus_status_t can_chassis_status;
   can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
   cJSON *can_chassis = cJSON_CreateObject();
-  cJSON_AddBoolToObject(can_chassis, "r", can_chassis_status.running);
+  cJSON_AddBoolToObject(can_chassis, "r", can_chassis_status.rx_count > 0); //can_chassis_status.running);
   // cJSON_AddNumberToObject(can_chassis, "rx", can_chassis_status.rx_count);
   // cJSON_AddNumberToObject(can_chassis, "tx", can_chassis_status.tx_count);
   cJSON_AddNumberToObject(can_chassis, "er", can_chassis_status.errors);
@@ -233,6 +233,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddBoolToObject(lights, "fg", current_vehicle_state.fog_lights);
   cJSON_AddBoolToObject(lights, "tl", current_vehicle_state.turn_left);
   cJSON_AddBoolToObject(lights, "tr", current_vehicle_state.turn_right);
+  cJSON_AddBoolToObject(lights, "hz", current_vehicle_state.hazard);
   cJSON_AddItemToObject(vehicle, "lights", lights);
 
   // Charge
@@ -266,7 +267,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
                           current_vehicle_state.brightness);
   cJSON_AddBoolToObject(safety, "sm",
                           current_vehicle_state.sentry_mode);
-  cJSON_AddNumberToObject(safety, "sr",
+  cJSON_AddNumberToObject(safety, "ap",
                           current_vehicle_state.autopilot);
   cJSON_AddBoolToObject(safety, "sa",
                           current_vehicle_state.sentry_alert);

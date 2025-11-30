@@ -178,14 +178,15 @@ body {
 .status-bar {
     display: flex;
     align-items: stretch;
-    gap: 24px;
-    padding: 15px 24px;
+    gap: 10px;
+    padding: 10px 10px;
     background: var(--color-panel);
     border-bottom: 1px solid var(--color-border);
     position: sticky;
     top: 0;
     z-index: 100;
     flex-wrap: wrap;
+    justify-content: space-evenly;
 }
 .status-item {
     min-width: 130px;
@@ -193,6 +194,7 @@ body {
     flex-direction: column;
     gap: 4px;
     font-size: 12px;
+    align-items: flex-start;
 }
 .status-label {
     font-size: 12px;
@@ -207,9 +209,8 @@ body {
 }
 .status-item-ble {
     flex-direction: row;
-    align-items: center;
     gap: 12px;
-    min-width: 200px;
+    min-width: 180px;
 }
 .status-item-ble .status-label {
     margin-bottom: 0;

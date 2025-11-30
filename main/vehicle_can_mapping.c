@@ -47,9 +47,51 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
 
   uint32_t id = msg->id;
   const char *name = sig->name ? sig->name : "";
-
-  // ESP_LOGI(TAG_CAN, "%x %s %f", id, name, value);
-
+  
+  if (id == 0x3C2) {
+    if (strcmp(name, "VCLEFT_swcLeftScrollTicks") == 0) { 
+      if(value != 21 && value != 0) {
+        state->left_btn_scroll_up = value > 0 ? 1 : 0;
+        state->left_btn_scroll_down = value < 0 ? 1 : 0;
+      }
+      return;
+    } else if (strcmp(name, "VCLEFT_swcLeftDoublePress") == 0) { 
+      state->left_btn_dbl_press = value > 0.5f ? 1 : 0;
+      return;
+    } else if (strcmp(name, "VCLEFT_swcLeftPressed") == 0) { 
+      state->left_btn_press = value == 2 ? 1 : 0;
+      return;
+    } else if (strcmp(name, "VCLEFT_swcLeftTiltLeft") == 0) { 
+      state->left_btn_tilt_left = value == 2 ? 1 : 0;
+      return;
+    } else if (strcmp(name, "VCLEFT_swcLeftTiltRight") == 0) { 
+      state->left_btn_tilt_right = value == 2 ? 1 : 0;
+      return;
+    } else
+    if (strcmp(name, "VCLEFT_swcRightScrollTicks") == 0) { 
+      if(value != 21 && value != 0) {
+        state->right_btn_scroll_up = value > 0 ? 1 : 0;
+        state->right_btn_scroll_down = value < 0 ? 1 : 0;
+      }
+      return;
+    } else if (strcmp(name, "VCLEFT_swcRightDoublePress") == 0) { 
+      state->right_btn_dbl_press = value > 0.5f ? 1 : 0;
+      return;
+    } else if (strcmp(name, "VCLEFT_swcRightPressed") == 0) { 
+      state->right_btn_press = value == 2 ? 1 : 0;
+      return;
+    } else if (strcmp(name, "VCLEFT_swcRightTiltLeft") == 0) { 
+      state->right_btn_tilt_left = value == 2 ? 1 : 0;
+      return;
+    } else if (strcmp(name, "VCLEFT_swcRightTiltRight") == 0) { 
+      state->right_btn_tilt_right = value == 2 ? 1 : 0;
+      return;
+    } else if (strcmp(name, "VCLEFT_screenDarkMode") == 0) { 
+      ESP_LOGI(TAG_CAN, "%s %f", name, value);
+      state->night_mode = value > 0.5f;
+      return;
+    }
+  } else
   // ---------------------------------------------------------------------
   // Vitesse véhicule : ID257DIspeed / DI_vehicleSpeed (kph)
   // ---------------------------------------------------------------------
@@ -145,11 +187,21 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
               if (strcmp(name, "VCFRONT_indicatorLeftRequest") == 0) {
                 int v = (int)(value + 0.5f);
                 state->turn_left = (v >= 1) ? 1 : 0;
+                if(state->turn_left && state->turn_right) {
+                  state->hazard = 1;
+                } else {
+                  state->hazard = 0;
+                }
                 return;
               }
               if (strcmp(name, "VCFRONT_indicatorRightRequest") == 0) {
                 int v = (int)(value + 0.5f);
                 state->turn_right = (v >= 1) ? 1 : 0;
+                if(state->turn_left && state->turn_right) {
+                  state->hazard = 1;
+                } else {
+                  state->hazard = 0;
+                }
                 return;
               }
 
@@ -181,10 +233,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg,
               //  3=SNA
               // ---------------------------------------------------------------------
               if (id == 0x399) {
-                if(value >0) {
-                  ESP_LOGI(TAG_CAN, "%x %s %f", id, name, value);
-                }
-
                 if (strcmp(name, "DAS_autopilotState") == 0) {
                   state->autopilot = value;
                   return;

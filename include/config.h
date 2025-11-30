@@ -32,10 +32,10 @@
 #define I2S_SD_PIN 11
 
 // Pins TWAI (CAN)
-#define CAN_TX_CHASSIS_PIN 8
-#define CAN_RX_CHASSIS_PIN 7
-#define CAN_TX_BODY_PIN 10
-#define CAN_RX_BODY_PIN 9
+#define CAN_TX_CHASSIS_PIN 10
+#define CAN_RX_CHASSIS_PIN 9
+#define CAN_TX_BODY_PIN 8
+#define CAN_RX_BODY_PIN 7
 
 #endif
 

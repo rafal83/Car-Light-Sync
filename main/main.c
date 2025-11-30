@@ -77,9 +77,48 @@ static void can_event_task(void *pvParameters) {
 
     // has_profile = config_manager_get_active_profile(&profile);
 
+    // if (current_state.left_btn_press ) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
+    // }
+    // if (current_state.left_btn_dbl_press ) {
+    //     config_manager_stop_event(CAN_EVENT_TURN_LEFT);
+    // }
+    // if (current_state.left_btn_scroll_up ) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
+    // }
+    // if (current_state.left_btn_scroll_down) {
+    //     config_manager_stop_event(CAN_EVENT_TURN_LEFT);
+    // }
+
+    // if (current_state.right_btn_press ) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
+    // }
+    // if (current_state.right_btn_dbl_press ) {
+    //     config_manager_stop_event(CAN_EVENT_TURN_LEFT);
+    // }
+
+    // if (current_state.right_btn_scroll_up) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
+    // }
+    // if (current_state.right_btn_scroll_down) {
+    //     config_manager_stop_event(CAN_EVENT_TURN_RIGHT);
+    // }
+    // if (current_state.right_btn_tilt_left) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
+    // }
+    // if (current_state.right_btn_tilt_right) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
+    // }
+    // if (current_state.left_btn_tilt_left) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
+    // }
+    // if (current_state.left_btn_tilt_right) {
+    //     config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
+    // }
     // Détecter les changements d'état et générer des événements
     // Clignotants - IMPORTANT: if séparés pour détecter chaque changement
     // indépendamment
+
     if (previous_state.hazard != current_state.hazard) {
       ESP_LOGI(TAG_MAIN, "Hazard changé: %d -> %d", previous_state.hazard,
                current_state.hazard);
@@ -203,23 +242,29 @@ static void can_event_task(void *pvParameters) {
       }
     }
     // Autopilot
-    // 9 "ABORTED"
-    // 8 "ABORTING"
-    // 5 "ACTIVE_NAV"
+    // 0 "DISABLED"
+    // 1 "UNAVAILABLE"
+    // 2 "AVAILABLE"
     // 3 "ACTIVE_NOMINAL"
     // 4 "ACTIVE_RESTRICTED"
-    // 2 "AVAILABLE"
-    // 0 "DISABLED"
+    // 5 "ACTIVE_NAV"
+    // 8 "ABORTING"
+    // 9 "ABORTED"
     // 14 "FAULT"
     // 15 "SNA"
-    // 1 "UNAVAILABLE"
     if (current_state.autopilot != previous_state.autopilot) {
       if (current_state.autopilot >= 3 && current_state.autopilot <= 5) {
         config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ENGAGED);
-      } else if (current_state.autopilot == 9) {
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
-      } else if (current_state.autopilot == 8) {
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_ABORTING);
+      } else if (current_state.autopilot == 9) {
+        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
+        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ENGAGED);
+        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ABORTING);
+      } else if (current_state.autopilot == 8) {
+        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ABORTING);
+        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ENGAGED);
+        config_manager_stop_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
       }
     }
 
@@ -372,23 +417,22 @@ static void monitor_task(void *pvParameters) {
         ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid,
                  wifi_status.sta_ip);
       }
-
-      if (can_chassis_status.running) {
-        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: RX=%lu, TX=%lu, Err=%lu",
-                 can_chassis_status.rx_count, can_chassis_status.tx_count,
-                 can_chassis_status.errors);
-      } else {
-        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: Déconnecté");
-      }
-
+      
       if (can_body_status.running) {
         ESP_LOGI(TAG_MAIN, "CAN BODY: RX=%lu, TX=%lu, Err=%lu",
-                 can_body_status.rx_count, can_body_status.tx_count,
-                 can_body_status.errors);
+          can_body_status.rx_count, can_body_status.tx_count,
+          can_body_status.errors);
       } else {
         ESP_LOGI(TAG_MAIN, "CAN BODY: Déconnecté");
       }
-
+        
+      if (can_chassis_status.running) {
+        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: RX=%lu, TX=%lu, Err=%lu",
+                  can_chassis_status.rx_count, can_chassis_status.tx_count,
+                  can_chassis_status.errors);
+      } else {
+        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: Déconnecté");
+      }
       ESP_LOGI(TAG_MAIN, "Mémoire libre: %lu bytes", esp_get_free_heap_size());
 #ifdef CONFIG_HAS_PSRAM
       ESP_LOGI(TAG_MAIN, "PSRAM libre: %d bytes",

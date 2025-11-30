@@ -70,6 +70,10 @@
                 <div class="status-label" data-i18n="status.wifi">WiFi</div>
                 <div class="status-value" id="wifi-status">...</div>
             </div>
+            <div class="status-item">
+                <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
+                <div class="status-value" id="vehicle-status">...</div>
+            </div>            
             <div class="status-item status-item-can">
                 <div class="status-label" data-i18n="status.canBus">CAN Bus</div>
                 <div class="status-can-group">
@@ -82,10 +86,6 @@
                         <span class="status-value" id="can-body-status">...</span>
                     </div>
                 </div>
-            </div>
-            <div class="status-item">
-                <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
-                <div class="status-value" id="vehicle-status">...</div>
             </div>
             <div class="status-item">
                 <div class="status-label" data-i18n="status.profile">Profil</div>
@@ -237,13 +237,13 @@
             </div>
             <div class="section-subtitle" data-i18n="vehicle.sentryTitle">Mode Sentry</div>
             <div class="vehicle-grid">
+              <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.autopilot">Autopilot</div>
+                  <div class="vehicle-value" id="v-autopilot">--</div>
+              </div>
                 <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.sentryMode">État UI</div>
+                    <div class="vehicle-label" data-i18n="vehicle.sentryMode">Mode Sentry</div>
                     <div class="vehicle-value" id="v-sentry-mode">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.sentryRequest">Requête Autopilot</div>
-                    <div class="vehicle-value" id="v-sentry-request">--</div>
                 </div>
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.sentryAlert">Alerte</div>

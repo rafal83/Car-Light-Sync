@@ -174,7 +174,7 @@ esp_err_t can_bus_start(can_bus_type_t bus_type) {
 
 #if !(ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2)
   // Skip pour le bus BODY si pas de support multi-contrôleur
-  if (bus_type == CAN_BUS_BODY) {
+  if (bus_type == CAN_BUS_CHASSIS) {
     ESP_LOGW(TAG_CAN_BUS, "[%s] Bus désactivé (nécessite ESP-IDF 5.2.0+)", bus_name);
     return ESP_OK;
   }
@@ -299,7 +299,7 @@ esp_err_t can_bus_send(can_bus_type_t bus_type, const can_frame_t *frame) {
 
   if (ret != ESP_OK) {
     ctx->errors++;
-    const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
+    const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
     ESP_LOGW(TAG_CAN_BUS, "[%s] Erreur twai_transmit: %s", bus_name, esp_err_to_name(ret));
     return ret;
   }
