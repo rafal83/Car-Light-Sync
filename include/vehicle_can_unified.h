@@ -78,6 +78,12 @@ extern "C" {
     uint8_t blindspot_left_lv2;
     uint8_t blindspot_right_lv1;
     uint8_t blindspot_right_lv2;
+
+    uint8_t lane_departure_warning_left_lv1;
+    uint8_t lane_departure_warning_left_lv2;
+    uint8_t lane_departure_warning_right_lv1;
+    uint8_t lane_departure_warning_right_lv2;
+
     uint8_t forward_collision;
     uint8_t night_mode;
     float brightness;

@@ -229,6 +229,35 @@ static void can_event_task(void *pvParameters) {
         config_manager_stop_event(CAN_EVENT_FORWARD_COLLISION);
       }
     }
+    if (current_state.lane_departure_warning_left_lv1 != previous_state.lane_departure_warning_left_lv1) {
+      if (current_state.lane_departure_warning_left_lv1) {
+        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1);
+      } else {
+        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1);
+      }
+    }
+    if (current_state.lane_departure_warning_left_lv2 != previous_state.lane_departure_warning_left_lv2) {
+      if (current_state.lane_departure_warning_left_lv2) {
+        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2);
+      } else {
+        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2);
+      }
+    }
+    if (current_state.lane_departure_warning_right_lv1 != previous_state.lane_departure_warning_right_lv1) {
+      if (current_state.lane_departure_warning_right_lv1) {
+        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1);
+      } else {
+        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1);
+      }
+    }
+    if (current_state.lane_departure_warning_right_lv2 != previous_state.lane_departure_warning_right_lv2) {
+      if (current_state.lane_departure_warning_right_lv2) {
+        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2);
+      } else {
+        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2);
+      }
+    }
+
     if (current_state.sentry_mode != previous_state.sentry_mode) {
       if (current_state.sentry_mode) {
         config_manager_process_can_event(CAN_EVENT_SENTRY_MODE_ON);

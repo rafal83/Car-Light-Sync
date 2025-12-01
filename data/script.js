@@ -664,6 +664,15 @@ const simulationSections = [
         ]
     },
     {
+        titleKey: 'simulation.laneDeparture',
+        events: [
+            { id: 'LANE_DEPARTURE_LEFT_LV1', labelKey: 'simulation.laneDepartureLeftLv1' },
+            { id: 'LANE_DEPARTURE_LEFT_LV2', labelKey: 'simulation.laneDepartureLeftLv2' },
+            { id: 'LANE_DEPARTURE_RIGHT_LV1', labelKey: 'simulation.laneDepartureRightLv1' },
+            { id: 'LANE_DEPARTURE_RIGHT_LV2', labelKey: 'simulation.laneDepartureRightLv2' }
+        ]
+    },
+    {
         titleKey: 'simulation.sentry',
         events: [
             { id: 'SENTRY_MODE_ON', labelKey: 'simulation.sentryOn' },
@@ -1890,6 +1899,11 @@ async function updateStatus() {
                 $('v-blindspot-right-lv1').textContent = v.safety.br1 ? t('status.active') : t('status.inactive');
                 $('v-blindspot-right-lv2').textContent = v.safety.br2 ? t('status.active') : t('status.inactive');
 
+                $('v-lane-departure-left-lv1').textContent = v.safety.ldl1 ? t('status.active') : t('status.inactive');
+                $('v-lane-departure-left-lv2').textContent = v.safety.ldl2 ? t('status.active') : t('status.inactive');
+                $('v-lane-departure-right-lv1').textContent = v.safety.ldr1 ? t('status.active') : t('status.inactive');
+                $('v-lane-departure-right-lv2').textContent = v.safety.ldr2 ? t('status.active') : t('status.inactive');
+
                 const sentryModeEl = $('v-sentry-mode');
                 if (sentryModeEl) {
                     if (typeof v.safety.sm === 'boolean') {
@@ -1935,6 +1949,8 @@ async function updateStatus() {
                 'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness', 
                 'v-blindspot-left-lv1', 'v-blindspot-right-lv1',
                 'v-blindspot-left-lv2', 'v-blindspot-right-lv2',
+                'v-lane-departure-left-lv1', 'v-lane-departure-right-lv1',
+                'v-lane-departure-left-lv2', 'v-lane-departure-right-lv2',
                 'v-sentry-mode', 'v-autopilot', 'v-sentry-alert'
             ];
             fields.forEach(id => {
@@ -2621,6 +2637,8 @@ const EVENT_TO_COMMON = {
     'BRAKE_ON': 'brakeOn', 'BRAKE_OFF': 'brakeOff',
     'BLINDSPOT_LEFT_LV1': 'blindspotLeftLv1', 'BLINDSPOT_LEFT_LV2': 'blindspotLeftLv2',
     'BLINDSPOT_RIGHT_LV1': 'blindspotRightLv1', 'BLINDSPOT_RIGHT_LV2': 'blindspotRightLv2',
+    'LANE_DEPARTURE_LEFT_LV1': 'laneDepartureLeftLv1', 'LANE_DEPARTURE_LEFT_LV2': 'laneDepartureLeftLv2',
+    'LANE_DEPARTURE_RIGHT_LV1': 'laneDepartureRightLv1', 'LANE_DEPARTURE_RIGHT_LV2': 'laneDepartureRightLv2',
     'NIGHT_MODE_ON': 'nightModeOn', 'NIGHT_MODE_OFF': 'nightModeOff',
     'SPEED_THRESHOLD': 'speedThreshold'
 };
