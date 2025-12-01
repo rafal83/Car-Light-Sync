@@ -1,31 +1,31 @@
-#include "esp_log.h"
-#include "esp_system.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "nvs_flash.h"
-#include <stdio.h>
-#include <string.h>
-
+#include "audio_input.h"
 #include "ble_api_service.h"
-#include "vehicle_can_mapping.h"
 #include "can_bus.h"
 #include "captive_portal.h"
 #include "config.h"
 #include "config_manager.h"
+#include "esp_log.h"
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "led_effects.h"
 #include "led_strip_encoder.h"
+#include "nvs_flash.h"
 #include "ota_update.h"
+#include "reset_button.h"
 #include "sdkconfig.h"
+#include "status_led.h"
+#include "status_manager.h"
 #include "task_core_utils.h"
+#include "vehicle_can_mapping.h"
 #include "vehicle_can_unified.h"
 #include "version_info.h"
 #include "web_server.h"
 #include "wifi_credentials.h" // Configuration WiFi optionnelle
 #include "wifi_manager.h"
-#include "audio_input.h"
-#include "status_led.h"
-#include "reset_button.h"
-#include "status_manager.h"
+
+#include <stdio.h>
+#include <string.h>
 
 // La config est générée par generate_vehicle_can_config.py
 #include "vehicle_can_unified_config.h"
@@ -120,8 +120,7 @@ static void can_event_task(void *pvParameters) {
     // indépendamment
 
     if (previous_state.hazard != current_state.hazard) {
-      ESP_LOGI(TAG_MAIN, "Hazard changé: %d -> %d", previous_state.hazard,
-               current_state.hazard);
+      ESP_LOGI(TAG_MAIN, "Hazard changé: %d -> %d", previous_state.hazard, current_state.hazard);
       if (current_state.hazard) {
         config_manager_process_can_event(CAN_EVENT_TURN_HAZARD);
       } else {
@@ -130,8 +129,7 @@ static void can_event_task(void *pvParameters) {
     }
 
     if (previous_state.turn_left != current_state.turn_left) {
-      ESP_LOGI(TAG_MAIN, "Turn left changé: %d -> %d", previous_state.turn_left,
-               current_state.turn_left);
+      ESP_LOGI(TAG_MAIN, "Turn left changé: %d -> %d", previous_state.turn_left, current_state.turn_left);
       if (current_state.turn_left) {
         config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
       } else {
@@ -140,8 +138,7 @@ static void can_event_task(void *pvParameters) {
     }
 
     if (previous_state.turn_right != current_state.turn_right) {
-      ESP_LOGI(TAG_MAIN, "Turn right changé: %d -> %d", previous_state.turn_right,
-               current_state.turn_right);
+      ESP_LOGI(TAG_MAIN, "Turn right changé: %d -> %d", previous_state.turn_right, current_state.turn_right);
       if (current_state.turn_right) {
         config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
       } else {
@@ -150,7 +147,7 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Portes
-    bool doors_open_now = current_state.doors_open_count > 0;
+    bool doors_open_now    = current_state.doors_open_count > 0;
     bool doors_open_before = previous_state.doors_open_count > 0;
 
     if (doors_open_now != doors_open_before) {
@@ -184,8 +181,7 @@ static void can_event_task(void *pvParameters) {
 
     // Freins
     if (current_state.brake_pressed != previous_state.brake_pressed) {
-      ESP_LOGI(TAG_MAIN, "Brake changé: %d -> %d", previous_state.brake_pressed,
-               current_state.brake_pressed);
+      ESP_LOGI(TAG_MAIN, "Brake changé: %d -> %d", previous_state.brake_pressed, current_state.brake_pressed);
       if (current_state.brake_pressed) {
         config_manager_process_can_event(CAN_EVENT_BRAKE_ON);
       } else {
@@ -413,7 +409,7 @@ void status_manager_update_led_now(void) {
 static void monitor_task(void *pvParameters) {
   ESP_LOGI(TAG_MAIN, "Tâche de monitoring démarrée");
 
-  TickType_t last_print = 0;
+  TickType_t last_print          = 0;
   TickType_t last_activity_check = 0;
 
   while (1) {
@@ -421,7 +417,8 @@ static void monitor_task(void *pvParameters) {
 
     // Mettre à jour la LED de statut toutes les 5 secondes
     if (now - last_activity_check > pdMS_TO_TICKS(5000)) {
-      // Ne pas changer la LED si elle est en mode FACTORY_RESET (reset en cours)
+      // Ne pas changer la LED si elle est en mode FACTORY_RESET (reset en
+      // cours)
       if (status_led_get_state() != STATUS_LED_FACTORY_RESET) {
         update_status_led_internal();
       }
@@ -438,34 +435,26 @@ static void monitor_task(void *pvParameters) {
       can_bus_get_status(CAN_BUS_BODY, &can_body_status);
 
       ESP_LOGI(TAG_MAIN, "=== Statut ===");
-      ESP_LOGI(TAG_MAIN, "WiFi AP: %s (IP: %s, Clients: %d)",
-               wifi_status.ap_started ? "Actif" : "Inactif", wifi_status.ap_ip,
-               wifi_status.connected_clients);
+      ESP_LOGI(TAG_MAIN, "WiFi AP: %s (IP: %s, Clients: %d)", wifi_status.ap_started ? "Actif" : "Inactif", wifi_status.ap_ip, wifi_status.connected_clients);
 
       if (wifi_status.sta_connected) {
-        ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid,
-                 wifi_status.sta_ip);
+        ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid, wifi_status.sta_ip);
       }
-      
+
       if (can_body_status.running) {
-        ESP_LOGI(TAG_MAIN, "CAN BODY: RX=%lu, TX=%lu, Err=%lu",
-          can_body_status.rx_count, can_body_status.tx_count,
-          can_body_status.errors);
+        ESP_LOGI(TAG_MAIN, "CAN BODY: RX=%lu, TX=%lu, Err=%lu", can_body_status.rx_count, can_body_status.tx_count, can_body_status.errors);
       } else {
         ESP_LOGI(TAG_MAIN, "CAN BODY: Déconnecté");
       }
-        
+
       if (can_chassis_status.running) {
-        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: RX=%lu, TX=%lu, Err=%lu",
-                  can_chassis_status.rx_count, can_chassis_status.tx_count,
-                  can_chassis_status.errors);
+        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: RX=%lu, TX=%lu, Err=%lu", can_chassis_status.rx_count, can_chassis_status.tx_count, can_chassis_status.errors);
       } else {
         ESP_LOGI(TAG_MAIN, "CAN CHASSIS: Déconnecté");
       }
       ESP_LOGI(TAG_MAIN, "Mémoire libre: %lu bytes", esp_get_free_heap_size());
 #ifdef CONFIG_HAS_PSRAM
-      ESP_LOGI(TAG_MAIN, "PSRAM libre: %d bytes",
-               heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+      ESP_LOGI(TAG_MAIN, "PSRAM libre: %d bytes", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 #endif
       ESP_LOGI(TAG_MAIN, "==============");
 
@@ -482,7 +471,9 @@ static void *psram_malloc(size_t size) {
   return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 }
 
-static void psram_free(void *ptr) { heap_caps_free(ptr); }
+static void psram_free(void *ptr) {
+  heap_caps_free(ptr);
+}
 #endif
 
 void app_main(void) {
@@ -523,8 +514,7 @@ void app_main(void) {
 
   // Initialiser NVS
   esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
   }
@@ -560,7 +550,7 @@ void app_main(void) {
   // CAN bus - Body
   ESP_ERROR_CHECK(can_bus_init(CAN_BUS_BODY, CAN_TX_BODY_PIN, CAN_RX_BODY_PIN));
   ESP_LOGI(TAG_MAIN, "✓ CAN bus BODY initialisé (GPIO TX=%d, RX=%d)", CAN_TX_BODY_PIN, CAN_RX_BODY_PIN);
-  
+
   // CAN bus - Chassis
   ESP_ERROR_CHECK(can_bus_init(CAN_BUS_CHASSIS, CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN));
   ESP_LOGI(TAG_MAIN, "✓ CAN bus CHASSIS initialisé (GPIO TX=%d, RX=%d)", CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN);
@@ -602,25 +592,20 @@ void app_main(void) {
   if (ble_init_status == ESP_OK) {
     esp_err_t ble_start_status = ble_api_service_start();
     if (ble_start_status != ESP_OK) {
-      ESP_LOGW(TAG_MAIN, "Impossible de démarrer le service BLE: %s",
-               esp_err_to_name(ble_start_status));
+      ESP_LOGW(TAG_MAIN, "Impossible de démarrer le service BLE: %s", esp_err_to_name(ble_start_status));
     }
   } else {
-    ESP_LOGW(TAG_MAIN, "Service BLE non disponible: %s",
-             esp_err_to_name(ble_init_status));
+    ESP_LOGW(TAG_MAIN, "Service BLE non disponible: %s", esp_err_to_name(ble_init_status));
   }
 #else
-  ESP_LOGW(TAG_MAIN,
-           "BLE désactivé dans la configuration, Web Bluetooth indisponible");
+  ESP_LOGW(TAG_MAIN, "BLE désactivé dans la configuration, Web Bluetooth indisponible");
 #endif
 
   // Créer les tâches
   create_task_on_led_core(led_task, "led_task", 4096, NULL, 5, NULL);
-  create_task_on_general_core(
-      can_event_task, "can_event_task", 8192, NULL, 4,
-      NULL); // Augmenté à 8KB à cause de config_profile_t
-  create_task_on_general_core(monitor_task, "monitor_task", 4096, NULL, 2,
-                              NULL);
+  create_task_on_general_core(can_event_task, "can_event_task", 8192, NULL, 4,
+                              NULL); // Augmenté à 8KB à cause de config_profile_t
+  create_task_on_general_core(monitor_task, "monitor_task", 4096, NULL, 2, NULL);
 
   // WiFi
   status_led_set_state(STATUS_LED_WIFI_CONNECTING);

@@ -2,6 +2,7 @@
 #define CONFIG_MANAGER_H
 
 #include "led_effects.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -105,11 +106,10 @@ typedef struct {
   can_event_type_t event;
   event_action_type_t action_type; // Type d'action à effectuer
   effect_config_t effect_config;
-  uint16_t
-      duration_ms; // Durée de l'effet (0 = permanent jusqu'à nouvel événement)
-  uint8_t priority;  // Priorité (0-255, plus haut = prioritaire)
-  int8_t profile_id; // ID du profil à activer (-1 = aucun)
-  bool enabled;      // Actif ou non
+  uint16_t duration_ms; // Durée de l'effet (0 = permanent jusqu'à nouvel événement)
+  uint8_t priority;     // Priorité (0-255, plus haut = prioritaire)
+  int8_t profile_id;    // ID du profil à activer (-1 = aucun)
+  bool enabled;         // Actif ou non
 } can_event_effect_t;
 
 // Profil de configuration complet
@@ -148,8 +148,7 @@ int config_manager_load_profiles(void);
  * @param profile Profil à sauvegarder
  * @return true si succès
  */
-bool config_manager_save_profile(uint8_t profile_id,
-                                 const config_profile_t *profile);
+bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *profile);
 
 /**
  * @brief Charge un profil depuis NVS
@@ -199,8 +198,7 @@ int config_manager_list_profiles(config_profile_t *profiles, int max_profiles);
  * @param profile Pointeur vers le profil
  * @param name Nom du profil
  */
-void config_manager_create_default_profile(config_profile_t *profile,
-                                           const char *name);
+void config_manager_create_default_profile(config_profile_t *profile, const char *name);
 
 /**
  * @brief Associe un effet à un événement CAN
@@ -211,9 +209,7 @@ void config_manager_create_default_profile(config_profile_t *profile,
  * @param priority Priorité
  * @return true si succès
  */
-bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event,
-                                     const effect_config_t *effect_config,
-                                     uint16_t duration_ms, uint8_t priority);
+bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority);
 
 /**
  * @brief Active ou désactive un événement
@@ -222,8 +218,7 @@ bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event,
  * @param enabled true pour activer, false pour désactiver
  * @return true si succès
  */
-bool config_manager_set_event_enabled(uint8_t profile_id,
-                                      can_event_type_t event, bool enabled);
+bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event, bool enabled);
 
 /**
  * @brief Traite un événement CAN et applique l'effet correspondant
@@ -252,8 +247,7 @@ void config_manager_update(void);
  * @param buffer_size Taille du buffer
  * @return true si succès
  */
-bool config_manager_export_profile(uint8_t profile_id, char *json_buffer,
-                                   size_t buffer_size);
+bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t buffer_size);
 
 /**
  * @brief Importe un profil depuis JSON
@@ -276,8 +270,7 @@ const char *config_manager_get_event_name(can_event_type_t event);
  * @param event_effect Pointeur vers la structure d'effet
  * @return true si succès (profil actif existe)
  */
-bool config_manager_get_effect_for_event(can_event_type_t event,
-                                         can_event_effect_t *event_effect);
+bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t *event_effect);
 
 /**
  * @brief Obtient le nombre de LEDs configuré

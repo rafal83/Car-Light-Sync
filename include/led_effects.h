@@ -2,6 +2,7 @@
 #define LED_EFFECTS_H
 
 #include "vehicle_can_unified.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -94,8 +95,8 @@ typedef struct {
   uint32_t color2;
   uint32_t color3;
   sync_mode_t sync_mode;
-  bool reverse;    // Direction de l'animation (pour compatibilité)
-  led_zone_t zone; // Zone d'application (full, left, right)
+  bool reverse;        // Direction de l'animation (pour compatibilité)
+  led_zone_t zone;     // Zone d'application (full, left, right)
   bool audio_reactive; // L'effet réagit au micro si activé
 } effect_config_t;
 
@@ -121,8 +122,7 @@ void led_effects_set_config(const effect_config_t *config);
  * @param left_config Configuration pour le côté gauche (peut être NULL)
  * @param right_config Configuration pour le côté droit (peut être NULL)
  */
-void led_effects_set_dual_directional(const effect_config_t *left_config,
-                                      const effect_config_t *right_config);
+void led_effects_set_dual_directional(const effect_config_t *left_config, const effect_config_t *right_config);
 
 /**
  * @brief Obtient la configuration actuelle
@@ -250,7 +250,8 @@ bool led_effects_requires_can(led_effect_t effect);
 bool led_effects_requires_fft(led_effect_t effect);
 
 /**
- * @brief Vérifie si un effet est audio-réactif (donc non sélectionnable dans les événements CAN)
+ * @brief Vérifie si un effet est audio-réactif (donc non sélectionnable dans
+ * les événements CAN)
  * @param effect Type d'effet
  * @return true si l'effet est audio-réactif, false sinon
  */

@@ -1,4 +1,6 @@
 #include "web_server.h"
+
+#include "audio_input.h"
 #include "cJSON.h"
 #include "can_bus.h"
 #include "config.h"
@@ -9,16 +11,16 @@
 #include "ota_update.h"
 #include "vehicle_can_unified.h"
 #include "wifi_manager.h"
-#include "audio_input.h"
+
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-static httpd_handle_t server = NULL;
+static httpd_handle_t server                 = NULL;
 static vehicle_state_t current_vehicle_state = {0};
 static esp_err_t event_single_post_handler(httpd_req_t *req);
 
@@ -56,10 +58,10 @@ void web_server_update_vehicle_state(const vehicle_state_t *state) {
 
 static esp_err_t static_file_handler(httpd_req_t *req) {
   static_file_route_t *route = (static_file_route_t *)req->user_ctx;
-  const size_t file_size = (route->end - route->start);
+  const size_t file_size     = (route->end - route->start);
 
   // Vérifier si la connexion est toujours valide
-  int sockfd = httpd_req_to_sockfd(req);
+  int sockfd                 = httpd_req_to_sockfd(req);
   if (sockfd < 0) {
     ESP_LOGW(TAG_WEBSERVER, "Socket invalide pour URI %s", route->uri);
     return ESP_FAIL;
@@ -76,13 +78,13 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
   // Fermer la connexion après l'envoi (désactive keep-alive pour cette requête)
   httpd_resp_set_hdr(req, "Connection", "close");
 
-  // Toujours envoyer par chunks pour éviter EAGAIN, même pour petits fichiers
-  #define CHUNK_SIZE 1024  // Réduit à 1KB pour éviter buffer overflow
-  #define MAX_RETRIES 10   // Augmenté à 10 retries
+// Toujours envoyer par chunks pour éviter EAGAIN, même pour petits fichiers
+#define CHUNK_SIZE 1024 // Réduit à 1KB pour éviter buffer overflow
+#define MAX_RETRIES 10  // Augmenté à 10 retries
 
   const uint8_t *data = route->start;
-  size_t remaining = file_size;
-  esp_err_t err = ESP_OK;
+  size_t remaining    = file_size;
+  esp_err_t err       = ESP_OK;
 
   ESP_LOGD(TAG_WEBSERVER, "Envoi fichier %s (%d bytes)", route->uri, file_size);
 
@@ -90,7 +92,7 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     size_t chunk_size = (remaining > CHUNK_SIZE) ? CHUNK_SIZE : remaining;
 
     // Réessayer jusqu'à MAX_RETRIES fois en cas d'EAGAIN
-    int retries = 0;
+    int retries       = 0;
     while (retries < MAX_RETRIES) {
       err = httpd_resp_send_chunk(req, (const char *)data, chunk_size);
 
@@ -102,21 +104,19 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
         retries++;
         // Délai exponentiel: 20ms, 40ms, 80ms, etc.
         int delay_ms = 20 * (1 << (retries - 1));
-        if (delay_ms > 500) delay_ms = 500; // Max 500ms
-        ESP_LOGD(TAG_WEBSERVER, "EAGAIN pour %s, retry %d/%d (wait %dms)",
-                 route->uri, retries, MAX_RETRIES, delay_ms);
+        if (delay_ms > 500)
+          delay_ms = 500; // Max 500ms
+        ESP_LOGD(TAG_WEBSERVER, "EAGAIN pour %s, retry %d/%d (wait %dms)", route->uri, retries, MAX_RETRIES, delay_ms);
         vTaskDelay(pdMS_TO_TICKS(delay_ms));
       } else {
         // Autre erreur, abandonner
-        ESP_LOGW(TAG_WEBSERVER, "Erreur envoi chunk pour %s: %s (errno: %d)",
-                 route->uri, esp_err_to_name(err), errno);
+        ESP_LOGW(TAG_WEBSERVER, "Erreur envoi chunk pour %s: %s (errno: %d)", route->uri, esp_err_to_name(err), errno);
         return err;
       }
     }
 
     if (err != ESP_OK) {
-      ESP_LOGW(TAG_WEBSERVER, "Échec envoi après %d retries pour %s",
-               MAX_RETRIES, route->uri);
+      ESP_LOGW(TAG_WEBSERVER, "Échec envoi après %d retries pour %s", MAX_RETRIES, route->uri);
       return err;
     }
 
@@ -132,8 +132,7 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
   // Terminer l'envoi chunké
   err = httpd_resp_send_chunk(req, NULL, 0);
   if (err != ESP_OK) {
-    ESP_LOGW(TAG_WEBSERVER, "Erreur fin chunk pour %s: %s",
-             route->uri, esp_err_to_name(err));
+    ESP_LOGW(TAG_WEBSERVER, "Erreur fin chunk pour %s: %s", route->uri, esp_err_to_name(err));
   } else {
     ESP_LOGD(TAG_WEBSERVER, "Fichier %s envoyé avec succès", route->uri);
   }
@@ -143,8 +142,7 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
 
 // Handler d'erreur 404 pour le portail captif
 // Redirige toutes les URLs non trouvées vers la page principale
-static esp_err_t captive_portal_404_handler(httpd_req_t *req,
-                                            httpd_err_code_t err) {
+static esp_err_t captive_portal_404_handler(httpd_req_t *req, httpd_err_code_t err) {
   if (err == HTTPD_404_NOT_FOUND) {
     // Envoyer la page principale (index.html) pour toutes les requêtes non
     // trouvées
@@ -153,8 +151,7 @@ static esp_err_t captive_portal_404_handler(httpd_req_t *req,
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
 
-    ESP_LOGD(TAG_WEBSERVER, "Portail captif: redirection de %s vers index.html",
-             req->uri);
+    ESP_LOGD(TAG_WEBSERVER, "Portail captif: redirection de %s vers index.html", req->uri);
     return httpd_resp_send(req, (const char *)index_html_gz_start, file_size);
   }
 
@@ -171,12 +168,12 @@ static esp_err_t status_handler(httpd_req_t *req) {
   wifi_manager_get_status(&wifi_status);
   cJSON_AddBoolToObject(root, "wc", wifi_status.sta_connected);
   cJSON_AddStringToObject(root, "wip", wifi_status.sta_ip);
-  
+
   // Statut CAN Bus - Body
   can_bus_status_t can_body_status;
   can_bus_get_status(CAN_BUS_BODY, &can_body_status);
   cJSON *can_body = cJSON_CreateObject();
-  cJSON_AddBoolToObject(can_body, "r", can_body_status.rx_count > 0); //can_body_status.running);
+  cJSON_AddBoolToObject(can_body, "r", can_body_status.rx_count > 0); // can_body_status.running);
   // cJSON_AddNumberToObject(can_body, "rx", can_body_status.rx_count);
   // cJSON_AddNumberToObject(can_body, "tx", can_body_status.tx_count);
   cJSON_AddNumberToObject(can_body, "er", can_body_status.errors);
@@ -186,16 +183,16 @@ static esp_err_t status_handler(httpd_req_t *req) {
   can_bus_status_t can_chassis_status;
   can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
   cJSON *can_chassis = cJSON_CreateObject();
-  cJSON_AddBoolToObject(can_chassis, "r", can_chassis_status.rx_count > 0); //can_chassis_status.running);
+  cJSON_AddBoolToObject(can_chassis, "r",
+                        can_chassis_status.rx_count > 0); // can_chassis_status.running);
   // cJSON_AddNumberToObject(can_chassis, "rx", can_chassis_status.rx_count);
   // cJSON_AddNumberToObject(can_chassis, "tx", can_chassis_status.tx_count);
   cJSON_AddNumberToObject(can_chassis, "er", can_chassis_status.errors);
   cJSON_AddItemToObject(root, "cbc", can_chassis);
 
   // Statut véhicule
-  uint32_t now = xTaskGetTickCount();
-  bool vehicle_active =
-      (now - current_vehicle_state.last_update_ms) < pdMS_TO_TICKS(5000);
+  uint32_t now        = xTaskGetTickCount();
+  bool vehicle_active = (now - current_vehicle_state.last_update_ms) < pdMS_TO_TICKS(5000);
   cJSON_AddBoolToObject(root, "va", vehicle_active);
 
   // Données véhicule complètes
@@ -204,23 +201,17 @@ static esp_err_t status_handler(httpd_req_t *req) {
   // État général
   cJSON_AddNumberToObject(vehicle, "g", current_vehicle_state.gear);
   cJSON_AddNumberToObject(vehicle, "s", current_vehicle_state.speed_kph);
-  cJSON_AddNumberToObject(vehicle, "bp",
-                          current_vehicle_state.brake_pressed);
+  cJSON_AddNumberToObject(vehicle, "bp", current_vehicle_state.brake_pressed);
 
   // Portes
   cJSON *doors = cJSON_CreateObject();
-  cJSON_AddBoolToObject(doors, "fl",
-                        current_vehicle_state.door_front_left_open);
-  cJSON_AddBoolToObject(doors, "fr",
-                        current_vehicle_state.door_front_right_open);
-  cJSON_AddBoolToObject(doors, "rl",
-                        current_vehicle_state.door_rear_left_open);
-  cJSON_AddBoolToObject(doors, "rr",
-                        current_vehicle_state.door_rear_right_open);
+  cJSON_AddBoolToObject(doors, "fl", current_vehicle_state.door_front_left_open);
+  cJSON_AddBoolToObject(doors, "fr", current_vehicle_state.door_front_right_open);
+  cJSON_AddBoolToObject(doors, "rl", current_vehicle_state.door_rear_left_open);
+  cJSON_AddBoolToObject(doors, "rr", current_vehicle_state.door_rear_right_open);
   cJSON_AddBoolToObject(doors, "t", current_vehicle_state.trunk_open);
   cJSON_AddBoolToObject(doors, "f", current_vehicle_state.frunk_open);
-  cJSON_AddNumberToObject(doors, "co",
-                          current_vehicle_state.doors_open_count);
+  cJSON_AddNumberToObject(doors, "co", current_vehicle_state.doors_open_count);
   cJSON_AddItemToObject(vehicle, "doors", doors);
 
   // Verrouillage
@@ -240,37 +231,25 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON *charge = cJSON_CreateObject();
   cJSON_AddBoolToObject(charge, "ch", current_vehicle_state.charging);
   cJSON_AddNumberToObject(charge, "pct", current_vehicle_state.soc_percent);
-  cJSON_AddNumberToObject(charge, "pw",
-                          current_vehicle_state.charge_power_kw);
+  cJSON_AddNumberToObject(charge, "pw", current_vehicle_state.charge_power_kw);
   cJSON_AddItemToObject(vehicle, "charge", charge);
 
   // Batterie et autres
-  cJSON_AddNumberToObject(vehicle, "blv",
-                          current_vehicle_state.battery_voltage_LV);
-  cJSON_AddNumberToObject(vehicle, "bhv",
-                          current_vehicle_state.battery_voltage_HV);
-  cJSON_AddNumberToObject(vehicle, "odo",
-                          current_vehicle_state.odometer_km);
+  cJSON_AddNumberToObject(vehicle, "blv", current_vehicle_state.battery_voltage_LV);
+  cJSON_AddNumberToObject(vehicle, "bhv", current_vehicle_state.battery_voltage_HV);
+  cJSON_AddNumberToObject(vehicle, "odo", current_vehicle_state.odometer_km);
 
   // Sécurité
   cJSON *safety = cJSON_CreateObject();
-  cJSON_AddBoolToObject(safety, "bl1",
-                        current_vehicle_state.blindspot_left_lv1);
-  cJSON_AddBoolToObject(safety, "bl2",
-                        current_vehicle_state.blindspot_left_lv2);
-  cJSON_AddBoolToObject(safety, "br1",
-                        current_vehicle_state.blindspot_right_lv1);
-  cJSON_AddBoolToObject(safety, "br2",
-                        current_vehicle_state.blindspot_right_lv2);
+  cJSON_AddBoolToObject(safety, "bl1", current_vehicle_state.blindspot_left_lv1);
+  cJSON_AddBoolToObject(safety, "bl2", current_vehicle_state.blindspot_left_lv2);
+  cJSON_AddBoolToObject(safety, "br1", current_vehicle_state.blindspot_right_lv1);
+  cJSON_AddBoolToObject(safety, "br2", current_vehicle_state.blindspot_right_lv2);
   cJSON_AddBoolToObject(safety, "nm", current_vehicle_state.night_mode);
-  cJSON_AddNumberToObject(safety, "br",
-                          current_vehicle_state.brightness);
-  cJSON_AddBoolToObject(safety, "sm",
-                          current_vehicle_state.sentry_mode);
-  cJSON_AddNumberToObject(safety, "ap",
-                          current_vehicle_state.autopilot);
-  cJSON_AddBoolToObject(safety, "sa",
-                          current_vehicle_state.sentry_alert);
+  cJSON_AddNumberToObject(safety, "br", current_vehicle_state.brightness);
+  cJSON_AddBoolToObject(safety, "sm", current_vehicle_state.sentry_mode);
+  cJSON_AddNumberToObject(safety, "ap", current_vehicle_state.autopilot);
+  cJSON_AddBoolToObject(safety, "sa", current_vehicle_state.sentry_alert);
   cJSON_AddItemToObject(vehicle, "safety", safety);
 
   cJSON_AddItemToObject(root, "vehicle", vehicle);
@@ -278,8 +257,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   // Profil actuellement appliqué (peut changer temporairement via évènements)
   int active_profile_id = config_manager_get_active_profile_id();
   cJSON_AddNumberToObject(root, "pid", active_profile_id);
-  config_profile_t *active_profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *active_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (active_profile && config_manager_get_active_profile(active_profile)) {
     cJSON_AddStringToObject(root, "pn", active_profile->name);
   } else {
@@ -316,12 +294,10 @@ static esp_err_t config_handler(httpd_req_t *req) {
 
   // Ajouter les paramètres du profil actif (allouer dynamiquement pour éviter
   // stack overflow)
-  config_profile_t *profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile != NULL && config_manager_get_active_profile(profile)) {
     cJSON_AddBoolToObject(root, "anm", profile->auto_night_mode);
-    cJSON_AddNumberToObject(root, "nbr",
-                            profile->night_brightness);
+    cJSON_AddNumberToObject(root, "nbr", profile->night_brightness);
     free(profile);
   } else if (profile != NULL) {
     free(profile);
@@ -357,7 +333,7 @@ static esp_err_t effect_handler(httpd_req_t *req) {
 
   content[ret] = '\0';
 
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -403,7 +379,7 @@ static esp_err_t effect_handler(httpd_req_t *req) {
 // Handler pour sauvegarder la configuration
 static esp_err_t save_handler(httpd_req_t *req) {
   // Sauvegarder tous les paramètres: LED + Audio
-  bool led_success = led_effects_save_config();
+  bool led_success   = led_effects_save_config();
   bool audio_success = audio_input_save_config();
 
   if (led_success && audio_success) {
@@ -412,8 +388,7 @@ static esp_err_t save_handler(httpd_req_t *req) {
     ESP_LOGI(TAG_WEBSERVER, "Configuration sauvegardée (LED + Audio)");
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Save failed");
-    ESP_LOGE(TAG_WEBSERVER, "Échec sauvegarde - LED: %s, Audio: %s",
-             led_success ? "OK" : "FAIL", audio_success ? "OK" : "FAIL");
+    ESP_LOGE(TAG_WEBSERVER, "Échec sauvegarde - LED: %s, Audio: %s", led_success ? "OK" : "FAIL", audio_success ? "OK" : "FAIL");
   }
 
   return ESP_OK;
@@ -433,13 +408,13 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
 
   content[ret] = '\0';
 
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
   }
 
-  const cJSON *led_count_json = cJSON_GetObjectItem(root, "lc");
+  const cJSON *led_count_json     = cJSON_GetObjectItem(root, "lc");
   const cJSON *strip_reverse_json = cJSON_GetObjectItem(root, "srv");
 
   if (led_count_json == NULL) {
@@ -469,15 +444,13 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
 
   if (success) {
     if (!led_effects_set_led_count(led_count)) {
-      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                          "Failed to apply new LED count");
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to apply new LED count");
       return ESP_FAIL;
     }
 
     cJSON *response = cJSON_CreateObject();
     cJSON_AddStringToObject(response, "st", "ok");
-    cJSON_AddStringToObject(response, "msg",
-                            "Configuration saved and applied.");
+    cJSON_AddStringToObject(response, "msg", "Configuration saved and applied.");
     cJSON_AddBoolToObject(response, "rr", false);
 
     const char *json_string = cJSON_PrintUnformatted(response);
@@ -487,11 +460,9 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     free((void *)json_string);
     cJSON_Delete(response);
 
-    ESP_LOGI(TAG_WEBSERVER, "Configuration LED appliquée: %d LEDs, GPIO %d", led_count,
-             LED_PIN);
+    ESP_LOGI(TAG_WEBSERVER, "Configuration LED appliquée: %d LEDs, GPIO %d", led_count, LED_PIN);
   } else {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Failed to save configuration");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save configuration");
   }
 
   return ESP_OK;
@@ -500,17 +471,15 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
 // Handler pour lister les profils
 static esp_err_t profiles_handler(httpd_req_t *req) {
   // Allouer un seul profil à la fois pour économiser la mémoire
-  config_profile_t *profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
     ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire pour profil");
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
-  int active_id = config_manager_get_active_profile_id();
-  cJSON *root = cJSON_CreateObject();
+  int active_id         = config_manager_get_active_profile_id();
+  cJSON *root           = cJSON_CreateObject();
   cJSON *profiles_array = cJSON_CreateArray();
 
   // Charger chaque profil un par un
@@ -526,16 +495,11 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 
     // Ajouter l'effet par défaut
     cJSON *default_effect_obj = cJSON_CreateObject();
-    cJSON_AddNumberToObject(default_effect_obj, "fx",
-                            profile->default_effect.effect);
-    cJSON_AddNumberToObject(default_effect_obj, "br",
-                            profile->default_effect.brightness);
-    cJSON_AddNumberToObject(default_effect_obj, "sp",
-                            profile->default_effect.speed);
-    cJSON_AddNumberToObject(default_effect_obj, "c1",
-                            profile->default_effect.color1);
-    cJSON_AddBoolToObject(default_effect_obj, "ar",
-                          profile->default_effect.audio_reactive);
+    cJSON_AddNumberToObject(default_effect_obj, "fx", profile->default_effect.effect);
+    cJSON_AddNumberToObject(default_effect_obj, "br", profile->default_effect.brightness);
+    cJSON_AddNumberToObject(default_effect_obj, "sp", profile->default_effect.speed);
+    cJSON_AddNumberToObject(default_effect_obj, "c1", profile->default_effect.color1);
+    cJSON_AddBoolToObject(default_effect_obj, "ar", profile->default_effect.audio_reactive);
     cJSON_AddItemToObject(profile_obj, "default_effect", default_effect_obj);
 
     cJSON_AddItemToArray(profiles_array, profile_obj);
@@ -572,7 +536,7 @@ static esp_err_t profile_activate_handler(httpd_req_t *req) {
   }
 
   content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -582,8 +546,7 @@ static esp_err_t profile_activate_handler(httpd_req_t *req) {
   if (profile_id) {
     bool success = config_manager_activate_profile(profile_id->valueint);
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}"
-                                    : "{\"status\":\"error\"}");
+    httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}" : "{\"status\":\"error\"}");
   } else {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id");
   }
@@ -603,7 +566,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
   }
 
   content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -617,9 +580,8 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
   }
 
   // Allouer dynamiquement pour éviter le stack overflow
-  config_profile_t *temp = (config_profile_t *)malloc(sizeof(config_profile_t));
-  config_profile_t *new_profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *temp        = (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *new_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
 
   if (temp == NULL || new_profile == NULL) {
     ESP_LOGE(TAG_WEBSERVER, "Échec allocation mémoire pour profil");
@@ -628,8 +590,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
     if (new_profile)
       free(new_profile);
     cJSON_Delete(root);
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
@@ -651,8 +612,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
         httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
         return ESP_OK;
       } else {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                            "Failed to save profile");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save profile");
         return ESP_FAIL;
       }
     }
@@ -677,7 +637,7 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
   }
 
   content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -685,12 +645,11 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
 
   const cJSON *profile_id = cJSON_GetObjectItem(root, "pid");
   if (profile_id) {
-    bool success = config_manager_delete_profile(profile_id->valueint);
+    bool success    = config_manager_delete_profile(profile_id->valueint);
     cJSON *response = cJSON_CreateObject();
     cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
     if (!success) {
-      cJSON_AddStringToObject(response, "msg",
-                              "Profile in use by an event or deletion failed");
+      cJSON_AddStringToObject(response, "msg", "Profile in use by an event or deletion failed");
     } else {
       config_manager_activate_profile(0);
     }
@@ -709,13 +668,12 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
 
 // Handler pour factory reset
 static esp_err_t factory_reset_handler(httpd_req_t *req) {
-  bool success = config_manager_factory_reset();
+  bool success    = config_manager_factory_reset();
 
   cJSON *response = cJSON_CreateObject();
   cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
   if (success) {
-    cJSON_AddStringToObject(response, "msg",
-                            "Factory reset successful. Device will restart.");
+    cJSON_AddStringToObject(response, "msg", "Factory reset successful. Device will restart.");
   } else {
     cJSON_AddStringToObject(response, "msg", "Factory reset failed");
   }
@@ -737,7 +695,7 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
 
 // Handler pour mettre à jour les paramètres d'un profil
 static esp_err_t profile_update_handler(httpd_req_t *req) {
-  char content[512];  // Augmenté pour accepter settings + effet par défaut
+  char content[512]; // Augmenté pour accepter settings + effet par défaut
   int ret = httpd_req_recv(req, content, sizeof(content) - 1);
 
   if (ret <= 0) {
@@ -746,7 +704,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
 
   content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -759,15 +717,13 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  uint8_t profile_id = (uint8_t)profile_id_json->valueint;
+  uint8_t profile_id        = (uint8_t)profile_id_json->valueint;
 
   // Allouer dynamiquement pour éviter stack overflow
-  config_profile_t *profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
     ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire");
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     cJSON_Delete(root);
     return ESP_FAIL;
   }
@@ -791,32 +747,32 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
 
   // Mettre à jour l'effet par défaut si fourni
-  bool default_effect_updated = false;
-  const cJSON *effect_json = cJSON_GetObjectItem(root, "fx");
-  const cJSON *brightness_json = cJSON_GetObjectItem(root, "br");
-  const cJSON *speed_json = cJSON_GetObjectItem(root, "sp");
-  const cJSON *color_json = cJSON_GetObjectItem(root, "c1");
+  bool default_effect_updated      = false;
+  const cJSON *effect_json         = cJSON_GetObjectItem(root, "fx");
+  const cJSON *brightness_json     = cJSON_GetObjectItem(root, "br");
+  const cJSON *speed_json          = cJSON_GetObjectItem(root, "sp");
+  const cJSON *color_json          = cJSON_GetObjectItem(root, "c1");
   const cJSON *audio_reactive_json = cJSON_GetObjectItem(root, "ar");
 
   if (effect_json) {
     profile->default_effect.effect = (led_effect_t)effect_json->valueint;
-    default_effect_updated = true;
+    default_effect_updated         = true;
   }
   if (brightness_json) {
     profile->default_effect.brightness = (uint8_t)brightness_json->valueint;
-    default_effect_updated = true;
+    default_effect_updated             = true;
   }
   if (speed_json) {
     profile->default_effect.speed = (uint8_t)speed_json->valueint;
-    default_effect_updated = true;
+    default_effect_updated        = true;
   }
   if (color_json) {
     profile->default_effect.color1 = (uint32_t)color_json->valueint;
-    default_effect_updated = true;
+    default_effect_updated         = true;
   }
   if (audio_reactive_json && cJSON_IsBool(audio_reactive_json)) {
     profile->default_effect.audio_reactive = cJSON_IsTrue(audio_reactive_json);
-    default_effect_updated = true;
+    default_effect_updated                 = true;
   }
 
   // Sauvegarder le profil
@@ -837,7 +793,8 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     ESP_LOGI(TAG_WEBSERVER,
              "Updated profile settings (auto: %s, brightness: %d, night state: %s)",
              profile->auto_night_mode ? "ENABLED" : "DISABLED",
-             profile->night_brightness, current_night_mode ? "ON" : "OFF");
+             profile->night_brightness,
+             current_night_mode ? "ON" : "OFF");
   }
 
   free(profile);
@@ -859,7 +816,7 @@ static esp_err_t event_effect_handler(httpd_req_t *req) {
   }
 
   content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -872,39 +829,36 @@ static esp_err_t event_effect_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  const cJSON *event = cJSON_GetObjectItem(root, "event");
-  const cJSON *effect = cJSON_GetObjectItem(root, "effect");
-  const cJSON *duration = cJSON_GetObjectItem(root, "duration");
-  const cJSON *priority = cJSON_GetObjectItem(root, "priority");
+  const cJSON *event      = cJSON_GetObjectItem(root, "event");
+  const cJSON *effect     = cJSON_GetObjectItem(root, "effect");
+  const cJSON *duration   = cJSON_GetObjectItem(root, "duration");
+  const cJSON *priority   = cJSON_GetObjectItem(root, "priority");
   const cJSON *brightness = cJSON_GetObjectItem(root, "brightness");
-  const cJSON *speed = cJSON_GetObjectItem(root, "speed");
-  const cJSON *color1 = cJSON_GetObjectItem(root, "color1");
+  const cJSON *speed      = cJSON_GetObjectItem(root, "speed");
+  const cJSON *color1     = cJSON_GetObjectItem(root, "color1");
 
   if (event && effect) {
     effect_config_t effect_config;
     effect_config.effect = effect->valueint;
 
-    // Vérifier que l'effet n'est pas un effet audio (non autorisé dans les événements)
+    // Vérifier que l'effet n'est pas un effet audio (non autorisé dans les
+    // événements)
     if (led_effects_is_audio_effect(effect_config.effect)) {
-      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                          "Audio effects cannot be assigned to CAN events");
+      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Audio effects cannot be assigned to CAN events");
       cJSON_Delete(root);
       return ESP_FAIL;
     }
 
     effect_config.brightness = brightness ? brightness->valueint : 128;
-    effect_config.speed = speed ? speed->valueint : 50;
-    effect_config.color1 = color1 ? color1->valueint : 0xFF0000;
+    effect_config.speed      = speed ? speed->valueint : 50;
+    effect_config.color1     = color1 ? color1->valueint : 0xFF0000;
 
-    bool success = config_manager_set_event_effect(
-        profile_id, event->valueint, &effect_config,
-        duration ? duration->valueint : 0, priority ? priority->valueint : 100);
+    bool success             = config_manager_set_event_effect(profile_id, event->valueint, &effect_config, duration ? duration->valueint : 0, priority ? priority->valueint : 100);
 
     if (success) {
       // Sauvegarder le profil (allouer dynamiquement pour éviter stack
       // overflow)
-      config_profile_t *profile =
-          (config_profile_t *)malloc(sizeof(config_profile_t));
+      config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
       if (profile != NULL) {
         if (config_manager_get_active_profile(profile)) {
           config_manager_save_profile(profile_id, profile);
@@ -914,8 +868,7 @@ static esp_err_t event_effect_handler(httpd_req_t *req) {
     }
 
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}"
-                                    : "{\"status\":\"error\"}");
+    httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}" : "{\"status\":\"error\"}");
   } else {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing parameters");
   }
@@ -929,26 +882,22 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
   // Récupérer le profile_id depuis les paramètres de query
   char query[32];
   if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                        "Missing profile_id parameter");
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id parameter");
     return ESP_FAIL;
   }
 
   char param_value[16];
-  if (httpd_query_key_value(query, "profile_id", param_value,
-                            sizeof(param_value)) != ESP_OK) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                        "Missing profile_id parameter");
+  if (httpd_query_key_value(query, "profile_id", param_value, sizeof(param_value)) != ESP_OK) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id parameter");
     return ESP_FAIL;
   }
 
   uint8_t profile_id = atoi(param_value);
 
   // Allouer un buffer pour le JSON (8KB devrait suffire pour un profil complet)
-  char *json_buffer = malloc(8192);
+  char *json_buffer  = malloc(8192);
   if (!json_buffer) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
@@ -957,8 +906,7 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
   if (success) {
     // Envoyer le JSON avec les bons headers pour le téléchargement
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_set_hdr(req, "Content-Disposition",
-                       "attachment; filename=profile.json");
+    httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=profile.json");
     httpd_resp_sendstr(req, json_buffer);
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Export failed");
@@ -973,8 +921,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   // Allouer un buffer pour recevoir le JSON
   char *content = malloc(8192);
   if (!content) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
@@ -989,7 +936,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   content[ret] = '\0';
 
   // Parser pour obtenir le profile_id et le JSON
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     free(content);
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
@@ -997,13 +944,12 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   }
 
   const cJSON *profile_id_json = cJSON_GetObjectItem(root, "profile_id");
-  const cJSON *profile_data = cJSON_GetObjectItem(root, "profile_data");
+  const cJSON *profile_data    = cJSON_GetObjectItem(root, "profile_data");
 
   if (!profile_id_json || !profile_data) {
     cJSON_Delete(root);
     free(content);
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                        "Missing profile_id or profile_data");
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id or profile_data");
     return ESP_FAIL;
   }
 
@@ -1014,8 +960,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   if (!profile_json) {
     cJSON_Delete(root);
     free(content);
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Failed to serialize profile");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to serialize profile");
     return ESP_FAIL;
   }
 
@@ -1026,8 +971,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   free(content);
 
   httpd_resp_set_type(req, "application/json");
-  httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}"
-                                  : "{\"status\":\"error\"}");
+  httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}" : "{\"status\":\"error\"}");
 
   return ESP_OK;
 }
@@ -1067,15 +1011,14 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
   int remaining = req->content_len;
   int received;
   bool first_chunk = true;
-  esp_err_t ret = ESP_OK;
+  esp_err_t ret    = ESP_OK;
 
   ESP_LOGI(TAG_WEBSERVER, "Début upload OTA, taille: %d octets", remaining);
 
   // Démarrer l'OTA
   ret = ota_begin(req->content_len);
   if (ret != ESP_OK) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "OTA begin failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA begin failed");
     return ESP_FAIL;
   }
 
@@ -1090,8 +1033,7 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
       }
       ESP_LOGE(TAG_WEBSERVER, "Erreur réception données OTA");
       ota_abort();
-      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                          "Upload failed");
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Upload failed");
       return ESP_FAIL;
     }
 
@@ -1123,8 +1065,9 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
   ESP_LOGI(TAG_WEBSERVER, "Upload OTA terminé avec succès");
 
   httpd_resp_set_type(req, "application/json");
-  httpd_resp_sendstr(req, "{\"status\":\"ok\",\"message\":\"Upload successful, "
-                          "restart to apply\"}");
+  httpd_resp_sendstr(req,
+                     "{\"status\":\"ok\",\"message\":\"Upload successful, "
+                     "restart to apply\"}");
 
   return ESP_OK;
 }
@@ -1154,7 +1097,7 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
   }
 
   content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -1191,20 +1134,16 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
 
 // Handler pour obtenir la liste des effets disponibles
 static esp_err_t effects_list_handler(httpd_req_t *req) {
-  cJSON *root = cJSON_CreateObject();
+  cJSON *root    = cJSON_CreateObject();
   cJSON *effects = cJSON_CreateArray();
 
   // Parcourir tous les effets disponibles
   for (int i = 0; i < EFFECT_MAX; i++) {
     cJSON *effect = cJSON_CreateObject();
-    cJSON_AddStringToObject(effect, "id",
-                            led_effects_enum_to_id((led_effect_t)i));
-    cJSON_AddStringToObject(effect, "n",
-                            led_effects_get_name((led_effect_t)i));
-    cJSON_AddBoolToObject(effect, "cr",
-                          led_effects_requires_can((led_effect_t)i));
-    cJSON_AddBoolToObject(effect, "ae",
-                          led_effects_is_audio_effect((led_effect_t)i));
+    cJSON_AddStringToObject(effect, "id", led_effects_enum_to_id((led_effect_t)i));
+    cJSON_AddStringToObject(effect, "n", led_effects_get_name((led_effect_t)i));
+    cJSON_AddBoolToObject(effect, "cr", led_effects_requires_can((led_effect_t)i));
+    cJSON_AddBoolToObject(effect, "ae", led_effects_is_audio_effect((led_effect_t)i));
     cJSON_AddItemToArray(effects, effect);
   }
 
@@ -1221,16 +1160,14 @@ static esp_err_t effects_list_handler(httpd_req_t *req) {
 
 // Handler pour obtenir la liste des types d'événements CAN
 static esp_err_t event_types_list_handler(httpd_req_t *req) {
-  cJSON *root = cJSON_CreateObject();
+  cJSON *root        = cJSON_CreateObject();
   cJSON *event_types = cJSON_CreateArray();
 
   // Parcourir tous les types d'événements CAN
   for (int i = 0; i < CAN_EVENT_MAX; i++) {
     cJSON *event_type = cJSON_CreateObject();
-    cJSON_AddStringToObject(event_type, "id",
-                            config_manager_enum_to_id((can_event_type_t)i));
-    cJSON_AddStringToObject(event_type, "n",
-                            config_manager_get_event_name((can_event_type_t)i));
+    cJSON_AddStringToObject(event_type, "id", config_manager_enum_to_id((can_event_type_t)i));
+    cJSON_AddStringToObject(event_type, "n", config_manager_get_event_name((can_event_type_t)i));
     cJSON_AddItemToArray(event_types, event_type);
   }
 
@@ -1256,7 +1193,7 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
   }
 
   content[ret] = '\0';
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   if (root == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -1291,13 +1228,11 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
   // Traiter l'événement
   bool success = config_manager_process_can_event(event);
 
-  ESP_LOGI(TAG_WEBSERVER, "Simulation événement CAN: %s (%d)",
-           config_manager_get_event_name(event), event);
+  ESP_LOGI(TAG_WEBSERVER, "Simulation événement CAN: %s (%d)", config_manager_get_event_name(event), event);
 
   cJSON *response = cJSON_CreateObject();
   cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
-  cJSON_AddStringToObject(response, "ev",
-                          config_manager_get_event_name(event));
+  cJSON_AddStringToObject(response, "ev", config_manager_get_event_name(event));
 
   const char *json_string = cJSON_PrintUnformatted(response);
   httpd_resp_set_type(req, "application/json");
@@ -1311,39 +1246,35 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
 }
 
 // Handler pour obtenir tous les événements CAN (GET)
-static bool apply_event_update_from_json(config_profile_t *profile,
-                                         int profile_id, cJSON *event_obj) {
+static bool apply_event_update_from_json(config_profile_t *profile, int profile_id, cJSON *event_obj) {
   if (profile == NULL || event_obj == NULL) {
     return false;
   }
 
-  const cJSON *event_json = cJSON_GetObjectItem(event_obj, "ev");
-  const cJSON *effect_json = cJSON_GetObjectItem(event_obj, "fx");
-  const cJSON *brightness_json = cJSON_GetObjectItem(event_obj, "br");
-  const cJSON *speed_json = cJSON_GetObjectItem(event_obj, "sp");
-  const cJSON *color_json = cJSON_GetObjectItem(event_obj, "c1");
-  const cJSON *duration_json = cJSON_GetObjectItem(event_obj, "dur");
-  const cJSON *priority_json = cJSON_GetObjectItem(event_obj, "pri");
-  const cJSON *enabled_json = cJSON_GetObjectItem(event_obj, "en");
+  const cJSON *event_json       = cJSON_GetObjectItem(event_obj, "ev");
+  const cJSON *effect_json      = cJSON_GetObjectItem(event_obj, "fx");
+  const cJSON *brightness_json  = cJSON_GetObjectItem(event_obj, "br");
+  const cJSON *speed_json       = cJSON_GetObjectItem(event_obj, "sp");
+  const cJSON *color_json       = cJSON_GetObjectItem(event_obj, "c1");
+  const cJSON *duration_json    = cJSON_GetObjectItem(event_obj, "dur");
+  const cJSON *priority_json    = cJSON_GetObjectItem(event_obj, "pri");
+  const cJSON *enabled_json     = cJSON_GetObjectItem(event_obj, "en");
   const cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "at");
-  const cJSON *profile_id_json = cJSON_GetObjectItem(event_obj, "pid");
+  const cJSON *profile_id_json  = cJSON_GetObjectItem(event_obj, "pid");
 
-  if (event_json == NULL || effect_json == NULL ||
-      !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
+  if (event_json == NULL || effect_json == NULL || !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
     ESP_LOGW(TAG_WEBSERVER, "Payload d'evenement invalide");
     return false;
   }
 
-  can_event_type_t event_type =
-      config_manager_id_to_enum(event_json->valuestring);
+  can_event_type_t event_type = config_manager_id_to_enum(event_json->valuestring);
   if (event_type <= CAN_EVENT_NONE || event_type >= CAN_EVENT_MAX) {
     ESP_LOGW(TAG_WEBSERVER, "Evenement inconnu: %s", event_json->valuestring);
     return false;
   }
 
-  effect_config_t effect_config =
-      profile->event_effects[event_type].effect_config;
-  effect_config.effect = led_effects_id_to_enum(effect_json->valuestring);
+  effect_config_t effect_config = profile->event_effects[event_type].effect_config;
+  effect_config.effect          = led_effects_id_to_enum(effect_json->valuestring);
   if (brightness_json && cJSON_IsNumber(brightness_json)) {
     effect_config.brightness = brightness_json->valueint;
   }
@@ -1354,39 +1285,27 @@ static bool apply_event_update_from_json(config_profile_t *profile,
     effect_config.color1 = color_json->valueint;
   }
   effect_config.sync_mode = SYNC_OFF;
-  effect_config.reverse = (event_type == CAN_EVENT_TURN_LEFT ||
-                           event_type == CAN_EVENT_BLINDSPOT_LEFT_LV1 ||
-                           event_type == CAN_EVENT_BLINDSPOT_LEFT_LV2
-                          );
+  effect_config.reverse   = (event_type == CAN_EVENT_TURN_LEFT || event_type == CAN_EVENT_BLINDSPOT_LEFT_LV1 || event_type == CAN_EVENT_BLINDSPOT_LEFT_LV2);
 
-  uint16_t duration = duration_json && cJSON_IsNumber(duration_json)
-                          ? duration_json->valueint
-                          : profile->event_effects[event_type].duration_ms;
-  uint8_t priority = priority_json && cJSON_IsNumber(priority_json)
-                         ? priority_json->valueint
-                         : profile->event_effects[event_type].priority;
-  bool enabled = enabled_json ? cJSON_IsTrue(enabled_json)
-                              : profile->event_effects[event_type].enabled;
+  uint16_t duration       = duration_json && cJSON_IsNumber(duration_json) ? duration_json->valueint : profile->event_effects[event_type].duration_ms;
+  uint8_t priority        = priority_json && cJSON_IsNumber(priority_json) ? priority_json->valueint : profile->event_effects[event_type].priority;
+  bool enabled            = enabled_json ? cJSON_IsTrue(enabled_json) : profile->event_effects[event_type].enabled;
 
-  if (!config_manager_set_event_effect(profile_id, event_type, &effect_config,
-                                       duration, priority)) {
+  if (!config_manager_set_event_effect(profile_id, event_type, &effect_config, duration, priority)) {
     return false;
   }
   config_manager_set_event_enabled(profile_id, event_type, enabled);
 
   profile->event_effects[event_type].event = event_type;
-  memcpy(&profile->event_effects[event_type].effect_config, &effect_config,
-         sizeof(effect_config_t));
+  memcpy(&profile->event_effects[event_type].effect_config, &effect_config, sizeof(effect_config_t));
   profile->event_effects[event_type].duration_ms = duration;
-  profile->event_effects[event_type].priority = priority;
-  profile->event_effects[event_type].enabled = enabled;
+  profile->event_effects[event_type].priority    = priority;
+  profile->event_effects[event_type].enabled     = enabled;
 
   if (action_type_json && cJSON_IsNumber(action_type_json)) {
     int action_type = action_type_json->valueint;
-    if (action_type >= EVENT_ACTION_APPLY_EFFECT &&
-        action_type <= EVENT_ACTION_SWITCH_PROFILE) {
-      profile->event_effects[event_type].action_type =
-          (event_action_type_t)action_type;
+    if (action_type >= EVENT_ACTION_APPLY_EFFECT && action_type <= EVENT_ACTION_SWITCH_PROFILE) {
+      profile->event_effects[event_type].action_type = (event_action_type_t)action_type;
     }
   }
   if (profile_id_json && cJSON_IsNumber(profile_id_json)) {
@@ -1397,7 +1316,7 @@ static bool apply_event_update_from_json(config_profile_t *profile,
 }
 
 static esp_err_t events_get_handler(httpd_req_t *req) {
-  cJSON *root = cJSON_CreateObject();
+  cJSON *root         = cJSON_CreateObject();
   cJSON *events_array = cJSON_CreateArray();
 
   // Itérer à travers tous les événements CAN (sauf CAN_EVENT_NONE)
@@ -1410,26 +1329,17 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
       cJSON *event_obj = cJSON_CreateObject();
 
       // Utiliser des IDs alphanumériques
-      cJSON_AddStringToObject(event_obj, "ev",
-                              config_manager_enum_to_id(event_effect.event));
-      cJSON_AddStringToObject(
-          event_obj, "fx",
-          led_effects_enum_to_id(event_effect.effect_config.effect));
-      cJSON_AddNumberToObject(event_obj, "br",
-                              event_effect.effect_config.brightness);
-      cJSON_AddNumberToObject(event_obj, "sp",
-                              event_effect.effect_config.speed);
-      cJSON_AddNumberToObject(event_obj, "c1",
-                              event_effect.effect_config.color1);
+      cJSON_AddStringToObject(event_obj, "ev", config_manager_enum_to_id(event_effect.event));
+      cJSON_AddStringToObject(event_obj, "fx", led_effects_enum_to_id(event_effect.effect_config.effect));
+      cJSON_AddNumberToObject(event_obj, "br", event_effect.effect_config.brightness);
+      cJSON_AddNumberToObject(event_obj, "sp", event_effect.effect_config.speed);
+      cJSON_AddNumberToObject(event_obj, "c1", event_effect.effect_config.color1);
       cJSON_AddNumberToObject(event_obj, "dur", event_effect.duration_ms);
       cJSON_AddNumberToObject(event_obj, "pri", event_effect.priority);
       cJSON_AddBoolToObject(event_obj, "en", event_effect.enabled);
-      cJSON_AddNumberToObject(event_obj, "at",
-                              event_effect.action_type);
+      cJSON_AddNumberToObject(event_obj, "at", event_effect.action_type);
       cJSON_AddNumberToObject(event_obj, "pid", event_effect.profile_id);
-      cJSON_AddBoolToObject(
-          event_obj, "csp",
-          config_manager_event_can_switch_profile(event_type));
+      cJSON_AddBoolToObject(event_obj, "csp", config_manager_event_can_switch_profile(event_type));
 
       cJSON_AddItemToArray(events_array, event_obj);
     }
@@ -1449,8 +1359,8 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
 
 // Handler pour mettre à jour les événements CAN (POST)
 static esp_err_t events_post_handler(httpd_req_t *req) {
-  char *content = NULL;
-  int ret = 0;
+  char *content      = NULL;
+  int ret            = 0;
   size_t content_len = req->content_len;
 
   // Allouer de la mémoire pour le contenu (peut être grand)
@@ -1461,8 +1371,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 
   content = (char *)malloc(content_len + 1);
   if (content == NULL) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
@@ -1477,7 +1386,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 
   content[ret] = '\0';
 
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   free(content);
 
   if (root == NULL) {
@@ -1487,8 +1396,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 
   cJSON *events_array = cJSON_GetObjectItem(root, "events");
   if (events_array == NULL || !cJSON_IsArray(events_array)) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                        "Missing or invalid events array");
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or invalid events array");
     cJSON_Delete(root);
     return ESP_FAIL;
   }
@@ -1502,19 +1410,16 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 
   // Charger le profil une seule fois (allouer dynamiquement pour éviter stack
   // overflow)
-  config_profile_t *profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
     ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire");
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     cJSON_Delete(root);
     return ESP_FAIL;
   }
 
   if (!config_manager_load_profile(profile_id, profile)) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Failed to load profile");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to load profile");
     free(profile);
     cJSON_Delete(root);
     return ESP_FAIL;
@@ -1522,7 +1427,7 @@ static esp_err_t events_post_handler(httpd_req_t *req) {
 
   // Traiter chaque événement
   int updated_count = 0;
-  cJSON *event_obj = NULL;
+  cJSON *event_obj  = NULL;
   cJSON_ArrayForEach(event_obj, events_array) {
     if (apply_event_update_from_json(profile, profile_id, event_obj)) {
       updated_count++;
@@ -1585,7 +1490,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
     return ESP_FAIL;
   }
-  buf[ret] = '\0';
+  buf[ret]    = '\0';
 
   cJSON *root = cJSON_Parse(buf);
   if (root == NULL) {
@@ -1601,8 +1506,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
       ESP_LOGI(TAG_WEBSERVER, "Micro %s", enable ? "activé" : "désactivé");
     } else {
       cJSON_Delete(root);
-      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                          "Failed to toggle audio");
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to toggle audio");
       return ESP_FAIL;
     }
   }
@@ -1628,7 +1532,7 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
     return ESP_FAIL;
   }
-  buf[ret] = '\0';
+  buf[ret]    = '\0';
 
   cJSON *root = cJSON_Parse(buf);
   if (root == NULL) {
@@ -1681,7 +1585,8 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler GET /api/audio/data - Données audio en temps réel (avec FFT si activé)
+// Handler GET /api/audio/data - Données audio en temps réel (avec FFT si
+// activé)
 static esp_err_t audio_data_handler(httpd_req_t *req) {
   audio_data_t audio_data;
   audio_fft_data_t fft_data;
@@ -1703,7 +1608,7 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
   // Données FFT (si activées)
   if (audio_input_is_fft_enabled() && audio_input_get_fft_data(&fft_data)) {
     // Créer un objet FFT
-    cJSON *fft_obj = cJSON_CreateObject();
+    cJSON *fft_obj     = cJSON_CreateObject();
 
     // Ajouter les bandes FFT
     cJSON *bands_array = cJSON_CreateArray();
@@ -1834,265 +1739,156 @@ esp_err_t web_server_init(void) {
 }
 
 esp_err_t web_server_start(void) {
-  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.server_port = WEB_SERVER_PORT;
+  httpd_config_t config   = HTTPD_DEFAULT_CONFIG();
+  config.server_port      = WEB_SERVER_PORT;
   config.max_uri_handlers = 47; // Augmenté pour les handlers système (restart/factory-reset)
-  config.max_open_sockets = 13; // Augmenté pour gérer les rafraîchissements de page (max 7 par défaut)
+  config.max_open_sockets = 13; // Augmenté pour gérer les rafraîchissements de
+                                // page (max 7 par défaut)
   config.lru_purge_enable = true;
 #ifndef CONFIG_HAS_PSRAM
   config.stack_size = 24576;
 #else
   config.stack_size = 16384;
 #endif
-  config.recv_wait_timeout = 10; // Réduit de 30 à 10 secondes
-  config.send_wait_timeout = 30; // Augmenté à 30 secondes pour les gros fichiers .gz
-  config.close_fn = NULL; // Permet de fermer proprement les connexions
+  config.recv_wait_timeout = 10;    // Réduit de 30 à 10 secondes
+  config.send_wait_timeout = 30;    // Augmenté à 30 secondes pour les gros fichiers .gz
+  config.close_fn          = NULL;  // Permet de fermer proprement les connexions
   config.keep_alive_enable = false; // Désactive keep-alive pour libérer les connexions plus rapidement
 
   // Configuration TCP pour améliorer la transmission de gros fichiers
-  config.backlog_conn = 5;
-  config.core_id = tskNO_AFFINITY;
+  config.backlog_conn      = 5;
+  config.core_id           = tskNO_AFFINITY;
 
   ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 
   if (httpd_start(&server, &config) == ESP_OK) {
-    static static_file_route_t static_files[] = {
-        {"/", index_html_gz_start, index_html_gz_end, "text/html",
-         "public, max-age=31536000", "gzip"},
-        {"/i18n.js", i18n_js_gz_start, i18n_js_gz_end, "text/javascript",
-         "public, max-age=31536000", "gzip"},
-        {"/script.js", script_js_gz_start, script_js_gz_end, "text/javascript",
-         "public, max-age=31536000", "gzip"},
-        {"/style.css", style_css_gz_start, style_css_gz_end, "text/css",
-         "public, max-age=31536000", "gzip"},
-        {"/carlightsync64.png", carlightsync64_png_start, carlightsync64_png_end,
-         "image/png", "public, max-age=31536000", NULL}};
-    int num_static_files = sizeof(static_files) / sizeof(static_files[0]);
+    static static_file_route_t static_files[] = {{"/", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
+                                                 {"/i18n.js", i18n_js_gz_start, i18n_js_gz_end, "text/javascript", "public, max-age=31536000", "gzip"},
+                                                 {"/script.js", script_js_gz_start, script_js_gz_end, "text/javascript", "public, max-age=31536000", "gzip"},
+                                                 {"/style.css", style_css_gz_start, style_css_gz_end, "text/css", "public, max-age=31536000", "gzip"},
+                                                 {"/carlightsync64.png", carlightsync64_png_start, carlightsync64_png_end, "image/png", "public, max-age=31536000", NULL}};
+    int num_static_files                      = sizeof(static_files) / sizeof(static_files[0]);
 
     for (int i = 0; i < num_static_files; i++) {
-      httpd_uri_t uri = {.uri = static_files[i].uri,
-                         .method = HTTP_GET,
-                         .handler = static_file_handler,
-                         .user_ctx = &static_files[i]};
+      httpd_uri_t uri = {.uri = static_files[i].uri, .method = HTTP_GET, .handler = static_file_handler, .user_ctx = &static_files[i]};
       httpd_register_uri_handler(server, &uri);
     }
 
-    httpd_uri_t config_uri = {.uri = "/api/config",
-                              .method = HTTP_GET,
-                              .handler = config_handler,
-                              .user_ctx = NULL};
+    httpd_uri_t config_uri = {.uri = "/api/config", .method = HTTP_GET, .handler = config_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &config_uri);
 
-    httpd_uri_t status_uri = {.uri = "/api/status",
-                              .method = HTTP_GET,
-                              .handler = status_handler,
-                              .user_ctx = NULL};
+    httpd_uri_t status_uri = {.uri = "/api/status", .method = HTTP_GET, .handler = status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &status_uri);
 
-    httpd_uri_t effect_uri = {.uri = "/api/effect",
-                              .method = HTTP_POST,
-                              .handler = effect_handler,
-                              .user_ctx = NULL};
+    httpd_uri_t effect_uri = {.uri = "/api/effect", .method = HTTP_POST, .handler = effect_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &effect_uri);
 
-    httpd_uri_t save_uri = {.uri = "/api/save",
-                            .method = HTTP_POST,
-                            .handler = save_handler,
-                            .user_ctx = NULL};
+    httpd_uri_t save_uri = {.uri = "/api/save", .method = HTTP_POST, .handler = save_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &save_uri);
 
     // Routes pour les profils
-    httpd_uri_t profiles_uri = {.uri = "/api/profiles",
-                                .method = HTTP_GET,
-                                .handler = profiles_handler,
-                                .user_ctx = NULL};
+    httpd_uri_t profiles_uri = {.uri = "/api/profiles", .method = HTTP_GET, .handler = profiles_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profiles_uri);
 
-    httpd_uri_t profile_activate_uri = {.uri = "/api/profile/activate",
-                                        .method = HTTP_POST,
-                                        .handler = profile_activate_handler,
-                                        .user_ctx = NULL};
+    httpd_uri_t profile_activate_uri = {.uri = "/api/profile/activate", .method = HTTP_POST, .handler = profile_activate_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_activate_uri);
 
-    httpd_uri_t profile_create_uri = {.uri = "/api/profile/create",
-                                      .method = HTTP_POST,
-                                      .handler = profile_create_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t profile_create_uri = {.uri = "/api/profile/create", .method = HTTP_POST, .handler = profile_create_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_create_uri);
 
-    httpd_uri_t profile_delete_uri = {.uri = "/api/profile/delete",
-                                      .method = HTTP_POST,
-                                      .handler = profile_delete_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t profile_delete_uri = {.uri = "/api/profile/delete", .method = HTTP_POST, .handler = profile_delete_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_delete_uri);
 
-    httpd_uri_t factory_reset_uri = {.uri = "/api/factory-reset",
-                                     .method = HTTP_POST,
-                                     .handler = factory_reset_handler,
-                                     .user_ctx = NULL};
+    httpd_uri_t factory_reset_uri = {.uri = "/api/factory-reset", .method = HTTP_POST, .handler = factory_reset_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &factory_reset_uri);
 
-    httpd_uri_t profile_update_uri = {.uri = "/api/profile/update",
-                                      .method = HTTP_POST,
-                                      .handler = profile_update_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t profile_update_uri = {.uri = "/api/profile/update", .method = HTTP_POST, .handler = profile_update_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_update_uri);
 
-    httpd_uri_t event_effect_uri = {.uri = "/api/event-effect",
-                                    .method = HTTP_POST,
-                                    .handler = event_effect_handler,
-                                    .user_ctx = NULL};
+    httpd_uri_t event_effect_uri = {.uri = "/api/event-effect", .method = HTTP_POST, .handler = event_effect_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &event_effect_uri);
 
-    httpd_uri_t profile_export_uri = {.uri = "/api/profile/export",
-                                      .method = HTTP_GET,
-                                      .handler = profile_export_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t profile_export_uri = {.uri = "/api/profile/export", .method = HTTP_GET, .handler = profile_export_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_export_uri);
 
-    httpd_uri_t profile_import_uri = {.uri = "/api/profile/import",
-                                      .method = HTTP_POST,
-                                      .handler = profile_import_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t profile_import_uri = {.uri = "/api/profile/import", .method = HTTP_POST, .handler = profile_import_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_import_uri);
 
     // Routes OTA
-    httpd_uri_t ota_info_uri = {.uri = "/api/ota/info",
-                                .method = HTTP_GET,
-                                .handler = ota_info_handler,
-                                .user_ctx = NULL};
+    httpd_uri_t ota_info_uri = {.uri = "/api/ota/info", .method = HTTP_GET, .handler = ota_info_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &ota_info_uri);
 
-    httpd_uri_t ota_upload_uri = {.uri = "/api/ota/upload",
-                                  .method = HTTP_POST,
-                                  .handler = ota_upload_handler,
-                                  .user_ctx = NULL};
+    httpd_uri_t ota_upload_uri = {.uri = "/api/ota/upload", .method = HTTP_POST, .handler = ota_upload_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &ota_upload_uri);
 
-    httpd_uri_t ota_restart_uri = {.uri = "/api/ota/restart",
-                                   .method = HTTP_POST,
-                                   .handler = ota_restart_handler,
-                                   .user_ctx = NULL};
+    httpd_uri_t ota_restart_uri = {.uri = "/api/ota/restart", .method = HTTP_POST, .handler = ota_restart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &ota_restart_uri);
 
     // Route de simulation
-    httpd_uri_t simulate_event_uri = {.uri = "/api/simulate/event",
-                                      .method = HTTP_POST,
-                                      .handler = simulate_event_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t simulate_event_uri = {.uri = "/api/simulate/event", .method = HTTP_POST, .handler = simulate_event_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &simulate_event_uri);
 
-    httpd_uri_t stop_event_uri = {.uri = "/api/stop/event",
-                                  .method = HTTP_POST,
-                                  .handler = stop_event_handler,
-                                  .user_ctx = NULL};
+    httpd_uri_t stop_event_uri = {.uri = "/api/stop/event", .method = HTTP_POST, .handler = stop_event_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &stop_event_uri);
 
     // Routes pour obtenir les listes d'effets et d'événements
-    httpd_uri_t effects_list_uri = {.uri = "/api/effects",
-                                    .method = HTTP_GET,
-                                    .handler = effects_list_handler,
-                                    .user_ctx = NULL};
+    httpd_uri_t effects_list_uri = {.uri = "/api/effects", .method = HTTP_GET, .handler = effects_list_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &effects_list_uri);
 
-    httpd_uri_t event_types_list_uri = {.uri = "/api/event-types",
-                                        .method = HTTP_GET,
-                                        .handler = event_types_list_handler,
-                                        .user_ctx = NULL};
+    httpd_uri_t event_types_list_uri = {.uri = "/api/event-types", .method = HTTP_GET, .handler = event_types_list_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &event_types_list_uri);
 
     // Route POST /api/config pour configurer le matériel LED
-    httpd_uri_t config_post_uri = {.uri = "/api/config",
-                                   .method = HTTP_POST,
-                                   .handler = config_post_handler,
-                                   .user_ctx = NULL};
+    httpd_uri_t config_post_uri = {.uri = "/api/config", .method = HTTP_POST, .handler = config_post_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &config_post_uri);
 
     // Route POST /api/events pour mettre à jour les événements CAN
     // IMPORTANT: Enregistrer POST AVANT GET pour éviter les conflits
-    httpd_uri_t events_post_uri = {.uri = "/api/events",
-                                   .method = HTTP_POST,
-                                   .handler = events_post_handler,
-                                   .user_ctx = NULL};
+    httpd_uri_t events_post_uri = {.uri = "/api/events", .method = HTTP_POST, .handler = events_post_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &events_post_uri);
 
-    httpd_uri_t event_single_post_uri = {.uri = "/api/events/update",
-                                         .method = HTTP_POST,
-                                         .handler = event_single_post_handler,
-                                         .user_ctx = NULL};
+    httpd_uri_t event_single_post_uri = {.uri = "/api/events/update", .method = HTTP_POST, .handler = event_single_post_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &event_single_post_uri);
 
     // Route GET /api/events pour obtenir les événements CAN
-    httpd_uri_t events_get_uri = {.uri = "/api/events",
-                                  .method = HTTP_GET,
-                                  .handler = events_get_handler,
-                                  .user_ctx = NULL};
+    httpd_uri_t events_get_uri = {.uri = "/api/events", .method = HTTP_GET, .handler = events_get_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &events_get_uri);
 
     // Routes audio (micro INMP441)
-    httpd_uri_t audio_status_uri = {.uri = "/api/audio/status",
-                                    .method = HTTP_GET,
-                                    .handler = audio_status_handler,
-                                    .user_ctx = NULL};
+    httpd_uri_t audio_status_uri = {.uri = "/api/audio/status", .method = HTTP_GET, .handler = audio_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_status_uri);
 
-    httpd_uri_t audio_enable_uri = {.uri = "/api/audio/enable",
-                                    .method = HTTP_POST,
-                                    .handler = audio_enable_handler,
-                                    .user_ctx = NULL};
+    httpd_uri_t audio_enable_uri = {.uri = "/api/audio/enable", .method = HTTP_POST, .handler = audio_enable_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_enable_uri);
 
-    httpd_uri_t audio_config_uri = {.uri = "/api/audio/config",
-                                    .method = HTTP_POST,
-                                    .handler = audio_config_handler,
-                                    .user_ctx = NULL};
+    httpd_uri_t audio_config_uri = {.uri = "/api/audio/config", .method = HTTP_POST, .handler = audio_config_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_config_uri);
 
-    httpd_uri_t audio_data_uri = {.uri = "/api/audio/data",
-                                  .method = HTTP_GET,
-                                  .handler = audio_data_handler,
-                                  .user_ctx = NULL};
+    httpd_uri_t audio_data_uri = {.uri = "/api/audio/data", .method = HTTP_GET, .handler = audio_data_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_data_uri);
 
     // Routes FFT
-    httpd_uri_t audio_fft_status_uri = {.uri = "/api/audio/fft/status",
-                                        .method = HTTP_GET,
-                                        .handler = audio_fft_status_handler,
-                                        .user_ctx = NULL};
+    httpd_uri_t audio_fft_status_uri = {.uri = "/api/audio/fft/status", .method = HTTP_GET, .handler = audio_fft_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_fft_status_uri);
 
-    httpd_uri_t audio_fft_enable_uri = {.uri = "/api/audio/fft/enable",
-                                        .method = HTTP_POST,
-                                        .handler = audio_fft_enable_handler,
-                                        .user_ctx = NULL};
+    httpd_uri_t audio_fft_enable_uri = {.uri = "/api/audio/fft/enable", .method = HTTP_POST, .handler = audio_fft_enable_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_fft_enable_uri);
 
-    httpd_uri_t audio_fft_data_uri = {.uri = "/api/audio/fft/data",
-                                      .method = HTTP_GET,
-                                      .handler = audio_fft_data_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t audio_fft_data_uri = {.uri = "/api/audio/fft/data", .method = HTTP_GET, .handler = audio_fft_data_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_fft_data_uri);
 
     // Alias pour les nouveaux endpoints système
-    httpd_uri_t system_restart_uri = {.uri = "/api/system/restart",
-                                      .method = HTTP_POST,
-                                      .handler = ota_restart_handler,
-                                      .user_ctx = NULL};
+    httpd_uri_t system_restart_uri = {.uri = "/api/system/restart", .method = HTTP_POST, .handler = ota_restart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &system_restart_uri);
 
-    httpd_uri_t system_factory_reset_uri = {.uri = "/api/system/factory-reset",
-                                            .method = HTTP_POST,
-                                            .handler = factory_reset_handler,
-                                            .user_ctx = NULL};
+    httpd_uri_t system_factory_reset_uri = {.uri = "/api/system/factory-reset", .method = HTTP_POST, .handler = factory_reset_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &system_factory_reset_uri);
 
     // Enregistrer le handler d'erreur 404 pour le portail captif
     // Toutes les URLs non trouvées seront redirigées vers la page principale
-    httpd_register_err_handler(server, HTTPD_404_NOT_FOUND,
-                               captive_portal_404_handler);
+    httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, captive_portal_404_handler);
 
-    ESP_LOGI(TAG_WEBSERVER,
-             "Serveur web démarré avec support portail captif (handler 404)");
+    ESP_LOGI(TAG_WEBSERVER, "Serveur web démarré avec support portail captif (handler 404)");
     return ESP_OK;
   }
 
@@ -2101,8 +1897,8 @@ esp_err_t web_server_start(void) {
 }
 
 static esp_err_t event_single_post_handler(httpd_req_t *req) {
-  char *content = NULL;
-  int ret = 0;
+  char *content      = NULL;
+  int ret            = 0;
   size_t content_len = req->content_len;
 
   if (content_len > 4096) {
@@ -2112,8 +1908,7 @@ static esp_err_t event_single_post_handler(httpd_req_t *req) {
 
   content = (char *)malloc(content_len + 1);
   if (content == NULL) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
@@ -2128,7 +1923,7 @@ static esp_err_t event_single_post_handler(httpd_req_t *req) {
 
   content[ret] = '\0';
 
-  cJSON *root = cJSON_Parse(content);
+  cJSON *root  = cJSON_Parse(content);
   free(content);
 
   if (root == NULL) {
@@ -2154,18 +1949,15 @@ static esp_err_t event_single_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  config_profile_t *profile =
-      (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Memory allocation failed");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     cJSON_Delete(root);
     return ESP_FAIL;
   }
 
   if (!config_manager_load_profile(profile_id, profile)) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
-                        "Failed to load profile");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to load profile");
     free(profile);
     cJSON_Delete(root);
     return ESP_FAIL;
@@ -2203,4 +1995,6 @@ esp_err_t web_server_stop(void) {
   return ESP_OK;
 }
 
-bool web_server_is_running(void) { return server != NULL; }
+bool web_server_is_running(void) {
+  return server != NULL;
+}

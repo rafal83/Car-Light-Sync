@@ -1,5 +1,6 @@
 // can_bus.c
 #include "can_bus.h"
+
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -18,7 +19,7 @@ typedef struct {
   volatile bool running;
   volatile bool initialized;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
-  twai_handle_t bus_handle;  // Handle pour TWAI v2
+  twai_handle_t bus_handle; // Handle pour TWAI v2
 #endif
 } can_bus_context_t;
 
@@ -26,8 +27,8 @@ typedef struct {
 static can_bus_context_t s_can_buses[CAN_BUS_COUNT] = {0};
 
 // Callback partagé pour tous les bus
-static can_bus_callback_t s_callback = NULL;
-static void *s_cb_user_data = NULL;
+static can_bus_callback_t s_callback                = NULL;
+static void *s_cb_user_data                         = NULL;
 
 // Structure passée aux tâches de réception
 typedef struct {
@@ -37,16 +38,15 @@ typedef struct {
 // ---- Tâche de réception ----
 static void can_rx_task(void *pvParameters) {
   can_rx_task_params_t *params = (can_rx_task_params_t *)pvParameters;
-  can_bus_type_t bus_type = params->bus_type;
+  can_bus_type_t bus_type      = params->bus_type;
 
   // Libérer les paramètres alloués
   free(params);
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
+  const char *bus_name   = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
-  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX démarrée pour bus %s (GPIO TX=%d RX=%d)",
-           bus_name, ctx->tx_gpio, ctx->rx_gpio);
+  ESP_LOGI(TAG_CAN_BUS, "Tâche CAN RX démarrée pour bus %s (GPIO TX=%d RX=%d)", bus_name, ctx->tx_gpio, ctx->rx_gpio);
 
   while (ctx->running) {
     twai_message_t msg;
@@ -61,8 +61,8 @@ static void can_rx_task(void *pvParameters) {
       ctx->rx_count++;
       if (s_callback) {
         can_frame_t frame = {0};
-        frame.id = msg.identifier;
-        frame.dlc = msg.data_length_code;
+        frame.id          = msg.identifier;
+        frame.dlc         = msg.data_length_code;
         if (frame.dlc > 8)
           frame.dlc = 8;
         for (int i = 0; i < frame.dlc; i++) {
@@ -94,28 +94,27 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   }
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
+  const char *bus_name   = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
   if (ctx->initialized) {
     ESP_LOGW(TAG_CAN_BUS, "Bus %s déjà initialisé", bus_name);
     return ESP_ERR_INVALID_STATE;
   }
 
-  ctx->tx_gpio = tx_gpio;
-  ctx->rx_gpio = rx_gpio;
+  ctx->tx_gpio  = tx_gpio;
+  ctx->rx_gpio  = rx_gpio;
   ctx->rx_count = ctx->tx_count = ctx->errors = 0;
-  ctx->running = false;
-  ctx->rx_task_handle = NULL;
+  ctx->running                                = false;
+  ctx->rx_task_handle                         = NULL;
 
   // Config générale : mode normal, pins
-  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(
-      tx_gpio, rx_gpio, TWAI_MODE_LISTEN_ONLY);
+  twai_general_config_t g_config              = TWAI_GENERAL_CONFIG_DEFAULT(tx_gpio, rx_gpio, TWAI_MODE_LISTEN_ONLY);
 
   // Vitesse 500 kbit/s (Tesla)
-  twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
+  twai_timing_config_t t_config               = TWAI_TIMING_CONFIG_500KBITS();
 
   // Filtre : accepte toutes les trames
-  twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+  twai_filter_config_t f_config               = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
   esp_err_t ret;
 
@@ -123,18 +122,19 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   // ESP-IDF 5.2.0+ avec support multi-contrôleur
   g_config.controller_id = bus_type;
 
-  ret = twai_driver_install_v2(&g_config, &t_config, &f_config, &ctx->bus_handle);
+  ret                    = twai_driver_install_v2(&g_config, &t_config, &f_config, &ctx->bus_handle);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_CAN_BUS, "[%s] twai_driver_install_v2 failed: %s",
-             bus_name, esp_err_to_name(ret));
+    ESP_LOGE(TAG_CAN_BUS, "[%s] twai_driver_install_v2 failed: %s", bus_name, esp_err_to_name(ret));
     return ret;
   }
-  ESP_LOGI(TAG_CAN_BUS, "Driver CAN %s installé avec TWAI v2 (TX=%d, RX=%d, ID=%d)",
-           bus_name, tx_gpio, rx_gpio, bus_type);
+  ESP_LOGI(TAG_CAN_BUS, "Driver CAN %s installé avec TWAI v2 (TX=%d, RX=%d, ID=%d)", bus_name, tx_gpio, rx_gpio, bus_type);
 #else
   // Anciennes versions ESP-IDF : un seul contrôleur supporté
   if (bus_type == CAN_BUS_CHASSIS) {
-    ESP_LOGW(TAG_CAN_BUS, "[%s] Le deuxième bus CAN nécessite ESP-IDF 5.2.0+ ou un contrôleur externe", bus_name);
+    ESP_LOGW(TAG_CAN_BUS,
+             "[%s] Le deuxième bus CAN nécessite ESP-IDF 5.2.0+ ou un "
+             "contrôleur externe",
+             bus_name);
     ESP_LOGW(TAG_CAN_BUS, "[%s] Fonctionnalité désactivée", bus_name);
     ctx->initialized = true;
     return ESP_OK;
@@ -142,12 +142,10 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
 
   ret = twai_driver_install(&g_config, &t_config, &f_config);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_CAN_BUS, "[%s] twai_driver_install failed: %s",
-             bus_name, esp_err_to_name(ret));
+    ESP_LOGE(TAG_CAN_BUS, "[%s] twai_driver_install failed: %s", bus_name, esp_err_to_name(ret));
     return ret;
   }
-  ESP_LOGI(TAG_CAN_BUS, "Driver CAN %s installé (TX=%d, RX=%d)",
-           bus_name, tx_gpio, rx_gpio);
+  ESP_LOGI(TAG_CAN_BUS, "Driver CAN %s installé (TX=%d, RX=%d)", bus_name, tx_gpio, rx_gpio);
 #endif
 
   ctx->initialized = true;
@@ -160,7 +158,7 @@ esp_err_t can_bus_start(can_bus_type_t bus_type) {
   }
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
+  const char *bus_name   = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
   if (!ctx->initialized) {
     ESP_LOGE(TAG_CAN_BUS, "[%s] Bus non initialisé", bus_name);
@@ -206,7 +204,11 @@ esp_err_t can_bus_start(can_bus_type_t bus_type) {
     char task_name[20];
     snprintf(task_name, sizeof(task_name), "can_rx_%s", bus_name);
 
-    xTaskCreatePinnedToCore(can_rx_task, task_name, 4096, params, 10,
+    xTaskCreatePinnedToCore(can_rx_task,
+                            task_name,
+                            4096,
+                            params,
+                            10,
                             &ctx->rx_task_handle,
                             0 // core général
     );
@@ -223,9 +225,9 @@ esp_err_t can_bus_stop(can_bus_type_t bus_type) {
   }
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
-  const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
+  const char *bus_name   = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
 
-  ctx->running = false;
+  ctx->running           = false;
 
   // Attendre que la tâche se termine
   if (ctx->rx_task_handle) {
@@ -261,7 +263,7 @@ esp_err_t can_bus_stop(can_bus_type_t bus_type) {
 }
 
 esp_err_t can_bus_register_callback(can_bus_callback_t cb, void *user_data) {
-  s_callback = cb;
+  s_callback     = cb;
   s_cb_user_data = user_data;
   return ESP_OK;
 }
@@ -277,14 +279,14 @@ esp_err_t can_bus_send(can_bus_type_t bus_type, const can_frame_t *frame) {
     return ESP_ERR_INVALID_STATE;
   }
 
-  twai_message_t msg = {0};
-  msg.identifier = frame->id;
+  twai_message_t msg   = {0};
+  msg.identifier       = frame->id;
   msg.data_length_code = frame->dlc;
   if (msg.data_length_code > 8)
     msg.data_length_code = 8;
 
   msg.extd = 0; // Tesla = ID standard 11 bits
-  msg.rtr = 0;  // pas de Remote Transmission Request
+  msg.rtr  = 0; // pas de Remote Transmission Request
 
   for (int i = 0; i < msg.data_length_code; i++) {
     msg.data[i] = frame->data[i];
@@ -315,9 +317,9 @@ esp_err_t can_bus_get_status(can_bus_type_t bus_type, can_bus_status_t *out) {
 
   can_bus_context_t *ctx = &s_can_buses[bus_type];
 
-  out->rx_count = ctx->rx_count;
-  out->tx_count = ctx->tx_count;
-  out->errors = ctx->errors;
-  out->running = ctx->rx_count > 0; // Il faut au moins recevoir quelque chose
+  out->rx_count          = ctx->rx_count;
+  out->tx_count          = ctx->tx_count;
+  out->errors            = ctx->errors;
+  out->running           = ctx->rx_count > 0; // Il faut au moins recevoir quelque chose
   return ESP_OK;
 }

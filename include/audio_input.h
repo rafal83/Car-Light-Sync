@@ -1,23 +1,24 @@
 #ifndef AUDIO_INPUT_H
 #define AUDIO_INPUT_H
 
+#include "config.h"
+
 #include <stdbool.h>
 #include <stdint.h>
-#include "config.h"
 
 #define TAG_AUDIO "Audio"
 
 // Configuration par défaut du micro INMP441 (ESP32-C6)
-#define AUDIO_I2S_SCK_PIN I2S_SCK_PIN      // Serial Clock
-#define AUDIO_I2S_WS_PIN I2S_WS_PIN       // Word Select (LRCK)
-#define AUDIO_I2S_SD_PIN I2S_SD_PIN        // Serial Data
-#define AUDIO_SAMPLE_RATE 44100   // Taux d'échantillonnage
-#define AUDIO_BUFFER_SIZE 1024    // Taille du buffer audio
-#define AUDIO_DMA_BUFFER_COUNT 2  // Nombre de buffers DMA
+#define AUDIO_I2S_SCK_PIN I2S_SCK_PIN // Serial Clock
+#define AUDIO_I2S_WS_PIN I2S_WS_PIN   // Word Select (LRCK)
+#define AUDIO_I2S_SD_PIN I2S_SD_PIN   // Serial Data
+#define AUDIO_SAMPLE_RATE 44100       // Taux d'échantillonnage
+#define AUDIO_BUFFER_SIZE 1024        // Taille du buffer audio
+#define AUDIO_DMA_BUFFER_COUNT 2      // Nombre de buffers DMA
 
 // Paramètres de traitement audio
 #define AUDIO_FFT_SIZE 512
-#define AUDIO_FFT_BANDS 32            // Nombre de bandes FFT (puissance de 2)
+#define AUDIO_FFT_BANDS 32 // Nombre de bandes FFT (puissance de 2)
 #define AUDIO_BPM_MIN 60
 #define AUDIO_BPM_MAX 180
 #define AUDIO_BPM_HISTORY_SIZE 4
@@ -32,36 +33,36 @@
 
 // Structure pour les données audio analysées (simple)
 typedef struct {
-    float amplitude;        // Amplitude normalisée (0.0 - 1.0)
-    float bass;            // Niveau des basses (0.0 - 1.0)
-    float mid;             // Niveau des médiums (0.0 - 1.0)
-    float treble;          // Niveau des aigus (0.0 - 1.0)
-    float bpm;             // BPM détecté
-    bool beat_detected;    // Battement détecté
-    uint32_t last_beat_ms; // Timestamp du dernier battement
+  float amplitude;       // Amplitude normalisée (0.0 - 1.0)
+  float bass;            // Niveau des basses (0.0 - 1.0)
+  float mid;             // Niveau des médiums (0.0 - 1.0)
+  float treble;          // Niveau des aigus (0.0 - 1.0)
+  float bpm;             // BPM détecté
+  bool beat_detected;    // Battement détecté
+  uint32_t last_beat_ms; // Timestamp du dernier battement
 } audio_data_t;
 
 // Structure pour les données FFT avancées
 typedef struct {
-    float bands[AUDIO_FFT_BANDS];  // Niveau de chaque bande (0.0 - 1.0)
-    float peak_freq;               // Fréquence dominante (Hz)
-    float spectral_centroid;       // "Centre de masse" du spectre (Hz)
-    uint8_t dominant_band;         // Index de la bande la plus forte
-    float bass_energy;             // Énergie totale dans les basses
-    float mid_energy;              // Énergie totale dans les médiums
-    float treble_energy;           // Énergie totale dans les aigus
-    bool kick_detected;            // Kick drum détecté (20-120 Hz)
-    bool snare_detected;           // Snare détecté (150-250 Hz)
-    bool vocal_detected;           // Voix détectée (500-2000 Hz)
+  float bands[AUDIO_FFT_BANDS]; // Niveau de chaque bande (0.0 - 1.0)
+  float peak_freq;              // Fréquence dominante (Hz)
+  float spectral_centroid;      // "Centre de masse" du spectre (Hz)
+  uint8_t dominant_band;        // Index de la bande la plus forte
+  float bass_energy;            // Énergie totale dans les basses
+  float mid_energy;             // Énergie totale dans les médiums
+  float treble_energy;          // Énergie totale dans les aigus
+  bool kick_detected;           // Kick drum détecté (20-120 Hz)
+  bool snare_detected;          // Snare détecté (150-250 Hz)
+  bool vocal_detected;          // Voix détectée (500-2000 Hz)
 } audio_fft_data_t;
 
 // Configuration du micro
 typedef struct {
-    bool enabled;           // Micro activé/désactivé
-    uint8_t sensitivity;    // Sensibilité (0-255)
-    uint8_t gain;          // Gain (0-255)
-    bool auto_gain;        // Gain automatique
-    bool fft_enabled;      // FFT activée/désactivée
+  bool enabled;        // Micro activé/désactivé
+  uint8_t sensitivity; // Sensibilité (0-255)
+  uint8_t gain;        // Gain (0-255)
+  bool auto_gain;      // Gain automatique
+  bool fft_enabled;    // FFT activée/désactivée
 } audio_config_t;
 
 /**

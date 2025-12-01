@@ -17,9 +17,7 @@ extern "C" {
 // Callbacks (overridables) pour mapper signaux -> état / events
 // ---------------------------------------------------------------------------
 
-void vehicle_state_apply_signal(const struct can_message_def_t *msg,
-                                const struct can_signal_def_t *sig, float value,
-                                vehicle_state_t *state);
+void vehicle_state_apply_signal(const struct can_message_def_t *msg, const struct can_signal_def_t *sig, float value, vehicle_state_t *state);
 
 #ifdef __cplusplus
 }

@@ -3,6 +3,7 @@
 
 #include "esp_err.h"
 #include "vehicle_can_unified.h" // pour can_frame_t
+
 #include <stdbool.h>
 
 #define TAG_CAN_BUS "CAN_BUS"
@@ -13,9 +14,9 @@ extern "C" {
 
 // Type de bus CAN
 typedef enum {
-  CAN_BUS_BODY = 0,
+  CAN_BUS_BODY    = 0,
   CAN_BUS_CHASSIS = 1,
-  CAN_BUS_COUNT = 2
+  CAN_BUS_COUNT   = 2
 } can_bus_type_t;
 
 // Callback pour chaque trame CAN reçue

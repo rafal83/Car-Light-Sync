@@ -1,8 +1,10 @@
 
 #include "vehicle_can_unified.h"
+
 #include "esp_log.h"
 #include "vehicle_can_mapping.h"
 #include "vehicle_can_unified_config.h"
+
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -43,8 +45,7 @@ static const can_message_def_t *find_message_def(uint32_t id) {
 // Extraction de bits (Intel / Motorola) + cast / scaling
 // ---------------------------------------------------------------------------
 
-static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit,
-                                uint8_t length) {
+static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit, uint8_t length) {
   // little-endian (Intel) : start_bit est le bit LSB indexé à partir de l’octet
   // 0
   uint64_t raw = 0;
@@ -55,8 +56,7 @@ static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit,
   return (raw >> start_bit) & mask;
 }
 
-static uint64_t extract_bits_be(const uint8_t *data, uint8_t start_bit,
-                                uint8_t length) {
+static uint64_t extract_bits_be(const uint8_t *data, uint8_t start_bit, uint8_t length) {
   // big-endian (Motorola) : on reconstruit en ordre réseau
   uint64_t raw = 0;
   for (int i = 0; i < 8; i++) {
@@ -64,13 +64,12 @@ static uint64_t extract_bits_be(const uint8_t *data, uint8_t start_bit,
   }
   // start_bit est comme en DBC : bit 0 = MSB du premier octet
   uint8_t msb_index = 63 - start_bit;
-  uint8_t shift = msb_index - (length - 1);
-  uint64_t mask = (length == 64) ? UINT64_MAX : (((uint64_t)1 << length) - 1);
+  uint8_t shift     = msb_index - (length - 1);
+  uint64_t mask     = (length == 64) ? UINT64_MAX : (((uint64_t)1 << length) - 1);
   return (raw >> shift) & mask;
 }
 
-static float decode_signal_value(const can_signal_def_t *sig,
-                                 const uint8_t *data, uint8_t dlc) {
+static float decode_signal_value(const can_signal_def_t *sig, const uint8_t *data, uint8_t dlc) {
   (void)dlc; // non utilisé ici mais conservé pour extension future
 
   uint64_t raw = 0;
@@ -86,10 +85,8 @@ static float decode_signal_value(const can_signal_def_t *sig,
 
   if (sig->value_type == SIGNAL_TYPE_SIGNED) {
     // signe sur "length" bits
-    uint64_t sign_bit = (uint64_t)1 << (sig->length - 1);
-    int64_t signed_val = (raw & sign_bit)
-                             ? (int64_t)(raw | (~((sign_bit << 1) - 1)))
-                             : (int64_t)raw;
+    uint64_t sign_bit  = (uint64_t)1 << (sig->length - 1);
+    int64_t signed_val = (raw & sign_bit) ? (int64_t)(raw | (~((sign_bit << 1) - 1))) : (int64_t)raw;
     return (float)signed_val * sig->factor + sig->offset;
   }
 
@@ -101,8 +98,7 @@ static float decode_signal_value(const can_signal_def_t *sig,
 // Pipeline principal
 // ---------------------------------------------------------------------------
 
-void vehicle_can_process_frame_static(const can_frame_t *frame,
-                                      vehicle_state_t *state) {
+void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t *state) {
   if (!frame || !state)
     return;
 
@@ -115,7 +111,7 @@ void vehicle_can_process_frame_static(const can_frame_t *frame,
   for (uint8_t i = 0; i < msg->signal_count; i++) {
     const can_signal_def_t *sig = &msg->signals[i];
 
-    float now = decode_signal_value(sig, frame->data, frame->dlc);
+    float now                   = decode_signal_value(sig, frame->data, frame->dlc);
 
     history_set(msg->id, i, now);
 

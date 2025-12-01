@@ -1,4 +1,5 @@
 #include "ota_update.h"
+
 #include "config_manager.h"
 #include "esp_app_format.h"
 #include "esp_log.h"
@@ -9,17 +10,18 @@
 #include "led_effects.h"
 #include "task_core_utils.h"
 #include "version_info.h"
+
 #include <string.h>
 
-static const uint32_t OTA_REBOOT_DELAY_MS = 30000;
-static const uint32_t OTA_WRITE_THROTTLE_MS = 5;
+static const uint32_t OTA_REBOOT_DELAY_MS      = 30000;
+static const uint32_t OTA_WRITE_THROTTLE_MS    = 5;
 
-static ota_progress_t current_progress = {0};
-static esp_ota_handle_t ota_handle = 0;
+static ota_progress_t current_progress         = {0};
+static esp_ota_handle_t ota_handle             = 0;
 static const esp_partition_t *update_partition = NULL;
-static bool ota_in_progress = false;
-static bool ota_reboot_scheduled = false;
-static TickType_t ota_reboot_deadline = 0;
+static bool ota_in_progress                    = false;
+static bool ota_reboot_scheduled               = false;
+static TickType_t ota_reboot_deadline          = 0;
 
 static void ota_reboot_task(void *arg) {
   vTaskDelay(pdMS_TO_TICKS(OTA_REBOOT_DELAY_MS));
@@ -32,12 +34,10 @@ static void ota_schedule_reboot(void) {
     return;
   }
   ota_reboot_scheduled = true;
-  ota_reboot_deadline =
-      xTaskGetTickCount() + pdMS_TO_TICKS(OTA_REBOOT_DELAY_MS);
-  if (create_task_on_general_core(ota_reboot_task, "ota_reboot", 2048, NULL, 5,
-                                  NULL) != pdPASS) {
+  ota_reboot_deadline  = xTaskGetTickCount() + pdMS_TO_TICKS(OTA_REBOOT_DELAY_MS);
+  if (create_task_on_general_core(ota_reboot_task, "ota_reboot", 2048, NULL, 5, NULL) != pdPASS) {
     ota_reboot_scheduled = false;
-    ota_reboot_deadline = 0;
+    ota_reboot_deadline  = 0;
     ESP_LOGE(TAG_OTA, "Impossible de lancer la tâche de rédémarrage OTA");
   }
 }
@@ -45,8 +45,8 @@ static void ota_schedule_reboot(void) {
 esp_err_t ota_init(void) {
   memset(&current_progress, 0, sizeof(ota_progress_t));
   current_progress.state = OTA_STATE_IDLE;
-  ota_reboot_scheduled = false;
-  ota_reboot_deadline = 0;
+  ota_reboot_scheduled   = false;
+  ota_reboot_deadline    = 0;
 
   ESP_LOGI(TAG_OTA, "OTA initialisé, version: %s", APP_VERSION_STRING);
   return ESP_OK;
@@ -64,17 +64,16 @@ esp_err_t ota_begin(size_t total_size) {
 
   // Rinitialiser la progression
   memset(&current_progress, 0, sizeof(ota_progress_t));
-  current_progress.state = OTA_STATE_RECEIVING;
-  current_progress.total_size = total_size;
+  current_progress.state        = OTA_STATE_RECEIVING;
+  current_progress.total_size   = total_size;
   current_progress.written_size = 0;
-  current_progress.progress = 0;
+  current_progress.progress     = 0;
 
   // Obtenir la partition de mise  jour
-  update_partition = esp_ota_get_next_update_partition(NULL);
+  update_partition              = esp_ota_get_next_update_partition(NULL);
   if (update_partition == NULL) {
     ESP_LOGE(TAG_OTA, "Impossible de trouver la partition OTA");
-    strncpy(current_progress.error_msg, "Partition OTA non trouvée",
-            sizeof(current_progress.error_msg) - 1);
+    strncpy(current_progress.error_msg, "Partition OTA non trouvée", sizeof(current_progress.error_msg) - 1);
     current_progress.state = OTA_STATE_ERROR;
     led_effects_stop_progress_display();
     led_effects_show_upgrade_error();
@@ -82,16 +81,13 @@ esp_err_t ota_begin(size_t total_size) {
     return ESP_ERR_NOT_FOUND;
   }
 
-  ESP_LOGI(TAG_OTA, "Début OTA vers partition: %s à 0x%08lx",
-           update_partition->label, update_partition->address);
+  ESP_LOGI(TAG_OTA, "Début OTA vers partition: %s à 0x%08lx", update_partition->label, update_partition->address);
 
   // Démarrer l'OTA
-  esp_err_t ret =
-      esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &ota_handle);
+  esp_err_t ret = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &ota_handle);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG_OTA, "Erreur esp_ota_begin: %s", esp_err_to_name(ret));
-    snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
-             "Erreur démarrage OTA: %s", esp_err_to_name(ret));
+    snprintf(current_progress.error_msg, sizeof(current_progress.error_msg), "Erreur démarrage OTA: %s", esp_err_to_name(ret));
     current_progress.state = OTA_STATE_ERROR;
     led_effects_stop_progress_display();
     led_effects_show_upgrade_error();
@@ -112,13 +108,12 @@ esp_err_t ota_write(const void *data, size_t size) {
 
   current_progress.state = OTA_STATE_WRITING;
 
-  esp_err_t ret = esp_ota_write(ota_handle, data, size);
+  esp_err_t ret          = esp_ota_write(ota_handle, data, size);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG_OTA, "Erreur esp_ota_write: %s", esp_err_to_name(ret));
-    snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
-             "Erreur écriture OTA: %s", esp_err_to_name(ret));
+    snprintf(current_progress.error_msg, sizeof(current_progress.error_msg), "Erreur écriture OTA: %s", esp_err_to_name(ret));
     current_progress.state = OTA_STATE_ERROR;
-    ota_in_progress = false;
+    ota_in_progress        = false;
     led_effects_stop_progress_display();
     led_effects_show_upgrade_error();
     ota_schedule_reboot();
@@ -128,8 +123,7 @@ esp_err_t ota_write(const void *data, size_t size) {
   current_progress.written_size += size;
 
   if (current_progress.total_size > 0) {
-    current_progress.progress =
-        (current_progress.written_size * 100) / current_progress.total_size;
+    current_progress.progress = (current_progress.written_size * 100) / current_progress.total_size;
     if (current_progress.progress > 100) {
       current_progress.progress = 100;
     }
@@ -139,8 +133,7 @@ esp_err_t ota_write(const void *data, size_t size) {
     vTaskDelay(pdMS_TO_TICKS(OTA_WRITE_THROTTLE_MS));
   }
 
-  ESP_LOGD(TAG_OTA, "OTA écrit %d octets, total: %lu", size,
-           current_progress.written_size);
+  ESP_LOGD(TAG_OTA, "OTA écrit %d octets, total: %lu", size, current_progress.written_size);
   return ESP_OK;
 }
 
@@ -154,15 +147,13 @@ esp_err_t ota_end(void) {
   if (ret != ESP_OK) {
     if (ret == ESP_ERR_OTA_VALIDATE_FAILED) {
       ESP_LOGE(TAG_OTA, "Validation de l'image échouée");
-      strncpy(current_progress.error_msg, "Validation du firmware échouée",
-              sizeof(current_progress.error_msg) - 1);
+      strncpy(current_progress.error_msg, "Validation du firmware échouée", sizeof(current_progress.error_msg) - 1);
     } else {
       ESP_LOGE(TAG_OTA, "Erreur esp_ota_end: %s", esp_err_to_name(ret));
-      snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
-               "Erreur fin OTA: %s", esp_err_to_name(ret));
+      snprintf(current_progress.error_msg, sizeof(current_progress.error_msg), "Erreur fin OTA: %s", esp_err_to_name(ret));
     }
     current_progress.state = OTA_STATE_ERROR;
-    ota_in_progress = false;
+    ota_in_progress        = false;
     led_effects_stop_progress_display();
     led_effects_show_upgrade_error();
     ota_schedule_reboot();
@@ -172,21 +163,19 @@ esp_err_t ota_end(void) {
   // Définir la nouvelle partition comme partition de boot
   ret = esp_ota_set_boot_partition(update_partition);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_OTA, "Erreur esp_ota_set_boot_partition: %s",
-             esp_err_to_name(ret));
-    snprintf(current_progress.error_msg, sizeof(current_progress.error_msg),
-             "Erreur configuration boot: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_OTA, "Erreur esp_ota_set_boot_partition: %s", esp_err_to_name(ret));
+    snprintf(current_progress.error_msg, sizeof(current_progress.error_msg), "Erreur configuration boot: %s", esp_err_to_name(ret));
     current_progress.state = OTA_STATE_ERROR;
-    ota_in_progress = false;
+    ota_in_progress        = false;
     led_effects_stop_progress_display();
     led_effects_show_upgrade_error();
     ota_schedule_reboot();
     return ret;
   }
 
-  current_progress.state = OTA_STATE_SUCCESS;
+  current_progress.state    = OTA_STATE_SUCCESS;
   current_progress.progress = 100;
-  ota_in_progress = false;
+  ota_in_progress           = false;
   led_effects_stop_progress_display();
   led_effects_show_upgrade_ready();
   ota_schedule_reboot();
@@ -198,7 +187,7 @@ esp_err_t ota_end(void) {
 void ota_abort(void) {
   if (ota_in_progress) {
     esp_ota_abort(ota_handle);
-    ota_in_progress = false;
+    ota_in_progress        = false;
     current_progress.state = OTA_STATE_IDLE;
     led_effects_stop_progress_display();
     ESP_LOGW(TAG_OTA, "OTA annulé");
@@ -211,7 +200,9 @@ void ota_get_progress(ota_progress_t *progress) {
   }
 }
 
-const char *ota_get_current_version(void) { return APP_VERSION_STRING; }
+const char *ota_get_current_version(void) {
+  return APP_VERSION_STRING;
+}
 
 void ota_restart(void) {
   ESP_LOGI(TAG_OTA, "Redémarrage dans 2 secondes...");
@@ -250,7 +241,7 @@ int ota_get_reboot_countdown(void) {
   }
 
   TickType_t remaining_ticks = ota_reboot_deadline - now;
-  uint32_t remaining_ms = remaining_ticks * portTICK_PERIOD_MS;
-  int seconds = (remaining_ms + 999) / 1000;
+  uint32_t remaining_ms      = remaining_ticks * portTICK_PERIOD_MS;
+  int seconds                = (remaining_ms + 999) / 1000;
   return seconds;
 }

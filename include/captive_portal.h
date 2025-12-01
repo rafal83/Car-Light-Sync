@@ -2,6 +2,7 @@
 #define CAPTIVE_PORTAL_H
 
 #include "esp_err.h"
+
 #include <stdbool.h>
 
 #define TAG_CAPTIVE_PORTAL "CaptivePortal"

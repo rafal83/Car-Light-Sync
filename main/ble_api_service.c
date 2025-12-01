@@ -1,12 +1,17 @@
 #include "ble_api_service.h"
+
 #include "sdkconfig.h"
 
 #if CONFIG_BT_ENABLED && CONFIG_BT_NIMBLE_ENABLED
 
-#include <stdio.h>
-#include <string.h>
-#include <strings.h>
-
+#include "cJSON.h"
+#include "config.h"
+#include "esp_heap_caps.h"
+#include "esp_http_client.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
 #include "host/ble_att.h"
 #include "host/ble_gap.h"
 #include "host/ble_gatt.h"
@@ -18,31 +23,19 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
-#include "cJSON.h"
-#include "config.h"
-#include "esp_heap_caps.h"
-#include "esp_http_client.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h"
-
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
 
 // UUIDs (128-bit) - NimBLE attend les octets en ordre inversé
 // Service: 4fafc201-1fb5-459e-8fcc-c5c9c331914b
-static const ble_uuid128_t ble_service_uuid =
-    BLE_UUID128_INIT(0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f, 0x9e, 0x45,
-                     0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
+static const ble_uuid128_t ble_service_uuid  = BLE_UUID128_INIT(0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f, 0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
 
 // Command: beb5483e-36e1-4688-b7f5-ea07361b26a8
-static const ble_uuid128_t ble_command_uuid =
-    BLE_UUID128_INIT(0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7, 0x88, 0x46,
-                     0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
+static const ble_uuid128_t ble_command_uuid  = BLE_UUID128_INIT(0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7, 0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 // Response: 64a0990c-52eb-4c1b-aa30-ea826f4ba9dc
-static const ble_uuid128_t ble_response_uuid =
-    BLE_UUID128_INIT(0xdc, 0xa9, 0x4b, 0x6f, 0x82, 0xea, 0x30, 0xaa, 0x1b, 0x4c,
-                     0xeb, 0x52, 0x0c, 0x99, 0xa0, 0x64);
+static const ble_uuid128_t ble_response_uuid = BLE_UUID128_INIT(0xdc, 0xa9, 0x4b, 0x6f, 0x82, 0xea, 0x30, 0xaa, 0x1b, 0x4c, 0xeb, 0x52, 0x0c, 0x99, 0xa0, 0x64);
 
 typedef struct {
   size_t length;
@@ -61,11 +54,11 @@ typedef struct {
 static uint16_t ble_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t ble_command_val_handle;
 static uint16_t ble_response_val_handle;
-static bool ble_connected = false;
-static bool notifications_enabled = false;
-static uint16_t negotiated_mtu = 23;
-static bool ble_started = false;
-static QueueHandle_t request_queue = NULL;
+static bool ble_connected               = false;
+static bool notifications_enabled       = false;
+static uint16_t negotiated_mtu          = 23;
+static bool ble_started                 = false;
+static QueueHandle_t request_queue      = NULL;
 static TaskHandle_t request_task_handle = NULL;
 static char incoming_buffer[BLE_MAX_REQUEST_LEN];
 static size_t incoming_length = 0;
@@ -76,12 +69,9 @@ static void ble_dispatch_request(const char *payload, size_t len);
 static void ble_process_request_message(const char *json);
 static void ble_send_json_response(cJSON *object);
 static void ble_send_text_response(const char *text);
-static void ble_send_error_response(int status, const char *status_text,
-                                    const char *message);
+static void ble_send_error_response(int status, const char *status_text, const char *message);
 static bool ble_send_notification(const uint8_t *data, size_t len);
-static esp_err_t ble_perform_local_http_request(
-    const char *method, const char *path, const char *body, size_t body_len,
-    cJSON *headers, ble_http_response_t *out_response);
+static esp_err_t ble_perform_local_http_request(const char *method, const char *path, const char *body, size_t body_len, cJSON *headers, ble_http_response_t *out_response);
 static esp_err_t ble_http_event_handler(esp_http_client_event_t *evt);
 
 static esp_http_client_method_t ble_method_from_string(const char *method) {
@@ -107,31 +97,26 @@ static esp_http_client_method_t ble_method_from_string(const char *method) {
 }
 
 static int ble_gap_event(struct ble_gap_event *event, void *arg);
-static int ble_gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-                              struct ble_gatt_access_ctxt *ctxt, void *arg);
+static int ble_gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg);
 
-static const struct ble_gatt_svc_def ble_gatt_svcs[] = {
-    {.type = BLE_GATT_SVC_TYPE_PRIMARY,
-     .uuid = &ble_service_uuid.u,
-     .characteristics =
-         (struct ble_gatt_chr_def[]){
-             {
-                 .uuid = &ble_command_uuid.u,
-                 .access_cb = ble_gatt_access_cb,
-                 .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
-                 .val_handle = &ble_command_val_handle,
-             },
-             {
-                 .uuid = &ble_response_uuid.u,
-                 .access_cb = ble_gatt_access_cb,
-                 .flags = BLE_GATT_CHR_F_NOTIFY,
-                 .val_handle = &ble_response_val_handle,
-             },
-             {0}}},
-    {0}};
+static const struct ble_gatt_svc_def ble_gatt_svcs[] = {{.type            = BLE_GATT_SVC_TYPE_PRIMARY,
+                                                         .uuid            = &ble_service_uuid.u,
+                                                         .characteristics = (struct ble_gatt_chr_def[]){{
+                                                                                                            .uuid       = &ble_command_uuid.u,
+                                                                                                            .access_cb  = ble_gatt_access_cb,
+                                                                                                            .flags      = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
+                                                                                                            .val_handle = &ble_command_val_handle,
+                                                                                                        },
+                                                                                                        {
+                                                                                                            .uuid       = &ble_response_uuid.u,
+                                                                                                            .access_cb  = ble_gatt_access_cb,
+                                                                                                            .flags      = BLE_GATT_CHR_F_NOTIFY,
+                                                                                                            .val_handle = &ble_response_val_handle,
+                                                                                                        },
+                                                                                                        {0}}},
+                                                        {0}};
 
-static int ble_gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
-                              struct ble_gatt_access_ctxt *ctxt, void *arg) {
+static int ble_gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg) {
   if (attr_handle == ble_command_val_handle) {
     if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
       uint16_t om_len;
@@ -154,55 +139,51 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
   switch (event->type) {
   case BLE_GAP_EVENT_CONNECT:
     if (event->connect.status == 0) {
-      ble_conn_handle = event->connect.conn_handle;
-      ble_connected = true;
+      ble_conn_handle       = event->connect.conn_handle;
+      ble_connected         = true;
       notifications_enabled = false;
-      negotiated_mtu = 23;
-      incoming_length = 0;
+      negotiated_mtu        = 23;
+      incoming_length       = 0;
       ESP_LOGI(TAG_BLE_API, "Client BLE connecte");
 
       struct ble_gap_upd_params params = {
-          .itvl_min = 6,   // 7.5 ms
-          .itvl_max = 12,  // 15 ms
-          .latency  = 0,
+          .itvl_min            = 6,  // 7.5 ms
+          .itvl_max            = 12, // 15 ms
+          .latency             = 0,
           .supervision_timeout = 400, // 4 s
-          .min_ce_len = 0,
-          .max_ce_len = 0,
+          .min_ce_len          = 0,
+          .max_ce_len          = 0,
       };
       int rc = ble_gap_update_params(event->connect.conn_handle, &params);
       if (rc != 0) {
-          ESP_LOGW(TAG_BLE_API, "ble_gap_update_params rc=%d", rc);
+        ESP_LOGW(TAG_BLE_API, "ble_gap_update_params rc=%d", rc);
       }
     } else {
-      ESP_LOGW(TAG_BLE_API, "Connexion BLE echouee, statut=%d",
-               event->connect.status);
+      ESP_LOGW(TAG_BLE_API, "Connexion BLE echouee, statut=%d", event->connect.status);
       struct ble_gap_adv_params adv = {
           .conn_mode = BLE_GAP_CONN_MODE_UND,
           .disc_mode = BLE_GAP_DISC_MODE_GEN,
-          .itvl_min = 0,
-          .itvl_max = 0,
+          .itvl_min  = 0,
+          .itvl_max  = 0,
       };
-      ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv,
-                        ble_gap_event, NULL);
+      ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv, ble_gap_event, NULL);
     }
     break;
 
   case BLE_GAP_EVENT_DISCONNECT:
-    ble_conn_handle = BLE_HS_CONN_HANDLE_NONE;
-    ble_connected = false;
+    ble_conn_handle       = BLE_HS_CONN_HANDLE_NONE;
+    ble_connected         = false;
     notifications_enabled = false;
-    incoming_length = 0;
-    ESP_LOGI(TAG_BLE_API, "Client BLE deconnecte, raison=%d",
-             event->disconnect.reason);
+    incoming_length       = 0;
+    ESP_LOGI(TAG_BLE_API, "Client BLE deconnecte, raison=%d", event->disconnect.reason);
     {
       struct ble_gap_adv_params adv = {
           .conn_mode = BLE_GAP_CONN_MODE_UND,
           .disc_mode = BLE_GAP_DISC_MODE_GEN,
-          .itvl_min = 0,
-          .itvl_max = 0,
+          .itvl_min  = 0,
+          .itvl_max  = 0,
       };
-      ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv,
-                        ble_gap_event, NULL);
+      ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv, ble_gap_event, NULL);
     }
     break;
 
@@ -212,11 +193,10 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
       struct ble_gap_adv_params adv = {
           .conn_mode = BLE_GAP_CONN_MODE_UND,
           .disc_mode = BLE_GAP_DISC_MODE_GEN,
-          .itvl_min = 0,
-          .itvl_max = 0,
+          .itvl_min  = 0,
+          .itvl_max  = 0,
       };
-      ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv,
-                        ble_gap_event, NULL);
+      ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv, ble_gap_event, NULL);
     }
     break;
 
@@ -227,8 +207,7 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
 
   case BLE_GAP_EVENT_SUBSCRIBE:
     notifications_enabled = event->subscribe.cur_notify;
-    ESP_LOGI(TAG_BLE_API, "Notifications BLE %s",
-             notifications_enabled ? "activees" : "desactivees");
+    ESP_LOGI(TAG_BLE_API, "Notifications BLE %s", notifications_enabled ? "activees" : "desactivees");
     break;
   }
   return 0;
@@ -266,17 +245,15 @@ static void ble_dispatch_request(const char *payload, size_t len) {
     ble_send_error_response(500, "QueueError", "Request queue unavailable");
     return;
   }
-  size_t copy_len =
-      len < (BLE_MAX_REQUEST_LEN - 1) ? len : (BLE_MAX_REQUEST_LEN - 1);
-  char *buffer = heap_caps_malloc(copy_len + 1, MALLOC_CAP_DEFAULT);
+  size_t copy_len = len < (BLE_MAX_REQUEST_LEN - 1) ? len : (BLE_MAX_REQUEST_LEN - 1);
+  char *buffer    = heap_caps_malloc(copy_len + 1, MALLOC_CAP_DEFAULT);
   if (!buffer) {
-    ESP_LOGE(TAG_BLE_API, "Impossible d'allouer le buffer requete (%d)",
-             copy_len + 1);
+    ESP_LOGE(TAG_BLE_API, "Impossible d'allouer le buffer requete (%d)", copy_len + 1);
     ble_send_error_response(500, "NoMem", "Allocation failure");
     return;
   }
   memcpy(buffer, payload, copy_len);
-  buffer[copy_len] = '\0';
+  buffer[copy_len]              = '\0';
 
   ble_request_message_t message = {.length = copy_len, .payload = buffer};
 
@@ -313,7 +290,7 @@ static esp_err_t ble_http_event_handler(esp_http_client_event_t *evt) {
       response->body_length += evt->data_len;
     } else {
       response->truncated = true;
-      size_t remaining = BLE_MAX_RESPONSE_BODY - response->body_length - 1;
+      size_t remaining    = BLE_MAX_RESPONSE_BODY - response->body_length - 1;
       if (remaining > 0) {
         memcpy(response->body + response->body_length, evt->data, remaining);
         response->body_length += remaining;
@@ -326,9 +303,7 @@ static esp_err_t ble_http_event_handler(esp_http_client_event_t *evt) {
   return ESP_OK;
 }
 
-static esp_err_t ble_perform_local_http_request(
-    const char *method, const char *path, const char *body, size_t body_len,
-    cJSON *headers, ble_http_response_t *out_response) {
+static esp_err_t ble_perform_local_http_request(const char *method, const char *path, const char *body, size_t body_len, cJSON *headers, ble_http_response_t *out_response) {
   if (!method) {
     method = "GET";
   }
@@ -338,23 +313,20 @@ static esp_err_t ble_perform_local_http_request(
 
   char url[256];
   const char *normalized_path = (path[0] == '/') ? path : "/";
-  int written =
-      snprintf(url, sizeof(url), BLE_HTTP_LOCAL_BASE_URL "%s", normalized_path);
+  int written                 = snprintf(url, sizeof(url), BLE_HTTP_LOCAL_BASE_URL "%s", normalized_path);
   if (written <= 0 || written >= (int)sizeof(url)) {
     return ESP_ERR_INVALID_ARG;
   }
 
   memset(out_response, 0, sizeof(*out_response));
-  strlcpy(out_response->status_text, "ERROR",
-          sizeof(out_response->status_text));
-  strlcpy(out_response->content_type, "application/json",
-          sizeof(out_response->content_type));
+  strlcpy(out_response->status_text, "ERROR", sizeof(out_response->status_text));
+  strlcpy(out_response->content_type, "application/json", sizeof(out_response->content_type));
 
   esp_http_client_config_t config = {
-      .url = url,
-      .method = ble_method_from_string(method),
-      .timeout_ms = BLE_HTTP_TIMEOUT_MS,
-      .user_data = out_response,
+      .url           = url,
+      .method        = ble_method_from_string(method),
+      .timeout_ms    = BLE_HTTP_TIMEOUT_MS,
+      .user_data     = out_response,
       .event_handler = ble_http_event_handler,
   };
 
@@ -373,33 +345,22 @@ static esp_err_t ble_perform_local_http_request(
     }
   }
 
-  if (body && body_len > 0 && config.method != HTTP_METHOD_GET &&
-      config.method != HTTP_METHOD_HEAD) {
+  if (body && body_len > 0 && config.method != HTTP_METHOD_GET && config.method != HTTP_METHOD_HEAD) {
     esp_http_client_set_post_field(client, body, body_len);
   }
 
   esp_err_t err = esp_http_client_perform(client);
   if (err == ESP_OK) {
     out_response->status_code = esp_http_client_get_status_code(client);
-    strlcpy(
-        out_response->status_text,
-        (out_response->status_code >= 200 && out_response->status_code < 300)
-            ? "OK"
-            : "HTTP_ERROR",
-        sizeof(out_response->status_text));
+    strlcpy(out_response->status_text, (out_response->status_code >= 200 && out_response->status_code < 300) ? "OK" : "HTTP_ERROR", sizeof(out_response->status_text));
     char *ct_header = NULL;
-    if (esp_http_client_get_header(client, "Content-Type", &ct_header) ==
-            ESP_OK &&
-        ct_header != NULL) {
-      strlcpy(out_response->content_type, ct_header,
-              sizeof(out_response->content_type));
+    if (esp_http_client_get_header(client, "Content-Type", &ct_header) == ESP_OK && ct_header != NULL) {
+      strlcpy(out_response->content_type, ct_header, sizeof(out_response->content_type));
     }
   } else {
-    ESP_LOGW(TAG_BLE_API, "Requete HTTP locale echouee: %s",
-             esp_err_to_name(err));
+    ESP_LOGW(TAG_BLE_API, "Requete HTTP locale echouee: %s", esp_err_to_name(err));
     out_response->status_code = 500;
-    strlcpy(out_response->status_text, "HTTP_ERROR",
-            sizeof(out_response->status_text));
+    strlcpy(out_response->status_text, "HTTP_ERROR", sizeof(out_response->status_text));
   }
 
   if (out_response->body_length < BLE_MAX_RESPONSE_BODY) {
@@ -421,18 +382,15 @@ static void ble_process_request_message(const char *json) {
     return;
   }
 
-  const char *method =
-      cJSON_GetStringValue(cJSON_GetObjectItem(root, "method"));
-  const char *path = cJSON_GetStringValue(cJSON_GetObjectItem(root, "path"));
-  const char *body = cJSON_GetStringValue(cJSON_GetObjectItem(root, "body"));
-  size_t body_len = body ? strlen(body) : 0;
-  cJSON *headers = cJSON_GetObjectItem(root, "headers");
+  const char *method = cJSON_GetStringValue(cJSON_GetObjectItem(root, "method"));
+  const char *path   = cJSON_GetStringValue(cJSON_GetObjectItem(root, "path"));
+  const char *body   = cJSON_GetStringValue(cJSON_GetObjectItem(root, "body"));
+  size_t body_len    = body ? strlen(body) : 0;
+  cJSON *headers     = cJSON_GetObjectItem(root, "headers");
 
-  ESP_LOGI(TAG_BLE_API, "HTTP %s %s", method ? method : "GET",
-           path ? path : "/");
+  ESP_LOGI(TAG_BLE_API, "HTTP %s %s", method ? method : "GET", path ? path : "/");
 
-  ble_http_response_t *response =
-      heap_caps_malloc(sizeof(ble_http_response_t), MALLOC_CAP_DEFAULT);
+  ble_http_response_t *response = heap_caps_malloc(sizeof(ble_http_response_t), MALLOC_CAP_DEFAULT);
   if (response == NULL) {
     ESP_LOGE(TAG_BLE_API, "Impossible d'allouer la reponse HTTP");
     cJSON_Delete(root);
@@ -440,10 +398,8 @@ static void ble_process_request_message(const char *json) {
     return;
   }
 
-  esp_err_t err = ble_perform_local_http_request(method, path, body, body_len,
-                                                 headers, response);
-  ESP_LOGI(TAG_BLE_API, "HTTP response: status=%d, body_len=%d",
-           response->status_code, response->body_length);
+  esp_err_t err = ble_perform_local_http_request(method, path, body, body_len, headers, response);
+  ESP_LOGI(TAG_BLE_API, "HTTP response: status=%d, body_len=%d", response->status_code, response->body_length);
 
   cJSON *json_response = cJSON_CreateObject();
   cJSON_AddNumberToObject(json_response, "status", response->status_code);
@@ -477,12 +433,10 @@ static void ble_send_json_response(cJSON *object) {
   cJSON_free(json_str);
 }
 
-static void ble_send_error_response(int status, const char *status_text,
-                                    const char *message) {
+static void ble_send_error_response(int status, const char *status_text, const char *message) {
   cJSON *response = cJSON_CreateObject();
   cJSON_AddNumberToObject(response, "status", status);
-  cJSON_AddStringToObject(response, "statusText",
-                          status_text ? status_text : "ERROR");
+  cJSON_AddStringToObject(response, "statusText", status_text ? status_text : "ERROR");
   cJSON *headers = cJSON_CreateObject();
   cJSON_AddStringToObject(headers, "Content-Type", "application/json");
   cJSON_AddItemToObject(response, "headers", headers);
@@ -491,10 +445,8 @@ static void ble_send_error_response(int status, const char *status_text,
 }
 
 static bool ble_send_notification(const uint8_t *data, size_t len) {
-  if (!ble_connected || !notifications_enabled ||
-      ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
-    ESP_LOGW(TAG_BLE_API,
-             "Impossible d'envoyer notification (connexion inactive)");
+  if (!ble_connected || !notifications_enabled || ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
+    ESP_LOGW(TAG_BLE_API, "Impossible d'envoyer notification (connexion inactive)");
     return false;
   }
   if (len == 0) {
@@ -509,16 +461,15 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
   }
 
   struct os_mbuf *om;
-  size_t offset = 0;
+  size_t offset   = 0;
   int chunk_count = 0;
 
   while (offset < len) {
     size_t chunk = (len - offset) > max_payload ? max_payload : (len - offset);
 
-    om = ble_hs_mbuf_from_flat(data + offset, chunk);
+    om           = ble_hs_mbuf_from_flat(data + offset, chunk);
     if (!om) {
-      ESP_LOGE(TAG_BLE_API, "Erreur allocation mbuf (chunk %d/%d, offset=%d)",
-               chunk_count + 1, (len + max_payload - 1) / max_payload, offset);
+      ESP_LOGE(TAG_BLE_API, "Erreur allocation mbuf (chunk %d/%d, offset=%d)", chunk_count + 1, (len + max_payload - 1) / max_payload, offset);
       // Attendre un peu plus et réessayer une fois
       vTaskDelay(pdMS_TO_TICKS(50));
       om = ble_hs_mbuf_from_flat(data + offset, chunk);
@@ -528,8 +479,7 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
       }
     }
 
-    int rc =
-        ble_gattc_notify_custom(ble_conn_handle, ble_response_val_handle, om);
+    int rc = ble_gattc_notify_custom(ble_conn_handle, ble_response_val_handle, om);
     if (rc != 0) {
       ESP_LOGE(TAG_BLE_API, "Erreur notification BLE: %d", rc);
       return false;
@@ -584,31 +534,28 @@ static void ble_on_sync(void) {
     return;
   }
 
-  ESP_LOGI(TAG_BLE_API, "Adresse BLE: %02x:%02x:%02x:%02x:%02x:%02x",
-           addr.val[5], addr.val[4], addr.val[3], addr.val[2], addr.val[1],
-           addr.val[0]);
+  ESP_LOGI(TAG_BLE_API, "Adresse BLE: %02x:%02x:%02x:%02x:%02x:%02x", addr.val[5], addr.val[4], addr.val[3], addr.val[2], addr.val[1], addr.val[0]);
 
   struct ble_hs_adv_fields fields = {0};
-  fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-  fields.name = (uint8_t *)g_device_name_with_suffix;
-  fields.name_len = strlen(g_device_name_with_suffix);
-  fields.name_is_complete = 1;
+  fields.flags                    = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+  fields.name                     = (uint8_t *)g_device_name_with_suffix;
+  fields.name_len                 = strlen(g_device_name_with_suffix);
+  fields.name_is_complete         = 1;
 
-  rc = ble_gap_adv_set_fields(&fields);
+  rc                              = ble_gap_adv_set_fields(&fields);
   if (rc != 0) {
     ESP_LOGE(TAG_BLE_API, "Erreur config advertising: %d", rc);
     return;
   }
 
   struct ble_gap_adv_params adv_params = {0};
-  adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
-  adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-  adv_params.itvl_min = 0; // Use default min interval
-  adv_params.itvl_max = 0; // Use default max interval
+  adv_params.conn_mode                 = BLE_GAP_CONN_MODE_UND;
+  adv_params.disc_mode                 = BLE_GAP_DISC_MODE_GEN;
+  adv_params.itvl_min                  = 0; // Use default min interval
+  adv_params.itvl_max                  = 0; // Use default max interval
 
   // Utiliser une adresse aléatoire statique (BLE_OWN_ADDR_RANDOM)
-  rc = ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv_params,
-                         ble_gap_event, NULL);
+  rc                                   = ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
   if (rc != 0) {
     ESP_LOGE(TAG_BLE_API, "Erreur demarrage advertising: %d", rc);
     return;
@@ -631,16 +578,13 @@ esp_err_t ble_api_service_init(void) {
     return ESP_OK;
   }
 
-  request_queue =
-      xQueueCreate(BLE_REQUEST_QUEUE_LENGTH, sizeof(ble_request_message_t));
+  request_queue = xQueueCreate(BLE_REQUEST_QUEUE_LENGTH, sizeof(ble_request_message_t));
   if (!request_queue) {
     ESP_LOGE(TAG_BLE_API, "Impossible de creer la file des requetes BLE");
     return ESP_ERR_NO_MEM;
   }
 
-  BaseType_t task_created =
-      xTaskCreatePinnedToCore(ble_request_task, "ble_api_req", 12288, NULL, 7,
-                              &request_task_handle, tskNO_AFFINITY);
+  BaseType_t task_created = xTaskCreatePinnedToCore(ble_request_task, "ble_api_req", 12288, NULL, 7, &request_task_handle, tskNO_AFFINITY);
   if (task_created != pdPASS) {
     ESP_LOGE(TAG_BLE_API, "Impossible de creer la tache BLE API");
     vQueueDelete(request_queue);
@@ -656,7 +600,7 @@ esp_err_t ble_api_service_init(void) {
     return ret;
   }
 
-  ble_hs_cfg.sync_cb = ble_on_sync;
+  ble_hs_cfg.sync_cb  = ble_on_sync;
   ble_hs_cfg.reset_cb = ble_on_reset;
 
   ble_svc_gap_device_name_set(g_device_name_with_suffix);
@@ -703,16 +647,26 @@ esp_err_t ble_api_service_stop(void) {
   return ESP_OK;
 }
 
-bool ble_api_service_is_connected(void) { return ble_connected; }
+bool ble_api_service_is_connected(void) {
+  return ble_connected;
+}
 
 #else
 
-esp_err_t ble_api_service_init(void) { return ESP_ERR_NOT_SUPPORTED; }
+esp_err_t ble_api_service_init(void) {
+  return ESP_ERR_NOT_SUPPORTED;
+}
 
-esp_err_t ble_api_service_start(void) { return ESP_ERR_NOT_SUPPORTED; }
+esp_err_t ble_api_service_start(void) {
+  return ESP_ERR_NOT_SUPPORTED;
+}
 
-esp_err_t ble_api_service_stop(void) { return ESP_ERR_NOT_SUPPORTED; }
+esp_err_t ble_api_service_stop(void) {
+  return ESP_ERR_NOT_SUPPORTED;
+}
 
-bool ble_api_service_is_connected(void) { return false; }
+bool ble_api_service_is_connected(void) {
+  return false;
+}
 
 #endif

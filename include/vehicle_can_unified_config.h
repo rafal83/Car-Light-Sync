@@ -10,13 +10,13 @@ extern "C" {
 
 typedef enum {
   BYTE_ORDER_LITTLE_ENDIAN = 0,
-  BYTE_ORDER_BIG_ENDIAN = 1
+  BYTE_ORDER_BIG_ENDIAN    = 1
 } byte_order_t;
 
 typedef enum {
   SIGNAL_TYPE_UNSIGNED = 0,
-  SIGNAL_TYPE_SIGNED = 1,
-  SIGNAL_TYPE_BOOLEAN = 2
+  SIGNAL_TYPE_SIGNED   = 1,
+  SIGNAL_TYPE_BOOLEAN  = 2
 } signal_type_t;
 
 // Définition d'un signal DBC (ex: DI_vehicleSpeed, UI_turnSignalLeft, etc.)

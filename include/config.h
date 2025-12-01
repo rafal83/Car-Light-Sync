@@ -16,7 +16,8 @@
 #define I2S_SD_PIN 18
 
 // Pins TWAI (CAN)
-// Note: Sur ESP32-C6, les pins TWAI peuvent être mappées sur n'importe quel GPIO
+// Note: Sur ESP32-C6, les pins TWAI peuvent être mappées sur n'importe quel
+// GPIO
 #define CAN_TX_BODY_PIN 15
 #define CAN_RX_BODY_PIN 14
 #define CAN_TX_CHASSIS_PIN 6
@@ -42,7 +43,7 @@
 // Configuration WiFi
 #define WIFI_AP_SSID_BASE "CarLightSync"
 #define WIFI_AP_SSID "CarLightSync" // Sera remplacé dynamiquement
-#define WIFI_AP_PASSWORD ""           // Réseau ouvert (pas de mot de passe)
+#define WIFI_AP_PASSWORD ""         // Réseau ouvert (pas de mot de passe)
 #define WIFI_MAX_CLIENTS 4
 
 // Buffer pour les noms avec suffixe MAC
