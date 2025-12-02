@@ -273,7 +273,6 @@ static void ble_request_task(void *arg) {
         heap_caps_free(message.payload);
       }
       taskYIELD();
-      // vTaskDelay(pdMS_TO_TICKS(10));
     }
   }
 }

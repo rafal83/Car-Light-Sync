@@ -44,10 +44,6 @@ static void vehicle_can_callback(const can_frame_t *frame, can_bus_type_t bus_ty
   vehicle_can_process_frame_static(frame, &last_vehicle_state);
   led_effects_update_vehicle_state(&last_vehicle_state);
   web_server_update_vehicle_state(&last_vehicle_state);
-
-  // Log optionnel pour debug
-  // const char *bus_name = (bus_type == CAN_BUS_CHASSIS) ? "CHASSIS" : "BODY";
-  // ESP_LOGD(TAG_MAIN, "[%s] Frame CAN ID=0x%03lX", bus_name, frame->id);
 }
 
 // Tâche de mise à jour des LEDs
@@ -68,56 +64,13 @@ static void can_event_task(void *pvParameters) {
   // Utiliser static pour éviter de surcharger la stack
   static vehicle_state_t current_state;
   static vehicle_state_t previous_state = {0};
-  // static config_profile_t profile;
-  // bool has_profile = false;
 
   while (1) {
     // Copier l'état actuel
     memcpy(&current_state, &last_vehicle_state, sizeof(vehicle_state_t));
 
-    // has_profile = config_manager_get_active_profile(&profile);
-
-    // if (current_state.left_btn_press ) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
-    // }
-    // if (current_state.left_btn_dbl_press ) {
-    //     config_manager_stop_event(CAN_EVENT_TURN_LEFT);
-    // }
-    // if (current_state.left_btn_scroll_up ) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
-    // }
-    // if (current_state.left_btn_scroll_down) {
-    //     config_manager_stop_event(CAN_EVENT_TURN_LEFT);
-    // }
-
-    // if (current_state.right_btn_press ) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
-    // }
-    // if (current_state.right_btn_dbl_press ) {
-    //     config_manager_stop_event(CAN_EVENT_TURN_LEFT);
-    // }
-
-    // if (current_state.right_btn_scroll_up) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
-    // }
-    // if (current_state.right_btn_scroll_down) {
-    //     config_manager_stop_event(CAN_EVENT_TURN_RIGHT);
-    // }
-    // if (current_state.right_btn_tilt_left) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
-    // }
-    // if (current_state.right_btn_tilt_right) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
-    // }
-    // if (current_state.left_btn_tilt_left) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
-    // }
-    // if (current_state.left_btn_tilt_right) {
-    //     config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
-    // }
     // Détecter les changements d'état et générer des événements
-    // Clignotants - IMPORTANT: if séparés pour détecter chaque changement
-    // indépendamment
+    // Clignotants - IMPORTANT: if séparés pour détecter chaque changement indépendamment
 
     if (previous_state.hazard != current_state.hazard) {
       ESP_LOGI(TAG_MAIN, "Hazard changé: %d -> %d", previous_state.hazard, current_state.hazard);
@@ -333,32 +286,7 @@ static void can_event_task(void *pvParameters) {
       }
     }
 
-    // Mode nuit
-    // if (current_state.night_mode != previous_state.night_mode) {
-    //     if (current_state.night_mode) {
-    //         config_manager_process_can_event(CAN_EVENT_NIGHT_MODE_ON);
-
-    //         // Appliquer automatiquement l'effet mode nuit si configuré
-    //         config_profile_t profile;
-    //         if (config_manager_get_active_profile(&profile) &&
-    //         profile.auto_night_mode) {
-    //             led_effects_set_config(&profile.night_mode_effect);
-    //             ESP_LOGI(TAG_MAIN, "Mode nuit activé automatiquement");
-    //         }
-    //     } else {
-    //         config_manager_process_can_event(CAN_EVENT_NIGHT_MODE_OFF);
-
-    //         // Retour à l'effet par défaut
-    //         config_profile_t profile;
-    //         if (config_manager_get_active_profile(&profile) &&
-    //         profile.auto_night_mode) {
-    //             led_effects_set_config(&profile.default_effect);
-    //             ESP_LOGI(TAG_MAIN, "Mode nuit désactivé");
-    //         }
-    //     }
-    // }
-
-    // Seuil de vitesse - Utiliser static pour éviter surcharge de la stack
+    // Seuil de vitesse
     if (current_state.speed_kph > current_state.speed_threshold) {
       config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
     } else {
