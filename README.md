@@ -640,4 +640,3 @@ Si ce projet vous est utile et que vous souhaitez soutenir son développement, v
 
 **Développé avec ❤️ pour la communauté automobile**
 
-Version actuelle : **v2.3.0** | Dernière mise à jour : 2025-11-27
