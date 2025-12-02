@@ -559,7 +559,7 @@ button {
     font-weight: 500;
     color: var(--color-text);
     font-size: 15px;
-    min-width: 180px;
+    min-width: 280px;
     flex-shrink: 0;
     transition: opacity 0.2s;
 }
@@ -673,7 +673,7 @@ button {
     }
     .event-accordion-summary {
         flex-wrap: wrap;
-        width: 100%;
+        width: 90%;
     }
     .event-accordion-form {
         grid-template-columns: 1fr;
@@ -822,7 +822,7 @@ button {
 
 @keyframes pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(0.95); }
+    50% { opacity: 0.7; transform: scale(0.85); }
 }
 
 .loading-content h2 {

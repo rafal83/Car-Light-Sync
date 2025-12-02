@@ -59,7 +59,6 @@ KNOWN_SIGNAL_EVENTS = {
     },
     'brake': {
         'PRESSED': 'BRAKE_ON',
-        'RELEASED': 'BRAKE_OFF'
     },
     'blindspot': {
         'WARNING_LEVEL_1': 'BLINDSPOT_WARNING',

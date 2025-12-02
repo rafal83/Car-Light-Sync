@@ -59,6 +59,20 @@ const jsMinifyOptions = {
 async function minifyFile(filePath, type) {
     console.log(`Minifying ${path.basename(filePath)}...`);
 
+    const gzPath = filePath + '.gz';
+    if (fs.existsSync(gzPath)) {
+        try {
+            const sourceMtime = fs.statSync(filePath).mtimeMs;
+            const gzMtime = fs.statSync(gzPath).mtimeMs;
+            if (gzMtime >= sourceMtime) {
+                console.log(`  Skipping ${path.basename(filePath)} (gzip newer than source)`);
+                return { success: true, skipped: true };
+            }
+        } catch (error) {
+            console.warn(`  Could not compare timestamps for ${path.basename(filePath)}: ${error.message}`);
+        }
+    }
+
     const content = fs.readFileSync(filePath, 'utf8');
     const outputPath = filePath + '.min';
 
@@ -109,14 +123,19 @@ async function minifyAll() {
     let totalOriginal = 0;
     let totalMinified = 0;
     let successCount = 0;
+    let skipCount = 0;
 
     for (const file of files) {
         if (fs.existsSync(file.path)) {
             const result = await minifyFile(file.path, file.type);
             if (result.success) {
-                totalOriginal += result.originalSize;
-                totalMinified += result.minifiedSize;
-                successCount++;
+                if (result.skipped) {
+                    skipCount++;
+                } else {
+                    totalOriginal += result.originalSize;
+                    totalMinified += result.minifiedSize;
+                    successCount++;
+                }
             }
         } else {
             console.log(`  ⚠ Skipping ${path.basename(file.path)} (not found)`);
@@ -124,9 +143,13 @@ async function minifyAll() {
     }
 
     console.log('\n📊 Summary:');
-    console.log(`  Files processed: ${successCount}/${files.length}`);
-    console.log(`  Total size: ${totalOriginal} → ${totalMinified} bytes`);
-    console.log(`  Total reduction: ${((1 - totalMinified / totalOriginal) * 100).toFixed(1)}%`);
+    console.log(`  Files processed: ${successCount + skipCount}/${files.length} (minified: ${successCount}, skipped: ${skipCount})`);
+    if (successCount > 0 && totalOriginal > 0) {
+        console.log(`  Total size: ${totalOriginal} → ${totalMinified} bytes`);
+        console.log(`  Total reduction: ${((1 - totalMinified / totalOriginal) * 100).toFixed(1)}%`);
+    } else {
+        console.log('  No files minified (all gzip files already up to date)');
+    }
     console.log('\n✅ Minification complete!\n');
 }
 

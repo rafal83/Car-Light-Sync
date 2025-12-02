@@ -634,7 +634,6 @@ const simulationSections = [
         titleKey: 'simulation.driving',
         events: [
             { id: 'BRAKE_ON', labelKey: 'simulation.brakeOn' },
-            { id: 'BRAKE_OFF', labelKey: 'simulation.brakeOff' },
             { id: 'SPEED_THRESHOLD', labelKey: 'simulation.speedThreshold' }
         ]
     },
@@ -2630,16 +2629,26 @@ async function toggleNightMode(isEnabled) {
 }
 // Mapping des événements vers les clés commonEvents
 const EVENT_TO_COMMON = {
-    'TURN_LEFT': 'turnLeft', 'TURN_RIGHT': 'turnRight', 'TURN_HAZARD': 'hazard',
-    'CHARGING': 'charging', 'CHARGE_COMPLETE': 'chargeComplete',
-    'DOOR_OPEN': 'doorOpen', 'DOOR_CLOSE': 'doorClose',
-    'LOCKED': 'locked', 'UNLOCKED': 'unlocked',
-    'BRAKE_ON': 'brakeOn', 'BRAKE_OFF': 'brakeOff',
-    'BLINDSPOT_LEFT_LV1': 'blindspotLeftLv1', 'BLINDSPOT_LEFT_LV2': 'blindspotLeftLv2',
-    'BLINDSPOT_RIGHT_LV1': 'blindspotRightLv1', 'BLINDSPOT_RIGHT_LV2': 'blindspotRightLv2',
-    'LANE_DEPARTURE_LEFT_LV1': 'laneDepartureLeftLv1', 'LANE_DEPARTURE_LEFT_LV2': 'laneDepartureLeftLv2',
-    'LANE_DEPARTURE_RIGHT_LV1': 'laneDepartureRightLv1', 'LANE_DEPARTURE_RIGHT_LV2': 'laneDepartureRightLv2',
-    'NIGHT_MODE_ON': 'nightModeOn', 'NIGHT_MODE_OFF': 'nightModeOff',
+    'TURN_LEFT': 'turnLeft', 
+    'TURN_RIGHT': 'turnRight', 
+    'TURN_HAZARD': 'hazard',
+    'CHARGING': 'charging', 
+    'CHARGE_COMPLETE': 'chargeComplete',
+    'DOOR_OPEN': 'doorOpen', 
+    'DOOR_CLOSE': 'doorClose',
+    'LOCKED': 'locked', 
+    'UNLOCKED': 'unlocked',
+    'BRAKE_ON': 'brakeOn', 
+    'BLINDSPOT_LEFT_LV1': 'blindspotLeftLv1', 
+    'BLINDSPOT_LEFT_LV2': 'blindspotLeftLv2',
+    'BLINDSPOT_RIGHT_LV1': 'blindspotRightLv1', 
+    'BLINDSPOT_RIGHT_LV2': 'blindspotRightLv2',
+    'LANE_DEPARTURE_LEFT_LV1': 'laneDepartureLeftLv1', 
+    'LANE_DEPARTURE_LEFT_LV2': 'laneDepartureLeftLv2',
+    'LANE_DEPARTURE_RIGHT_LV1': 'laneDepartureRightLv1',
+    'LANE_DEPARTURE_RIGHT_LV2': 'laneDepartureRightLv2',
+    'NIGHT_MODE_ON': 'nightModeOn', 
+    'NIGHT_MODE_OFF': 'nightModeOff',
     'SPEED_THRESHOLD': 'speedThreshold'
 };
 function translateEventId(eventId) {
@@ -2679,7 +2688,7 @@ function getEventName(eventId) {
         }
         const numericIndex = typeof eventId === 'number' ? eventId : parseInt(eventId, 10);
         if (!Number.isNaN(numericIndex) && eventTypesList[numericIndex]) {
-            return eventTypesList[numericIndex].n;
+            return eventTypesList[numericIndex].id;
         }
     }
     return t('eventNames.unknown', eventId);

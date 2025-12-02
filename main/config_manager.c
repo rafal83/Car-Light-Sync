@@ -29,46 +29,6 @@ typedef struct {
 static active_event_t active_events[MAX_ACTIVE_EVENTS];
 static bool effect_override_active = false;
 
-// Noms des événements CAN
-static const char *event_names[]   = {"None",
-                                      "Turn Left",
-                                      "Turn Right",
-                                      "Turn Hazard",
-                                      "Charging",
-                                      "Charge Complete",
-                                      "Charging Started",
-                                      "Charging Stopped",
-                                      "Charging Cable Connected",
-                                      "Charging Cable Disconnected",
-                                      "Charging Port Opened",
-                                      "Door Open",
-                                      "Door Close",
-                                      "Locked",
-                                      "Unlocked",
-                                      "Brake On",
-                                      "Brake Off",
-                                      "Blindspot Left lv1",
-                                      "Blindspot Left lv2",
-                                      "Blindspot Right lv1",
-                                      "Blindspot Right lv2",
-                                      "Forward Collision",
-                                      "Lane departure Left lv1",
-                                      "Lane departure Left lv2",
-                                      "Lane departure Right lv1",
-                                      "Lane departure Right lv2",
-                                      "Night Mode On",
-                                      "Night Mode Off",
-                                      "Speed Threshold",
-                                      "Autopilot Engaged",
-                                      "Autopilot Disengaged",
-                                      "Autopilot Aborting",
-                                      "Gear Drive",
-                                      "Gear Reverse",
-                                      "Gear Park",
-                                      "Sentry Mode On",
-                                      "Sentry Mode Off",
-                                      "Sentry Alert"};
-
 bool config_manager_init(void) {
   // Initialiser les profils
   memset(profiles, 0, sizeof(profiles));
@@ -541,30 +501,31 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   profile->event_effects[CAN_EVENT_FORWARD_COLLISION].enabled                                = false;
 
   // Dépassement de ligne
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].event                    = CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].effect_config.effect     = EFFECT_SOLID;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].effect_config.brightness = 255;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].effect_config.speed      = 255;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].effect_config.color1     = 0xFFF000;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].effect_config.reverse    = true; // Animation depuis centre vers gauche
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].duration_ms              = 0;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].priority                 = 220;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1].enabled                  = false;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].event                    = CAN_EVENT_LANE_DEPARTURE_LEFT_LV1;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].action_type              = EVENT_ACTION_APPLY_EFFECT;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].profile_id               = -1;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.effect     = EFFECT_SOLID;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.brightness = 255;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.speed      = 255;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.color1     = 0xFFF000;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.reverse    = true; // Animation depuis centre vers gauche
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].duration_ms              = 0;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].priority                 = 220;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].enabled                  = false;
 
   // Dépassement de ligne droite (identique)
-  memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1].event                 = CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1].effect_config.reverse = false; // Animation depuis centre vers droite
+  memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1], sizeof(can_event_effect_t));
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1].event                 = CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1].effect_config.reverse = false; // Animation depuis centre vers droite
 
-  memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2].effect_config.color1 = 0xFF0000;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2].priority             = 250;
+  memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1], sizeof(can_event_effect_t));
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].event                 = CAN_EVENT_LANE_DEPARTURE_LEFT_LV2;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].effect_config.color1 = 0xFF0000;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].priority             = 250;
 
-  memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2].event                 = CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2].effect_config.reverse = false; // Animation depuis centre vers droite
+  memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2], sizeof(can_event_effect_t));
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2].event                 = CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2].effect_config.reverse = false; // Animation depuis centre vers droite
 
   // Hazard/Warning (clignotants de détresse)
   profile->event_effects[CAN_EVENT_TURN_HAZARD].event                                      = CAN_EVENT_TURN_HAZARD;
@@ -816,11 +777,15 @@ bool config_manager_process_can_event(can_event_type_t event) {
     case CAN_EVENT_TURN_LEFT:
     case CAN_EVENT_BLINDSPOT_LEFT_LV1:
     case CAN_EVENT_BLINDSPOT_LEFT_LV2:
+    case CAN_EVENT_LANE_DEPARTURE_LEFT_LV1:
+    case CAN_EVENT_LANE_DEPARTURE_LEFT_LV2:
       effect_to_apply.zone = LED_ZONE_LEFT;
       break;
     case CAN_EVENT_TURN_RIGHT:
     case CAN_EVENT_BLINDSPOT_RIGHT_LV1:
     case CAN_EVENT_BLINDSPOT_RIGHT_LV2:
+    case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1:
+    case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2:
       effect_to_apply.zone = LED_ZONE_RIGHT;
       break;
     default:
@@ -879,7 +844,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
         ESP_LOGI(TAG_CONFIG, "Écrasement événement priorité %d par priorité %d", lowest_priority, priority);
       } else {
         // ESP_LOGW(TAG_CONFIG, "Événement '%s' ignoré (pas de slot
-        // disponible)", config_manager_get_event_name(event));
+        // disponible)", config_manager_enum_to_id(event));
         return false;
       }
     }
@@ -896,15 +861,15 @@ bool config_manager_process_can_event(can_event_type_t event) {
     // selon la logique de priorité par zone pour éviter le glitch visuel
 
     if (duration_ms > 0) {
-      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé pour %dms (priorité %d)", config_manager_get_event_name(event), duration_ms, priority);
+      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé pour %dms (priorité %d)", config_manager_enum_to_id(event), duration_ms, priority);
     } else {
-      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé (permanent, priorité %d)", config_manager_get_event_name(event), priority);
+      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé (permanent, priorité %d)", config_manager_enum_to_id(event), priority);
     }
 
     return true;
   } else {
     // ESP_LOGW(TAG_CONFIG, "Effet par défaut ignoré pour '%s'",
-    //         config_manager_get_event_name(event));
+    //         config_manager_enum_to_id(event));
   }
 
   return false;
@@ -919,7 +884,7 @@ void config_manager_stop_event(can_event_type_t event) {
   // Désactiver tous les slots qui correspondent à cet événement
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (active_events[i].active && active_events[i].event == event) {
-      ESP_LOGI(TAG_CONFIG, "Arrêt de l'événement '%s'", config_manager_get_event_name(event));
+      ESP_LOGI(TAG_CONFIG, "Arrêt de l'événement '%s'", config_manager_enum_to_id(event));
       active_events[i].active = false;
     }
   }
@@ -928,7 +893,7 @@ void config_manager_stop_event(can_event_type_t event) {
 void config_manager_stop_all_events(void) {
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (active_events[i].active) {
-      ESP_LOGI(TAG_CONFIG, "Arret global de l'evenement '%s'", config_manager_get_event_name(active_events[i].event));
+      ESP_LOGI(TAG_CONFIG, "Arret global de l'evenement '%s'", config_manager_enum_to_id(active_events[i].event));
       active_events[i].active = false;
     }
   }
@@ -947,7 +912,7 @@ void config_manager_update(void) {
     if (active_events[i].duration_ms > 0) {
       uint32_t elapsed = now - active_events[i].start_time;
       if (elapsed >= pdMS_TO_TICKS(active_events[i].duration_ms)) {
-        ESP_LOGD(TAG_CONFIG, "Événement '%s' terminé", config_manager_get_event_name(active_events[i].event));
+        ESP_LOGD(TAG_CONFIG, "Événement '%s' terminé", config_manager_enum_to_id(active_events[i].event));
         active_events[i].active = false;
         continue;
       }
@@ -1007,7 +972,7 @@ void config_manager_update(void) {
       // Effet FULL écrase tout (priorité suffisante)
       // ESP_LOGI(TAG_CONFIG, "Événement '%s' actif écrase l'effet par défaut
       // (priorité=%d)",
-      //          config_manager_get_event_name(active_events[full_slot].event),
+      //          config_manager_enum_to_id(active_events[full_slot].event),
       //          active_events[full_slot].priority);
       led_effects_set_config(&active_events[full_slot].effect_config);
       effect_override_active = true;
@@ -1054,13 +1019,6 @@ void config_manager_update(void) {
   }
 }
 
-const char *config_manager_get_event_name(can_event_type_t event) {
-  if (event >= 0 && event < CAN_EVENT_MAX) {
-    return event_names[event];
-  }
-  return "Unknown";
-}
-
 // Table de correspondance enum -> ID alphanumérique
 const char *config_manager_enum_to_id(can_event_type_t event) {
   switch (event) {
@@ -1105,15 +1063,15 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
   case CAN_EVENT_BLINDSPOT_RIGHT_LV2:
     return EVENT_ID_BLINDSPOT_RIGHT_LV2;
   case CAN_EVENT_FORWARD_COLLISION:
-    return EVENT_ID_EVENT_FORWARD_COLLISION;
-  case CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1:
-    return EVENT_ID_BLINDSPOT_LEFT_LV1;
-  case CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2:
-    return EVENT_ID_BLINDSPOT_RIGHT_LV2;
-  case CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1:
-    return EVENT_ID_BLINDSPOT_RIGHT_LV1;
-  case CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2:
-    return EVENT_ID_BLINDSPOT_LEFT_LV2;
+    return EVENT_ID_FORWARD_COLLISION;
+  case CAN_EVENT_LANE_DEPARTURE_LEFT_LV1:
+    return EVENT_ID_LANE_DEPARTURE_LEFT_LV1;
+  case CAN_EVENT_LANE_DEPARTURE_LEFT_LV2:
+    return EVENT_ID_LANE_DEPARTURE_RIGHT_LV2;
+  case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1:
+    return EVENT_ID_LANE_DEPARTURE_RIGHT_LV1;
+  case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2:
+    return EVENT_ID_LANE_DEPARTURE_LEFT_LV2;
   case CAN_EVENT_NIGHT_MODE_ON:
     return EVENT_ID_NIGHT_MODE_ON;
   case CAN_EVENT_NIGHT_MODE_OFF:
@@ -1188,16 +1146,16 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_BLINDSPOT_RIGHT_LV1;
   if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT_LV2) == 0)
     return CAN_EVENT_BLINDSPOT_RIGHT_LV2;
-  if (strcmp(id, EVENT_ID_EVENT_FORWARD_COLLISION) == 0)
+  if (strcmp(id, EVENT_ID_FORWARD_COLLISION) == 0)
     return CAN_EVENT_FORWARD_COLLISION;
-  if (strcmp(id, EVENT_ID_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1) == 0)
-    return CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV1;
-  if (strcmp(id, EVENT_ID_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2) == 0)
-    return CAN_EVENT_LANE_DEPARTURE_WARNING_LEFT_LV2;
-  if (strcmp(id, EVENT_ID_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1) == 0)
-    return CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV1;
-  if (strcmp(id, EVENT_ID_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2) == 0)
-    return CAN_EVENT_LANE_DEPARTURE_WARNING_RIGHT_LV2;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_LEFT_LV1) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_LEFT_LV1;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_LEFT_LV2) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_LEFT_LV2;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_RIGHT_LV1) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_RIGHT_LV2) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2;
   if (strcmp(id, EVENT_ID_NIGHT_MODE_ON) == 0)
     return CAN_EVENT_NIGHT_MODE_ON;
   if (strcmp(id, EVENT_ID_NIGHT_MODE_OFF) == 0)

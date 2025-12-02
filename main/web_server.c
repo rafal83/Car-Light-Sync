@@ -1113,9 +1113,6 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
   can_event_type_t event = CAN_EVENT_NONE;
   if (cJSON_IsString(event_item)) {
     event = config_manager_id_to_enum(event_item->valuestring);
-  } else if (cJSON_IsNumber(event_item)) {
-    // Support legacy payloads that still send a numeric enum
-    event = (can_event_type_t)event_item->valueint;
   } else {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid event parameter");
     cJSON_Delete(root);
@@ -1167,7 +1164,6 @@ static esp_err_t event_types_list_handler(httpd_req_t *req) {
   for (int i = 0; i < CAN_EVENT_MAX; i++) {
     cJSON *event_type = cJSON_CreateObject();
     cJSON_AddStringToObject(event_type, "id", config_manager_enum_to_id((can_event_type_t)i));
-    cJSON_AddStringToObject(event_type, "n", config_manager_get_event_name((can_event_type_t)i));
     cJSON_AddItemToArray(event_types, event_type);
   }
 
@@ -1209,9 +1205,6 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
   can_event_type_t event = CAN_EVENT_NONE;
   if (cJSON_IsString(event_item)) {
     event = config_manager_id_to_enum(event_item->valuestring);
-  } else if (cJSON_IsNumber(event_item)) {
-    // Support legacy payloads that still send numeric enums
-    event = (can_event_type_t)event_item->valueint;
   } else {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid event parameter");
     cJSON_Delete(root);
@@ -1228,11 +1221,11 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
   // Traiter l'événement
   bool success = config_manager_process_can_event(event);
 
-  ESP_LOGI(TAG_WEBSERVER, "Simulation événement CAN: %s (%d)", config_manager_get_event_name(event), event);
+  ESP_LOGI(TAG_WEBSERVER, "Simulation événement CAN: %s (%d)", config_manager_enum_to_id(event), event);
 
   cJSON *response = cJSON_CreateObject();
   cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
-  cJSON_AddStringToObject(response, "ev", config_manager_get_event_name(event));
+  cJSON_AddStringToObject(response, "ev", config_manager_enum_to_id(event));
 
   const char *json_string = cJSON_PrintUnformatted(response);
   httpd_resp_set_type(req, "application/json");

@@ -207,7 +207,6 @@ Le système détecte 22+ événements CAN du véhicule Tesla :
 | `LOCKED` | Véhicule verrouillé | 110 |
 | `UNLOCKED` | Véhicule déverrouillé | 110 |
 | `BRAKE_ON` | Frein appuyé | 180 |
-| `BRAKE_OFF` | Frein relâché | 170 |
 | `BLINDSPOT_LEFT` | Angle mort gauche détecté | 250 |
 | `BLINDSPOT_RIGHT` | Angle mort droit détecté | 250 |
 | `NIGHT_MODE_ON` | Mode nuit activé | 0 (auto) |

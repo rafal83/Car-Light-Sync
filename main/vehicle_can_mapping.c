@@ -247,10 +247,10 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     if (strcmp(name, "DAS_laneDepartureWarning") == 0) {
       // 1 "LEFT_WARNING" 3 "LEFT_WARNING_SEVERE" 0 "NONE" 2 "RIGHT_WARNING" 4
       // "RIGHT_WARNING_SEVERE"
-      state->lane_departure_warning_left_lv1  = value == 1 ? 1 : 0;
-      state->lane_departure_warning_left_lv2  = value == 3 ? 1 : 0;
-      state->lane_departure_warning_right_lv1 = value == 2 ? 1 : 0;
-      state->lane_departure_warning_right_lv2 = value == 4 ? 1 : 0;
+      state->lane_departure_left_lv1  = value == 1 ? 1 : 0;
+      state->lane_departure_left_lv2  = value == 3 ? 1 : 0;
+      state->lane_departure_right_lv1 = value == 2 ? 1 : 0;
+      state->lane_departure_right_lv2 = value == 4 ? 1 : 0;
       return;
     }
     if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
