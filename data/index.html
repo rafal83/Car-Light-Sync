@@ -41,20 +41,12 @@
                 <p data-i18n="app.subtitle">Contrôle RGB synchronisé avec votre voiture</p>
             </div>
             <div class="header-controls">
-                <div class="header-control">
-                    <label for="language-select" data-i18n="config.language">Langue</label>
-                    <select id="language-select" onchange="setLanguage(this.value)">
-                        <option value="fr" data-i18n="config.languageFrench">Français</option>
-                        <option value="en" data-i18n="config.languageEnglish">English</option>
-                    </select>
-                </div>
-                <div class="header-control">
-                    <label for="theme-select" data-i18n="config.theme">Thème</label>
-                    <select id="theme-select" onchange="setTheme(this.value)">
-                        <option value="dark" data-i18n="config.themeDark">Mode sombre</option>
-                        <option value="light" data-i18n="config.themeLight">Mode clair</option>
-                    </select>
-                </div>
+                <button id="language-toggle" class="icon-toggle-btn" onclick="toggleLanguage()" title="Language / Langue">
+                    <span id="language-icon">FR</span>
+                </button>
+                <button id="theme-toggle" class="icon-toggle-btn" onclick="toggleTheme()" title="Theme">
+                    <span id="theme-icon">☀️</span>
+                </button>
             </div>
         </div>
         <div id="ble-notification" class="notification"></div>

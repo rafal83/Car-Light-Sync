@@ -1254,6 +1254,9 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   const cJSON *enabled_json     = cJSON_GetObjectItem(event_obj, "en");
   const cJSON *action_type_json = cJSON_GetObjectItem(event_obj, "at");
   const cJSON *profile_id_json  = cJSON_GetObjectItem(event_obj, "pid");
+  const cJSON *segment_start    = cJSON_GetObjectItem(event_obj, "st");
+  const cJSON *segment_length   = cJSON_GetObjectItem(event_obj, "ln");
+  const cJSON *anchor_left      = cJSON_GetObjectItem(event_obj, "al");
 
   if (event_json == NULL || effect_json == NULL || !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
     ESP_LOGW(TAG_WEBSERVER, "Payload d'evenement invalide");
@@ -1276,6 +1279,15 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   }
   if (color_json && cJSON_IsNumber(color_json)) {
     effect_config.color1 = color_json->valueint;
+  }
+  if (segment_start && cJSON_IsNumber(segment_start)) {
+    effect_config.segment_start = segment_start->valueint;
+  }
+  if (segment_length && cJSON_IsNumber(segment_length)) {
+    effect_config.segment_length = segment_length->valueint;
+  }
+  if (anchor_left && cJSON_IsBool(anchor_left)) {
+    effect_config.anchor_left = cJSON_IsTrue(anchor_left);
   }
   effect_config.sync_mode = SYNC_OFF;
   effect_config.reverse   = (event_type == CAN_EVENT_TURN_LEFT || event_type == CAN_EVENT_BLINDSPOT_LEFT_LV1 || event_type == CAN_EVENT_BLINDSPOT_LEFT_LV2);
@@ -1333,6 +1345,9 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
       cJSON_AddNumberToObject(event_obj, "at", event_effect.action_type);
       cJSON_AddNumberToObject(event_obj, "pid", event_effect.profile_id);
       cJSON_AddBoolToObject(event_obj, "csp", config_manager_event_can_switch_profile(event_type));
+      cJSON_AddNumberToObject(event_obj, "st", event_effect.effect_config.segment_start);
+      cJSON_AddNumberToObject(event_obj, "ln", event_effect.effect_config.segment_length);
+      cJSON_AddBoolToObject(event_obj, "al", event_effect.effect_config.anchor_left);
 
       cJSON_AddItemToArray(events_array, event_obj);
     }
@@ -1491,7 +1506,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  cJSON *enabled = cJSON_GetObjectItem(root, "en");
+  cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
   if (cJSON_IsBool(enabled)) {
     bool enable = cJSON_IsTrue(enabled);
     if (audio_input_set_enabled(enable)) {
@@ -1734,23 +1749,11 @@ esp_err_t web_server_init(void) {
 esp_err_t web_server_start(void) {
   httpd_config_t config   = HTTPD_DEFAULT_CONFIG();
   config.server_port      = WEB_SERVER_PORT;
-  config.max_uri_handlers = 47; // Augmenté pour les handlers système (restart/factory-reset)
-  config.max_open_sockets = 13; // Augmenté pour gérer les rafraîchissements de
-                                // page (max 7 par défaut)
-  config.lru_purge_enable = true;
-#ifndef CONFIG_HAS_PSRAM
-  config.stack_size = 24576;
-#else
-  config.stack_size = 16384;
-#endif
-  config.recv_wait_timeout = 10;    // Réduit de 30 à 10 secondes
-  config.send_wait_timeout = 30;    // Augmenté à 30 secondes pour les gros fichiers .gz
-  config.close_fn          = NULL;  // Permet de fermer proprement les connexions
-  config.keep_alive_enable = false; // Désactive keep-alive pour libérer les connexions plus rapidement
+  config.max_uri_handlers = 60;
+  config.max_open_sockets = 13;
+  config.lru_purge_enable = true;  // Ferme les plus anciennes connexions si limite atteinte
+  config.core_id          = 1;     // Serveur web sur core 1 (WiFi sur core 0)
 
-  // Configuration TCP pour améliorer la transmission de gros fichiers
-  config.backlog_conn      = 5;
-  config.core_id           = tskNO_AFFINITY;
 
   ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 

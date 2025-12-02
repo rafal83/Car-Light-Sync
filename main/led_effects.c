@@ -715,60 +715,35 @@ static void effect_blindspot_flash(void) {
   // Pause plus courte pour effet d'alerte
 }
 
-// Effet: Clignotants avec défilement séquentiel (style moderne)
+// Effet: Clignotants avec défilement séquentiel (segment configurable)
 static void effect_turn_signal(void) {
-  rgb_t color   = color_to_rgb(current_config.color1);
-  color         = apply_brightness(color, current_config.brightness);
+  rgb_t base_color = color_to_rgb(current_config.color1);
 
-  // Configuration: utiliser la moitié du ruban selon la direction
-  // reverse = true : côté gauche (animation du centre vers la gauche)
-  // reverse = false : côté droit (animation du centre vers la droite)
-  int half_leds = led_count / 2;
+  int segment_len = led_count;
+  if (segment_len <= 0) {
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
 
-  // Période complète d'animation basée sur le paramètre speed
-  // speed: 0-255, converti en période 20-120 frames (speed élevé = période
-  // courte = rapide)
-  int period    = 120 - ((current_config.speed * 100) / 255); // Range: 120 (slow) to 20 (fast)
+  int period = 120 - ((current_config.speed * 100) / 255); // Range: 120 (slow) to 20 (fast)
   if (period < 20)
     period = 20;
   int cycle              = effect_counter % period;
 
-  // Phase 1: Défilement progressif (70% du cycle)
   int animation_duration = (period * 70) / 100;
 
-  // Effacer tout le ruban
   fill_solid((rgb_t){0, 0, 0});
 
   if (cycle < animation_duration) {
-    // Défilement fluide : allumer progressivement
-    int lit_count = (cycle * half_leds) / animation_duration;
+    int lit_count = (cycle * segment_len) / animation_duration;
 
-    // Allumer les LEDs avec un dégradé pour la fluidité (même style que hazard)
-    for (int i = 0; i < lit_count && i < half_leds; i++) {
-      int led_index;
+    for (int i = 0; i < lit_count && i < segment_len; i++) {
+      int led_index = current_config.reverse ? (segment_len - 1 - i) : i;
 
-      // Animation depuis le CENTRE vers l'extérieur
-      if (current_config.reverse) {
-        // Côté gauche: animation du centre (half_leds-1) vers la gauche (0)
-        led_index = half_leds - 1 - i;
-      } else {
-        // Côté droit: animation du centre (half_leds) vers la droite
-        // (led_count-1)
-        led_index = half_leds + i;
-      }
-
-      // Luminosité décroissante : même style que hazard
-      float brightness_factor;
-      if (i < lit_count - 5) {
-        brightness_factor = 0.3f; // Queue à 30%
-      } else {
-        brightness_factor = 1.0f; // Tête à 100%
-      }
-
-      leds[led_index] = apply_brightness(color, (uint8_t)(current_config.brightness * brightness_factor));
+      float brightness_factor = (i < lit_count - 5) ? 0.3f : 1.0f;
+      leds[led_index]         = apply_brightness(base_color, (uint8_t)(current_config.brightness * brightness_factor));
     }
   }
-  // Sinon tout reste éteint (pause)
 }
 
 // Effet: Warnings (clignotants des deux côtés simultanément)
@@ -1324,9 +1299,27 @@ bool led_effects_set_led_count(uint16_t requested_led_count) {
   return true;
 }
 
+uint16_t led_effects_get_led_count(void) {
+  return led_count;
+}
+
 void led_effects_set_config(const effect_config_t *config) {
   if (config != NULL) {
     memcpy(&current_config, config, sizeof(effect_config_t));
+
+    // Normaliser le segment (0 = full strip)
+    if (current_config.segment_length == 0 || current_config.segment_length > led_count) {
+      current_config.segment_length = led_count;
+    }
+    if (current_config.segment_start >= led_count) {
+      current_config.segment_start = 0;
+    }
+    if ((current_config.segment_start + current_config.segment_length) > led_count) {
+      current_config.segment_length = led_count - current_config.segment_start;
+    }
+    if (current_config.segment_length == led_count) {
+      current_config.anchor_left = true;
+    }
 
     // Activer/désactiver automatiquement le FFT selon l'effet
     bool needs_fft = led_effects_requires_fft(current_config.effect);
@@ -1358,6 +1351,12 @@ void led_effects_get_config(effect_config_t *config) {
 }
 
 void led_effects_update(void) {
+  // Ne rien afficher si config_manager gère les événements actifs
+  if (config_manager_has_active_events()) {
+    effect_counter++;
+    return;
+  }
+
   if (!enabled && !ota_progress_mode && !ota_ready_mode && !ota_error_mode) {
     fill_solid((rgb_t){0, 0, 0});
     led_strip_show();
@@ -1658,6 +1657,9 @@ void led_effects_reset_config(void) {
   current_config.sync_mode      = SYNC_OFF;
   current_config.reverse        = false;
   current_config.audio_reactive = false;
+  current_config.segment_start  = 0;
+  current_config.segment_length = 0;
+  current_config.anchor_left    = true;
 
   ESP_LOGI(TAG_LED, "Configuration réinitialisée");
 }
@@ -1674,4 +1676,73 @@ bool led_effects_get_night_mode(void) {
 
 uint8_t led_effects_get_night_brightness(void) {
   return night_mode_brightness;
+}
+
+uint32_t led_effects_get_frame_counter(void) {
+  return effect_counter;
+}
+
+void led_effects_advance_frame_counter(void) {
+  effect_counter++;
+}
+
+void led_effects_render_to_buffer(const effect_config_t *config, uint16_t segment_start, uint16_t segment_length, uint32_t frame_counter, led_rgb_t *out_buffer) {
+  if (config == NULL || out_buffer == NULL) {
+    return;
+  }
+
+  if (segment_length == 0 || segment_start >= led_count) {
+    return;
+  }
+
+  if ((segment_start + segment_length) > led_count) {
+    segment_length = led_count - segment_start;
+  }
+
+  // Sauvegarder l'etat courant
+  effect_config_t saved_config = current_config;
+  uint16_t saved_led_count     = led_count;
+  uint32_t saved_counter       = effect_counter;
+
+  // Travailler sur un segment uniquement
+  led_count     = segment_length;
+  effect_counter = frame_counter;
+  current_config = *config;
+  current_config.zone = LED_ZONE_FULL;
+
+  fill_solid((rgb_t){0, 0, 0});
+  if (current_config.effect == EFFECT_OFF) {
+    // rien a faire
+  } else if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
+    effect_functions[current_config.effect]();
+  }
+
+  for (uint16_t i = 0; i < segment_length; i++) {
+    uint16_t idx = segment_start + i;
+    if (idx >= saved_led_count) {
+      break;
+    }
+    out_buffer[idx].r = leds[i].r;
+    out_buffer[idx].g = leds[i].g;
+    out_buffer[idx].b = leds[i].b;
+  }
+
+  // Restaurer l'etat
+  current_config = saved_config;
+  led_count      = saved_led_count;
+  effect_counter = saved_counter;
+}
+
+void led_effects_show_buffer(const led_rgb_t *buffer) {
+  if (buffer == NULL) {
+    return;
+  }
+
+  for (uint16_t i = 0; i < led_count; i++) {
+    leds[i].r = buffer[i].r;
+    leds[i].g = buffer[i].g;
+    leds[i].b = buffer[i].b;
+  }
+
+  led_strip_show();
 }

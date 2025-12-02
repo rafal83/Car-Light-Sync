@@ -239,6 +239,12 @@ void config_manager_stop_all_events(void);
 void config_manager_update(void);
 
 /**
+ * @brief Indique si des événements actifs overrident l'effet par défaut
+ * @return true si des événements sont actifs
+ */
+bool config_manager_has_active_events(void);
+
+/**
  * @brief Exporte un profil en JSON
  * @param profile_id ID du profil
  * @param json_buffer Buffer pour le JSON

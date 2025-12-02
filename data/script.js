@@ -49,6 +49,7 @@ let initialDataLoadPromise = null;
 let activeTabName = 'vehicle';
 let statusIntervalHandle = null;
 let isApMode = false; // Mode AP de l'ESP32 (plus lent)
+let maxLeds = 300; // Par défaut, sera mis à jour depuis /api/config
 function isApiConnectionReady() {
     return wifiOnline || (bleTransportInstance && bleTransportInstance.isConnected());
 }
@@ -778,6 +779,7 @@ async function toggleBleConnection() {
 function setLanguage(lang) {
     if (!lang || lang === currentLang) {
         updateLanguageSelector();
+        updateLanguageIcon();
         return;
     }
     currentLang = lang;
@@ -785,6 +787,7 @@ function setLanguage(lang) {
     applyTranslations();
     renderSimulationSections();
     renderEventsTable();
+    updateLanguageIcon();
 }
 function updateLanguageSelector() {
     const select = $('language-select');
@@ -804,6 +807,31 @@ function setTheme(theme) {
     currentTheme = theme;
     localStorage.setItem('theme', currentTheme);
     applyTheme();
+    updateThemeIcon();
+}
+
+function toggleTheme() {
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(currentTheme);
+}
+
+function updateThemeIcon() {
+    const icon = $('theme-icon');
+    if (icon) {
+        icon.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+    }
+}
+
+function toggleLanguage() {
+    currentLang = currentLang === 'fr' ? 'en' : 'fr';
+    setLanguage(currentLang);
+}
+
+function updateLanguageIcon() {
+    const icon = $('language-icon');
+    if (icon) {
+        icon.textContent = currentLang === 'fr' ? 'FR' : 'EN';
+    }
 }
 function applyTranslations() {
     doc.querySelectorAll('[data-i18n]').forEach(el => {
@@ -831,11 +859,8 @@ function applyTranslations() {
     // Update select options
     updateSelectOptions();
     refreshEffectOptionLabels();
-    updateLanguageSelector();
-    const themeSelect = $('theme-select');
-    if (themeSelect) {
-        themeSelect.value = currentTheme;
-    }
+    updateLanguageIcon();
+    updateThemeIcon();
     updateBleUiState();
 }
 function updateSelectOptions() {
@@ -1194,6 +1219,7 @@ function renderEventsTable() {
             eventTypesList
                 .filter(evt => evt.id !== 'NONE')
                 .forEach(evt => {
+                    const isRight = evt.id && evt.id.includes('RIGHT');
                     eventsConfigData.push({
                         ev: evt.id,
                         fx: defaultEffectId,
@@ -1205,7 +1231,10 @@ function renderEventsTable() {
                         en: true,
                         at: 0,
                         pid: -1,
-                        csp: false
+                        csp: false,
+                        st: 0,
+                        ln: 0,
+                        al: !isRight
                     });
                 });
         }
@@ -1249,10 +1278,13 @@ function renderEventsTable() {
             // Apply Effect
             const effectName = getEffectName(event.fx);
             const colorHex = '#' + event.c1.toString(16).padStart(6, '0');
+            const anchor = event.al !== false ? '⇦' : '⇨';
+            const displayLength = (event.ln ?? 0) === 0 ? maxLeds : event.ln;
+            const segmentInfo = `[${event.st ?? 0}→${(event.st ?? 0) + displayLength}] ${anchor}`;
             summaryHTML += `
                 <div class="event-accordion-summary-item effect-item">
                     <span class="event-accordion-summary-label">${t('eventsConfig.effect')}:</span>
-                    <span class="event-accordion-summary-value">${effectName}</span>
+                    <span class="event-accordion-summary-value">${effectName} ${segmentInfo}</span>
                 </div>
                 <div class="event-accordion-summary-item color-item">
                     <span class="event-accordion-summary-label">${t('eventsConfig.color')}:</span>
@@ -1343,6 +1375,30 @@ function renderEventsTable() {
                         <input type="number" min="0" max="255" value="${event.pri}"
                             onchange="updateEventConfig(${index}, 'pri', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
                     </div>
+                    <div class="event-form-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.segmentRange">${t('eventsConfig.segmentRange')}</label>
+                        <div class="segment-range-container">
+                            <div class="segment-range-slider" id="segment-range-${index}">
+                                <div class="segment-range-track"></div>
+                                <div class="segment-range-selected" id="segment-range-selected-${index}"></div>
+                                <input type="range" min="0" max="${maxLeds}" step="5" value="${event.st ?? 0}"
+                                    class="segment-range-min" id="segment-range-min-${index}"
+                                    oninput="updateSegmentRange(${index})" ${!event.en ? 'disabled' : ''}>
+                                <input type="range" min="0" max="${maxLeds}" step="5" value="${(event.st ?? 0) + ((event.ln ?? 0) === 0 ? maxLeds : event.ln)}"
+                                    class="segment-range-max" id="segment-range-max-${index}"
+                                    oninput="updateSegmentRange(${index})" ${!event.en ? 'disabled' : ''}>
+                            </div>
+                            <div class="segment-range-values">
+                                <span data-i18n="eventsConfig.start">${t('eventsConfig.start')}</span>: <span id="segment-value-start-${index}">${event.st ?? 0}</span> |
+                                <span data-i18n="eventsConfig.length">${t('eventsConfig.length')}</span>: <span id="segment-value-length-${index}">${(event.ln ?? 0) === 0 ? maxLeds : event.ln}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="event-form-field checkbox-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.anchorLeft">${t('eventsConfig.anchorLeft')}</label>
+                        <input type="checkbox" ${event.al !== false ? 'checked' : ''} ${!event.en ? 'disabled' : ''}
+                            onchange="updateEventConfig(${index}, 'al', this.checked)">
+                    </div>
                     ` : ''}
                 </div>
             </div>
@@ -1350,6 +1406,58 @@ function renderEventsTable() {
         container.appendChild(accordionItem);
     });
 }
+function updateSegmentRange(index) {
+    const minSlider = $('segment-range-min-' + index);
+    const maxSlider = $('segment-range-max-' + index);
+    const selected = $('segment-range-selected-' + index);
+    const startValue = $('segment-value-start-' + index);
+    const lengthValue = $('segment-value-length-' + index);
+
+    const MIN_LENGTH = 10;
+    let min = parseInt(minSlider.value);
+    let max = parseInt(maxSlider.value);
+
+    // Empêcher longueur < MIN_LENGTH
+    if (max - min < MIN_LENGTH) {
+        if (minSlider === document.activeElement) {
+            // L'utilisateur bouge le min, ajuster le max
+            max = min + MIN_LENGTH;
+            if (max > maxLeds) {
+                max = maxLeds;
+                min = max - MIN_LENGTH;
+            }
+            maxSlider.value = max;
+        } else {
+            // L'utilisateur bouge le max, ajuster le min
+            min = max - MIN_LENGTH;
+            if (min < 0) {
+                min = 0;
+                max = MIN_LENGTH;
+            }
+            minSlider.value = min;
+        }
+    }
+
+    const start = min;
+    let length = max - min;
+
+    // Si length == maxLeds, enregistrer 0 (= toute la strip)
+    const lengthToSave = (length === maxLeds) ? 0 : length;
+
+    // Mettre à jour l'affichage
+    const percent1 = (min / maxLeds) * 100;
+    const percent2 = (max / maxLeds) * 100;
+    selected.style.left = percent1 + '%';
+    selected.style.width = (percent2 - percent1) + '%';
+
+    startValue.textContent = start;
+    lengthValue.textContent = length;
+
+    // Mettre à jour les données
+    updateEventConfig(index, 'st', start);
+    updateEventConfig(index, 'ln', lengthToSave);
+}
+
 function updateEventConfig(index, field, value) {
     eventsConfigData[index][field] = value;
     if (field === 'action_type') {
@@ -1403,6 +1511,9 @@ function toggleEventAccordion(index) {
         // Ouvrir l'accordéon sélectionné
         header.classList.add('active');
         content.classList.add('active');
+
+        // Initialiser le segment range slider visuellement
+        setTimeout(() => updateSegmentRange(index), 10);
     }
 }
 function toggleEventFormFields(index) {
@@ -1465,10 +1576,13 @@ function updateEventSummary(index) {
     if (actionType === 0) {
         const effectName = getEffectName(event.fx);
         const colorHex = '#' + event.c1.toString(16).padStart(6, '0');
+        const anchor = event.al !== false ? '⇦' : '⇨';
+        const displayLength = (event.ln ?? 0) === 0 ? maxLeds : event.ln;
+        const segmentInfo = `[${event.st ?? 0}→${(event.st ?? 0) + displayLength}] ${anchor}`;
         summaryHTML += `
             <div class="event-accordion-summary-item effect-item">
                 <span class="event-accordion-summary-label">${t('eventsConfig.effect')}:</span>
-                <span class="event-accordion-summary-value">${effectName}</span>
+                <span class="event-accordion-summary-value">${effectName} ${segmentInfo}</span>
             </div>
             <div class="event-accordion-summary-item color-item">
                 <span class="event-accordion-summary-label">${t('eventsConfig.color')}:</span>
@@ -1508,7 +1622,8 @@ function buildEventPayload(event) {
     }
     const allowedKeys = [
         'ev', 'fx', 'br', 'sp', 'c1',
-        'dur', 'pri', 'en', 'at', 'pid', 'csp'
+        'dur', 'pri', 'en', 'at', 'pid', 'csp',
+        'st', 'ln', 'al'
     ];
     const payload = {};
     allowedKeys.forEach(key => {
@@ -1971,6 +2086,12 @@ async function loadConfig() {
     try {
         const response = await fetch(API_BASE + '/api/config');
         const config = await response.json();
+
+        // Mettre à jour le nombre max de LEDs
+        if (config.lc && config.lc > 0) {
+            maxLeds = config.lc;
+        }
+
         // Convertir 0-255 en pourcentage
         const nightBrightnessPercent = to255ToPercent(config.nbr);
         // Charger uniquement les éléments qui existent encore
@@ -2935,21 +3056,11 @@ async function loadInitialData() {
 
         // Étape 1-3: Chargement des données essentielles
         updateProgress(1, t('loading.loadingEffects'));
-        if (isApMode) {
-            // Mode AP: séquentialiser pour ne pas saturer le serveur
-            await loadEffects();
-            await delay(baseDelay);
-            await loadEventTypes();
-            await delay(baseDelay);
-            await ensureEventsConfigData().catch(() => null);
-        } else {
-            // Mode Station: paralléliser
-            await Promise.all([
-                loadEffects(),
-                loadEventTypes(),
-                ensureEventsConfigData().catch(() => null)
-            ]);
-        }
+        await loadEffects();
+        await delay(baseDelay);
+        await loadEventTypes();
+        await delay(baseDelay);
+        await ensureEventsConfigData().catch(() => null);
         await delay(baseDelay);
 
         // Étape 4: Rendu des sections

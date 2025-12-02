@@ -98,7 +98,16 @@ typedef struct {
   bool reverse;        // Direction de l'animation (pour compatibilité)
   led_zone_t zone;     // Zone d'application (full, left, right)
   bool audio_reactive; // L'effet réagit au micro si activé
+  uint16_t segment_start;   // Index de départ (compté depuis anchor_left)
+  uint16_t segment_length;  // Longueur du segment (0 = auto)
+  bool anchor_left;         // true: segment_start depuis la gauche, false: depuis la droite
 } effect_config_t;
+
+typedef struct {
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+} led_rgb_t;
 
 /**
  * @brief Initialise le système LED
@@ -291,5 +300,19 @@ void led_effects_show_upgrade_error(void);
  * @return true si la modification a réussi
  */
 bool led_effects_set_led_count(uint16_t led_count);
+
+/**
+ * @brief Rendu d'un effet dans un buffer sans l'envoyer aux LEDs
+ */
+void led_effects_render_to_buffer(const effect_config_t *config, uint16_t segment_start, uint16_t segment_length, uint32_t frame_counter, led_rgb_t *out_buffer);
+
+/**
+ * @brief Affiche un buffer déjà calculé
+ */
+void led_effects_show_buffer(const led_rgb_t *buffer);
+
+uint32_t led_effects_get_frame_counter(void);
+void led_effects_advance_frame_counter(void);
+uint16_t led_effects_get_led_count(void);
 
 #endif // LED_EFFECTS_H

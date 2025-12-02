@@ -479,22 +479,33 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
       }
     }
 
+    // Revérifier l'état avant chaque envoi
+    if (!ble_connected || !notifications_enabled || ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
+      ESP_LOGW(TAG_BLE_API, "Connexion perdue pendant l'envoi (chunk %d)", chunk_count);
+      os_mbuf_free_chain(om);
+      return false;
+    }
+
     int rc = ble_gattc_notify_custom(ble_conn_handle, ble_response_val_handle, om);
     if (rc != 0) {
-      ESP_LOGE(TAG_BLE_API, "Erreur notification BLE: %d", rc);
+      ESP_LOGE(TAG_BLE_API, "Erreur notification BLE: %d (chunk %d/%d)", rc, chunk_count + 1, (len + max_payload - 1) / max_payload);
       return false;
     }
 
     chunk_count++;
     offset += chunk;
 
-    taskYIELD();
-    // // Délai adaptatif : plus long pour les gros transferts
-    // if (len > 1000) {
-    //   vTaskDelay(pdMS_TO_TICKS(20)); // 20ms pour les grosses réponses
-    // } else {
-    //   vTaskDelay(pdMS_TO_TICKS(10)); // 10ms pour les petites réponses
-    // }
+    // Délai entre chunks pour éviter de saturer le buffer BLE
+    // Plus le transfert est gros, plus on attend pour laisser le temps au client de traiter
+    if (offset < len) { // Pas de délai après le dernier chunk
+      if (len > 2000) {
+        vTaskDelay(pdMS_TO_TICKS(30)); // 30ms pour les très gros transferts
+      } else if (len > 500) {
+        vTaskDelay(pdMS_TO_TICKS(20)); // 20ms pour les transferts moyens
+      } else {
+        vTaskDelay(pdMS_TO_TICKS(10)); // 10ms pour les petits transferts
+      }
+    }
   }
 
   return true;
@@ -506,7 +517,7 @@ static void ble_send_text_response(const char *text) {
     return;
   }
   size_t len = strlen(text);
-  ESP_LOGI(TAG_BLE_API, "Sending text response: %d bytes", len);
+  ESP_LOGD(TAG_BLE_API, "Sending text response: %d bytes", len);
   if (len > 0) {
     bool sent = ble_send_notification((const uint8_t *)text, len);
     if (!sent) {
