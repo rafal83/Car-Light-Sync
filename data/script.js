@@ -823,8 +823,8 @@ function updateThemeIcon() {
 }
 
 function toggleLanguage() {
-    currentLang = currentLang === 'fr' ? 'en' : 'fr';
-    setLanguage(currentLang);
+    const newLang = currentLang === 'fr' ? 'en' : 'fr';
+    setLanguage(newLang);
 }
 
 function updateLanguageIcon() {

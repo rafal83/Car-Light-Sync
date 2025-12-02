@@ -1759,6 +1759,7 @@ esp_err_t web_server_start(void) {
 
   if (httpd_start(&server, &config) == ESP_OK) {
     static static_file_route_t static_files[] = {{"/", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
+                                                 {"/generate_204", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
                                                  {"/i18n.js", i18n_js_gz_start, i18n_js_gz_end, "text/javascript", "public, max-age=31536000", "gzip"},
                                                  {"/script.js", script_js_gz_start, script_js_gz_end, "text/javascript", "public, max-age=31536000", "gzip"},
                                                  {"/style.css", style_css_gz_start, style_css_gz_end, "text/css", "public, max-age=31536000", "gzip"},
