@@ -742,7 +742,7 @@ function updateOtaBleNote() {
         ? bleTransport.shouldUseBle()
         : false;
     note.style.display = useBle ? 'block' : 'none';
-    const fileInput = $('firmware-file');
+    const fileInput = $('ota-progress-title');
     const uploadBtn = $('ota-upload-btn');
     if (fileInput) {
         fileInput.style.display = useBle ? 'none' : 'block';
@@ -1208,6 +1208,20 @@ function renderEventsTable() {
         console.error('events-accordion-container not found in DOM');
         return;
     }
+
+    // Sauvegarder l'état des accordéons ouverts avant de recréer
+    const openAccordions = new Set();
+    container.querySelectorAll('.event-accordion-header.active').forEach(header => {
+        // Trouver l'index réel de l'accordéon
+        const contentId = header.nextElementSibling?.id;
+        if (contentId) {
+            const match = contentId.match(/event-accordion-content-(\d+)/);
+            if (match) {
+                openAccordions.add(parseInt(match[1]));
+            }
+        }
+    });
+
     container.innerHTML = '';
     // If no data from API, create default rows for all events
     if (eventsConfigData.length === 0) {
@@ -1323,7 +1337,7 @@ function renderEventsTable() {
                     ${canSwitchProfile ? `
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.action">${t('eventsConfig.action')}</label>
-                        <select onchange="updateEventConfig(${index}, 'at', parseInt(this.value)); renderEventsTable();" ${!event.en ? 'disabled' : ''}>
+                        <select id="event-action-${index}" data-event-index="${index}" ${!event.en ? 'disabled' : ''}>
                             ${actionOptions}
                         </select>
                     </div>
@@ -1401,6 +1415,25 @@ function renderEventsTable() {
             </div>
         `;
         container.appendChild(accordionItem);
+    });
+
+    // Event delegation pour les selects d'action (évite les fuites mémoire)
+    container.querySelectorAll('[id^="event-action-"]').forEach(select => {
+        select.addEventListener('change', function() {
+            const idx = parseInt(this.dataset.eventIndex);
+            updateEventConfig(idx, 'at', parseInt(this.value));
+            renderEventsTable();
+        });
+    });
+
+    // Restaurer l'état des accordéons qui étaient ouverts
+    openAccordions.forEach(index => {
+        const header = container.querySelector(`#event-accordion-item-${index} .event-accordion-header`);
+        const content = $(`event-accordion-content-${index}`);
+        if (header && content) {
+            header.classList.add('active');
+            content.classList.add('active');
+        }
     });
 }
 function updateSegmentRange(index) {
@@ -2072,7 +2105,11 @@ async function updateStatus() {
         console.error('Erreur:', e);
     } finally {
         // Planifier le prochain appel après avoir terminé (évite les bouchons)
-        if (statusIntervalHandle !== null) {
+        if (statusIntervalHandle !== null && statusIntervalHandle !== 'stopped') {
+            // Annuler le précédent timeout s'il existe
+            if (typeof statusIntervalHandle === 'number') {
+                clearTimeout(statusIntervalHandle);
+            }
             statusIntervalHandle = setTimeout(updateStatus, 2000);
         }
     }
@@ -2294,7 +2331,11 @@ async function updateAudioData() {
     } finally {
         // Planifier le prochain appel seulement après avoir terminé celui-ci
         // Évite les bouchons si une requête prend du temps
-        if (audioUpdateInterval !== null) {
+        if (audioUpdateInterval !== null && audioUpdateInterval !== 'stopped') {
+            // Annuler le précédent timeout s'il existe
+            if (typeof audioUpdateInterval === 'number') {
+                clearTimeout(audioUpdateInterval);
+            }
             audioUpdateInterval = setTimeout(updateAudioData, 500);
         }
     }
@@ -2432,7 +2473,7 @@ async function loadOTAInfo() {
         const statusMessage = $('ota-status-message');
         const uploadBtn = $('ota-upload-btn');
         const restartBtn = $('ota-restart-btn');
-        const fileInputEl = $('firmware-file');
+        const fileInputEl = $('ota-progress-title');
         const backendStateKey = getOtaStateKey(data.st);
         if (otaManualUploadRunning && backendStateKey !== 'idle') {
             otaManualUploadRunning = false;
@@ -3113,6 +3154,58 @@ async function loadInitialData() {
         throw error;
     }
 }
+// Fonction de nettoyage des timers
+function stopAllTimers() {
+    console.log('[Cleanup] Arrêt de tous les timers');
+
+    // Arrêter le polling de status
+    if (typeof statusIntervalHandle === 'number') {
+        clearTimeout(statusIntervalHandle);
+    }
+    statusIntervalHandle = 'stopped';
+
+    // Arrêter le polling audio
+    if (typeof audioUpdateInterval === 'number') {
+        clearTimeout(audioUpdateInterval);
+    }
+    audioUpdateInterval = 'stopped';
+
+    // Arrêter le polling OTA
+    if (typeof otaPollingInterval === 'number') {
+        clearInterval(otaPollingInterval);
+    }
+}
+
+function resumeAllTimers() {
+    console.log('[Cleanup] Reprise des timers');
+
+    // Reprendre le polling de status si on est connecté
+    if (statusIntervalHandle === 'stopped' && initialDataLoaded) {
+        statusIntervalHandle = 'active';
+        updateStatus();
+    }
+
+    // Reprendre le polling audio s'il était actif
+    if (audioUpdateInterval === 'stopped' && audioEnabled) {
+        audioUpdateInterval = 'active';
+        updateAudioData();
+    }
+}
+
+// Gérer la visibilité de la page pour économiser les ressources
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopAllTimers();
+    } else {
+        resumeAllTimers();
+    }
+});
+
+// Nettoyer avant de quitter la page
+window.addEventListener('beforeunload', () => {
+    stopAllTimers();
+});
+
 // Init
 renderSimulationSections();
 applyTranslations();

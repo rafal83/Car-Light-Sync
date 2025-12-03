@@ -586,6 +586,7 @@ button {
 .event-accordion-summary {
     display: flex;
     flex-wrap: nowrap;
+    justify-content: space-around;
     gap: 0px;
     align-items: center;
     font-size: 13px;
@@ -600,13 +601,13 @@ button {
     white-space: nowrap;
 }
 .event-accordion-summary-item.enabled-item {
-    min-width: 80px;
+    min-width: 30%;
 }
 .event-accordion-summary-item.effect-item {
-    min-width: 150px;
+    min-width: 30%;
 }
 .event-accordion-summary-item.color-item {
-    min-width: 80px;
+    min-width: 30%;
 }
 .event-accordion-summary-label {
     font-weight: 500;
@@ -959,9 +960,9 @@ button {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--color-primary);
+    background: #E82127;
     cursor: pointer;
-    border: 3px solid #ffffff;
+    border: 3px solid #E82127;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
@@ -970,9 +971,9 @@ button {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--color-primary);
+    background: #E82127;
     cursor: pointer;
-    border: 3px solid #ffffff;
+    border: 3px solid #E82127;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
