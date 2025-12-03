@@ -344,4 +344,10 @@ bool config_manager_factory_reset(void);
  */
 void config_manager_reapply_default_effect(void);
 
+/**
+ * @brief Vérifie si l'espace NVS permet de créer un nouveau profil
+ * @return true si suffisamment d'espace disponible
+ */
+bool config_manager_can_create_profile(void);
+
 #endif // CONFIG_MANAGER_H

@@ -533,6 +533,9 @@ bool config_manager_activate_profile(uint8_t profile_id) {
     nvs_close(nvs_handle);
   }
 
+  // Arrêter tous les événements actifs avant d'appliquer le nouvel effet
+  config_manager_stop_all_events();
+
   // Appliquer l'effet par défaut
   led_effects_set_config(&profiles[profile_id].default_effect);
   effect_override_active = false;
@@ -1673,6 +1676,24 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
 
   cJSON_Delete(root);
 
+  // Compléter tous les événements manquants avec des valeurs par défaut (désactivés)
+  // Cela permet de gérer les nouveaux événements ajoutés après la création du preset
+  for (int evt = CAN_EVENT_NONE; evt < CAN_EVENT_MAX; evt++) {
+    // Si l'événement n'a pas été initialisé (effect_config.effect == 0 et enabled == false)
+    // ET que ce n'est pas NONE, on le complète avec des valeurs par défaut
+    if (evt != CAN_EVENT_NONE &&
+        imported_profile->event_effects[evt].event == 0 &&
+        !imported_profile->event_effects[evt].enabled) {
+      imported_profile->event_effects[evt].event = evt;
+      imported_profile->event_effects[evt].enabled = false;
+      imported_profile->event_effects[evt].effect_config.effect = EFFECT_OFF;
+      imported_profile->event_effects[evt].priority = 0;
+      imported_profile->event_effects[evt].duration_ms = 0;
+      imported_profile->event_effects[evt].action_type = EVENT_ACTION_APPLY_EFFECT;
+      imported_profile->event_effects[evt].profile_id = -1;
+    }
+  }
+
   // Sauvegarder le profil importé
   bool success = config_manager_save_profile(profile_id, imported_profile);
   if (success) {
@@ -1751,4 +1772,41 @@ void config_manager_reapply_default_effect(void) {
   // Réappliquer l'effet par défaut du profil actif
   led_effects_set_config(&profiles[active_profile_id].default_effect);
   ESP_LOGI(TAG_CONFIG, "Effet par défaut réappliqué (audio_reactive=%d)", profiles[active_profile_id].default_effect.audio_reactive);
+}
+
+bool config_manager_can_create_profile(void) {
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS pour vérifier l'espace");
+    return false;
+  }
+
+  nvs_stats_t nvs_stats;
+  err = nvs_get_stats(NULL, &nvs_stats);
+  nvs_close(nvs_handle);
+
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG_CONFIG, "Impossible de récupérer les stats NVS");
+    return false;
+  }
+
+  // Un profil nécessite environ 1 entry (clé) + entries pour le blob
+  // Taille d'un profil : sizeof(config_profile_t) ≈ 17KB
+  // NVS entry = 32 bytes, donc un profil ≈ 17KB/32 ≈ 544 entries
+  // On garde une marge de sécurité : on vérifie qu'il reste au moins 600 entries libres
+  const size_t ENTRIES_PER_PROFILE = 600;
+  const size_t MIN_FREE_ENTRIES = ENTRIES_PER_PROFILE;
+
+  bool can_create = nvs_stats.free_entries >= MIN_FREE_ENTRIES;
+
+  ESP_LOGI(TAG_CONFIG,
+           "NVS check: free=%zu, needed=%zu, can_create=%d (usage=%zu%%)",
+           nvs_stats.free_entries,
+           MIN_FREE_ENTRIES,
+           can_create,
+           (nvs_stats.total_entries > 0) ? (nvs_stats.used_entries * 100 / nvs_stats.total_entries) : 0);
+
+  return can_create;
 }

@@ -405,6 +405,11 @@ button {
 .btn-secondary:hover {
     background: var(--color-input-border);
 }
+.btn-secondary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--color-border);
+}
 .btn-danger {
     background: #E82127;
     color: var(--color-text);

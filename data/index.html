@@ -334,6 +334,15 @@
                             <option value="-1" data-i18n="profiles.loading">Chargement...</option>
                         </select>
                     </div>
+                    <div class="control-group" id="storage-info" style="margin-top: 10px; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <label class="control-label" data-i18n="profiles.storage">Stockage Profils</label>
+                            <span id="storage-text" style="font-size: 0.9em; color: #aaa;">-</span>
+                        </div>
+                        <div style="width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden;">
+                            <div id="storage-bar" style="height: 100%; background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336); width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
                     <div class="button-group">
                         <button class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
                         <button class="btn-secondary" onclick="showRenameProfileDialog()" data-i18n="profiles.rename">Renommer</button>

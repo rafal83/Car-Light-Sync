@@ -20,6 +20,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "led_effects.h"
+#include "nvs_flash.h"
 #include "ota_update.h"
 #include "vehicle_can_unified.h"
 #include "wifi_manager.h"
@@ -647,6 +648,27 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(root, "an", "None");
   }
 
+  // Ajouter les statistiques NVS
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+  if (err == ESP_OK) {
+    nvs_stats_t nvs_stats;
+    err = nvs_get_stats(NULL, &nvs_stats);
+    if (err == ESP_OK) {
+      size_t used_entries = nvs_stats.used_entries;
+      size_t free_entries = nvs_stats.free_entries;
+      size_t total_entries = nvs_stats.total_entries;
+
+      cJSON *storage = cJSON_CreateObject();
+      cJSON_AddNumberToObject(storage, "used", used_entries);
+      cJSON_AddNumberToObject(storage, "free", free_entries);
+      cJSON_AddNumberToObject(storage, "total", total_entries);
+      cJSON_AddNumberToObject(storage, "usage_pct", (total_entries > 0) ? (used_entries * 100 / total_entries) : 0);
+      cJSON_AddItemToObject(root, "storage", storage);
+    }
+    nvs_close(nvs_handle);
+  }
+
   const char *json_string = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, json_string);
@@ -693,6 +715,14 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
   if (name == NULL || name->valuestring == NULL) {
     cJSON_Delete(root);
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing name");
+    return ESP_FAIL;
+  }
+
+  // Vérifier d'abord s'il reste assez d'espace NVS
+  if (!config_manager_can_create_profile()) {
+    cJSON_Delete(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Insufficient storage space\"}");
     return ESP_FAIL;
   }
 
@@ -1045,6 +1075,12 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
 }
 
 static int find_free_profile_slot(int preferred_id) {
+  // Vérifier d'abord s'il reste assez d'espace NVS
+  if (!config_manager_can_create_profile()) {
+    ESP_LOGW(TAG_WEBSERVER, "Espace NVS insuffisant pour créer un nouveau profil");
+    return -1;
+  }
+
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
     ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire pour recherche de slot");
@@ -1117,7 +1153,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
     cJSON_Delete(root);
     free(content);
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, "{\"st\":\"error\",\"msg\":\"No free profile slots\"}");
+    httpd_resp_sendstr(req, "{\"st\":\"error\",\"msg\":\"Insufficient storage space or no free profile slots\"}");
     return ESP_FAIL;
   }
 
@@ -1129,6 +1165,9 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
 
   httpd_resp_set_type(req, "application/json");
   if (success) {
+    // Activer le profil importé
+    config_manager_activate_profile((uint8_t)target_id);
+
     char response[64];
     snprintf(response, sizeof(response), "{\"st\":\"ok\",\"pid\":%d}", target_id);
     httpd_resp_sendstr(req, response);

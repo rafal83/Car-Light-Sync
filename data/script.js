@@ -1786,6 +1786,45 @@ async function loadProfiles() {
             select.appendChild(option);
         });
         $('profile-status').textContent = data.an;
+
+        // Afficher les statistiques de stockage
+        if (data.storage) {
+            const storageInfo = $('storage-info');
+            const storageText = $('storage-text');
+            const storageBar = $('storage-bar');
+
+            const usagePct = data.storage.usage_pct || 0;
+            const used = data.storage.used || 0;
+            const total = data.storage.total || 0;
+            const free = data.storage.free || 0;
+
+            storageText.textContent = `${usagePct}% (${used}/${total} entries)`;
+            storageBar.style.width = usagePct + '%';
+
+            // Changer la couleur selon l'utilisation
+            if (usagePct < 50) {
+                storageBar.style.background = '#4CAF50';
+            } else if (usagePct < 80) {
+                storageBar.style.background = '#FFC107';
+            } else {
+                storageBar.style.background = '#F44336';
+            }
+
+            // Désactiver les boutons de création si espace insuffisant (< 600 entries libres)
+            const canCreate = free >= 600;
+            const newButton = document.querySelector('button[onclick="showNewProfileDialog()"]');
+            const importButton = document.querySelector('button[onclick="showImportDialog()"]');
+            if (newButton) {
+                newButton.disabled = !canCreate;
+                newButton.title = canCreate ? '' : 'Espace de stockage insuffisant';
+            }
+            if (importButton) {
+                importButton.disabled = !canCreate;
+                importButton.title = canCreate ? '' : 'Espace de stockage insuffisant';
+            }
+
+            storageInfo.style.display = 'block';
+        }
     } catch (e) {
         console.error('Erreur:', e);
     }
@@ -1958,6 +1997,8 @@ function showImportDialog() {
                             select.value = result.pid;
                         }
                     }
+                    // Charger la configuration complète du profil importé
+                    await loadConfig();
                     showNotification('profiles-notification', t('profiles.importSuccess'), 'success');
                 } else {
                     const message = result.msg || t('profiles.importError');
