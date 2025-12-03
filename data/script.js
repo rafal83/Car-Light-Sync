@@ -1381,10 +1381,10 @@ function renderEventsTable() {
                             <div class="segment-range-slider" id="segment-range-${index}">
                                 <div class="segment-range-track"></div>
                                 <div class="segment-range-selected" id="segment-range-selected-${index}"></div>
-                                <input type="range" min="0" max="${maxLeds}" step="5" value="${event.st ?? 0}"
+                                <input type="range" min="0" max="${maxLeds}" step="1" value="${event.st ?? 0}"
                                     class="segment-range-min" id="segment-range-min-${index}"
                                     oninput="updateSegmentRange(${index})" ${!event.en ? 'disabled' : ''}>
-                                <input type="range" min="0" max="${maxLeds}" step="5" value="${(event.st ?? 0) + ((event.ln ?? 0) === 0 ? maxLeds : event.ln)}"
+                                <input type="range" min="0" max="${maxLeds}" step="1" value="${(event.st ?? 0) + ((event.ln ?? 0) === 0 ? maxLeds : event.ln)}"
                                     class="segment-range-max" id="segment-range-max-${index}"
                                     oninput="updateSegmentRange(${index})" ${!event.en ? 'disabled' : ''}>
                             </div>

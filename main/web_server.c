@@ -56,6 +56,45 @@ void web_server_update_vehicle_state(const vehicle_state_t *state) {
   // taskENTER_CRITICAL / taskEXIT_CRITICAL autour du memcpy.
 }
 
+/**
+ * @brief Parse une requête JSON HTTP et retourne l'objet cJSON
+ *
+ * @param req Requête HTTP
+ * @param buffer Buffer pour recevoir le contenu
+ * @param buffer_size Taille du buffer
+ * @param out_json Pointeur pour recevoir l'objet cJSON parsé (doit être libéré avec cJSON_Delete)
+ * @return ESP_OK si succès, ESP_FAIL si erreur (réponse HTTP déjà envoyée)
+ */
+static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffer_size, cJSON **out_json) {
+  if (!req || !buffer || !out_json || buffer_size == 0) {
+    return ESP_FAIL;
+  }
+
+  int ret = httpd_req_recv(req, buffer, buffer_size - 1);
+
+  if (ret <= 0) {
+    if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+      httpd_resp_send_408(req);
+    }
+    return ESP_FAIL;
+  }
+
+  // Vérifier si le buffer est plein (donnée potentiellement tronquée)
+  if (ret >= (int)(buffer_size - 1)) {
+    ESP_LOGW(TAG_WEBSERVER, "Request too large, may be truncated (%d bytes)", ret);
+  }
+
+  buffer[ret] = '\0';
+
+  *out_json   = cJSON_Parse(buffer);
+  if (*out_json == NULL) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+    return ESP_FAIL;
+  }
+
+  return ESP_OK;
+}
+
 static esp_err_t static_file_handler(httpd_req_t *req) {
   static_file_route_t *route = (static_file_route_t *)req->user_ctx;
   const size_t file_size     = (route->end - route->start);
@@ -322,20 +361,9 @@ static esp_err_t config_handler(httpd_req_t *req) {
 // Handler pour définir l'effet
 static esp_err_t effect_handler(httpd_req_t *req) {
   char content[512];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-      httpd_resp_send_408(req);
-    }
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -397,20 +425,9 @@ static esp_err_t save_handler(httpd_req_t *req) {
 // Handler pour configurer le matériel LED (POST)
 static esp_err_t config_post_handler(httpd_req_t *req) {
   char content[256];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-      httpd_resp_send_408(req);
-    }
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -528,17 +545,9 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 // Handler pour activer un profil
 static esp_err_t profile_activate_handler(httpd_req_t *req) {
   char content[128];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -558,17 +567,9 @@ static esp_err_t profile_activate_handler(httpd_req_t *req) {
 // Handler pour créer un nouveau profil
 static esp_err_t profile_create_handler(httpd_req_t *req) {
   char content[256];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -629,17 +630,9 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
 // Handler pour supprimer un profil
 static esp_err_t profile_delete_handler(httpd_req_t *req) {
   char content[128];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -696,17 +689,9 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
 // Handler pour mettre à jour les paramètres d'un profil
 static esp_err_t profile_update_handler(httpd_req_t *req) {
   char content[512]; // Augmenté pour accepter settings + effet par défaut
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -808,17 +793,9 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
 // Handler pour assigner un effet à un événement
 static esp_err_t event_effect_handler(httpd_req_t *req) {
   char content[512];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -1089,17 +1066,9 @@ static esp_err_t ota_restart_handler(httpd_req_t *req) {
 // Handler pour arrêter un événement CAN
 static esp_err_t stop_event_handler(httpd_req_t *req) {
   char content[128];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -1181,17 +1150,9 @@ static esp_err_t event_types_list_handler(httpd_req_t *req) {
 // Handler pour simuler un événement CAN
 static esp_err_t simulate_event_handler(httpd_req_t *req) {
   char content[128];
-  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  cJSON *root = NULL;
 
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -1751,9 +1712,8 @@ esp_err_t web_server_start(void) {
   config.server_port      = WEB_SERVER_PORT;
   config.max_uri_handlers = 60;
   config.max_open_sockets = 13;
-  config.lru_purge_enable = true;  // Ferme les plus anciennes connexions si limite atteinte
-  config.core_id          = 1;     // Serveur web sur core 1 (WiFi sur core 0)
-
+  config.lru_purge_enable = true; // Ferme les plus anciennes connexions si limite atteinte
+  config.core_id          = 1;    // Serveur web sur core 1 (WiFi sur core 0)
 
   ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 
