@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 // Configuration GPIO
-#define NUM_LEDS 112
+#define NUM_LEDS 122
 
 #ifdef CONFIG_IDF_TARGET_ESP32C6
 // Configuration ESP32-C6

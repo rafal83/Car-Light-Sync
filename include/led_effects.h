@@ -79,13 +79,6 @@ typedef enum {
   SYNC_ALL           // Tous les événements
 } sync_mode_t;
 
-// Zone d'application de l'effet
-typedef enum {
-  LED_ZONE_FULL = 0, // Tout le strip (0 à NUM_LEDS-1)
-  LED_ZONE_LEFT,     // Moitié gauche (0 à NUM_LEDS/2-1)
-  LED_ZONE_RIGHT     // Moitié droite (NUM_LEDS/2 à NUM_LEDS-1)
-} led_zone_t;
-
 // Configuration d'un effet
 typedef struct {
   led_effect_t effect;
@@ -95,12 +88,11 @@ typedef struct {
   uint32_t color2;
   uint32_t color3;
   sync_mode_t sync_mode;
-  bool reverse;        // Direction de l'animation (pour compatibilité)
-  led_zone_t zone;     // Zone d'application (full, left, right)
-  bool audio_reactive; // L'effet réagit au micro si activé
-  uint16_t segment_start;   // Index de départ (compté depuis anchor_left)
-  uint16_t segment_length;  // Longueur du segment (0 = auto)
-  bool anchor_left;         // true: segment_start depuis la gauche, false: depuis la droite
+  bool reverse;            // Direction de l'animation (pour compatibilité)
+  bool audio_reactive;     // L'effet réagit au micro si activé
+  uint16_t segment_start;  // Index de départ (compté depuis anchor_left)
+  uint16_t segment_length; // Longueur du segment (0 = auto)
+  bool anchor_left;        // true: segment_start depuis la gauche, false: depuis la droite
 } effect_config_t;
 
 typedef struct {
