@@ -597,11 +597,21 @@ button {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    padding: 12px 16px;
-    cursor: pointer;
     background: var(--color-panel);
     transition: background 0.2s;
+    position: relative;
+}
+.event-accordion-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px 16px;
     gap: 3px;
+    flex: 1;
+    cursor: pointer;
+}
+.event-accordion-left:hover {
+    background: rgba(255, 255, 255, 0.03);
 }
 .event-accordion-header:hover {
     background: var(--color-border);
@@ -670,6 +680,28 @@ button {
 }
 .event-accordion-header.active .event-accordion-toggle {
     transform: rotate(180deg);
+}
+.event-accordion-simulate {
+    display: flex;
+    align-items: center;
+    padding: 0px 5px;
+    flex-shrink: 0;
+    margin: auto;
+}
+.event-accordion-simulate .toggle-switch {
+    width: 46px;
+    height: 24px;
+}
+.event-accordion-simulate .toggle-slider:before {
+    height: 18px;
+    width: 18px;
+}
+.event-accordion-simulate input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+.event-accordion-simulate input:disabled + .toggle-slider {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 .event-accordion-content {
     max-height: 0;
@@ -1083,7 +1115,7 @@ button {
     position: relative;
     display: inline-block;
     width: 50px;
-    height: 28px;
+    height: 27px;
     flex-shrink: 0;
 }
 
@@ -1114,6 +1146,7 @@ button {
     width: 20px;
     left: 2px;
     bottom: 2px;
+    top: 1px;
     background-color: white;
     transition: 0.3s;
     border-radius: 50%;

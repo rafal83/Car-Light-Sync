@@ -785,7 +785,6 @@ function setLanguage(lang) {
     currentLang = lang;
     localStorage.setItem('language', currentLang);
     applyTranslations();
-    renderSimulationSections();
     renderEventsTable();
     updateLanguageIcon();
 }
@@ -961,7 +960,6 @@ function restoreSimulationToggles() {
         if (checkbox) {
             checkbox.checked = simulationTogglesState[eventId];
         }
-        setToggleContainerState(eventId, simulationTogglesState[eventId]);
     });
 }
 function getSimulationEventConfig(eventType) {
@@ -992,7 +990,17 @@ async function autoStopSimulationEvent(eventType) {
     if (checkbox) {
         checkbox.checked = false;
     }
-    await toggleEvent(eventType, false);
+    simulationTogglesState[eventType] = false;
+    // Call stop event API directly
+    try {
+        await fetch(API_BASE + '/api/stop/event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: eventType })
+        });
+    } catch (e) {
+        console.error('Error auto-stopping event:', e);
+    }
 }
 async function getSimulationEventDuration(eventType) {
     try {
@@ -1003,65 +1011,7 @@ async function getSimulationEventDuration(eventType) {
     const config = getSimulationEventConfig(eventType);
     return config && typeof config.dur === 'number' ? config.dur : 0;
 }
-function renderSimulationSections() {
-    const container = $('simulation-sections');
-    if (!container) return;
-    container.innerHTML = '';
-    simulationSections.forEach(section => {
-        const sectionDiv = doc.createElement('div');
-        sectionDiv.className = 'section';
-        const title = doc.createElement('div');
-        title.className = 'section-title';
-        title.style.fontSize = '16px';
-        title.setAttribute('data-i18n', section.titleKey);
-        title.textContent = t(section.titleKey);
-        sectionDiv.appendChild(title);
-        const grid = doc.createElement('div');
-        grid.className = 'simulation-grid';
-        section.events.forEach(event => {
-            const toggleContainer = doc.createElement('div');
-            toggleContainer.className = 'event-toggle-container';
-            toggleContainer.id = 'event-toggle-' + event.id;
-            const eventConfig = getSimulationEventConfig(event.id);
-            const eventEnabledInConfig = isSimulationEventEnabled(event.id);
-            if (eventConfig && !eventEnabledInConfig) {
-                simulationTogglesState[event.id] = false;
-            }
-            const label = doc.createElement('label');
-            label.className = 'event-toggle-label';
-            label.htmlFor = 'toggle-' + event.id;
-            label.setAttribute('data-i18n', event.labelKey);
-            label.textContent = t(event.labelKey);
-            const toggle = doc.createElement('label');
-            toggle.className = 'toggle-switch';
-            const input = doc.createElement('input');
-            input.type = 'checkbox';
-            input.id = 'toggle-' + event.id;
-            input.checked = eventEnabledInConfig && !!simulationTogglesState[event.id];
-            input.disabled = !eventEnabledInConfig;
-            input.addEventListener('change', (e) => toggleEvent(event.id, e.target.checked));
-            const slider = doc.createElement('span');
-            slider.className = 'toggle-slider';
-            toggle.appendChild(input);
-            toggle.appendChild(slider);
-            if (simulationTogglesState[event.id]) {
-                toggleContainer.classList.add('active');
-            }
-            toggleContainer.classList.toggle('disabled', !eventEnabledInConfig);
-            toggleContainer.appendChild(label);
-            toggleContainer.appendChild(toggle);
-            grid.appendChild(toggleContainer);
-        });
-        sectionDiv.appendChild(grid);
-        container.appendChild(sectionDiv);
-    });
-}
-function setToggleContainerState(eventType, isActive) {
-    const container = $('event-toggle-' + eventType);
-    if (container) {
-        container.classList.toggle('active', !!isActive);
-    }
-}
+// renderSimulationSections removed - simulation is now integrated into events config tab
 // Conversion pourcentage <-> 0-255
 function percentTo255(percent) {
     return Math.round((percent * 255) / 100);
@@ -1240,7 +1190,6 @@ async function loadEventsConfig() {
     try {
         await ensureEventsConfigData(true);
         renderEventsTable();
-        renderSimulationSections();
         loading.style.display = 'none';
         content.style.display = 'block';
     } catch (e) {
@@ -1367,12 +1316,20 @@ function renderEventsTable() {
         accordionItem.className = 'event-accordion-item ' + (event.en ? 'enabled' : 'disabled');
         accordionItem.id = 'event-accordion-item-' + index;
         accordionItem.innerHTML = `
-            <div class="event-accordion-header" onclick="toggleEventAccordion(${index})">
-                <div class="event-accordion-title">${eventName}</div>
-                <div class="event-accordion-summary">
-                    ${summaryHTML}
+            <div class="event-accordion-header">
+                <div class="event-accordion-left" onclick="toggleEventAccordion(${index})">
+                    <div class="event-accordion-title">${eventName}</div>
+                    <div class="event-accordion-summary">
+                        ${summaryHTML}
+                    </div>
+                    <div class="event-accordion-toggle">▼</div>
                 </div>
-                <div class="event-accordion-toggle">▼</div>
+                <div class="event-accordion-simulate">
+                    <label class="toggle-switch" onclick="event.stopPropagation()">
+                        <input type="checkbox" id="toggle-${event.ev}" onchange="toggleEventTest('${event.ev}', this.checked)" ${!event.en ? 'disabled' : ''}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
             <div class="event-accordion-content" id="event-accordion-content-${index}">
                 <div class="event-accordion-form" id="event-accordion-form-${index}">
@@ -1616,6 +1573,19 @@ function toggleEventFormFields(index) {
         } else {
             item.classList.remove('enabled');
             item.classList.add('disabled');
+        }
+    }
+
+    // Mettre à jour le toggle de test
+    const eventId = eventsConfigData[index]?.ev;
+    if (eventId) {
+        const testToggle = $('toggle-' + eventId);
+        if (testToggle) {
+            testToggle.disabled = !enabled;
+            if (!enabled && testToggle.checked) {
+                testToggle.checked = false;
+                simulationTogglesState[eventId] = false;
+            }
         }
     }
 
@@ -2084,9 +2054,9 @@ async function updateStatus() {
                 $('v-high-beams').textContent = v.lights.hb ? t('status.active') : t('status.inactive');
                 $('v-fog-lights').textContent = v.lights.fg ? t('status.active') : t('status.inactive');
                 if(v.lights.hz) {
-                  $('v-turn-signal').textContent = t('simulation.hazard');
+                  $('v-turn-signal').textContent = t('vehicle.hazard');
                 } else {
-                  $('v-turn-signal').textContent = v.lights.tl ? t('simulation.left'): v.lights.tr ? t('simulation.right'): t('vehicle.off')
+                  $('v-turn-signal').textContent = v.lights.tl ? t('vehicle.left'): v.lights.tr ? t('vehicle.right'): t('vehicle.off')
                 }
             }
             // Batterie et autres
@@ -2110,7 +2080,7 @@ async function updateStatus() {
                 const sentryModeEl = $('v-sentry-mode');
                 if (sentryModeEl) {
                     if (typeof v.safety.sm === 'boolean') {
-                        sentryModeEl.textContent = v.safety.sm ? t('simulation.sentryOn') : t('simulation.sentryOff');
+                        sentryModeEl.textContent = v.safety.sm ? t('vehicle.sentryOn') : t('vehicle.sentryOff');
                     } else {
                         sentryModeEl.textContent = t('vehicle.none');
                     }
@@ -2119,14 +2089,14 @@ async function updateStatus() {
                 const autopilotEl = $('v-autopilot');
                 if (autopilotEl) {
                     const requestMap = {
-                      0: t('vehicle.DISABLED'), 
+                      0: t('vehicle.DISABLED'),
                       1: t('vehicle.UNAVAILABLE'),
-                      3: t('vehicle.ACTIVE_NOMINAL'), 
-                      4: t('vehicle.ACTIVE_RESTRICTED'), 
-                      5: t('vehicle.ACTIVE_NAV'), 
-                      2: t('vehicle.AVAILABLE'), 
-                      8: t('vehicle.ABORTING'), 
-                      9: t('vehicle.ABORTED'), 
+                      3: t('vehicle.ACTIVE_NOMINAL'),
+                      4: t('vehicle.ACTIVE_RESTRICTED'),
+                      5: t('vehicle.ACTIVE_NAV'),
+                      2: t('vehicle.AVAILABLE'),
+                      8: t('vehicle.ABORTING'),
+                      9: t('vehicle.ABORTED'),
                       14: t('vehicle.FAULT')
                     };
                     const autopilotState = v.safety.ap;
@@ -2136,7 +2106,7 @@ async function updateStatus() {
                 const sentryAlertEl = $('v-sentry-alert');
                 if (sentryAlertEl) {
                     if (typeof v.safety.sa === 'boolean') {
-                        sentryAlertEl.textContent = v.safety.sa ? t('simulation.sentryAlert') : t('vehicle.none');
+                        sentryAlertEl.textContent = v.safety.sa ? t('vehicle.sentryAlertActive') : t('vehicle.none');
                     } else {
                         sentryAlertEl.textContent = t('vehicle.none');
                     }
@@ -2770,76 +2740,76 @@ async function restartDevice() {
         console.error('Erreur:', e);
     }
 }
-// Toggle event on/off
-async function toggleEvent(eventType, isEnabled) {
+// Night mode has been removed and replaced by dynamic brightness
+
+// Toggle event test from events config tab
+async function toggleEventTest(eventId, isEnabled) {
     try {
         if (isEnabled) {
+            // Vérifier que l'événement est activé dans la config
             try {
                 await ensureEventsConfigData();
             } catch (error) {
-                console.error('Failed to refresh events config for simulation:', error);
+                console.error('Failed to refresh events config for test:', error);
             }
-            if (!isSimulationEventEnabled(eventType)) {
-                const checkbox = $('toggle-' + eventType);
+            if (!isSimulationEventEnabled(eventId)) {
+                const checkbox = $('toggle-' + eventId);
                 if (checkbox) {
                     checkbox.checked = false;
                 }
-                setToggleContainerState(eventType, false);
-                simulationTogglesState[eventType] = false;
-                showNotification('simulation-notification', t('simulation.disabledEvent'), 'error');
+                simulationTogglesState[eventId] = false;
+                showNotification('events-notification', t('test.disabledEvent'), 'error');
                 return;
             }
-            cancelSimulationAutoStop(eventType);
-            setToggleContainerState(eventType, true);
-            showNotification('simulation-notification', t('simulation.sending') + ': ' + getEventName(eventType) + '...', 'info');
+            cancelSimulationAutoStop(eventId);
+            showNotification('events-notification', t('test.sending') + ': ' + getEventName(eventId) + '...', 'info');
             const response = await fetch(API_BASE + '/api/simulate/event', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ event: eventType })
+                body: JSON.stringify({ event: eventId })
             });
             const result = await response.json();
             if (result.st === 'ok') {
-                showNotification('simulation-notification', t('simulation.eventActive', getEventName(eventType)), 'success');
-                simulationTogglesState[eventType] = true;
-                const durationMs = await getSimulationEventDuration(eventType);
+                showNotification('events-notification', t('test.eventActive', getEventName(eventId)), 'success');
+                simulationTogglesState[eventId] = true;
+                const durationMs = await getSimulationEventDuration(eventId);
                 if (durationMs > 0) {
-                    scheduleSimulationAutoStop(eventType, durationMs);
+                    scheduleSimulationAutoStop(eventId, durationMs);
                 }
             } else {
-                $('toggle-' + eventType).checked = false;
-                setToggleContainerState(eventType, false);
-                showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
-                simulationTogglesState[eventType] = false;
+                const checkbox = $('toggle-' + eventId);
+                if (checkbox) checkbox.checked = false;
+                showNotification('events-notification', t('test.testError', t('test.error')), 'error');
+                simulationTogglesState[eventId] = false;
             }
         } else {
-            cancelSimulationAutoStop(eventType);
-            showNotification('simulation-notification', t('simulation.stoppingEvent', getEventName(eventType)), 'info');
+            cancelSimulationAutoStop(eventId);
+            showNotification('events-notification', t('test.stoppingEvent', getEventName(eventId)), 'info');
             const response = await fetch(API_BASE + '/api/stop/event', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ event: eventType })
+                body: JSON.stringify({ event: eventId })
             });
             const result = await response.json();
             if (result.st === 'ok') {
-                setToggleContainerState(eventType, false);
-                showNotification('simulation-notification', t('simulation.eventDeactivated', getEventName(eventType)), 'success');
-                simulationTogglesState[eventType] = false;
-                cancelSimulationAutoStop(eventType);
+                showNotification('events-notification', t('test.eventStopped', getEventName(eventId)), 'success');
+                simulationTogglesState[eventId] = false;
             } else {
-                $('toggle-' + eventType).checked = true;
-                setToggleContainerState(eventType, true);
-                showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
-                simulationTogglesState[eventType] = true;
+                const checkbox = $('toggle-' + eventId);
+                if (checkbox) checkbox.checked = true;
+                showNotification('events-notification', t('test.testError', t('test.error')), 'error');
+                simulationTogglesState[eventId] = true;
             }
         }
     } catch (e) {
-        console.error('Erreur:', e);
-        $('toggle-' + eventType).checked = true;
-        setToggleContainerState(eventType, true);
-        showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
+        console.error('Erreur test:', e);
+        const checkbox = $('toggle-' + eventId);
+        if (checkbox) checkbox.checked = !isEnabled;
+        showNotification('events-notification', t('test.testError', t('test.error')), 'error');
+        simulationTogglesState[eventId] = !isEnabled;
     }
 }
-// Night mode has been removed and replaced by dynamic brightness
+
 // Mapping des événements vers les clés commonEvents
 const EVENT_TO_COMMON = {
     'TURN_LEFT': 'turnLeft', 
@@ -3155,7 +3125,6 @@ async function loadInitialData() {
 
         // Étape 4: Rendu des sections
         updateProgress(4, t('loading.loadingConfig'));
-        renderSimulationSections();
         await delay(baseDelay);
 
         // Étape 5: Profils
@@ -3260,7 +3229,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 // Init
-renderSimulationSections();
 applyTranslations();
 applyTheme();
 updateLanguageSelector();

@@ -91,8 +91,7 @@
           <button class="tab active" data-tab="vehicle" onclick="switchTab('vehicle', event)" data-i18n="tabs.vehicle">Véhicule</button>
           <button class="tab" data-tab="profiles" onclick="switchTab('profiles', event)" data-i18n="tabs.profiles">Profils</button>
           <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)" data-i18n="tabs.eventsConfig">Événements</button>
-          <button class="tab" data-tab="simulation" onclick="switchTab('simulation', event)" data-i18n="tabs.simulation">Simulation</button>
-          <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.config">Configuration</button>
+          <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.hardware">Matérielle</button>
           <button class="tab" data-tab="ota" onclick="switchTab('ota', event)" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
         <!-- Tab: Véhicule -->
@@ -464,20 +463,6 @@
                     </div>
                 </div>
                 <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>
-            </div>
-        </div>
-        <!-- Tab: Simulation -->
-        <div id="simulation-tab" class="tab-content">
-            <div class="section-title" data-i18n="simulation.title">Simulation d'Événements CAN</div>
-            <div id="simulation-notification" class="notification"></div>
-
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="simulation.description">Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule</h3>
-                </div>
-                <div class="profile-section-content">
-                    <div id="simulation-sections"></div>
-                </div>
             </div>
         </div>
         <!-- Tab: Configuration -->

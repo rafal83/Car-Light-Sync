@@ -1022,7 +1022,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   }
 
   cJSON *root = NULL;
-  if (parse_json_request(req, content, 8192, &root) != ESP_OK) {
+  if (parse_json_request(req, content, BUFFER_SIZE_PROFILE, &root) != ESP_OK) {
     free(content);
     return ESP_FAIL;
   }
