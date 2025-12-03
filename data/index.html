@@ -98,8 +98,13 @@
         <!-- Tab: Véhicule -->
         <div id="vehicle-tab" class="tab-content active">
             <div class="section-title" data-i18n="vehicle.title">Données Véhicule</div>
+
             <!-- Section: État général -->
-            <div class="section-subtitle" data-i18n="vehicle.generalState">État Général</div>
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.generalState">État Général</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.speed">Vitesse</div>
@@ -118,8 +123,15 @@
                     <div class="vehicle-value" id="v-locked">--</div>
                 </div>
             </div>
+                </div>
+            </div>
+
             <!-- Section: Portes -->
-            <div class="section-subtitle" data-i18n="vehicle.doorsTitle">Portes</div>
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.doorsTitle">Portes</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.doorFL">AV Gauche</div>
@@ -146,8 +158,15 @@
                     <div class="vehicle-value" id="v-frunk">--</div>
                 </div>
             </div>
+                </div>
+            </div>
+
             <!-- Section: Charge -->
-            <div class="section-subtitle" data-i18n="vehicle.chargeTitle">Charge</div>
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.chargeTitle">Charge</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.charging">En Charge</div>
@@ -162,8 +181,15 @@
                     <div class="vehicle-value" id="v-charge-power">-- kW</div>
                 </div>
             </div>
+                </div>
+            </div>
+
             <!-- Section: Lumières -->
-            <div class="section-subtitle" data-i18n="vehicle.lightsTitle">Lumières</div>
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.lightsTitle">Lumières</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.headlights">Phares</div>
@@ -182,8 +208,15 @@
                     <div class="vehicle-value" id="v-turn-signal">--</div>
                 </div>
             </div>
+                </div>
+            </div>
+
             <!-- Section: Blindspot -->
-            <div class="section-subtitle" data-i18n="vehicle.blindspot">Angle mort</div>
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.blindspot">Angle mort</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.blindspotLeftLv1">Gauche Niv1</div>
@@ -200,11 +233,17 @@
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.blindspotRightLv2">Droit Niv2</div>
                     <div class="vehicle-value" id="v-blindspot-right-lv2">--</div>
-                </div>              
+                </div>
+            </div>
+                </div>
             </div>
 
             <!-- Section: Lane departure -->
-            <div class="section-subtitle" data-i18n="vehicle.laneDeparture">Dépassement de ligne</div>
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.laneDeparture">Dépassement de ligne</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.laneDepartureLeftLv1">Gauche Niv1</div>
@@ -221,11 +260,17 @@
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.laneDepartureRightLv2">Droit Niv2</div>
                     <div class="vehicle-value" id="v-lane-departure-right-lv2">--</div>
-                </div>              
+                </div>
             </div>
-            
+                </div>
+            </div>
+
             <!-- Section: Autres -->
-            <div class="section-subtitle" data-i18n="vehicle.othersTitle">Autres</div>
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.othersTitle">Autres</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
                 <div class="vehicle-item">
                     <div class="vehicle-label" data-i18n="vehicle.batterylv">Batterie LV</div>
@@ -248,7 +293,14 @@
                     <div class="vehicle-value" id="v-brightness">--</div>
                 </div>
             </div>
-            <div class="section-subtitle" data-i18n="vehicle.sentryTitle">Mode Sentry</div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="vehicle.sentryTitle">Mode Sentry</h3>
+                </div>
+                <div class="profile-section-content">
             <div class="vehicle-grid">
               <div class="vehicle-item">
                   <div class="vehicle-label" data-i18n="vehicle.autopilot">Autopilot</div>
@@ -263,89 +315,134 @@
                     <div class="vehicle-value" id="v-sentry-alert">--</div>
                 </div>
             </div>
-        </div>
+                </div>
+            </div>
         </div>
         <!-- Tab: Profils -->
         <div id="profiles-tab" class="tab-content">
             <div class="section-title" data-i18n="profiles.title">Gestion des Profils</div>
             <div id="profiles-notification" class="notification"></div>
-            <div class="control-group">
-                <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
-                <select id="profile-select" onchange="activateProfile()">
-                    <option value="-1" data-i18n="profiles.loading">Chargement...</option>
-                </select>
-            </div>
-            <!-- <button class="btn-primary" onclick="activateProfile()" data-i18n="profiles.activate">Activer</button> -->
-            <button class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
-            <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
-            <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
-            <button class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
-            <div class="checkbox-container" style="margin-top: 20px;">
-                <input type="checkbox" id="auto-night-mode">
-                <label for="auto-night-mode" data-i18n="profiles.autoNightMode">Mode nuit automatique (basé sur CAN)</label>
-            </div>
-            <div class="control-group" style="margin-top: 10px;">
-                <label class="control-label" data-i18n="profiles.nightBrightness">Luminosité Mode Nuit</label>
-                <div class="slider-container">
-                    <input type="range" id="night-brightness-slider" min="0" max="100" value="12">
-                    <span class="slider-value" id="night-brightness-value">12%</span>
+
+            <!-- Section: Sélection du profil -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="profiles.profileSelection">Sélection du Profil</h3>
+                </div>
+                <div class="profile-section-content">
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
+                        <select id="profile-select" onchange="activateProfile()">
+                            <option value="-1" data-i18n="profiles.loading">Chargement...</option>
+                        </select>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
+                        <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
+                        <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
+                        <button class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
+                    </div>
                 </div>
             </div>
-            <div class="section" style="margin-top: 30px;">
-                <div class="section-title" style="font-size: 16px;" data-i18n="profiles.defaultEffect">Effet par Défaut</div>
-                <p style="margin-bottom: 15px; color: var(--color-muted); font-size: 14px;" data-i18n="profiles.defaultEffectDesc">
-                    Configurez l'effet affiché lorsqu'aucun événement CAN n'est actif.
-                </p>
-                <div class="control-group">
-                    <label class="control-label" data-i18n="effects.effect">Effet</label>
-                    <select id="default-effect-select" data-effect-options="true">
+
+            <!-- Section: Mode Nuit -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="profiles.nightMode">Mode Nuit</h3>
+                    <p data-i18n="profiles.nightModeDesc">Luminosité réduite activée automatiquement selon les événements CAN</p>
+                </div>
+                <div class="profile-section-content">
+                    <label class="toggle-container" for="auto-night-mode">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="auto-night-mode">
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label" data-i18n="profiles.autoNightMode">Activer le mode nuit automatique</span>
+                    </label>
+                    <div class="control-group" style="margin-top: 15px;">
+                        <label class="control-label" data-i18n="profiles.nightBrightness">Luminosité Mode Nuit</label>
+                        <div class="slider-container">
+                            <input type="range" id="night-brightness-slider" min="0" max="100" value="12">
+                            <span class="slider-value" id="night-brightness-value">12%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Effet par Défaut -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="profiles.defaultEffect">Effet par Défaut</h3>
+                    <p data-i18n="profiles.defaultEffectDesc">Effet affiché quand aucun événement CAN n'est actif</p>
+                </div>
+                <div class="profile-section-content">
+                    <!-- Effet et paramètres de base -->
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="effects.effect">Effet</label>
+                        <select id="default-effect-select" data-effect-options="true">
                             <!-- Will be populated dynamically -->
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
-                    <div class="slider-container">
-                        <input type="range" id="default-brightness-slider" min="0" max="100" value="50">
-                        <span class="slider-value" id="default-brightness-value">50%</span>
+                        </select>
                     </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label" data-i18n="effects.speed">Vitesse</label>
-                    <div class="slider-container">
-                        <input type="range" id="default-speed-slider" min="0" max="100" value="50">
-                        <span class="slider-value" id="default-speed-value">50%</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label" data-i18n="effects.color">Couleur</label>
-                    <input type="color" id="default-color1" value="#ff0000">
-                </div>
-                <div class="checkbox-container" style="margin-top: 15px;">
-                    <input type="checkbox" id="default-reverse">
-                    <label for="default-reverse" data-i18n="eventsConfig.reverse">Inverser le sens</label>
-                </div>
-                <div class="control-group">
-                    <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
-                    <div class="segment-range-container">
-                        <div class="segment-range-slider" id="default-segment-range">
-                            <div class="segment-range-track"></div>
-                            <div class="segment-range-selected" id="default-segment-range-selected"></div>
-                            <input type="range" min="0" max="300" step="1" value="0"
-                                class="segment-range-min" id="default-segment-range-min"
-                                oninput="updateDefaultSegmentRange()">
-                            <input type="range" min="0" max="300" step="1" value="300"
-                                class="segment-range-max" id="default-segment-range-max"
-                                oninput="updateDefaultSegmentRange()">
+
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
+                            <div class="slider-container">
+                                <input type="range" id="default-brightness-slider" min="0" max="100" value="50">
+                                <span class="slider-value" id="default-brightness-value">50%</span>
+                            </div>
                         </div>
-                        <div class="segment-range-values">
-                            <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span> |
-                            <span data-i18n="eventsConfig.length">Longueur</span>: <span id="default-segment-value-length">300</span>
+                        <div class="control-group">
+                            <label class="control-label" data-i18n="effects.speed">Vitesse</label>
+                            <div class="slider-container">
+                                <input type="range" id="default-speed-slider" min="0" max="100" value="50">
+                                <span class="slider-value" id="default-speed-value">50%</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="checkbox-container" style="margin-top: 15px;">
-                    <input type="checkbox" id="default-audio-reactive">
-                    <label for="default-audio-reactive" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</label>
+
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="effects.color">Couleur</label>
+                        <input type="color" id="default-color1" value="#ff0000">
+                    </div>
+
+                    <!-- Options avancées -->
+                    <div class="advanced-options">
+                        <label class="toggle-container" for="default-reverse">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="default-reverse">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span class="toggle-label" data-i18n="eventsConfig.reverse">Inverser le sens</span>
+                        </label>
+                        <label class="toggle-container" for="default-audio-reactive">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="default-audio-reactive">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span class="toggle-label" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</span>
+                        </label>
+                    </div>
+
+                    <!-- Plage de segment -->
+                    <div class="control-group" style="margin-top: 20px;">
+                        <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
+                        <div class="segment-range-container">
+                            <div class="segment-range-slider" id="default-segment-range">
+                                <div class="segment-range-track"></div>
+                                <div class="segment-range-selected" id="default-segment-range-selected"></div>
+                                <input type="range" min="0" max="300" step="1" value="0"
+                                    class="segment-range-min" id="default-segment-range-min"
+                                    oninput="updateDefaultSegmentRange()">
+                                <input type="range" min="0" max="300" step="1" value="300"
+                                    class="segment-range-max" id="default-segment-range-max"
+                                    oninput="updateDefaultSegmentRange()">
+                            </div>
+                            <div class="segment-range-values">
+                                <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span> |
+                                <span data-i18n="eventsConfig.length">Longueur</span>: <span id="default-segment-value-length">300</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -370,19 +467,29 @@
         <div id="simulation-tab" class="tab-content">
             <div class="section-title" data-i18n="simulation.title">Simulation d'Événements CAN</div>
             <div id="simulation-notification" class="notification"></div>
-            <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="simulation.description">
-                Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule.
-            </p>
-            <div id="simulation-sections"></div>
-            <div class="section">
-                <div class="section-title" style="font-size: 16px;" data-i18n="simulation.nightMode">Mode Nuit</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                    <div class="event-toggle-container" id="event-toggle-nightmode">
-                        <label class="event-toggle-label" for="toggle-nightmode" data-i18n="simulation.nightModeToggle">Mode Nuit</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-nightmode" onchange="toggleNightMode(this.checked)">
-                            <span class="toggle-slider"></span>
-                        </label>
+
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="simulation.description">Testez les effets lumineux en simulant des événements CAN sans connexion au véhicule</h3>
+                </div>
+                <div class="profile-section-content">
+                    <div id="simulation-sections"></div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="simulation.nightMode">Mode Nuit</h3>
+                </div>
+                <div class="profile-section-content">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                        <div class="event-toggle-container" id="event-toggle-nightmode">
+                            <label class="event-toggle-label" for="toggle-nightmode" data-i18n="simulation.nightModeToggle">Mode Nuit</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-nightmode" onchange="toggleNightMode(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -391,54 +498,70 @@
         <div id="config-tab" class="tab-content">
             <div class="section-title" data-i18n="config.title">Configuration Matérielle</div>
             <div id="config-notification" class="notification"></div>
-            <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="config.description">
-                Configurez les paramètres matériels du contrôleur LED.
-            </p>
-            <div class="control-group">
-                <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
-                <input type="number" id="led-count" value="" min="1" max="200">
-            </div>
-            <div class="checkbox-container" style="margin-top: 20px;">
-                <input type="checkbox" id="strip-reverse">
-                <label for="strip-reverse" data-i18n="config.stripReverse">Inverser le sens de la strip LED</label>
-            </div>
-            <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
-            <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
-            <button class="btn-danger" style="margin-left: 10px;" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
 
-            <!-- Section Audio (Micro INMP441) -->
-            <div class="section" style="margin-top: 40px; border-top: 2px solid var(--color-border); padding-top: 20px;">
-                <div class="section-title" data-i18n="audio.title">Configuration Audio</div>
-                <p style="margin-bottom: 15px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px; color: var(--color-text);" data-i18n="audio.warning">
-                    ⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif.
-                </p>
-
-                <div class="checkbox-container" style="margin-bottom: 20px;">
-                    <input type="checkbox" id="audio-enable" onchange="toggleAudio(this.checked)">
-                    <label for="audio-enable" data-i18n="audio.enable">Activer le micro</label>
-                    <span id="audio-status" style="margin-left: 10px; font-weight: bold; color: var(--color-muted);" data-i18n="audio.disabled">Désactivé</span>
+            <!-- Section: Configuration LED -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="config.ledSettings">Paramètres LED</h3>
+                    <p data-i18n="config.description">Configurez les paramètres matériels du contrôleur LED</p>
                 </div>
-
-                <div id="audio-settings" style="display: none;">
+                <div class="profile-section-content">
                     <div class="control-group">
-                        <label class="control-label" data-i18n="audio.sensitivity">Sensibilité</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="range" id="audio-sensitivity" min="0" max="255" value="128" oninput="updateAudioValue('sensitivity', this.value)" style="flex: 1;">
-                            <span id="audio-sensitivity-value" style="min-width: 40px; font-weight: bold;">128</span>
-                        </div>
+                        <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
+                        <input type="number" id="led-count" value="" min="1" max="200">
+                    </div>
+                    <div class="button-group" style="margin-top: 20px;">
+                        <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
+                        <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
+                        <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Configuration Audio -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="audio.title">Configuration Audio</h3>
+                    <p style="padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px; margin-top: 10px;" data-i18n="audio.warning">
+                        ⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif
+                    </p>
+                </div>
+                <div class="profile-section-content">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                        <label class="toggle-container" for="audio-enable">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="audio-enable" onchange="toggleAudio(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span class="toggle-label" data-i18n="audio.enable">Activer le micro</span>
+                        </label>
+                        <span id="audio-status" style="font-weight: bold; color: var(--color-muted);" data-i18n="audio.disabled">Désactivé</span>
                     </div>
 
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="audio.gain">Gain</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="range" id="audio-gain" min="0" max="255" value="128" oninput="updateAudioValue('gain', this.value)" style="flex: 1;">
-                            <span id="audio-gain-value" style="min-width: 40px; font-weight: bold;">128</span>
+                    <div id="audio-settings" style="display: none;">
+                        <div class="control-group">
+                            <label class="control-label" data-i18n="audio.sensitivity">Sensibilité</label>
+                            <div class="slider-container">
+                                <input type="range" id="audio-sensitivity" min="0" max="255" value="128" oninput="updateAudioValue('sensitivity', this.value)">
+                                <span class="slider-value" id="audio-sensitivity-value">128</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="checkbox-container">
-                        <input type="checkbox" id="audio-auto-gain">
-                        <label for="audio-auto-gain" data-i18n="audio.autoGain">Gain automatique</label>
+                        <div class="control-group">
+                            <label class="control-label" data-i18n="audio.gain">Gain</label>
+                            <div class="slider-container">
+                                <input type="range" id="audio-gain" min="0" max="255" value="128" oninput="updateAudioValue('gain', this.value)">
+                                <span class="slider-value" id="audio-gain-value">128</span>
+                            </div>
+                        </div>
+
+                        <label class="toggle-container" for="audio-auto-gain">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="audio-auto-gain">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span class="toggle-label" data-i18n="audio.autoGain">Gain automatique</span>
+                        </label>
                     </div>
 
                     <div id="audio-data" class="section" style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
@@ -517,46 +640,67 @@
                 </div>
             </div>
 
-
-            <div class="section" style="margin-top: 40px; border-top: 2px solid #E82127; padding-top: 20px;">
-                <div class="section-title" style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</div>
-                <p style="margin-bottom: 15px; color: var(--color-muted); font-size: 14px;" data-i18n="config.factoryResetWarning">
-                    La réinitialisation usine supprimera TOUS les profils et configurations. Cette action est irréversible !
-                </p>
-                <button class="btn-danger" onclick="confirmFactoryReset()" data-i18n="config.factoryReset">Réinitialisation Usine</button>
+            <!-- Section: Zone Dangereuse -->
+            <div class="profile-section" style="border: 2px solid #E82127;">
+                <div class="profile-section-header">
+                    <h3 style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</h3>
+                    <p style="padding: 10px; background: rgba(232, 33, 39, 0.1); border-left: 3px solid #E82127; font-size: 13px; margin-top: 10px;" data-i18n="config.factoryResetWarning">
+                        La réinitialisation usine supprimera TOUS les profils et configurations. Cette action est irréversible !
+                    </p>
+                </div>
+                <div class="profile-section-content">
+                    <button class="btn-danger" onclick="confirmFactoryReset()" data-i18n="config.factoryReset">Réinitialisation Usine</button>
+                </div>
             </div>
         </div>
         <!-- Tab: OTA -->
         <div id="ota-tab" class="tab-content">
             <div class="section-title" data-i18n="ota.title">Mise à Jour OTA</div>
             <div id="ota-notification" class="notification"></div>
-            <div class="control-group">
-                <label class="control-label" data-i18n="ota.currentVersion">Version Actuelle</label>
-                <div style="padding: 12px; background: var(--color-panel); border-radius: 4px; font-weight: bold; border: 1px solid var(--color-input-border);" id="ota-version">
-                    <span data-i18n="ota.loading">Chargement...</span>
+
+            <!-- Section: Version Actuelle -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="ota.currentVersion">Version Actuelle</h3>
+                </div>
+                <div class="profile-section-content">
+                    <div style="padding: 12px; background: var(--color-panel); border-radius: 4px; font-weight: bold; border: 1px solid var(--color-input-border);" id="ota-version">
+                        <span data-i18n="ota.loading">Chargement...</span>
+                    </div>
                 </div>
             </div>
-            <div id="ota-progress-title" class="control-group" style="display: none;">
-                <label class="control-label" data-i18n="ota.firmwareFile">Fichier Firmware (.bin)</label>
-                <input type="file" id="firmware-file" accept=".bin">
-            </div>
-            <div id="ota-progress-container" style="display: none; margin-top: 15px;">
-                <div style="background: var(--color-panel); border-radius: 4px; padding: 15px; border: 1px solid var(--color-input-border);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span data-i18n="ota.progress">Progression</span>
-                        <span id="ota-progress-percent" style="font-weight: bold;">0%</span>
+
+            <!-- Section: Mise à Jour Firmware -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="ota.updateFirmware">Mise à Jour du Firmware</h3>
+                    <div id="ota-ble-note" style="display: none; margin-top: 10px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px;" data-i18n="ota.bleNote">
+                        Connectez-vous au Wi-Fi de l'appareil (AP) pour effectuer la mise à jour
                     </div>
-                    <div style="background: var(--color-input-border); height: 8px; border-radius: 4px; overflow: hidden;">
-                        <div id="ota-progress-bar" style="background: #E82127; height: 100%; width: 0%; transition: width 0.3s;"></div>
-                    </div>
-                    <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: var(--color-muted);"></div>
-                    <div id="ota-reboot-countdown" style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
                 </div>
-            </div>
-            <button class="btn-primary" onclick="uploadFirmware()" id="ota-upload-btn" data-i18n="ota.upload" style="display: none;">Téléverser</button>
-            <button class="btn-secondary" onclick="restartDevice()" id="ota-restart-btn" style="display: none;" data-i18n="ota.restart">Redémarrer</button>
-            <div id="ota-ble-note" style="display: none; margin-top: 12px; font-size: 14px; color: #FACC15;" data-i18n="ota.bleNote">
-                Connectez-vous au Wi-Fi de l'appareil (AP) pour effectuer la mise à jour.
+                <div class="profile-section-content">
+                    <div class="control-group" id="ota-progress-title">
+                        <label class="control-label" data-i18n="ota.firmwareFile">Fichier Firmware (.bin)</label>
+                        <input type="file" id="firmware-file" accept=".bin">
+                    </div>
+                    <div id="ota-progress-container" style="display: none; margin-top: 15px;">
+                        <div style="background: var(--color-panel); border-radius: 4px; padding: 15px; border: 1px solid var(--color-input-border);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span data-i18n="ota.progress">Progression</span>
+                                <span id="ota-progress-percent" style="font-weight: bold;">0%</span>
+                            </div>
+                            <div style="background: var(--color-input-border); height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="ota-progress-bar" style="background: #E82127; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: var(--color-muted);"></div>
+                            <div id="ota-reboot-countdown" style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
+                        </div>
+                    </div>
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button class="btn-primary" onclick="uploadFirmware()" id="ota-upload-btn" data-i18n="ota.upload">Téléverser</button>
+                        <button class="btn-secondary" onclick="restartDevice()" id="ota-restart-btn" style="display: none;" data-i18n="ota.restart">Redémarrer</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

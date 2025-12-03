@@ -1750,9 +1750,6 @@ async function loadHardwareConfig() {
         if (config.lc !== undefined) {
             $('led-count').value = config.lc;
         }
-        if (config.srv !== undefined) {
-            $('strip-reverse').checked = config.srv;
-        }
     } catch (e) {
         console.error('Error:', e);
         showNotification('config-notification', t('config.loadError'), 'error');
@@ -1761,7 +1758,6 @@ async function loadHardwareConfig() {
 async function saveHardwareConfig() {
     const config = {
         lc: parseInt($('led-count').value),
-        srv: $('strip-reverse').checked
     };
     try {
         const response = await fetch(API_BASE + '/api/config', {
@@ -2645,6 +2641,9 @@ async function loadOTAInfo() {
         if (rebootCountdownEl) {
             rebootCountdownEl.style.display = 'none';
         }
+    } finally {
+        // Toujours mettre à jour la note BLE après le chargement des infos OTA
+        updateOtaBleNote();
     }
 }
 async function uploadFirmware() {
