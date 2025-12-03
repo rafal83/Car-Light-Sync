@@ -1635,6 +1635,10 @@ void led_effects_stop_progress_display(void) {
   ota_last_progress_refresh = 0;
 }
 
+bool led_effects_is_ota_display_active(void) {
+  return ota_progress_mode || ota_ready_mode || ota_error_mode;
+}
+
 void led_effects_show_upgrade_ready(void) {
   ota_progress_mode     = false;
   ota_progress_percent  = 100;

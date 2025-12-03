@@ -295,6 +295,8 @@ void led_effects_update_progress(uint8_t percent);
  */
 void led_effects_stop_progress_display(void);
 
+bool led_effects_is_ota_display_active(void);
+
 /**
  * @brief Affiche un effet indiquant que l'appareil est prêt à redémarrer
  *        après une mise à jour OTA réussie.

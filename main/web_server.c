@@ -176,21 +176,26 @@ static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffe
     return ESP_FAIL;
   }
 
-  int ret = httpd_req_recv(req, buffer, buffer_size - 1);
+  size_t remaining = req->content_len;
+  size_t offset    = 0;
 
-  if (ret <= 0) {
-    if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-      httpd_resp_send_408(req);
+  // Lire tout le corps de la requête, même si httpd_req_recv renvoie par fragments
+  while (remaining > 0) {
+    size_t to_read = MIN(remaining, buffer_size - 1 - offset);
+    int ret        = httpd_req_recv(req, buffer + offset, to_read);
+
+    if (ret <= 0) {
+      if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+        httpd_resp_send_408(req);
+      }
+      return ESP_FAIL;
     }
-    return ESP_FAIL;
+
+    offset += ret;
+    remaining -= ret;
   }
 
-  // Vérifier si le buffer est plein (donnée potentiellement tronquée)
-  if (ret > (int)(buffer_size - 1)) {
-    ESP_LOGW(TAG_WEBSERVER, "Request too large, may be truncated (%d bytes vs %d bytes)", ret, (int)(buffer_size - 1));
-  }
-
-  buffer[ret] = '\0';
+  buffer[offset] = '\0';
 
   *out_json   = cJSON_Parse(buffer);
   if (*out_json == NULL) {
@@ -1055,7 +1060,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   free(content);
 
   httpd_resp_set_type(req, "application/json");
-  httpd_resp_sendstr(req, success ? "{\"status\":\"ok\"}" : "{\"status\":\"error\"}");
+  httpd_resp_sendstr(req, success ? "{\"st\":\"ok\"}" : "{\"st\":\"error\"}");
 
   return ESP_OK;
 }

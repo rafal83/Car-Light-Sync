@@ -979,6 +979,11 @@ void config_manager_stop_all_events(void) {
 }
 
 void config_manager_update(void) {
+  if (led_effects_is_ota_display_active()) {
+    effect_override_active = false;
+    return;
+  }
+
   uint32_t now        = xTaskGetTickCount();
   uint16_t total_leds = led_effects_get_led_count();
   bool any_active     = false;

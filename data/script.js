@@ -2534,8 +2534,11 @@ async function loadOTAInfo() {
             const progressValue = Math.max(0, Math.min(100, Number(data.pg) || 0));
             if (showProgress || stateKey === 'success' || stateKey === 'error') {
                 progressContainer.style.display = 'block';
-                progressBar.style.width = progressValue + '%';
-                progressPercent.textContent = progressValue + '%';
+                // Ne mettre à jour le progress que si on n'est pas en train d'uploader (XHR gère le progress)
+                if (!otaManualUploadRunning) {
+                    progressBar.style.width = progressValue + '%';
+                    progressPercent.textContent = progressValue + '%';
+                }
             } else {
                 progressContainer.style.display = 'none';
                 progressBar.style.width = '0%';
@@ -2646,8 +2649,8 @@ async function uploadFirmware() {
     if (otaPollingInterval) {
         clearInterval(otaPollingInterval);
     }
-    // Démarrer le polling OTA pendant l'upload
-    otaPollingInterval = setInterval(loadOTAInfo, 1000);
+    // Démarrer le polling OTA pendant l'upload (moins fréquent pour ne pas surcharger l'ESP32)
+    otaPollingInterval = setInterval(loadOTAInfo, 3000);
     try {
         await waitForApiConnection();
         const xhr = new XMLHttpRequest();
