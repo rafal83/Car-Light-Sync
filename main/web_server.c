@@ -170,6 +170,12 @@ static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffe
     return ESP_FAIL;
   }
 
+  // Valider que le contenu ne dépasse pas la taille du buffer
+  if (req->content_len >= buffer_size) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request body too large");
+    return ESP_FAIL;
+  }
+
   int ret = httpd_req_recv(req, buffer, buffer_size - 1);
 
   if (ret <= 0) {

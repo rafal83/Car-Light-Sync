@@ -428,6 +428,38 @@ static void monitor_task(void *pvParameters) {
   }
 }
 
+/**
+ * Stratégie d'allocation mémoire dans le projet
+ * =============================================
+ *
+ * Ce projet utilise deux méthodes d'allocation selon le contexte :
+ *
+ * 1. malloc() / free() - RAM interne (SRAM)
+ *    - UTILISATION : Structures de configuration, buffers temporaires
+ *    - AVANTAGES : Rapide, accessible par tous les périphériques (RMT, SPI, etc.)
+ *    - LIMITES : ~200-300KB disponible sur ESP32-S3
+ *    - EXEMPLES : config_profile_t, buffers JSON courts
+ *
+ * 2. heap_caps_malloc(size, MALLOC_CAP_SPIRAM) - PSRAM externe
+ *    - UTILISATION : Grands buffers, données cJSON (si CONFIG_HAS_PSRAM)
+ *    - AVANTAGES : ~8MB disponible, réduit la pression sur la SRAM
+ *    - LIMITES : Plus lent, incompatible avec DMA/RMT
+ *    - EXEMPLES : Buffers BLE, réponses HTTP volumineuses
+ *
+ * 3. heap_caps_malloc(size, MALLOC_CAP_DEFAULT) - RAM par défaut
+ *    - UTILISATION : Allocation générique compatible BLE/WiFi
+ *    - AVANTAGES : Compatible avec tous les contextes
+ *    - LIMITES : Utilise la SRAM interne
+ *    - EXEMPLES : Buffers BLE temporaires
+ *
+ * RÈGLES DE CHOIX :
+ * - LED/RMT buffers : toujours malloc() (DMA incompatible avec PSRAM)
+ * - Config profiles : malloc() (accès fréquent, petite taille)
+ * - Buffers JSON > 4KB : heap_caps_malloc(PSRAM) si disponible
+ * - Buffers BLE : heap_caps_malloc(DEFAULT) pour compatibilité
+ * - Buffers temporaires < 1KB : stack (variables locales)
+ */
+
 #ifdef CONFIG_HAS_PSRAM
 // Fonctions d'allocation mémoire pour cJSON utilisant la PSRAM
 static void *psram_malloc(size_t size) {

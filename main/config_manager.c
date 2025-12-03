@@ -1030,16 +1030,16 @@ void config_manager_update(void) {
     total_leds = MAX_LED_BUFFER;
   }
 
-  // V?rifier et expirer les ?v?nements actifs
+  // Vérifier et expirer les événements actifs
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (!active_events[i].active)
       continue;
 
-    // V?rifier si l??v?nement est expir? (si dur?e > 0)
+    // Vérifier si l'événement est expiré (si durée > 0)
     if (active_events[i].duration_ms > 0) {
       uint32_t elapsed = now - active_events[i].start_time;
       if (elapsed >= pdMS_TO_TICKS(active_events[i].duration_ms)) {
-        ESP_LOGI(TAG_CONFIG, "?v?nement '%s' termin?", config_manager_enum_to_id(active_events[i].event));
+        ESP_LOGI(TAG_CONFIG, "Événements '%s' terminé", config_manager_enum_to_id(active_events[i].event));
         active_events[i].active = false;
         continue;
       }
