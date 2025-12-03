@@ -963,11 +963,6 @@ function restoreSimulationToggles() {
         }
         setToggleContainerState(eventId, simulationTogglesState[eventId]);
     });
-    // Restaurer le toggle du mode nuit
-    const nightModeCheckbox = $('toggle-nightmode');
-    if (nightModeCheckbox && simulationTogglesState['nightmode'] !== undefined) {
-        nightModeCheckbox.checked = simulationTogglesState['nightmode'];
-    }
 }
 function getSimulationEventConfig(eventType) {
     if (!eventsConfigData || eventsConfigData.length === 0) {
@@ -1074,15 +1069,15 @@ function percentTo255(percent) {
 function to255ToPercent(value) {
     return Math.round((value * 100) / 255);
 }
-const defaultNightMode = $('default-night-mode');
-if (defaultNightMode) {
-    defaultNightMode.addEventListener('change', scheduleDefaultEffectSave);
+const dynamicBrightnessEnabled = $('dynamic-brightness-enabled');
+if (dynamicBrightnessEnabled) {
+    dynamicBrightnessEnabled.addEventListener('change', scheduleDefaultEffectSave);
 }
 // Mise à jour des sliders avec pourcentage (seulement ceux qui existent)
-const nightBrightnessSlider = $('night-brightness-slider');
-if (nightBrightnessSlider) {
-    nightBrightnessSlider.oninput = function() {
-        $('night-brightness-value').textContent = this.value + '%';
+const dynamicBrightnessRateSlider = $('dynamic-brightness-rate');
+if (dynamicBrightnessRateSlider) {
+    dynamicBrightnessRateSlider.oninput = function() {
+        $('dynamic-brightness-rate-value').textContent = this.value + '%';
         scheduleDefaultEffectSave();
     };
 }
@@ -1968,10 +1963,10 @@ async function saveProfile(params = {}) {
     const profileId = parseInt($('profile-select').value);
     const payload = { pid: profileId };
 
-    // Paramètres profil (mode nuit)
+    // Paramètres profil (luminosité dynamique)
     if (params.settings !== false) {
-        payload.anm = $('auto-night-mode').checked;
-        payload.nbr = percentTo255(parseInt($('night-brightness-slider').value));
+        payload.dbe = $('dynamic-brightness-enabled').checked;
+        payload.dbr = parseInt($('dynamic-brightness-rate').value);
     }
 
     // Effet par défaut
@@ -2190,22 +2185,7 @@ async function loadConfig() {
             maxLeds = config.lc;
         }
 
-        // Convertir 0-255 en pourcentage
-        const nightBrightnessPercent = to255ToPercent(config.nbr);
-        // Charger uniquement les éléments qui existent encore
-        const autoNightMode = $('auto-night-mode');
-        if (autoNightMode) {
-            autoNightMode.checked = config.anm;
-        }
-        const nightBrightnessSlider = $('night-brightness-slider');
-        if (nightBrightnessSlider) {
-            nightBrightnessSlider.value = nightBrightnessPercent;
-        }
-        const nightBrightnessValue = $('night-brightness-value');
-        if (nightBrightnessValue) {
-            nightBrightnessValue.textContent = nightBrightnessPercent + '%';
-        }
-        // Charger aussi l'effet par défaut du profil actif
+        // Charger l'effet par défaut et les paramètres du profil actif
         loadActiveProfileDefaultEffect();
     } catch (e) {
         console.error('Erreur:', e);
@@ -2255,6 +2235,20 @@ async function loadActiveProfileDefaultEffect() {
                 maxSlider.max = maxLeds;
                 // Mettre à jour l'affichage du segment (sans sauvegarder)
                 updateDefaultSegmentRange(false);
+            }
+
+            // Luminosité dynamique
+            const dynBrightEnabled = $('dynamic-brightness-enabled');
+            if (dynBrightEnabled && activeProfile.dbe !== undefined) {
+                dynBrightEnabled.checked = activeProfile.dbe;
+            }
+            const dynBrightRate = $('dynamic-brightness-rate');
+            const dynBrightRateValue = $('dynamic-brightness-rate-value');
+            if (dynBrightRate && activeProfile.dbr !== undefined) {
+                dynBrightRate.value = activeProfile.dbr;
+                if (dynBrightRateValue) {
+                    dynBrightRateValue.textContent = activeProfile.dbr + '%';
+                }
             }
         }
     } catch (e) {
@@ -2653,7 +2647,7 @@ async function uploadFirmware() {
         showNotification('ota-notification', t('ota.selectFile'), 'error');
         return;
     }
-    if (!file.n.endsWith('.bin')) {
+    if (!file.name.endsWith('.bin')) {
         showNotification('ota-notification', t('ota.wrongExtension'), 'error');
         return;
     }
@@ -2845,35 +2839,7 @@ async function toggleEvent(eventType, isEnabled) {
         showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
     }
 }
-// Toggle night mode simulation (single switch for ON/OFF)
-async function toggleNightMode(isEnabled) {
-    const toggleContainer = $('event-toggle-nightmode');
-    const eventType = isEnabled ? 'NIGHT_MODE_ON' : 'NIGHT_MODE_OFF';
-    const eventName = isEnabled ? t('canEvents.nightModeOn') : t('canEvents.nightModeOff');
-    try {
-        showNotification('simulation-notification', t('simulation.sendingEvent', eventName), 'info');
-        const response = await fetch(API_BASE + '/api/simulate/event', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event: eventType })
-        });
-        const result = await response.json();
-        if (result.st === 'ok') {
-            toggleContainer.classList.toggle('active', isEnabled);
-            showNotification('simulation-notification', t('simulation.eventSimulated', eventName), 'success');
-            simulationTogglesState['nightmode'] = isEnabled;
-        } else {
-            $('toggle-nightmode').checked = !isEnabled;
-            simulationTogglesState['nightmode'] = !isEnabled;
-            showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
-        }
-    } catch (e) {
-        console.error('Erreur:', e);
-        $('toggle-nightmode').checked = !isEnabled;
-        simulationTogglesState['nightmode'] = !isEnabled;
-        showNotification('simulation-notification', t('simulation.simulationError', t('simulation.error')), 'error');
-    }
-}
+// Night mode has been removed and replaced by dynamic brightness
 // Mapping des événements vers les clés commonEvents
 const EVENT_TO_COMMON = {
     'TURN_LEFT': 'turnLeft', 
@@ -2894,8 +2860,6 @@ const EVENT_TO_COMMON = {
     'LANE_DEPARTURE_LEFT_LV2': 'laneDepartureLeftLv2',
     'LANE_DEPARTURE_RIGHT_LV1': 'laneDepartureRightLv1',
     'LANE_DEPARTURE_RIGHT_LV2': 'laneDepartureRightLv2',
-    'NIGHT_MODE_ON': 'nightModeOn', 
-    'NIGHT_MODE_OFF': 'nightModeOff',
     'SPEED_THRESHOLD': 'speedThreshold'
 };
 function translateEventId(eventId) {

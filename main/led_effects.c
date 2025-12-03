@@ -8,7 +8,7 @@
  * - Audio-réactivité avec FFT (basse fréquence)
  * - Limitation de puissance automatique (max 2A pour brownout)
  * - Segments LED avec reverse/direction
- * - Mode nuit avec luminosité réduite
+ * - Luminosité dynamique liée au brightness de la voiture (CAN bus)
  */
 
 #include "led_effects.h"
@@ -114,10 +114,6 @@ static const TickType_t OTA_PROGRESS_REFRESH_LIMIT = pdMS_TO_TICKS(500);
 // Accumulateur flottant pour animation de charge fluide
 static float charge_anim_position                  = 0.0f;
 
-// Night mode global state
-static bool night_mode_active                      = false;
-static uint8_t night_mode_brightness               = BRIGHTNESS_NO_REDUCTION;
-
 // Dual directional mode state
 static bool dual_directional_mode                  = false;
 static effect_config_t left_directional_config;
@@ -142,8 +138,7 @@ static rgb_t color_to_rgb(uint32_t color) {
 
 static void fill_solid(rgb_t color);
 
-// Applique la luminosité à une couleur (avec prise en compte du mode nuit et
-// audio)
+// Applique la luminosité à une couleur (avec prise en compte de la luminosité dynamique et audio)
 static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   rgb_t result;
   // Apply effect brightness
@@ -151,11 +146,19 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   result.g = (color.g * brightness) / 255;
   result.b = (color.b * brightness) / 255;
 
-  // Apply night mode brightness multiplier if active
-  if (night_mode_active) {
-    result.r = (result.r * night_mode_brightness) / 255;
-    result.g = (result.g * night_mode_brightness) / 255;
-    result.b = (result.b * night_mode_brightness) / 255;
+  // Apply dynamic brightness if enabled (from active profile)
+  config_profile_t active_profile;
+  if (config_manager_get_active_profile(&active_profile)) {
+    if (active_profile.dynamic_brightness_enabled) {
+      // Formula: final_brightness = effect_brightness × (vehicle_brightness × rate / 100)
+      float vehicle_brightness = last_vehicle_state.brightness; // 0-100 from CAN
+      float rate = (active_profile.dynamic_brightness_rate ? active_profile.dynamic_brightness_rate : 1) / 100.0f; // 0-1
+      float applied_brightness = vehicle_brightness * rate / 100.0f; // normalized to 0-1
+
+      result.r = (uint8_t)(result.r * applied_brightness);
+      result.g = (uint8_t)(result.g * applied_brightness);
+      result.b = (uint8_t)(result.b * applied_brightness);
+    }
   }
 
   // Apply audio reactive modulation if enabled
@@ -1762,20 +1765,6 @@ void led_effects_reset_config(void) {
   current_config.segment_length = 0;
 
   ESP_LOGI(TAG_LED, "Configuration réinitialisée");
-}
-
-void led_effects_set_night_mode(bool active, uint8_t brightness) {
-  night_mode_active     = active;
-  night_mode_brightness = brightness;
-  ESP_LOGI(TAG_LED, "Night mode: %s, brightness: %d%%", active ? "ON" : "OFF", (brightness * 100) / 255);
-}
-
-bool led_effects_get_night_mode(void) {
-  return night_mode_active;
-}
-
-uint8_t led_effects_get_night_brightness(void) {
-  return night_mode_brightness;
 }
 
 uint32_t led_effects_get_frame_counter(void) {

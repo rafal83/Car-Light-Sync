@@ -230,13 +230,6 @@ bool led_effects_load_config(void);
  */
 void led_effects_reset_config(void);
 
-/**
- * @brief Active/désactive le mode nuit avec luminosité globale
- * @param active true pour activer le mode nuit
- * @param brightness Luminosité du mode nuit (0-255, appliqué comme
- * multiplicateur)
- */
-void led_effects_set_night_mode(bool active, uint8_t brightness);
 
 /**
  * @brief Obtient l'état du mode nuit

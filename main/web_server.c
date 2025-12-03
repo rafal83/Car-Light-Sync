@@ -37,7 +37,7 @@
 #define BUFFER_SIZE_MEDIUM      256
 #define BUFFER_SIZE_LARGE       512
 #define BUFFER_SIZE_JSON        1024
-#define BUFFER_SIZE_PROFILE     8192
+#define BUFFER_SIZE_PROFILE     16384
 #define BUFFER_SIZE_EVENT_MAX   16384
 
 // Constantes pour les limites du système
@@ -441,8 +441,6 @@ static esp_err_t config_handler(httpd_req_t *req) {
   // stack overflow)
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile != NULL && config_manager_get_active_profile(profile)) {
-    cJSON_AddBoolToObject(root, "anm", profile->auto_night_mode);
-    cJSON_AddNumberToObject(root, "nbr", profile->night_brightness);
     free(profile);
   } else if (profile != NULL) {
     free(profile);
@@ -627,6 +625,10 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddNumberToObject(default_effect_obj, "st", profile->default_effect.segment_start);
     cJSON_AddNumberToObject(default_effect_obj, "ln", profile->default_effect.segment_length);
     cJSON_AddItemToObject(profile_obj, "default_effect", default_effect_obj);
+
+    // Ajouter les paramètres de luminosité dynamique
+    cJSON_AddBoolToObject(profile_obj, "dbe", profile->dynamic_brightness_enabled);
+    cJSON_AddNumberToObject(profile_obj, "dbr", profile->dynamic_brightness_rate);
 
     cJSON_AddItemToArray(profiles_array, profile_obj);
   }
@@ -829,17 +831,6 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Mettre à jour les paramètres si fournis
-  const cJSON *auto_night_mode = cJSON_GetObjectItem(root, "anm");
-  if (auto_night_mode) {
-    profile->auto_night_mode = cJSON_IsTrue(auto_night_mode);
-  }
-
-  const cJSON *night_brightness = cJSON_GetObjectItem(root, "nbr");
-  if (night_brightness) {
-    profile->night_brightness = (uint8_t)night_brightness->valueint;
-  }
-
   // Mettre à jour l'effet par défaut si fourni
   bool default_effect_updated      = false;
   const cJSON *effect_json         = cJSON_GetObjectItem(root, "fx");
@@ -850,6 +841,8 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   const cJSON *reverse_json        = cJSON_GetObjectItem(root, "rv");
   const cJSON *segment_start_json  = cJSON_GetObjectItem(root, "st");
   const cJSON *segment_length_json = cJSON_GetObjectItem(root, "ln");
+  const cJSON *dyn_bright_enabled_json = cJSON_GetObjectItem(root, "dbe");
+  const cJSON *dyn_bright_rate_json = cJSON_GetObjectItem(root, "dbr");
 
   if (effect_json) {
     profile->default_effect.effect = (led_effect_t)effect_json->valueint;
@@ -884,6 +877,17 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     default_effect_updated                 = true;
   }
 
+  // Mettre à jour les paramètres de luminosité dynamique
+  bool dynamic_brightness_updated = false;
+  if (dyn_bright_enabled_json && cJSON_IsBool(dyn_bright_enabled_json)) {
+    profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled_json);
+    dynamic_brightness_updated = true;
+  }
+  if (dyn_bright_rate_json && cJSON_IsNumber(dyn_bright_rate_json)) {
+    profile->dynamic_brightness_rate = (uint8_t)dyn_bright_rate_json->valueint;
+    dynamic_brightness_updated = true;
+  }
+
   // Sauvegarder le profil
   bool success = config_manager_save_profile(profile_id, profile);
 
@@ -895,15 +899,6 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
       led_effects_set_config(&profile->default_effect);
       ESP_LOGI(TAG_WEBSERVER, "Applied updated default effect");
     }
-
-    // Mettre à jour le mode nuit (garder l'état actuel)
-    bool current_night_mode = led_effects_get_night_mode();
-    led_effects_set_night_mode(current_night_mode, profile->night_brightness);
-    ESP_LOGI(TAG_WEBSERVER,
-             "Updated profile settings (auto: %s, brightness: %d, night state: %s)",
-             profile->auto_night_mode ? "ENABLED" : "DISABLED",
-             profile->night_brightness,
-             current_night_mode ? "ON" : "OFF");
   }
 
   free(profile);
@@ -995,7 +990,7 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
 
   uint8_t profile_id = atoi(param_value);
 
-  // Allouer un buffer pour le JSON (8KB devrait suffire pour un profil complet)
+  // Allouer un buffer pour le JSON (16KB devrait suffire pour un profil complet)
   char *json_buffer  = malloc(BUFFER_SIZE_PROFILE);
   if (!json_buffer) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
@@ -1786,7 +1781,7 @@ esp_err_t web_server_start(void) {
   config.max_uri_handlers = HTTP_MAX_URI_HANDLERS;
   config.max_open_sockets = HTTP_MAX_OPEN_SOCKETS;
   config.lru_purge_enable = true; // Ferme les plus anciennes connexions si limite atteinte
-  config.core_id          = 1;    // Serveur web sur core 1 (WiFi sur core 0)
+  // config.core_id          = 1;    // Serveur web sur core 1 (WiFi sur core 0)
 
   ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 

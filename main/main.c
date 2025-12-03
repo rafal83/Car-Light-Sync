@@ -305,29 +305,6 @@ static void can_event_task(void *pvParameters) {
       config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
     }
 
-    // Mode nuit
-    if (current_state.night_mode != previous_state.night_mode) {
-      if (current_state.night_mode) {
-        config_manager_process_can_event(CAN_EVENT_NIGHT_MODE_ON);
-
-        // Appliquer automatiquement l'effet mode nuit si configuré
-        config_profile_t profile;
-        if (config_manager_get_active_profile(&profile) && profile.auto_night_mode) {
-          led_effects_set_config(&profile.night_mode_effect);
-          ESP_LOGI(TAG_MAIN, "Mode nuit activé automatiquement");
-        }
-      } else {
-        config_manager_process_can_event(CAN_EVENT_NIGHT_MODE_OFF);
-
-        // Retour à l'effet par défaut
-        config_profile_t profile;
-        if (config_manager_get_active_profile(&profile) && profile.auto_night_mode) {
-          led_effects_set_config(&profile.default_effect);
-          ESP_LOGI(TAG_MAIN, "Mode nuit désactivé");
-        }
-      }
-    }
-
     // Sauvegarder l'état précédent
     memcpy(&previous_state, &current_state, sizeof(vehicle_state_t));
 

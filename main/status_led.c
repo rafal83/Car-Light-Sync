@@ -42,7 +42,7 @@ static esp_err_t status_led_set_color(uint8_t r, uint8_t g, uint8_t b) {
     return ESP_ERR_INVALID_STATE;
   }
 
-  uint8_t led_data[3]             = {g, r, b}; // WS2812 format: GRB
+  uint8_t led_data[3]             = {g*.3, r*.3, b*.3}; // WS2812 format: GRB 30% de la luminosité
 
   rmt_transmit_config_t tx_config = {
       .loop_count = 0,

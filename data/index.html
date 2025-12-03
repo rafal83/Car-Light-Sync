@@ -344,26 +344,29 @@
                 </div>
             </div>
 
-            <!-- Section: Mode Nuit -->
+            <!-- Section: Luminosité Dynamique -->
             <div class="profile-section">
                 <div class="profile-section-header">
-                    <h3 data-i18n="profiles.nightMode">Mode Nuit</h3>
-                    <p data-i18n="profiles.nightModeDesc">Luminosité réduite activée automatiquement selon les événements CAN</p>
+                    <h3 data-i18n="profiles.dynamicBrightness">Luminosité Dynamique</h3>
+                    <p data-i18n="profiles.dynamicBrightnessDesc">Ajuste automatiquement la luminosité en fonction du brightness de l'écran de la voiture</p>
                 </div>
                 <div class="profile-section-content">
-                    <label class="toggle-container" for="auto-night-mode">
+                    <label class="toggle-container" for="dynamic-brightness-enabled">
                         <div class="toggle-switch">
-                            <input type="checkbox" id="auto-night-mode">
+                            <input type="checkbox" id="dynamic-brightness-enabled">
                             <span class="toggle-slider"></span>
                         </div>
-                        <span class="toggle-label" data-i18n="profiles.autoNightMode">Activer le mode nuit automatique</span>
+                        <span class="toggle-label" data-i18n="profiles.dynamicBrightnessEnable">Activer la luminosité dynamique</span>
                     </label>
                     <div class="control-group" style="margin-top: 15px;">
-                        <label class="control-label" data-i18n="profiles.nightBrightness">Luminosité Mode Nuit</label>
+                        <label class="control-label" data-i18n="profiles.dynamicBrightnessRate">Taux d'Application (%)</label>
                         <div class="slider-container">
-                            <input type="range" id="night-brightness-slider" min="0" max="100" value="12">
-                            <span class="slider-value" id="night-brightness-value">12%</span>
+                            <input type="range" id="dynamic-brightness-rate" min="1" max="100" value="50">
+                            <span class="slider-value" id="dynamic-brightness-rate-value">50%</span>
                         </div>
+                        <p style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;" data-i18n="profiles.dynamicBrightnessHelp">
+                            Exemple: Si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16.8%
+                        </p>
                     </div>
                 </div>
             </div>
@@ -387,14 +390,14 @@
                         <div class="control-group">
                             <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
                             <div class="slider-container">
-                                <input type="range" id="default-brightness-slider" min="0" max="100" value="50">
+                                <input type="range" id="default-brightness-slider" min="1" max="100" value="50">
                                 <span class="slider-value" id="default-brightness-value">50%</span>
                             </div>
                         </div>
                         <div class="control-group">
                             <label class="control-label" data-i18n="effects.speed">Vitesse</label>
                             <div class="slider-container">
-                                <input type="range" id="default-speed-slider" min="0" max="100" value="50">
+                                <input type="range" id="default-speed-slider" min="1" max="100" value="50">
                                 <span class="slider-value" id="default-speed-value">50%</span>
                             </div>
                         </div>
@@ -406,7 +409,7 @@
                     </div>
 
                     <!-- Options avancées -->
-                    <div class="advanced-options">
+                    <div class="control-row">
                         <label class="toggle-container" for="default-reverse">
                             <div class="toggle-switch">
                                 <input type="checkbox" id="default-reverse">
@@ -476,23 +479,6 @@
                     <div id="simulation-sections"></div>
                 </div>
             </div>
-
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="simulation.nightMode">Mode Nuit</h3>
-                </div>
-                <div class="profile-section-content">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                        <div class="event-toggle-container" id="event-toggle-nightmode">
-                            <label class="event-toggle-label" for="toggle-nightmode" data-i18n="simulation.nightModeToggle">Mode Nuit</label>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="toggle-nightmode" onchange="toggleNightMode(this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
         <!-- Tab: Configuration -->
         <div id="config-tab" class="tab-content">
@@ -542,7 +528,7 @@
                         <div class="control-group">
                             <label class="control-label" data-i18n="audio.sensitivity">Sensibilité</label>
                             <div class="slider-container">
-                                <input type="range" id="audio-sensitivity" min="0" max="255" value="128" oninput="updateAudioValue('sensitivity', this.value)">
+                                <input type="range" id="audio-sensitivity" min="1" max="255" value="128" oninput="updateAudioValue('sensitivity', this.value)">
                                 <span class="slider-value" id="audio-sensitivity-value">128</span>
                             </div>
                         </div>
@@ -550,7 +536,7 @@
                         <div class="control-group">
                             <label class="control-label" data-i18n="audio.gain">Gain</label>
                             <div class="slider-container">
-                                <input type="range" id="audio-gain" min="0" max="255" value="128" oninput="updateAudioValue('gain', this.value)">
+                                <input type="range" id="audio-gain" min="1" max="255" value="128" oninput="updateAudioValue('gain', this.value)">
                                 <span class="slider-value" id="audio-gain-value">128</span>
                             </div>
                         </div>

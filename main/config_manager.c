@@ -176,10 +176,6 @@ bool config_manager_init(void) {
     if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
       ESP_LOGI(TAG_CONFIG, "Application du profil actif %d: %s", active_profile_id, profiles[active_profile_id].name);
       led_effects_set_config(&profiles[active_profile_id].default_effect);
-      // Ne pas activer le mode nuit au démarrage, il sera activé par
-      // l'événement CAN si auto_night_mode est activé
-      led_effects_set_night_mode(false, profiles[active_profile_id].night_brightness);
-      ESP_LOGI(TAG_CONFIG, "Auto night mode: %s (will respond to CAN events)", profiles[active_profile_id].auto_night_mode ? "ENABLED" : "DISABLED");
       effect_override_active = false;
     } else {
       ESP_LOGW(TAG_CONFIG, "Aucun profil actif trouvé, activation du profil 0");
@@ -500,17 +496,12 @@ bool config_manager_activate_profile(uint8_t profile_id) {
 
   // Appliquer l'effet par défaut
   led_effects_set_config(&profiles[profile_id].default_effect);
-  // Ne pas activer le mode nuit lors du changement de profil, il sera activé
-  // par l'événement CAN
-  led_effects_set_night_mode(false, profiles[profile_id].night_brightness);
   effect_override_active = false;
 
   ESP_LOGI(TAG_CONFIG,
-           "Profil %d activé: %s (auto night mode: %s, brightness: %d)",
+           "Profil %d activé: %s",
            profile_id,
-           profiles[profile_id].name,
-           profiles[profile_id].auto_night_mode ? "ENABLED" : "DISABLED",
-           profiles[profile_id].night_brightness);
+           profiles[profile_id].name);
   return true;
 }
 
@@ -552,14 +543,6 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   profile->default_effect.color1            = 0xFF0000;
   profile->default_effect.segment_start     = 0;
   profile->default_effect.segment_length    = 0; // full strip par defaut
-
-  // Effet mode nuit: breathing doux
-  profile->night_mode_effect.effect         = EFFECT_BREATHING;
-  profile->night_mode_effect.brightness     = 30;
-  profile->night_mode_effect.speed          = 20;
-  profile->night_mode_effect.color1         = 0x0000FF;
-  profile->night_mode_effect.segment_start  = 0;
-  profile->night_mode_effect.segment_length = 0;
 
   // Défauts segment: LEFT sur moitié gauche, RIGHT sur moitié droite
   // Cette boucle initialise les segments AVANT la configuration manuelle des événements
@@ -771,30 +754,6 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   profile->event_effects[CAN_EVENT_BRAKE_ON].priority                        = 180;
   profile->event_effects[CAN_EVENT_BRAKE_ON].enabled                         = true;
 
-  // Mode nuit activé - DÉSACTIVÉ par défaut
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].event                      = CAN_EVENT_NIGHT_MODE_ON;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].action_type                = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].profile_id                 = -1;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.effect       = EFFECT_OFF;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.brightness   = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.speed        = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.color1       = 0x000000;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].duration_ms                = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].priority                   = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].enabled                    = false; // Toujours désactivé
-
-  // Mode nuit désactivé - DÉSACTIVÉ par défaut
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].event                     = CAN_EVENT_NIGHT_MODE_OFF;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].action_type               = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].profile_id                = -1;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.effect      = EFFECT_OFF;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.brightness  = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.speed       = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.color1      = 0x000000;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].duration_ms               = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].priority                  = 0;
-  profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].enabled                   = false; // Toujours désactivé
-
   // Seuil de vitesse
   profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].event                    = CAN_EVENT_SPEED_THRESHOLD;
   profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].action_type              = EVENT_ACTION_APPLY_EFFECT;
@@ -858,9 +817,9 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
     profile->event_effects[e].enabled = true;
   }
 
-  // Paramètres généraux
-  profile->auto_night_mode    = false; // Désactivé par défaut, l'utilisateur peut l'activer manuellement
-  profile->night_brightness   = 30;
+  // Paramètres de luminosité dynamique
+  profile->dynamic_brightness_enabled = false; // Désactivé par défaut
+  profile->dynamic_brightness_rate    = 50;    // 50% par défaut
 
   profile->active             = false;
   profile->created_timestamp  = (uint32_t)time(NULL);
@@ -1233,10 +1192,6 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
     return EVENT_ID_LANE_DEPARTURE_RIGHT_LV1;
   case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2:
     return EVENT_ID_LANE_DEPARTURE_RIGHT_LV2;
-  case CAN_EVENT_NIGHT_MODE_ON:
-    return EVENT_ID_NIGHT_MODE_ON;
-  case CAN_EVENT_NIGHT_MODE_OFF:
-    return EVENT_ID_NIGHT_MODE_OFF;
   case CAN_EVENT_SPEED_THRESHOLD:
     return EVENT_ID_SPEED_THRESHOLD;
   case CAN_EVENT_AUTOPILOT_ENGAGED:
@@ -1317,10 +1272,6 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1;
   if (strcmp(id, EVENT_ID_LANE_DEPARTURE_RIGHT_LV2) == 0)
     return CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2;
-  if (strcmp(id, EVENT_ID_NIGHT_MODE_ON) == 0)
-    return CAN_EVENT_NIGHT_MODE_ON;
-  if (strcmp(id, EVENT_ID_NIGHT_MODE_OFF) == 0)
-    return CAN_EVENT_NIGHT_MODE_OFF;
   if (strcmp(id, EVENT_ID_SPEED_THRESHOLD) == 0)
     return CAN_EVENT_SPEED_THRESHOLD;
   if (strcmp(id, EVENT_ID_AUTOPILOT_ENGAGED) == 0)
@@ -1351,8 +1302,6 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
   switch (event) {
   case CAN_EVENT_DOOR_OPEN:
   case CAN_EVENT_DOOR_CLOSE:
-  case CAN_EVENT_NIGHT_MODE_ON:
-  case CAN_EVENT_NIGHT_MODE_OFF:
   case CAN_EVENT_CHARGING:
   case CAN_EVENT_CHARGE_COMPLETE:
   case CAN_EVENT_SPEED_THRESHOLD:
@@ -1451,10 +1400,6 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
   cJSON_AddNumberToObject(root, "created_timestamp", profile->created_timestamp);
   cJSON_AddNumberToObject(root, "modified_timestamp", profile->modified_timestamp);
 
-  // Paramètres généraux
-  cJSON_AddBoolToObject(root, "auto_night_mode", profile->auto_night_mode);
-  cJSON_AddNumberToObject(root, "night_brightness", profile->night_brightness);
-
   // Effet par défaut
   cJSON *default_effect = cJSON_CreateObject();
   cJSON_AddNumberToObject(default_effect, "effect", profile->default_effect.effect);
@@ -1469,19 +1414,9 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
   cJSON_AddNumberToObject(default_effect, "segment_length", profile->default_effect.segment_length);
   cJSON_AddItemToObject(root, "default_effect", default_effect);
 
-  // Effet mode nuit
-  cJSON *night_effect = cJSON_CreateObject();
-  cJSON_AddNumberToObject(night_effect, "effect", profile->night_mode_effect.effect);
-  cJSON_AddNumberToObject(night_effect, "brightness", profile->night_mode_effect.brightness);
-  cJSON_AddNumberToObject(night_effect, "speed", profile->night_mode_effect.speed);
-  cJSON_AddNumberToObject(night_effect, "color1", profile->night_mode_effect.color1);
-  cJSON_AddNumberToObject(night_effect, "color2", profile->night_mode_effect.color2);
-  cJSON_AddNumberToObject(night_effect, "color3", profile->night_mode_effect.color3);
-  cJSON_AddBoolToObject(night_effect, "reverse", profile->night_mode_effect.reverse);
-  cJSON_AddBoolToObject(night_effect, "audio_reactive", profile->night_mode_effect.audio_reactive);
-  cJSON_AddNumberToObject(night_effect, "segment_start", profile->night_mode_effect.segment_start);
-  cJSON_AddNumberToObject(night_effect, "segment_length", profile->night_mode_effect.segment_length);
-  cJSON_AddItemToObject(root, "night_mode_effect", night_effect);
+  // Paramètres de luminosité dynamique
+  cJSON_AddBoolToObject(root, "dynamic_brightness_enabled", profile->dynamic_brightness_enabled);
+  cJSON_AddNumberToObject(root, "dynamic_brightness_rate", profile->dynamic_brightness_rate);
 
   // Événements CAN
   cJSON *events = cJSON_CreateArray();
@@ -1574,17 +1509,6 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
     imported_profile->modified_timestamp = modified->valueint;
   }
 
-  // Paramètres généraux
-  const cJSON *auto_night = cJSON_GetObjectItem(root, "auto_night_mode");
-  if (auto_night && cJSON_IsBool(auto_night)) {
-    imported_profile->auto_night_mode = cJSON_IsTrue(auto_night);
-  }
-
-  const cJSON *night_bright = cJSON_GetObjectItem(root, "night_brightness");
-  if (night_bright && cJSON_IsNumber(night_bright)) {
-    imported_profile->night_brightness = night_bright->valueint;
-  }
-
   // Effet par défaut
   const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
   if (default_effect && cJSON_IsObject(default_effect)) {
@@ -1611,30 +1535,19 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
       imported_profile->default_effect.segment_length = item->valueint;
   }
 
-  // Effet mode nuit
-  const cJSON *night_effect = cJSON_GetObjectItem(root, "night_mode_effect");
-  if (night_effect && cJSON_IsObject(night_effect)) {
-    cJSON *item;
-    if ((item = cJSON_GetObjectItem(night_effect, "effect")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.effect = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "brightness")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.brightness = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "speed")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.speed = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "color1")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.color1 = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "color2")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.color2 = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "color3")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.color3 = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "reverse")) && cJSON_IsBool(item))
-      imported_profile->night_mode_effect.reverse = cJSON_IsTrue(item);
-    if ((item = cJSON_GetObjectItem(night_effect, "audio_reactive")) && cJSON_IsBool(item))
-      imported_profile->night_mode_effect.audio_reactive = cJSON_IsTrue(item);
-    if ((item = cJSON_GetObjectItem(night_effect, "segment_start")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.segment_start = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "segment_length")) && cJSON_IsNumber(item))
-      imported_profile->night_mode_effect.segment_length = item->valueint;
+  // Paramètres de luminosité dynamique
+  const cJSON *dyn_bright_enabled = cJSON_GetObjectItem(root, "dynamic_brightness_enabled");
+  if (dyn_bright_enabled && cJSON_IsBool(dyn_bright_enabled)) {
+    imported_profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled);
+  } else {
+    imported_profile->dynamic_brightness_enabled = false; // Défaut
+  }
+
+  const cJSON *dyn_bright_rate = cJSON_GetObjectItem(root, "dynamic_brightness_rate");
+  if (dyn_bright_rate && cJSON_IsNumber(dyn_bright_rate)) {
+    imported_profile->dynamic_brightness_rate = dyn_bright_rate->valueint;
+  } else {
+    imported_profile->dynamic_brightness_rate = 50; // Défaut
   }
 
   // Événements CAN

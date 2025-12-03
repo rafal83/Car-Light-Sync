@@ -37,8 +37,6 @@
 #define EVENT_ID_LANE_DEPARTURE_LEFT_LV2 "LANE_DEPARTURE_LEFT_LV2"
 #define EVENT_ID_LANE_DEPARTURE_RIGHT_LV1 "LANE_DEPARTURE_RIGHT_LV1"
 #define EVENT_ID_LANE_DEPARTURE_RIGHT_LV2 "LANE_DEPARTURE_RIGHT_LV2"
-#define EVENT_ID_NIGHT_MODE_ON "NIGHT_MODE_ON"
-#define EVENT_ID_NIGHT_MODE_OFF "NIGHT_MODE_OFF"
 #define EVENT_ID_SPEED_THRESHOLD "SPEED_THRESHOLD"
 #define EVENT_ID_AUTOPILOT_ENGAGED "AUTOPILOT_ENGAGED"
 #define EVENT_ID_AUTOPILOT_DISENGAGED "AUTOPILOT_DISENGAGED"
@@ -78,8 +76,6 @@ typedef enum {
   CAN_EVENT_LANE_DEPARTURE_LEFT_LV2,
   CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1,
   CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2,
-  CAN_EVENT_NIGHT_MODE_ON,
-  CAN_EVENT_NIGHT_MODE_OFF,
   CAN_EVENT_SPEED_THRESHOLD, // Déclenché quand vitesse > seuil
   CAN_EVENT_AUTOPILOT_ENGAGED,
   CAN_EVENT_AUTOPILOT_DISENGAGED,
@@ -138,14 +134,13 @@ typedef struct {
 // Profil de configuration complet
 typedef struct {
   char name[PROFILE_NAME_MAX_LEN];
-  effect_config_t default_effect;    // Effet par défaut
-  effect_config_t night_mode_effect; // Effet en mode nuit
+  effect_config_t default_effect; // Effet par défaut
 
   can_event_effect_t event_effects[CAN_EVENT_MAX]; // Effets par événement
 
-  // Paramètres généraux
-  bool auto_night_mode;     // Active automatiquement le mode nuit
-  uint8_t night_brightness; // Luminosité en mode nuit (0-255)
+  // Paramètres généraux - Luminosité dynamique
+  bool dynamic_brightness_enabled; // Active la luminosité dynamique liée au brightness de la voiture
+  uint8_t dynamic_brightness_rate; // Taux d'application du brightness voiture (0-100%)
 
   // Métadonnées
   bool active; // Profil actif

@@ -61,7 +61,7 @@ body {
     background-color: var(--carbon-base);
     background-size: 20px 20px;
     min-height: 100vh;
-    padding: 20px;
+    padding: 0px;
     color: var(--color-text);
 }
 .container {
@@ -293,15 +293,15 @@ body {
 .tab-content { display: none; padding: 15px; }
 .tab-content.active { display: block; }
 .section {
-    margin-bottom: 30px;
-    padding-bottom: 30px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
     border-bottom: 1px solid var(--color-border);
 }
 .section:last-child { border-bottom: none; }
 .section-title {
     font-size: 18px;
     font-weight: 400;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
     color: var(--color-text);
     letter-spacing: 1px;
 }
@@ -333,7 +333,7 @@ input[type="range"] {
     border-radius: 2px;
     background: var(--color-input-border);
     outline: none;
-    -webkit-appearance: none;
+    accent-color: #E82127;
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -369,8 +369,8 @@ select:focus, input:focus {
     margin-top: 10px;
 }
 input[type="color"] {
-    width: 50px;
-    height: 50px;
+    width: 100%;
+    height: 20px;
     border: 1px solid var(--color-input-border);
     border-radius: 4px;
     cursor: pointer;
@@ -490,17 +490,55 @@ button {
 }
 .vehicle-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 2fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
 }
+
+@media (max-width: 768px) {
+    .vehicle-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+}
+
 .vehicle-item {
-    padding: 15px;
+    padding: 12px;
     background: var(--color-panel);
     border-radius: 4px;
     border-left: 3px solid #E82127;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
-.vehicle-label { font-size: 12px; color: var(--color-muted); margin-bottom: 5px; }
-.vehicle-value { font-size: 16px; font-weight: 500; color: var(--color-text); }
+
+@media (max-width: 768px) {
+    .vehicle-item {
+        padding: 10px;
+    }
+}
+
+.vehicle-label {
+    font-size: 11px;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.vehicle-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+    word-break: break-word;
+}
+
+@media (max-width: 768px) {
+    .vehicle-label {
+        font-size: 10px;
+    }
+    .vehicle-value {
+        font-size: 14px;
+    }
+}
 .modal {
     display: none;
     position: fixed;
@@ -670,7 +708,7 @@ button {
 }
 .event-form-field input[type="color"] {
     padding: 4px;
-    height: 40px;
+    height: 34px;
     cursor: pointer;
     background: var(--color-panel);
     border: 1px solid var(--color-input-border);
@@ -774,7 +812,6 @@ button {
         margin-right: 10px;
     }
     .header-content h1 {
-        font-size: 1.2rem;
         margin: 0;
     }
     .header-content p {
@@ -787,9 +824,6 @@ button {
         width: 40px;
         height: 40px;
         margin-right: 8px;
-    }
-    .header-content h1 {
-        font-size: 0.9rem;
     }
     .header-content p {
         font-size: 0.6rem;
@@ -933,10 +967,10 @@ button {
 
 .segment-range-selected {
     position: absolute;
-    height: 8px;
+    height: 4px;
     top: 50%;
     transform: translateY(-50%);
-    background: var(--color-primary);
+    background: #E82127; /*var(--color-primary);*/
     border-radius: 4px;
     pointer-events: none;
     box-shadow: 0 0 8px rgba(79, 70, 229, 0.4);
@@ -974,16 +1008,22 @@ button {
     background: #E82127;
     cursor: pointer;
     border: 3px solid #E82127;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* Profile Section Layout */
 .profile-section {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(120, 120, 120, 0.05);
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(120, 120, 120, 0.1);
+}
+
+@media (max-width: 768px) {
+    .profile-section {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
 }
 
 .profile-section-header {
@@ -1002,7 +1042,6 @@ button {
 .profile-section-content {
     display: flex;
     flex-direction: column;
-    gap: 15px;
 }
 
 /* Button Group */
@@ -1029,17 +1068,6 @@ button {
     .control-row {
         grid-template-columns: 1fr;
     }
-}
-
-/* Advanced Options Group */
-.advanced-options {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Toggle Switch Styles */
@@ -1112,7 +1140,7 @@ button {
 
 .toggle-label {
     font-size: 0.95em;
-    color: #E0E0E0;
+    color: var(--color-text);
     flex: 1;
 }
 
