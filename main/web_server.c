@@ -775,6 +775,33 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+// Handler pour renommer un profil
+static esp_err_t profile_rename_handler(httpd_req_t *req) {
+  char content[BUFFER_SIZE_SMALL];
+  cJSON *root = NULL;
+
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
+    return ESP_FAIL;
+  }
+
+  const cJSON *profile_id = cJSON_GetObjectItem(root, "pid");
+  const cJSON *name       = cJSON_GetObjectItem(root, "name");
+
+  if (!profile_id || !name || !cJSON_IsString(name) || strlen(name->valuestring) == 0) {
+    cJSON_Delete(root);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or invalid profile_id/name");
+    return ESP_FAIL;
+  }
+
+  bool success = config_manager_rename_profile((uint8_t)profile_id->valueint, name->valuestring);
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, success ? "{\"st\":\"ok\"}" : "{\"st\":\"error\"}");
+
+  cJSON_Delete(root);
+  return success ? ESP_OK : ESP_FAIL;
+}
+
 // Handler pour factory reset
 static esp_err_t factory_reset_handler(httpd_req_t *req) {
   bool success    = config_manager_factory_reset();
@@ -1017,6 +1044,34 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+static int find_free_profile_slot(int preferred_id) {
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (profile == NULL) {
+    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire pour recherche de slot");
+    return -1;
+  }
+
+  int target_id = -1;
+
+  if (preferred_id >= 0 && preferred_id < MAX_PROFILES) {
+    if (!config_manager_load_profile((uint8_t)preferred_id, profile)) {
+      target_id = preferred_id;
+    }
+  }
+
+  if (target_id < 0) {
+    for (int i = 0; i < MAX_PROFILES; i++) {
+      if (!config_manager_load_profile(i, profile)) {
+        target_id = i;
+        break;
+      }
+    }
+  }
+
+  free(profile);
+  return target_id;
+}
+
 // Handler pour importer un profil depuis JSON
 static esp_err_t profile_import_handler(httpd_req_t *req) {
   // Allouer un buffer pour recevoir le JSON
@@ -1035,14 +1090,17 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   const cJSON *profile_id_json = cJSON_GetObjectItem(root, "profile_id");
   const cJSON *profile_data    = cJSON_GetObjectItem(root, "profile_data");
 
-  if (!profile_id_json || !profile_data) {
+  if (!profile_data) {
     cJSON_Delete(root);
     free(content);
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id or profile_data");
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_data");
     return ESP_FAIL;
   }
 
-  uint8_t profile_id = (uint8_t)profile_id_json->valueint;
+  int preferred_id = -1;
+  if (profile_id_json && cJSON_IsNumber(profile_id_json)) {
+    preferred_id = profile_id_json->valueint;
+  }
 
   // Convertir profile_data en chaîne JSON
   char *profile_json = cJSON_PrintUnformatted(profile_data);
@@ -1053,14 +1111,30 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  bool success = config_manager_import_profile(profile_id, profile_json);
+  int target_id = find_free_profile_slot(preferred_id);
+  if (target_id < 0) {
+    free(profile_json);
+    cJSON_Delete(root);
+    free(content);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"st\":\"error\",\"msg\":\"No free profile slots\"}");
+    return ESP_FAIL;
+  }
+
+  bool success = config_manager_import_profile((uint8_t)target_id, profile_json);
 
   free(profile_json);
   cJSON_Delete(root);
   free(content);
 
   httpd_resp_set_type(req, "application/json");
-  httpd_resp_sendstr(req, success ? "{\"st\":\"ok\"}" : "{\"st\":\"error\"}");
+  if (success) {
+    char response[64];
+    snprintf(response, sizeof(response), "{\"st\":\"ok\",\"pid\":%d}", target_id);
+    httpd_resp_sendstr(req, response);
+  } else {
+    httpd_resp_sendstr(req, "{\"st\":\"error\",\"msg\":\"Import failed\"}");
+  }
 
   return ESP_OK;
 }
@@ -1828,6 +1902,9 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t profile_delete_uri = {.uri = "/api/profile/delete", .method = HTTP_POST, .handler = profile_delete_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profile_delete_uri);
+
+    httpd_uri_t profile_rename_uri = {.uri = "/api/profile/rename", .method = HTTP_POST, .handler = profile_rename_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &profile_rename_uri);
 
     httpd_uri_t factory_reset_uri = {.uri = "/api/factory-reset", .method = HTTP_POST, .handler = factory_reset_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &factory_reset_uri);

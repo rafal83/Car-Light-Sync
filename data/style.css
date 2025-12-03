@@ -349,7 +349,7 @@ input[type="range"]::-webkit-slider-thumb {
     font-weight: 500;
     color: #E82127;
 }
-select, input[type="text"], input[type="password"], input[type="number"], input[type="file"] {
+select, input:not([type]), input[type="text"], input[type="password"], input[type="number"], input[type="file"] {
     width: 100%;
     padding: 12px;
     border: 1px solid var(--color-input-border);

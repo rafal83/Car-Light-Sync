@@ -462,6 +462,45 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   return true;
 }
 
+bool config_manager_rename_profile(uint8_t profile_id, const char *new_name) {
+  if (profile_id >= MAX_PROFILES || new_name == NULL) {
+    return false;
+  }
+
+  size_t name_len = strnlen(new_name, PROFILE_NAME_MAX_LEN);
+  if (name_len == 0) {
+    return false;
+  }
+
+  // Allouer dynamiquement pour éviter le stack overflow
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour renommage");
+    return false;
+  }
+
+  if (!config_manager_load_profile(profile_id, profile)) {
+    ESP_LOGW(TAG_CONFIG, "Profil %d introuvable pour renommage", profile_id);
+    free(profile);
+    return false;
+  }
+
+  bool was_active = profile->active;
+
+  memset(profile->name, 0, PROFILE_NAME_MAX_LEN);
+  strncpy(profile->name, new_name, PROFILE_NAME_MAX_LEN - 1);
+
+  bool success = config_manager_save_profile(profile_id, profile);
+  free(profile);
+
+  if (success && was_active) {
+    // Réappliquer pour conserver l'état actif et l'effet
+    config_manager_activate_profile(profile_id);
+  }
+
+  return success;
+}
+
 bool config_manager_activate_profile(uint8_t profile_id) {
   if (profile_id >= MAX_PROFILES) {
     return false;
@@ -1513,6 +1552,14 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
   if (modified && cJSON_IsNumber(modified)) {
     imported_profile->modified_timestamp = modified->valueint;
   }
+
+  if (imported_profile->created_timestamp == 0) {
+    imported_profile->created_timestamp = (uint32_t)time(NULL);
+  }
+  if (imported_profile->modified_timestamp == 0) {
+    imported_profile->modified_timestamp = imported_profile->created_timestamp;
+  }
+  imported_profile->active = false;
 
   // Effet par défaut
   const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");

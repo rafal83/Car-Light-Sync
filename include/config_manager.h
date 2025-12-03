@@ -191,6 +191,14 @@ bool config_manager_delete_profile(uint8_t profile_id);
 bool config_manager_activate_profile(uint8_t profile_id);
 
 /**
+ * @brief Renomme un profil
+ * @param profile_id ID du profil
+ * @param new_name Nouveau nom du profil
+ * @return true si succès
+ */
+bool config_manager_rename_profile(uint8_t profile_id, const char *new_name);
+
+/**
  * @brief Obtient le profil actif
  * @param profile Pointeur vers le profil
  * @return true si un profil est actif

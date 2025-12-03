@@ -336,6 +336,7 @@
                     </div>
                     <div class="button-group">
                         <button class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
+                        <button class="btn-secondary" onclick="showRenameProfileDialog()" data-i18n="profiles.rename">Renommer</button>
                         <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
                         <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
                         <button class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
@@ -675,23 +676,31 @@
             </div>
         </div>
     </div>
-    <!-- Modal pour nouveau profil -->
-    <div id="newProfileModal" class="modal">
-        <div class="modal-content">
-            <h3 style="margin-bottom: 20px;" data-i18n="profiles.newProfileTitle">Nouveau Profil</h3>
-            <input type="text" id="new-profile-name" data-i18n-placeholder="profiles.profileName" placeholder="Nom du profil" style="margin-bottom: 20px;">
-            <button class="btn-primary" onclick="createProfile()" data-i18n="profiles.create">Créer</button>
-            <button class="btn-secondary" onclick="hideNewProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
-        </div>
+<!-- Modal pour nouveau profil -->
+<div id="newProfileModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-bottom: 20px;" data-i18n="profiles.newProfileTitle">Nouveau Profil</h3>
+        <input type="text" id="new-profile-name" data-i18n-placeholder="profiles.profileName" placeholder="Nom du profil" style="margin-bottom: 20px;">
+        <button class="btn-primary" onclick="createProfile()" data-i18n="profiles.create">Créer</button>
+        <button class="btn-secondary" onclick="hideNewProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
     </div>
+</div>
+<!-- Modal pour renommer un profil -->
+<div id="renameProfileModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-bottom: 20px;" data-i18n="profiles.renameProfileTitle">Renommer le profil</h3>
+        <input type="text" id="rename-profile-name" data-i18n-placeholder="profiles.profileName" placeholder="Nom du profil" style="margin-bottom: 20px;">
+        <button class="btn-primary" onclick="renameProfile()" data-i18n="profiles.rename">Renommer</button>
+        <button class="btn-secondary" onclick="hideRenameProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
     </div>
+</div>
+</div>
     </div>
 </div>
 </body>
 <script src="i18n.js"></script>
 <script src="script.js"></script>
 </html>
-
 
 
 

@@ -1779,7 +1779,9 @@ async function loadProfiles() {
         data.profiles.forEach(profile => {
             const option = doc.createElement('option');
             option.value = profile.id;
-            option.textContent = profile.n + (profile.ac ? ' ✓' : '');
+            option.dataset.name = profile.n;
+            const activeSuffix = profile.ac ? ' ✓' : '';
+            option.textContent = profile.n + activeSuffix;
             if (profile.ac) option.selected = true;
             select.appendChild(option);
         });
@@ -1856,6 +1858,51 @@ async function deleteProfile() {
         showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
     }
 }
+function showRenameProfileDialog() {
+    const select = $('profile-select');
+    if (!select || select.options.length === 0) {
+        showNotification('profiles-notification', t('profiles.selectProfile'), 'error');
+        return;
+    }
+    const selectedOption = select.options[select.selectedIndex];
+    const currentName = (selectedOption && selectedOption.dataset && selectedOption.dataset.name) ? selectedOption.dataset.name : (selectedOption ? selectedOption.textContent : '');
+    $('rename-profile-name').value = currentName;
+    $('renameProfileModal').classList.add('active');
+}
+function hideRenameProfileDialog() {
+    $('renameProfileModal').classList.remove('active');
+}
+async function renameProfile() {
+    const profileId = parseInt($('profile-select').value);
+    const newName = $('rename-profile-name').value.trim();
+    if (!newName) {
+        showNotification('profiles-notification', t('profiles.nameRequired') || t('profiles.profileName'), 'error');
+        return;
+    }
+    try {
+        const response = await fetch(API_BASE + '/api/profile/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pid: profileId, name: newName })
+        });
+        const apiResult = await parseApiResponse(response);
+        if (apiResult.success) {
+            hideRenameProfileDialog();
+            await loadProfiles();
+            const select = $('profile-select');
+            if (select) {
+                select.value = profileId;
+            }
+            showNotification('profiles-notification', t('profiles.renameSuccess'), 'success');
+        } else {
+            const message = apiResult.data?.msg || apiResult.raw || t('profiles.renameError');
+            showNotification('profiles-notification', message, 'error');
+        }
+    } catch (e) {
+        console.error('Erreur:', e);
+        showNotification('profiles-notification', e.message || t('profiles.renameError'), 'error');
+    }
+}
 async function exportProfile() {
     const profileId = parseInt($('profile-select').value);
     if (profileId < 0) {
@@ -1885,11 +1932,6 @@ async function exportProfile() {
     }
 }
 function showImportDialog() {
-    const profileId = parseInt($('profile-select').value);
-    if (profileId < 0) {
-        showNotification('profiles-notification', t('profiles.selectProfile'), 'error');
-        return;
-    }
     const input = doc.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -1904,16 +1946,22 @@ function showImportDialog() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        profile_id: profileId,
                         profile_data: profileData
                     })
                 });
                 const result = await response.json();
                 if (result.st === 'ok') {
+                    await loadProfiles();
+                    if (typeof result.pid === 'number') {
+                        const select = $('profile-select');
+                        if (select) {
+                            select.value = result.pid;
+                        }
+                    }
                     showNotification('profiles-notification', t('profiles.importSuccess'), 'success');
-                    loadProfiles();
                 } else {
-                    showNotification('profiles-notification', t('profiles.importError'), 'error');
+                    const message = result.msg || t('profiles.importError');
+                    showNotification('profiles-notification', message, 'error');
                 }
             } catch (e) {
                 console.error('Erreur import:', e);
