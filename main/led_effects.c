@@ -20,6 +20,10 @@
 
 #define MAX_LED_COUNT 1000 // Align with config_manager_set_led_hardware validation
 
+// Limitation de puissance pour éviter brownout sur alimentation USB
+#define MAX_POWER_MILLIAMPS 2000  // Consommation max en mA (USB peut fournir ~2A max)
+#define LED_MILLIAMPS_PER_LED 60  // Consommation max par LED en blanc à pleine luminosité (mA)
+
 // Handles pour la nouvelle API RMT
 static rmt_channel_handle_t led_chan    = NULL;
 static rmt_encoder_handle_t led_encoder = NULL;
@@ -204,32 +208,6 @@ static rgb_t hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
   }
 
   return rgb;
-}
-
-// Applique le masque de zone: éteint les LEDs hors de la zone spécifiée
-static void apply_zone_mask(led_zone_t zone) {
-  int half = led_count / 2;
-
-  switch (zone) {
-  case LED_ZONE_LEFT:
-    // Éteindre la moitié droite
-    for (int i = half; i < led_count; i++) {
-      leds[i] = (rgb_t){0, 0, 0};
-    }
-    break;
-
-  case LED_ZONE_RIGHT:
-    // Éteindre la moitié gauche
-    for (int i = 0; i < half; i++) {
-      leds[i] = (rgb_t){0, 0, 0};
-    }
-    break;
-
-  case LED_ZONE_FULL:
-  default:
-    // Pas de masque, tout le strip est actif
-    break;
-  }
 }
 
 // Envoie les données aux LEDs via RMT
@@ -719,7 +697,7 @@ static void effect_blindspot_flash(void) {
 static void effect_turn_signal(void) {
   rgb_t base_color = color_to_rgb(current_config.color1);
 
-  int segment_len = led_count;
+  int segment_len  = led_count;
   if (segment_len <= 0) {
     fill_solid((rgb_t){0, 0, 0});
     return;
@@ -738,7 +716,7 @@ static void effect_turn_signal(void) {
     int lit_count = (cycle * segment_len) / animation_duration;
 
     for (int i = 0; i < lit_count && i < segment_len; i++) {
-      int led_index = current_config.reverse ? (segment_len - 1 - i) : i;
+      int led_index           = current_config.reverse ? (segment_len - 1 - i) : i;
 
       float brightness_factor = (i < lit_count - 5) ? 0.3f : 1.0f;
       leds[led_index]         = apply_brightness(base_color, (uint8_t)(current_config.brightness * brightness_factor));
@@ -1413,16 +1391,13 @@ void led_effects_update(void) {
     if (left_directional_config.effect != EFFECT_OFF) {
       effect_config_t saved = current_config;
       memcpy(&current_config, &left_directional_config, sizeof(effect_config_t));
-      current_config.zone = LED_ZONE_LEFT; // Force zone gauche
       fill_solid((rgb_t){0, 0, 0});
 
       if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
         effect_functions[current_config.effect]();
       }
 
-      // Appliquer le masque de zone AVANT de copier
-      apply_zone_mask(LED_ZONE_LEFT);
-
+      // Copier uniquement la moitié gauche dans le buffer
       for (int i = 0; i < half; i++) {
         left_led_buffer[i] = leds[i];
       }
@@ -1432,16 +1407,13 @@ void led_effects_update(void) {
     // Rendu effet droit
     if (right_directional_config.effect != EFFECT_OFF) {
       memcpy(&current_config, &right_directional_config, sizeof(effect_config_t));
-      current_config.zone = LED_ZONE_RIGHT; // Force zone droite
       fill_solid((rgb_t){0, 0, 0});
 
       if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
         effect_functions[current_config.effect]();
       }
 
-      // Appliquer le masque de zone AVANT de copier
-      apply_zone_mask(LED_ZONE_RIGHT);
-
+      // Copier uniquement la moitié droite dans le buffer
       for (int i = 0; i < half; i++) {
         right_led_buffer[i] = leds[half + i];
       }
@@ -1461,8 +1433,6 @@ void led_effects_update(void) {
       fill_solid((rgb_t){0, 0, 0});
     } else if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
       effect_functions[current_config.effect]();
-      // Appliquer le masque de zone après le rendu
-      apply_zone_mask(current_config.zone);
     }
   }
 
@@ -1705,10 +1675,9 @@ void led_effects_render_to_buffer(const effect_config_t *config, uint16_t segmen
   uint32_t saved_counter       = effect_counter;
 
   // Travailler sur un segment uniquement
-  led_count     = segment_length;
-  effect_counter = frame_counter;
-  current_config = *config;
-  current_config.zone = LED_ZONE_FULL;
+  led_count                    = segment_length;
+  effect_counter               = frame_counter;
+  current_config               = *config;
 
   fill_solid((rgb_t){0, 0, 0});
   if (current_config.effect == EFFECT_OFF) {
@@ -1738,10 +1707,37 @@ void led_effects_show_buffer(const led_rgb_t *buffer) {
     return;
   }
 
+  // Copier le buffer et calculer la consommation estimée
+  uint32_t total_brightness = 0;
   for (uint16_t i = 0; i < led_count; i++) {
     leds[i].r = buffer[i].r;
     leds[i].g = buffer[i].g;
     leds[i].b = buffer[i].b;
+
+    // Calculer la luminosité totale (max des composantes RGB pour estimer la conso)
+    uint8_t max_component = leds[i].r;
+    if (leds[i].g > max_component) max_component = leds[i].g;
+    if (leds[i].b > max_component) max_component = leds[i].b;
+    total_brightness += max_component;
+  }
+
+  // Calculer la consommation estimée en mA
+  // Formule: (nombre_leds * conso_max_par_led * luminosité_moyenne) / 255
+  uint32_t estimated_milliamps = (led_count * LED_MILLIAMPS_PER_LED * total_brightness) / (led_count * 255);
+
+  // Si la consommation dépasse le seuil, réduire proportionnellement la luminosité
+  if (estimated_milliamps > MAX_POWER_MILLIAMPS) {
+    uint32_t scale_factor = (MAX_POWER_MILLIAMPS * 256) / estimated_milliamps;
+
+    ESP_LOGW(TAG_LED, "Limitation puissance: %lu mA -> %d mA (réduction luminosité à %lu%%)",
+             estimated_milliamps, MAX_POWER_MILLIAMPS, (scale_factor * 100) / 256);
+
+    // Appliquer la réduction à toutes les LEDs
+    for (uint16_t i = 0; i < led_count; i++) {
+      leds[i].r = (leds[i].r * scale_factor) / 256;
+      leds[i].g = (leds[i].g * scale_factor) / 256;
+      leds[i].b = (leds[i].b * scale_factor) / 256;
+    }
   }
 
   led_strip_show();
