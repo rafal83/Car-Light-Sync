@@ -1,0 +1,206 @@
+{
+  "name": "Minimal Tech",
+  "version": 1,
+  "default_effect": {
+    "effect_id": "SOLID",
+    "brightness": 70,
+    "speed": 0,
+    "color1": 5592405,
+    "reverse": false,
+    "audio_reactive": false,
+    "segment_start": 0,
+    "segment_length": 0
+  },
+  "dynamic_brightness_enabled": true,
+  "dynamic_brightness_rate": 45,
+  "event_effects": [
+    {
+      "event_id": "TURN_LEFT",
+      "enabled": true,
+      "priority": 140,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "TURN_SIGNAL",
+        "brightness": 200,
+        "speed": 140,
+        "color1": 255,
+        "reverse": true,
+        "segment_start": 0,
+        "segment_length": 12
+      }
+    },
+    {
+      "event_id": "TURN_RIGHT",
+      "enabled": true,
+      "priority": 140,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "TURN_SIGNAL",
+        "brightness": 200,
+        "speed": 140,
+        "color1": 255,
+        "reverse": false,
+        "segment_start": 110,
+        "segment_length": 12
+      }
+    },
+    {
+      "event_id": "TURN_HAZARD",
+      "enabled": true,
+      "priority": 135,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "HAZARD",
+        "brightness": 190,
+        "speed": 130,
+        "color1": 255,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    },
+    {
+      "event_id": "BRAKE_ON",
+      "enabled": true,
+      "priority": 200,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "BRAKE_LIGHT",
+        "brightness": 240,
+        "speed": 170,
+        "color1": 16724736,
+        "segment_start": 45,
+        "segment_length": 32
+      }
+    },
+    {
+      "event_id": "BLINDSPOT_LEFT_LV1",
+      "enabled": true,
+      "priority": 170,
+      "duration_ms": 800,
+      "effect_config": {
+        "effect_id": "BLINDSPOT_FLASH",
+        "brightness": 200,
+        "speed": 180,
+        "color1": 65535,
+        "reverse": true,
+        "segment_start": 14,
+        "segment_length": 8
+      }
+    },
+    {
+      "event_id": "BLINDSPOT_RIGHT_LV1",
+      "enabled": true,
+      "priority": 170,
+      "duration_ms": 800,
+      "effect_config": {
+        "effect_id": "BLINDSPOT_FLASH",
+        "brightness": 200,
+        "speed": 180,
+        "color1": 65535,
+        "reverse": false,
+        "segment_start": 98,
+        "segment_length": 8
+      }
+    },
+    {
+      "event_id": "LANE_DEPARTURE_LEFT_LV1",
+      "enabled": true,
+      "priority": 175,
+      "duration_ms": 900,
+      "effect_config": {
+        "effect_id": "SCAN",
+        "brightness": 210,
+        "speed": 190,
+        "color1": 65535,
+        "reverse": true,
+        "segment_start": 14,
+        "segment_length": 8
+      }
+    },
+    {
+      "event_id": "LANE_DEPARTURE_RIGHT_LV1",
+      "enabled": true,
+      "priority": 175,
+      "duration_ms": 900,
+      "effect_config": {
+        "effect_id": "SCAN",
+        "brightness": 210,
+        "speed": 190,
+        "color1": 65535,
+        "reverse": false,
+        "segment_start": 98,
+        "segment_length": 8
+      }
+    },
+    {
+      "event_id": "CHARGING",
+      "enabled": true,
+      "priority": 110,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "CHARGE_STATUS",
+        "brightness": 170,
+        "speed": 150,
+        "color1": 5592405,
+        "segment_start": 45,
+        "segment_length": 32
+      }
+    },
+    {
+      "event_id": "CHARGE_COMPLETE",
+      "enabled": true,
+      "priority": 120,
+      "duration_ms": 2500,
+      "effect_config": {
+        "effect_id": "SOLID",
+        "brightness": 140,
+        "speed": 0,
+        "color1": 65535,
+        "segment_start": 45,
+        "segment_length": 32
+      }
+    },
+    {
+      "event_id": "LOCKED",
+      "enabled": true,
+      "priority": 90,
+      "duration_ms": 1200,
+      "effect_config": {
+        "effect_id": "SOLID",
+        "brightness": 120,
+        "speed": 0,
+        "color1": 2302755,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    },
+    {
+      "event_id": "UNLOCKED",
+      "enabled": true,
+      "priority": 95,
+      "duration_ms": 1500,
+      "effect_config": {
+        "effect_id": "FADE",
+        "brightness": 150,
+        "speed": 150,
+        "color1": 65535,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    },
+    {
+      "event_id": "DOOR_OPEN",
+      "enabled": true,
+      "priority": 100,
+      "duration_ms": 2000,
+      "effect_config": {
+        "effect_id": "BREATHING",
+        "brightness": 150,
+        "speed": 140,
+        "color1": 5592405,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    }
+  ]
+}

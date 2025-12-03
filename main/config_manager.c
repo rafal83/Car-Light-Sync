@@ -1446,7 +1446,7 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
 
   // Effet par défaut
   cJSON *default_effect = cJSON_CreateObject();
-  cJSON_AddNumberToObject(default_effect, "effect", profile->default_effect.effect);
+  cJSON_AddStringToObject(default_effect, "effect_id", led_effects_enum_to_id(profile->default_effect.effect));
   cJSON_AddNumberToObject(default_effect, "brightness", profile->default_effect.brightness);
   cJSON_AddNumberToObject(default_effect, "speed", profile->default_effect.speed);
   cJSON_AddNumberToObject(default_effect, "color1", profile->default_effect.color1);
@@ -1475,7 +1475,7 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
       cJSON_AddNumberToObject(event, "duration_ms", profile->event_effects[i].duration_ms);
 
       cJSON *event_effect = cJSON_CreateObject();
-      cJSON_AddNumberToObject(event_effect, "effect", profile->event_effects[i].effect_config.effect);
+      cJSON_AddStringToObject(event_effect, "effect_id", led_effects_enum_to_id(profile->event_effects[i].effect_config.effect));
       cJSON_AddNumberToObject(event_effect, "brightness", profile->event_effects[i].effect_config.brightness);
       cJSON_AddNumberToObject(event_effect, "speed", profile->event_effects[i].effect_config.speed);
       cJSON_AddNumberToObject(event_effect, "color1", profile->event_effects[i].effect_config.color1);
@@ -1565,8 +1565,9 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
   const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
   if (default_effect && cJSON_IsObject(default_effect)) {
     cJSON *item;
-    if ((item = cJSON_GetObjectItem(default_effect, "effect")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.effect = item->valueint;
+    if ((item = cJSON_GetObjectItem(default_effect, "effect_id")) && cJSON_IsString(item)) {
+      imported_profile->default_effect.effect = led_effects_id_to_enum(item->valuestring);
+    }
     if ((item = cJSON_GetObjectItem(default_effect, "brightness")) && cJSON_IsNumber(item))
       imported_profile->default_effect.brightness = item->valueint;
     if ((item = cJSON_GetObjectItem(default_effect, "speed")) && cJSON_IsNumber(item))
@@ -1645,8 +1646,9 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
       const cJSON *effect_config                 = cJSON_GetObjectItem(event, "effect_config");
       if (effect_config && cJSON_IsObject(effect_config)) {
         cJSON *item;
-        if ((item = cJSON_GetObjectItem(effect_config, "effect")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.effect = item->valueint;
+        if ((item = cJSON_GetObjectItem(effect_config, "effect_id")) && cJSON_IsString(item)) {
+          imported_profile->event_effects[evt].effect_config.effect = led_effects_id_to_enum(item->valuestring);
+        }
         if ((item = cJSON_GetObjectItem(effect_config, "brightness")) && cJSON_IsNumber(item))
           imported_profile->event_effects[evt].effect_config.brightness = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "speed")) && cJSON_IsNumber(item))
