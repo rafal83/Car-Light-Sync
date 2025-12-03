@@ -142,6 +142,7 @@ const translations = {
         },
         profiles: {
             title: "Gestion des Profils",
+            profileSelection: "Sélection du Profil",
             activeProfile: "Profil Actif",
             loading: "Chargement...",
             activate: "Activer",
@@ -154,6 +155,11 @@ const translations = {
             renameSuccess: "Profil renommé avec succès",
             renameError: "Erreur lors du renommage",
             nameRequired: "Le nom du profil est requis",
+            dynamicBrightness: "Luminosité Dynamique",
+            dynamicBrightnessDesc: "Ajuste automatiquement la luminosité en fonction de la luminosité de l'écran de la voiture",
+            dynamicBrightnessEnable: "Activer la luminosité dynamique",
+            dynamicBrightnessRate: "Taux d'Application (%)",
+            dynamicBrightnessHelp: "Exemple : si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16,8%",
             defaultEffect: "Effet par Défaut",
             defaultEffectDesc: "Configurez l'effet affiché lorsqu'aucun événement CAN n'est actif.",
             saveDefault: "Sauvegarder Effet par Défaut",
@@ -197,6 +203,7 @@ const translations = {
         config: {
             title: "Configuration Matérielle",
             description: "Configurez les paramètres matériels du contrôleur LED.",
+            ledSettings: "Paramètres LED",
             ledCount: "Nombre de LEDs",
             language: "Langue",
             languageFrench: "Français",
@@ -226,6 +233,7 @@ const translations = {
             gear: "Position de transmission",
             brake: "Frein",
             brightness: "Luminosité",
+            nightMode: "Mode Nuit",
             off: "Éteint",
             locked: "Verrouillé",
             unlocked: "Déverrouillé",
@@ -337,6 +345,7 @@ const translations = {
             currentVersion: "Version Actuelle",
             loading: "Chargement...",
             firmwareFile: "Fichier Firmware (.bin)",
+            updateFirmware: "Mise à Jour du Firmware",
             progress: "Progression",
             upload: "Téléverser",
             restart: "Redémarrer",
@@ -502,6 +511,7 @@ en: {
         },
         profiles: {
             title: "Profile Management",
+            profileSelection: "Profile Selection",
             activeProfile: "Active Profile",
             loading: "Loading...",
             activate: "Activate",
@@ -514,6 +524,11 @@ en: {
             renameSuccess: "Profile renamed successfully",
             renameError: "Error renaming profile",
             nameRequired: "Profile name is required",
+            dynamicBrightness: "Dynamic Brightness",
+            dynamicBrightnessDesc: "Automatically adjusts brightness based on the car screen brightness",
+            dynamicBrightnessEnable: "Enable dynamic brightness",
+            dynamicBrightnessRate: "Application Rate (%)",
+            dynamicBrightnessHelp: "Example: if the effect is at 80%, the car at 70% and the rate at 30%, the final brightness will be 16.8%",
             defaultEffect: "Default Effect",
             defaultEffectDesc: "Configure the effect displayed when no CAN event is active.",
             saveDefault: "Save Default Effect",
@@ -557,6 +572,7 @@ en: {
         config: {
             title: "Hardware Configuration",
             description: "Configure hardware parameters for the LED controller.",
+            ledSettings: "LED Settings",
             ledCount: "LED Count",
             language: "Language",
             languageFrench: "French",
@@ -586,6 +602,7 @@ en: {
             gear: "Gear",
             brake: "Brake",
             brightness: "Brightness",
+            nightMode: "Night Mode",
             off: "Off",
             locked: "Locked",
             unlocked: "Unlocked",
@@ -697,26 +714,27 @@ en: {
             currentVersion: "Current Version",
             loading: "Loading...",
             firmwareFile: "Firmware File (.bin)",
+            updateFirmware: "Firmware Update",
             progress: "Progress",
             upload: "Upload",
             restart: "Restart",
             uploading: "Uploading...",
             success: "Update successful! You can restart.",
-        error: "Update error",
-        selectFile: "Please select a firmware file",
-        wrongExtension: "File must have .bin extension",
-        confirmUpdate: "Are you sure you want to update the firmware? The device will restart.",
-        confirmRestart: "Restart now?",
-        restarting: "Restarting... Reconnecting in 10 seconds.",
-        autoRestartIn: "Auto reboot in",
-        states: {
-            idle: "Waiting for an update",
-            receiving: "Receiving firmware...",
-            writing: "Writing firmware to flash...",
-            success: "Update completed, restart pending",
-            error: "Update failed"
-        },
-        bleNote: "Connect to the device's Wi-Fi (AP) to perform the update."
-    }
-}
+            error: "Update error",
+            selectFile: "Please select a firmware file",
+            wrongExtension: "File must have .bin extension",
+            confirmUpdate: "Are you sure you want to update the firmware? The device will restart.",
+            confirmRestart: "Restart now?",
+            restarting: "Restarting... Reconnecting in 10 seconds.",
+            autoRestartIn: "Auto reboot in",
+            states: {
+                idle: "Waiting for an update",
+                receiving: "Receiving firmware...",
+                writing: "Writing firmware to flash...",
+                success: "Update completed, restart pending",
+                error: "Update failed"
+            },
+            bleNote: "Connect to the device's Wi-Fi (AP) to perform the update."
+          }
+      }
 };
