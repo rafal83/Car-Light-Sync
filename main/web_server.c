@@ -1,3 +1,15 @@
+/**
+ * @file web_server.c
+ * @brief Serveur HTTP pour l'interface web et l'API REST
+ *
+ * Gère:
+ * - Serveur HTTP avec routes statiques (HTML, CSS, JS) compressées GZIP
+ * - API REST pour configuration profils, événements CAN, effets LED
+ * - Portail captif pour configuration WiFi initiale
+ * - Mise à jour OTA (Over-The-Air)
+ * - Streaming de l'état véhicule et des événements CAN
+ */
+
 #include "web_server.h"
 
 #include "audio_input.h"
@@ -19,6 +31,88 @@
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
+
+// Constantes pour les tailles de buffers
+#define BUFFER_SIZE_SMALL       128
+#define BUFFER_SIZE_MEDIUM      256
+#define BUFFER_SIZE_LARGE       512
+#define BUFFER_SIZE_JSON        1024
+#define BUFFER_SIZE_PROFILE     8192
+#define BUFFER_SIZE_EVENT_MAX   16384
+
+// Constantes pour les limites du système
+#define LED_COUNT_MIN           1
+#define LED_COUNT_MAX           1000
+#define MAX_CONTENT_LENGTH      4096
+
+// Constantes de timing
+#define VEHICLE_STATE_TIMEOUT_MS  5000
+#define TASK_DELAY_MS             1000
+#define RETRY_DELAY_BASE_MS       20
+#define RETRY_DELAY_MAX_MS        500
+
+// Constantes de configuration serveur
+#define HTTP_MAX_URI_HANDLERS   60
+#define HTTP_MAX_OPEN_SOCKETS   13
+
+// Constantes de configuration par défaut
+#define DEFAULT_BRIGHTNESS      128
+#define DEFAULT_SPEED           50
+#define DEFAULT_PRIORITY        100
+
+// Cache control HTTP
+#define CACHE_ONE_YEAR          "public, max-age=31536000"
+
+/**
+ * Clés JSON abrégées utilisées dans l'API REST (pour réduire la taille des paquets)
+ *
+ * EFFETS LED:
+ *   fx  = effect (ID alphanumérique de l'effet)
+ *   br  = brightness (0-255)
+ *   sp  = speed (0-100)
+ *   c1  = color1 (format 0xRRGGBB)
+ *   c2  = color2
+ *   c3  = color3
+ *   rv  = reverse (bool: direction de l'animation)
+ *   ar  = audio_reactive (bool)
+ *   sm  = sync_mode
+ *
+ * ÉVÉNEMENTS CAN:
+ *   ev  = event (ID alphanumérique de l'événement)
+ *   dur = duration_ms (durée en millisecondes)
+ *   pri = priority (0-255, plus haut = plus prioritaire)
+ *   en  = enabled (bool)
+ *   at  = action_type (0=effet, 1=switch profil)
+ *   csp = can_switch_profile (bool)
+ *
+ * SEGMENTS LED:
+ *   st  = segment_start (index de départ, 0-based)
+ *   ln  = segment_length (longueur, 0=full strip)
+ *
+ * PROFILS:
+ *   pid = profile_id (0-9)
+ *
+ * RÉPONSES:
+ *   st  = status ("ok" ou "error")
+ *   msg = message (texte descriptif)
+ *   pg  = progress (0-100)
+ *   upd = updated (nombre d'éléments mis à jour)
+ *   rr  = requires_restart (bool)
+ *
+ * AUDIO/FFT:
+ *   sen = sensitivity (sensibilité micro)
+ *   gn  = gain
+ *   sr  = sample_rate
+ *
+ * VÉHICULE:
+ *   va  = vehicle_active (bool)
+ *   nm  = night_mode (bool)
+ *   ap  = autopilot (0-3)
+ *   bl1 = blindspot_left_lv1 (bool)
+ *   bl2 = blindspot_left_lv2 (bool)
+ *   br1 = blindspot_right_lv1 (bool)
+ *   br2 = blindspot_right_lv2 (bool)
+ */
 
 static httpd_handle_t server                 = NULL;
 static vehicle_state_t current_vehicle_state = {0};
@@ -70,6 +164,12 @@ static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffe
     return ESP_FAIL;
   }
 
+  // Vérifier qu'il y a bien des données à recevoir
+  if (req->content_len == 0) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty request body");
+    return ESP_FAIL;
+  }
+
   int ret = httpd_req_recv(req, buffer, buffer_size - 1);
 
   if (ret <= 0) {
@@ -80,8 +180,8 @@ static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffe
   }
 
   // Vérifier si le buffer est plein (donnée potentiellement tronquée)
-  if (ret >= (int)(buffer_size - 1)) {
-    ESP_LOGW(TAG_WEBSERVER, "Request too large, may be truncated (%d bytes)", ret);
+  if (ret > (int)(buffer_size - 1)) {
+    ESP_LOGW(TAG_WEBSERVER, "Request too large, may be truncated (%d bytes vs %d bytes)", ret, (int)(buffer_size - 1));
   }
 
   buffer[ret] = '\0';
@@ -142,9 +242,9 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         retries++;
         // Délai exponentiel: 20ms, 40ms, 80ms, etc.
-        int delay_ms = 20 * (1 << (retries - 1));
-        if (delay_ms > 500)
-          delay_ms = 500; // Max 500ms
+        int delay_ms = RETRY_DELAY_BASE_MS * (1 << (retries - 1));
+        if (delay_ms > RETRY_DELAY_MAX_MS)
+          delay_ms = RETRY_DELAY_MAX_MS;
         ESP_LOGD(TAG_WEBSERVER, "EAGAIN pour %s, retry %d/%d (wait %dms)", route->uri, retries, MAX_RETRIES, delay_ms);
         vTaskDelay(pdMS_TO_TICKS(delay_ms));
       } else {
@@ -231,7 +331,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
   // Statut véhicule
   uint32_t now        = xTaskGetTickCount();
-  bool vehicle_active = (now - current_vehicle_state.last_update_ms) < pdMS_TO_TICKS(5000);
+  bool vehicle_active = (now - current_vehicle_state.last_update_ms) < pdMS_TO_TICKS(VEHICLE_STATE_TIMEOUT_MS);
   cJSON_AddBoolToObject(root, "va", vehicle_active);
 
   // Données véhicule complètes
@@ -360,7 +460,7 @@ static esp_err_t config_handler(httpd_req_t *req) {
 
 // Handler pour définir l'effet
 static esp_err_t effect_handler(httpd_req_t *req) {
-  char content[512];
+  char content[BUFFER_SIZE_LARGE];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -424,7 +524,7 @@ static esp_err_t save_handler(httpd_req_t *req) {
 
 // Handler pour configurer le matériel LED (POST)
 static esp_err_t config_post_handler(httpd_req_t *req) {
-  char content[256];
+  char content[BUFFER_SIZE_MEDIUM];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -448,7 +548,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
   }
 
   // Validation
-  if (led_count < 1 || led_count > 1000) {
+  if (led_count < LED_COUNT_MIN || led_count > LED_COUNT_MAX) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "led_count must be 1-1000");
     cJSON_Delete(root);
     return ESP_FAIL;
@@ -544,7 +644,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 
 // Handler pour activer un profil
 static esp_err_t profile_activate_handler(httpd_req_t *req) {
-  char content[128];
+  char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -566,7 +666,7 @@ static esp_err_t profile_activate_handler(httpd_req_t *req) {
 
 // Handler pour créer un nouveau profil
 static esp_err_t profile_create_handler(httpd_req_t *req) {
-  char content[256];
+  char content[BUFFER_SIZE_MEDIUM];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -629,7 +729,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
 
 // Handler pour supprimer un profil
 static esp_err_t profile_delete_handler(httpd_req_t *req) {
-  char content[128];
+  char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -679,7 +779,7 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
 
   // Redémarrer l'ESP32 après un court délai
   if (success) {
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(TASK_DELAY_MS));
     esp_restart();
   }
 
@@ -688,7 +788,7 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
 
 // Handler pour mettre à jour les paramètres d'un profil
 static esp_err_t profile_update_handler(httpd_req_t *req) {
-  char content[512]; // Augmenté pour accepter settings + effet par défaut
+  char content[BUFFER_SIZE_LARGE]; // Augmenté pour accepter settings + effet par défaut
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -792,7 +892,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
 
 // Handler pour assigner un effet à un événement
 static esp_err_t event_effect_handler(httpd_req_t *req) {
-  char content[512];
+  char content[BUFFER_SIZE_LARGE];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -826,11 +926,11 @@ static esp_err_t event_effect_handler(httpd_req_t *req) {
       return ESP_FAIL;
     }
 
-    effect_config.brightness = brightness ? brightness->valueint : 128;
-    effect_config.speed      = speed ? speed->valueint : 50;
+    effect_config.brightness = brightness ? brightness->valueint : DEFAULT_BRIGHTNESS;
+    effect_config.speed      = speed ? speed->valueint : DEFAULT_SPEED;
     effect_config.color1     = color1 ? color1->valueint : 0xFF0000;
 
-    bool success             = config_manager_set_event_effect(profile_id, event->valueint, &effect_config, duration ? duration->valueint : 0, priority ? priority->valueint : 100);
+    bool success             = config_manager_set_event_effect(profile_id, event->valueint, &effect_config, duration ? duration->valueint : 0, priority ? priority->valueint : DEFAULT_PRIORITY);
 
     if (success) {
       // Sauvegarder le profil (allouer dynamiquement pour éviter stack
@@ -872,13 +972,13 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
   uint8_t profile_id = atoi(param_value);
 
   // Allouer un buffer pour le JSON (8KB devrait suffire pour un profil complet)
-  char *json_buffer  = malloc(8192);
+  char *json_buffer  = malloc(BUFFER_SIZE_PROFILE);
   if (!json_buffer) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
-  bool success = config_manager_export_profile(profile_id, json_buffer, 8192);
+  bool success = config_manager_export_profile(profile_id, json_buffer, BUFFER_SIZE_PROFILE);
 
   if (success) {
     // Envoyer le JSON avec les bons headers pour le téléchargement
@@ -896,27 +996,15 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
 // Handler pour importer un profil depuis JSON
 static esp_err_t profile_import_handler(httpd_req_t *req) {
   // Allouer un buffer pour recevoir le JSON
-  char *content = malloc(8192);
+  char *content = malloc(BUFFER_SIZE_PROFILE);
   if (!content) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
-  int ret = httpd_req_recv(req, content, 8192 - 1);
-
-  if (ret <= 0) {
+  cJSON *root = NULL;
+  if (parse_json_request(req, content, 8192, &root) != ESP_OK) {
     free(content);
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-
-  content[ret] = '\0';
-
-  // Parser pour obtenir le profile_id et le JSON
-  cJSON *root  = cJSON_Parse(content);
-  if (root == NULL) {
-    free(content);
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
   }
 
@@ -984,7 +1072,7 @@ static esp_err_t ota_info_handler(httpd_req_t *req) {
 
 // Handler pour uploader le firmware OTA
 static esp_err_t ota_upload_handler(httpd_req_t *req) {
-  char buf[1024];
+  char buf[BUFFER_SIZE_JSON];
   int remaining = req->content_len;
   int received;
   bool first_chunk = true;
@@ -1065,7 +1153,7 @@ static esp_err_t ota_restart_handler(httpd_req_t *req) {
 
 // Handler pour arrêter un événement CAN
 static esp_err_t stop_event_handler(httpd_req_t *req) {
-  char content[128];
+  char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -1149,7 +1237,7 @@ static esp_err_t event_types_list_handler(httpd_req_t *req) {
 
 // Handler pour simuler un événement CAN
 static esp_err_t simulate_event_handler(httpd_req_t *req) {
-  char content[128];
+  char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -1210,6 +1298,7 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   const cJSON *brightness_json  = cJSON_GetObjectItem(event_obj, "br");
   const cJSON *speed_json       = cJSON_GetObjectItem(event_obj, "sp");
   const cJSON *color_json       = cJSON_GetObjectItem(event_obj, "c1");
+  const cJSON *reverse_json     = cJSON_GetObjectItem(event_obj, "rv");
   const cJSON *duration_json    = cJSON_GetObjectItem(event_obj, "dur");
   const cJSON *priority_json    = cJSON_GetObjectItem(event_obj, "pri");
   const cJSON *enabled_json     = cJSON_GetObjectItem(event_obj, "en");
@@ -1217,7 +1306,6 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   const cJSON *profile_id_json  = cJSON_GetObjectItem(event_obj, "pid");
   const cJSON *segment_start    = cJSON_GetObjectItem(event_obj, "st");
   const cJSON *segment_length   = cJSON_GetObjectItem(event_obj, "ln");
-  const cJSON *anchor_left      = cJSON_GetObjectItem(event_obj, "al");
 
   if (event_json == NULL || effect_json == NULL || !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
     ESP_LOGW(TAG_WEBSERVER, "Payload d'evenement invalide");
@@ -1247,11 +1335,10 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   if (segment_length && cJSON_IsNumber(segment_length)) {
     effect_config.segment_length = segment_length->valueint;
   }
-  if (anchor_left && cJSON_IsBool(anchor_left)) {
-    effect_config.anchor_left = cJSON_IsTrue(anchor_left);
+  if (reverse_json && cJSON_IsBool(reverse_json)) {
+    effect_config.reverse = cJSON_IsTrue(reverse_json);
   }
   effect_config.sync_mode = SYNC_OFF;
-  effect_config.reverse   = (event_type == CAN_EVENT_TURN_LEFT || event_type == CAN_EVENT_BLINDSPOT_LEFT_LV1 || event_type == CAN_EVENT_BLINDSPOT_LEFT_LV2);
 
   uint16_t duration       = duration_json && cJSON_IsNumber(duration_json) ? duration_json->valueint : profile->event_effects[event_type].duration_ms;
   uint8_t priority        = priority_json && cJSON_IsNumber(priority_json) ? priority_json->valueint : profile->event_effects[event_type].priority;
@@ -1300,6 +1387,7 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
       cJSON_AddNumberToObject(event_obj, "br", event_effect.effect_config.brightness);
       cJSON_AddNumberToObject(event_obj, "sp", event_effect.effect_config.speed);
       cJSON_AddNumberToObject(event_obj, "c1", event_effect.effect_config.color1);
+      cJSON_AddBoolToObject(event_obj, "rv", event_effect.effect_config.reverse);
       cJSON_AddNumberToObject(event_obj, "dur", event_effect.duration_ms);
       cJSON_AddNumberToObject(event_obj, "pri", event_effect.priority);
       cJSON_AddBoolToObject(event_obj, "en", event_effect.enabled);
@@ -1308,7 +1396,6 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
       cJSON_AddBoolToObject(event_obj, "csp", config_manager_event_can_switch_profile(event_type));
       cJSON_AddNumberToObject(event_obj, "st", event_effect.effect_config.segment_start);
       cJSON_AddNumberToObject(event_obj, "ln", event_effect.effect_config.segment_length);
-      cJSON_AddBoolToObject(event_obj, "al", event_effect.effect_config.anchor_left);
 
       cJSON_AddItemToArray(events_array, event_obj);
     }
@@ -1328,40 +1415,26 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
 
 // Handler pour mettre à jour les événements CAN (POST)
 static esp_err_t events_post_handler(httpd_req_t *req) {
-  char *content      = NULL;
-  int ret            = 0;
   size_t content_len = req->content_len;
 
   // Allouer de la mémoire pour le contenu (peut être grand)
-  if (content_len > 16384) {
+  if (content_len > BUFFER_SIZE_EVENT_MAX) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request too large");
     return ESP_FAIL;
   }
 
-  content = (char *)malloc(content_len + 1);
+  char *content = (char *)malloc(content_len + 1);
   if (content == NULL) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
-  ret = httpd_req_recv(req, content, content_len);
-  if (ret <= 0) {
-    if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-      httpd_resp_send_408(req);
-    }
+  cJSON *root = NULL;
+  if (parse_json_request(req, content, content_len + 1, &root) != ESP_OK) {
     free(content);
     return ESP_FAIL;
   }
-
-  content[ret] = '\0';
-
-  cJSON *root  = cJSON_Parse(content);
   free(content);
-
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
-    return ESP_FAIL;
-  }
 
   cJSON *events_array = cJSON_GetObjectItem(root, "events");
   if (events_array == NULL || !cJSON_IsArray(events_array)) {
@@ -1453,17 +1526,9 @@ static esp_err_t audio_status_handler(httpd_req_t *req) {
 
 // Handler POST /api/audio/enable - Activer/désactiver le micro
 static esp_err_t audio_enable_handler(httpd_req_t *req) {
-  char buf[128];
-  int ret = httpd_req_recv(req, buf, MIN(req->content_len, sizeof(buf) - 1));
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-  buf[ret]    = '\0';
-
-  cJSON *root = cJSON_Parse(buf);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  char buf[BUFFER_SIZE_SMALL];
+  cJSON *root = NULL;
+  if (parse_json_request(req, buf, sizeof(buf), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -1495,17 +1560,9 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
 
 // Handler POST /api/audio/config - Mettre à jour la configuration audio
 static esp_err_t audio_config_handler(httpd_req_t *req) {
-  char buf[256];
-  int ret = httpd_req_recv(req, buf, MIN(req->content_len, sizeof(buf) - 1));
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request");
-    return ESP_FAIL;
-  }
-  buf[ret]    = '\0';
-
-  cJSON *root = cJSON_Parse(buf);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  char buf[BUFFER_SIZE_MEDIUM];
+  cJSON *root = NULL;
+  if (parse_json_request(req, buf, sizeof(buf), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -1620,16 +1677,8 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
 // et /api/save pour sauvegarder
 static esp_err_t audio_fft_enable_handler(httpd_req_t *req) {
   char content[100];
-  int ret = httpd_req_recv(req, content, MIN(req->content_len, sizeof(content)));
-
-  if (ret <= 0) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive data");
-    return ESP_FAIL;
-  }
-
-  cJSON *root = cJSON_Parse(content);
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+  cJSON *root = NULL;
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
@@ -1710,20 +1759,20 @@ esp_err_t web_server_init(void) {
 esp_err_t web_server_start(void) {
   httpd_config_t config   = HTTPD_DEFAULT_CONFIG();
   config.server_port      = WEB_SERVER_PORT;
-  config.max_uri_handlers = 60;
-  config.max_open_sockets = 13;
+  config.max_uri_handlers = HTTP_MAX_URI_HANDLERS;
+  config.max_open_sockets = HTTP_MAX_OPEN_SOCKETS;
   config.lru_purge_enable = true; // Ferme les plus anciennes connexions si limite atteinte
   config.core_id          = 1;    // Serveur web sur core 1 (WiFi sur core 0)
 
   ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
 
   if (httpd_start(&server, &config) == ESP_OK) {
-    static static_file_route_t static_files[] = {{"/", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
-                                                 {"/generate_204", index_html_gz_start, index_html_gz_end, "text/html", "public, max-age=31536000", "gzip"},
-                                                 {"/i18n.js", i18n_js_gz_start, i18n_js_gz_end, "text/javascript", "public, max-age=31536000", "gzip"},
-                                                 {"/script.js", script_js_gz_start, script_js_gz_end, "text/javascript", "public, max-age=31536000", "gzip"},
-                                                 {"/style.css", style_css_gz_start, style_css_gz_end, "text/css", "public, max-age=31536000", "gzip"},
-                                                 {"/carlightsync64.png", carlightsync64_png_start, carlightsync64_png_end, "image/png", "public, max-age=31536000", NULL}};
+    static static_file_route_t static_files[] = {{"/", index_html_gz_start, index_html_gz_end, "text/html", "CACHE_ONE_YEAR", "gzip"},
+                                                 {"/generate_204", index_html_gz_start, index_html_gz_end, "text/html", "CACHE_ONE_YEAR", "gzip"},
+                                                 {"/i18n.js", i18n_js_gz_start, i18n_js_gz_end, "text/javascript", "CACHE_ONE_YEAR", "gzip"},
+                                                 {"/script.js", script_js_gz_start, script_js_gz_end, "text/javascript", "CACHE_ONE_YEAR", "gzip"},
+                                                 {"/style.css", style_css_gz_start, style_css_gz_end, "text/css", "CACHE_ONE_YEAR", "gzip"},
+                                                 {"/carlightsync64.png", carlightsync64_png_start, carlightsync64_png_end, "image/png", "CACHE_ONE_YEAR", NULL}};
     int num_static_files                      = sizeof(static_files) / sizeof(static_files[0]);
 
     for (int i = 0; i < num_static_files; i++) {
@@ -1854,39 +1903,25 @@ esp_err_t web_server_start(void) {
 }
 
 static esp_err_t event_single_post_handler(httpd_req_t *req) {
-  char *content      = NULL;
-  int ret            = 0;
   size_t content_len = req->content_len;
 
-  if (content_len > 4096) {
+  if (content_len > MAX_CONTENT_LENGTH) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request too large");
     return ESP_FAIL;
   }
 
-  content = (char *)malloc(content_len + 1);
+  char *content = (char *)malloc(content_len + 1);
   if (content == NULL) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
 
-  ret = httpd_req_recv(req, content, content_len);
-  if (ret <= 0) {
-    if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-      httpd_resp_send_408(req);
-    }
+  cJSON *root = NULL;
+  if (parse_json_request(req, content, content_len + 1, &root) != ESP_OK) {
     free(content);
     return ESP_FAIL;
   }
-
-  content[ret] = '\0';
-
-  cJSON *root  = cJSON_Parse(content);
   free(content);
-
-  if (root == NULL) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
-    return ESP_FAIL;
-  }
 
   cJSON *event_obj = cJSON_GetObjectItem(root, "event");
   if (event_obj == NULL || !cJSON_IsObject(event_obj)) {

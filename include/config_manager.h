@@ -99,7 +99,32 @@ typedef enum {
   EVENT_ACTION_SWITCH_PROFILE    // Change de profil
 } event_action_type_t;
 
-// Configuration d'un effet pour un événement CAN spécifique
+/**
+ * @brief Configuration d'un effet pour un événement CAN spécifique
+ *
+ * Exemple d'usage:
+ * @code
+ * // Configurer clignotant gauche sur événement CAN
+ * effect_config_t turn_config = {
+ *   .effect = EFFECT_TURN_SIGNAL,
+ *   .brightness = 255,
+ *   .speed = 80,
+ *   .color1 = 0xFF8000,  // Orange
+ *   .reverse = true,
+ *   .segment_start = 0,
+ *   .segment_length = 61
+ * };
+ *
+ * config_manager_set_event_effect(
+ *   0,                         // profile_id
+ *   CAN_EVENT_TURN_LEFT,      // event
+ *   &turn_config,              // effect_config
+ *   500,                       // duration_ms (500ms)
+ *   200                        // priority (haute priorité)
+ * );
+ * config_manager_set_event_enabled(0, CAN_EVENT_TURN_LEFT, true);
+ * @endcode
+ */
 typedef struct {
   can_event_type_t event;
   event_action_type_t action_type; // Type d'action à effectuer

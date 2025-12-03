@@ -1,3 +1,16 @@
+/**
+ * @file led_effects.c
+ * @brief Moteur de rendu des effets LED WS2812B
+ *
+ * Gère:
+ * - Initialisation du périphérique RMT pour WS2812B
+ * - 15+ effets LED (solid, rainbow, theater chase, kitt, etc.)
+ * - Audio-réactivité avec FFT (basse fréquence)
+ * - Limitation de puissance automatique (max 2A pour brownout)
+ * - Segments LED avec reverse/direction
+ * - Mode nuit avec luminosité réduite
+ */
+
 #include "led_effects.h"
 
 #include "audio_input.h"
@@ -21,8 +34,57 @@
 #define MAX_LED_COUNT 1000 // Align with config_manager_set_led_hardware validation
 
 // Limitation de puissance pour éviter brownout sur alimentation USB
-#define MAX_POWER_MILLIAMPS 2000  // Consommation max en mA (USB peut fournir ~2A max)
-#define LED_MILLIAMPS_PER_LED 60  // Consommation max par LED en blanc à pleine luminosité (mA)
+#define MAX_POWER_MILLIAMPS 2000 // Consommation max en mA (USB peut fournir ~2A max)
+#define LED_MILLIAMPS_PER_LED 60 // Consommation max par LED en blanc à pleine luminosité (mA)
+
+// Constantes de luminosité et couleur
+#define BRIGHTNESS_MAX 255
+#define BRIGHTNESS_HALF 128
+#define BRIGHTNESS_OFF 0
+#define BRIGHTNESS_NO_REDUCTION 255
+
+// Facteurs audio-réactifs
+#define AUDIO_BRIGHTNESS_MIN 0.1f  // Luminosité minimale en mode audio (10%)
+#define AUDIO_BRIGHTNESS_MAX 0.9f  // Plage de modulation audio (90%)
+
+// Facteurs de luminosité pour effets
+#define EFFECT_BRIGHTNESS_TAIL 0.3f  // Luminosité de la queue (30%)
+#define EFFECT_BRIGHTNESS_MID 0.5f   // Luminosité moyenne (50%)
+#define EFFECT_BRIGHTNESS_FULL 1.0f  // Luminosité maximale (100%)
+
+// Périodes d'animation (en frames)
+#define ANIM_PERIOD_SLOW_MAX 120
+#define ANIM_PERIOD_FAST_MIN 20
+#define ANIM_PERIOD_MEDIUM 100
+#define ANIM_PERIOD_SHORT 50
+#define ANIM_FLASH_DUTY_CYCLE 30  // Pourcentage du cycle pour le flash
+#define ANIM_FLASH_DUTY_ALERT 60  // Pourcentage pour alerte (plus long)
+#define ANIM_TURN_DUTY_CYCLE 70   // Pourcentage pour clignotants
+
+// Facteurs de fade et decay
+#define FADE_FACTOR_SLOW 95   // Fade lent: conserve 95% (réduit de 5%)
+#define FADE_FACTOR_MEDIUM 90 // Fade moyen: conserve 90% (réduit de 10%)
+#define FADE_DIVISOR 100
+
+// HSV conversion
+#define HSV_HUE_REGION_SIZE 43  // Taille d'une région de teinte HSV (256/6)
+#define HSV_SATURATION_MAX 255
+#define HSV_VALUE_MAX 255
+
+// Seuils de niveau de charge (%)
+#define CHARGE_LEVEL_LOW 20
+#define CHARGE_LEVEL_MEDIUM 50
+#define CHARGE_LEVEL_HIGH 80
+#define CHARGE_LEVEL_MAX 100
+
+// Valeurs de charge minimale pour détection
+#define CHARGE_POWER_THRESHOLD 0.1f
+
+// Beat detection timing (ms)
+#define BEAT_FLASH_DURATION 100
+
+// Sentinel value pour indicateur non initialisé
+#define PROGRESS_NOT_INITIALIZED 255
 
 // Handles pour la nouvelle API RMT
 static rmt_channel_handle_t led_chan    = NULL;
@@ -47,7 +109,7 @@ static bool ota_progress_mode                      = false;
 static bool ota_ready_mode                         = false;
 static bool ota_error_mode                         = false;
 static uint8_t ota_progress_percent                = 0;
-static uint8_t ota_displayed_percent               = 255;
+static uint8_t ota_displayed_percent               = PROGRESS_NOT_INITIALIZED;
 static TickType_t ota_last_progress_refresh        = 0;
 static const TickType_t OTA_PROGRESS_REFRESH_LIMIT = pdMS_TO_TICKS(500);
 
@@ -56,7 +118,7 @@ static float charge_anim_position                  = 0.0f;
 
 // Night mode global state
 static bool night_mode_active                      = false;
-static uint8_t night_mode_brightness               = 255; // 255 = 100%, default no reduction
+static uint8_t night_mode_brightness               = BRIGHTNESS_NO_REDUCTION;
 
 // Dual directional mode state
 static bool dual_directional_mode                  = false;
@@ -363,10 +425,11 @@ static void effect_rainbow(void) {
   uint32_t speed_factor = (effect_counter * (current_config.speed + 10)) / 50;
 
   for (int i = 0; i < led_count; i++) {
+    int led_index = current_config.reverse ? (led_count - 1 - i) : i;
     uint16_t hue = (i * 256 / led_count + speed_factor) % 256;
-    rgb_t color  = hsv_to_rgb(hue, 255, 255);                          // Utiliser luminosité max pour HSV
-    color        = apply_brightness(color, current_config.brightness); // Appliquer brightness ET mode nuit
-    leds[i]      = color;
+    rgb_t color  = hsv_to_rgb(hue, HSV_SATURATION_MAX, HSV_VALUE_MAX);
+    color        = apply_brightness(color, current_config.brightness);
+    leds[led_index] = color;
   }
 }
 
@@ -392,15 +455,16 @@ static void effect_theater_chase(void) {
 
   // Utiliser la vitesse pour contrôler la vitesse de défilement
   int speed_divider = 256 - current_config.speed;
-  if (speed_divider < 20)
-    speed_divider = 20;
+  if (speed_divider < ANIM_PERIOD_FAST_MIN)
+    speed_divider = ANIM_PERIOD_FAST_MIN;
   int pos = (effect_counter * 10 / speed_divider) % 3;
 
   for (int i = 0; i < led_count; i++) {
+    int led_index = current_config.reverse ? (led_count - 1 - i) : i;
     if (i % 3 == pos) {
-      leds[i] = color1;
+      leds[led_index] = color1;
     } else {
-      leds[i] = color2;
+      leds[led_index] = color2;
     }
   }
 }
@@ -412,6 +476,9 @@ static void effect_running_lights(void) {
   if (speed_divider < 10)
     speed_divider = 10;
   int pos     = (effect_counter * 100 / speed_divider) % led_count;
+  if (current_config.reverse) {
+    pos = led_count - 1 - pos;
+  }
 
   rgb_t color = color_to_rgb(current_config.color1);
 
@@ -522,6 +589,10 @@ static void effect_scan(void) {
     pos = led_count * 2 - pos - 1;
   }
 
+  if (current_config.reverse) {
+    pos = led_count - 1 - pos;
+  }
+
   rgb_t base_color = color_to_rgb(current_config.color1);
 
   // LED principale plus brillante
@@ -560,6 +631,10 @@ static void effect_knight_rider(void) {
 
   if (pos >= led_count) {
     pos = led_count * 2 - pos - 1;
+  }
+
+  if (current_config.reverse) {
+    pos = led_count - 1 - pos;
   }
 
   rgb_t base_color = color_to_rgb(current_config.color1);
@@ -806,13 +881,13 @@ static void effect_charge_status(void) {
   for (int i = 0; i < target_led; i++) {
     rgb_t color;
 
-    if (charge_level < 20) {
+    if (charge_level < CHARGE_LEVEL_LOW) {
       // Rouge en dessous de 20%
       color = (rgb_t){255, 0, 0};
-    } else if (charge_level < 50) {
+    } else if (charge_level < CHARGE_LEVEL_MEDIUM) {
       // Jaune/Orange entre 20% et 50%
       color = (rgb_t){255, 200, 0};
-    } else if (charge_level < 80) {
+    } else if (charge_level < CHARGE_LEVEL_HIGH) {
       // Jaune/Vert entre 50% et 80%
       color = (rgb_t){200, 255, 0};
     } else {
@@ -820,7 +895,8 @@ static void effect_charge_status(void) {
       color = (rgb_t){0, 255, 0};
     }
 
-    leds[i] = apply_brightness(color, current_config.brightness);
+    int led_index = current_config.reverse ? (led_count - 1 - i) : i;
+    leds[led_index] = apply_brightness(color, current_config.brightness);
   }
 
   // Pixel animé qui vient de l'extrémité (empilement fluide)
@@ -867,7 +943,8 @@ static void effect_charge_status(void) {
 
     // Position actuelle du pixel (conversion en entier pour affichage)
     int anim_pos         = (int)charge_anim_position;
-    int moving_pixel_pos = led_count - 1 - anim_pos;
+    // Calculer la position du pixel selon la direction
+    int moving_pixel_pos = current_config.reverse ? anim_pos : (led_count - 1 - anim_pos);
 
     // Extraire les composantes RGB de la couleur configurée
     rgb_t trail_color    = color_to_rgb(current_config.color1);
@@ -881,13 +958,17 @@ static void effect_charge_status(void) {
     // Traînée de la même couleur derrière le pixel (8 pixels pour traînée
     // longue et fluide)
     for (int trail = 1; trail <= TRAIL_LENGTH; trail++) {
-      int trail_pos = moving_pixel_pos + trail;
+      // Direction de la traînée selon reverse
+      int trail_pos = current_config.reverse ? (moving_pixel_pos - trail) : (moving_pixel_pos + trail);
 
       // Afficher la traînée seulement si:
       // 1. Elle est dans la zone visible (< led_count)
-      // 2. Elle n'a pas encore été "avalée" par la barre de charge (>=
-      // target_led)
-      if (trail_pos >= target_led && trail_pos < led_count) {
+      // 2. Elle n'a pas encore été "avalée" par la barre de charge
+      bool in_visible_zone = current_config.reverse
+        ? (trail_pos >= 0 && trail_pos < target_led)
+        : (trail_pos >= target_led && trail_pos < led_count);
+
+      if (in_visible_zone) {
         // Décroissance exponentielle agressive pour une traînée bien visible
         // trail 1 = 80% (204), trail 2 = 60% (153), trail 3 = 40% (102), trail
         // 4 = 25% (64), trail 5 = 10% (25)
@@ -1295,9 +1376,6 @@ void led_effects_set_config(const effect_config_t *config) {
     if ((current_config.segment_start + current_config.segment_length) > led_count) {
       current_config.segment_length = led_count - current_config.segment_start;
     }
-    if (current_config.segment_length == led_count) {
-      current_config.anchor_left = true;
-    }
 
     // Activer/désactiver automatiquement le FFT selon l'effet
     bool needs_fft = led_effects_requires_fft(current_config.effect);
@@ -1629,7 +1707,6 @@ void led_effects_reset_config(void) {
   current_config.audio_reactive = false;
   current_config.segment_start  = 0;
   current_config.segment_length = 0;
-  current_config.anchor_left    = true;
 
   ESP_LOGI(TAG_LED, "Configuration réinitialisée");
 }
@@ -1661,10 +1738,17 @@ void led_effects_render_to_buffer(const effect_config_t *config, uint16_t segmen
     return;
   }
 
-  if (segment_length == 0 || segment_start >= led_count) {
+  // segment_length == 0 signifie "utiliser toute la strip"
+  if (segment_length == 0) {
+    segment_length = led_count;
+  }
+
+  // Valider segment_start
+  if (segment_start >= led_count) {
     return;
   }
 
+  // Ajuster la longueur si le segment déborde
   if ((segment_start + segment_length) > led_count) {
     segment_length = led_count - segment_start;
   }
@@ -1710,14 +1794,16 @@ void led_effects_show_buffer(const led_rgb_t *buffer) {
   // Copier le buffer et calculer la consommation estimée
   uint32_t total_brightness = 0;
   for (uint16_t i = 0; i < led_count; i++) {
-    leds[i].r = buffer[i].r;
-    leds[i].g = buffer[i].g;
-    leds[i].b = buffer[i].b;
+    leds[i].r             = buffer[i].r;
+    leds[i].g             = buffer[i].g;
+    leds[i].b             = buffer[i].b;
 
     // Calculer la luminosité totale (max des composantes RGB pour estimer la conso)
     uint8_t max_component = leds[i].r;
-    if (leds[i].g > max_component) max_component = leds[i].g;
-    if (leds[i].b > max_component) max_component = leds[i].b;
+    if (leds[i].g > max_component)
+      max_component = leds[i].g;
+    if (leds[i].b > max_component)
+      max_component = leds[i].b;
     total_brightness += max_component;
   }
 
@@ -1729,8 +1815,7 @@ void led_effects_show_buffer(const led_rgb_t *buffer) {
   if (estimated_milliamps > MAX_POWER_MILLIAMPS) {
     uint32_t scale_factor = (MAX_POWER_MILLIAMPS * 256) / estimated_milliamps;
 
-    ESP_LOGW(TAG_LED, "Limitation puissance: %lu mA -> %d mA (réduction luminosité à %lu%%)",
-             estimated_milliamps, MAX_POWER_MILLIAMPS, (scale_factor * 100) / 256);
+    // ESP_LOGW(TAG_LED, "Limitation puissance: %lu mA -> %d mA (réduction luminosité à %lu%%)", estimated_milliamps, MAX_POWER_MILLIAMPS, (scale_factor * 100) / 256);
 
     // Appliquer la réduction à toutes les LEDs
     for (uint16_t i = 0; i < led_count; i++) {

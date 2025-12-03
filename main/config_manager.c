@@ -1,3 +1,15 @@
+/**
+ * @file config_manager.c
+ * @brief Gestionnaire de profils et événements CAN
+ *
+ * Gère:
+ * - Profils d'effets LED (4 profils max) avec sauvegarde NVS
+ * - Événements CAN avec priorités et segments
+ * - Système multi-pass de rendu: réservation → effet par défaut → événements
+ * - Import/export JSON des profils
+ * - Activation/désactivation d'événements
+ */
+
 #include "config_manager.h"
 
 #include "audio_input.h"
@@ -33,7 +45,7 @@ static bool effect_override_active = false;
 static led_rgb_t composed_buffer[MAX_LED_BUFFER];
 static led_rgb_t temp_buffer[MAX_LED_BUFFER];
 static uint8_t priority_buffer[MAX_LED_BUFFER];
- 
+
 static inline bool event_is_left(can_event_type_t event) {
   switch (event) {
   case CAN_EVENT_TURN_LEFT:
@@ -67,25 +79,40 @@ static inline bool event_is_right(can_event_type_t event) {
  * @param left_event Type d'événement gauche
  * @param right_event Type d'événement droite
  */
-static void create_symmetric_event_pair(config_profile_t *profile,
-                                         can_event_type_t left_event,
-                                         can_event_type_t right_event) {
+static void create_symmetric_event_pair(config_profile_t *profile, can_event_type_t left_event, can_event_type_t right_event) {
   if (!profile) {
     return;
   }
 
   // Copier la configuration LEFT vers RIGHT
-  memcpy(&profile->event_effects[right_event],
-         &profile->event_effects[left_event],
-         sizeof(can_event_effect_t));
+  memcpy(&profile->event_effects[right_event], &profile->event_effects[left_event], sizeof(can_event_effect_t));
 
   // Restaurer les propriétés spécifiques à RIGHT
-  profile->event_effects[right_event].event = right_event;
-  profile->event_effects[right_event].effect_config.reverse = false; // RIGHT = animation vers la droite
-  profile->event_effects[right_event].effect_config.segment_start = config_manager_get_led_count() / 2;
+  profile->event_effects[right_event].event                        = right_event;
+  profile->event_effects[right_event].effect_config.reverse        = false; // RIGHT = animation vers la droite
+  profile->event_effects[right_event].effect_config.segment_start  = config_manager_get_led_count() / 2;
   profile->event_effects[right_event].effect_config.segment_length = config_manager_get_led_count() / 2;
 }
 
+/**
+ * @brief Valide et ajuste les paramètres de segment LED
+ *
+ * Normalise les valeurs de segment_start et segment_length pour garantir
+ * qu'elles sont valides et ne dépassent pas la bande LED.
+ *
+ * Règles de normalisation:
+ * - segment_length == 0 → utiliser toute la bande (led_total)
+ * - segment_length > led_total → limiter à led_total
+ * - segment_start >= led_total → réinitialiser à 0
+ * - start + length > led_total → réduire length pour ne pas déborder
+ *
+ * @param event Type d'événement CAN (pour info/debug)
+ * @param cfg Configuration de l'effet à valider (modifiée en place)
+ * @param led_total Nombre total de LEDs (0 = utiliser NUM_LEDS par défaut)
+ *
+ * @note Les segments sont toujours indexés depuis la gauche (0-based)
+ * @note La direction (gauche/droite) est gérée par le champ 'reverse'
+ */
 static void apply_segment_defaults(can_event_type_t event, effect_config_t *cfg, uint16_t led_total) {
   if (cfg == NULL) {
     return;
@@ -95,46 +122,27 @@ static void apply_segment_defaults(can_event_type_t event, effect_config_t *cfg,
     led_total = NUM_LEDS;
   }
 
-  // bool has_custom_segment = (cfg->segment_length != 0) || (cfg->segment_start != 0);
-  // Si rien n'est configure, appliquer un ancrage par defaut
-  // if (!has_custom_segment) {
-  //   if (event_is_left(event)) {
-  //     cfg->anchor_left = true;
-  //   } else if (!event_is_right(event)) {
-  //     // Par defaut, ancrage a gauche pour les evenements non directionnels
-  //     cfg->anchor_left = true;
-  //   }
-  // }
-
+  // Valider et ajuster la longueur du segment
   uint16_t length = cfg->segment_length;
   if (length == 0 || length > led_total) {
-    // length = event_is_left(event) || event_is_right(event) ? (led_total / 2) : led_total;
-    length =  led_total;
+    length = led_total;
   }
 
-  uint16_t start_offset = cfg->segment_start;
-  if (start_offset >= led_total) {
-    start_offset = 0;
+  // Valider la position de départ (toujours depuis la gauche)
+  uint16_t start = cfg->segment_start;
+  if (start >= led_total) {
+    start = 0;
   }
 
-  uint16_t start;
-  if (cfg->anchor_left) {
-    start = start_offset;
-    if ((uint32_t)start + length > led_total) {
-      if (length > led_total)
-        length = led_total;
-      start = led_total - length;
-    }
-  } else {
-    // Comptage depuis la droite
+  // Ajuster si le segment déborde
+  if ((uint32_t)start + length > led_total) {
     if (length > led_total) {
       length = led_total;
     }
-    // Ecarter debordement
-    if (start_offset > led_total - length) {
-      start_offset = 0;
+    // Réduire la longueur pour ne pas déborder
+    if (start + length > led_total) {
+      length = led_total - start;
     }
-    start = led_total - length - start_offset;
   }
 
   cfg->segment_start  = start;
@@ -267,7 +275,7 @@ bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *pro
 
   ESP_LOGI(TAG_CONFIG, "Saving profile %d: size=%d bytes (NVS limit=1984)", profile_id, sizeof(config_profile_t));
 
-  err                              = nvs_set_blob(nvs_handle, key, profile_copy, sizeof(config_profile_t));
+  err = nvs_set_blob(nvs_handle, key, profile_copy, sizeof(config_profile_t));
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde profil: %s (size=%d bytes)", esp_err_to_name(err), sizeof(config_profile_t));
     free(profile_copy);
@@ -310,9 +318,6 @@ bool config_manager_load_profile(uint8_t profile_id, config_profile_t *profile) 
   }
 
   // Vérifier que la taille correspond à la structure actuelle
-  ESP_LOGI(TAG_CONFIG, "Profile %d: required_size=%d, sizeof(config_profile_t)=%d, NVS limit=1984",
-           profile_id, required_size, sizeof(config_profile_t));
-
   if (required_size != sizeof(config_profile_t)) {
     ESP_LOGW(TAG_CONFIG, "Profile %d a une taille incompatible (%d vs %d) - ignoré", profile_id, required_size, sizeof(config_profile_t));
     nvs_close(nvs_handle);
@@ -540,39 +545,36 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
 
   // Effet par défaut: rainbow
-  profile->default_effect.effect                                       = EFFECT_SCAN;
-  profile->default_effect.brightness                                   = 128;
-  profile->default_effect.speed                                        = 50;
-  profile->default_effect.color1                                       = 0xFF0000;
-  profile->default_effect.segment_start                                = 0;
-  profile->default_effect.segment_length                               = 0; // full strip par defaut
-  profile->default_effect.anchor_left                                  = true;
+  profile->default_effect.effect            = EFFECT_SCAN;
+  profile->default_effect.brightness        = 128;
+  profile->default_effect.speed             = 50;
+  profile->default_effect.color1            = 0xFF0000;
+  profile->default_effect.segment_start     = 0;
+  profile->default_effect.segment_length    = 0; // full strip par defaut
 
   // Effet mode nuit: breathing doux
-  profile->night_mode_effect.effect                                    = EFFECT_BREATHING;
-  profile->night_mode_effect.brightness                                = 30;
-  profile->night_mode_effect.speed                                     = 20;
-  profile->night_mode_effect.color1                                    = 0x0000FF;
-  profile->night_mode_effect.segment_start                             = 0;
-  profile->night_mode_effect.segment_length                            = 0;
-  profile->night_mode_effect.anchor_left                               = true;
+  profile->night_mode_effect.effect         = EFFECT_BREATHING;
+  profile->night_mode_effect.brightness     = 30;
+  profile->night_mode_effect.speed          = 20;
+  profile->night_mode_effect.color1         = 0x0000FF;
+  profile->night_mode_effect.segment_start  = 0;
+  profile->night_mode_effect.segment_length = 0;
 
-  // Défauts segment: point de départ = 0, longueur auto, ancre selon l'événement
+  // Défauts segment: LEFT sur moitié gauche, RIGHT sur moitié droite
   // Cette boucle initialise les segments AVANT la configuration manuelle des événements
   for (int e = 0; e < CAN_EVENT_MAX; e++) {
     if (event_is_left((can_event_type_t)e)) {
-      profile->event_effects[e].effect_config.anchor_left = true;
       profile->event_effects[e].effect_config.segment_start  = 0;
       profile->event_effects[e].effect_config.segment_length = config_manager_get_led_count() / 2;
+      profile->event_effects[e].effect_config.reverse        = true;  // Animation vers la gauche
     } else if (event_is_right((can_event_type_t)e)) {
-      profile->event_effects[e].effect_config.anchor_left = false;
-      profile->event_effects[e].effect_config.reverse = false;
       profile->event_effects[e].effect_config.segment_start  = config_manager_get_led_count() / 2;
       profile->event_effects[e].effect_config.segment_length = config_manager_get_led_count() / 2;
+      profile->event_effects[e].effect_config.reverse        = false; // Animation vers la droite
     } else {
-      profile->event_effects[e].effect_config.anchor_left = true;
       profile->event_effects[e].effect_config.segment_start  = 0;
       profile->event_effects[e].effect_config.segment_length = config_manager_get_led_count();
+      profile->event_effects[e].effect_config.reverse        = false;
     }
   }
 
@@ -623,25 +625,24 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
 
   // Blindspot LV2 (basé sur LV1 avec couleur et priorité différentes)
   memcpy(&profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2], &profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].event                = CAN_EVENT_BLINDSPOT_LEFT_LV2;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].effect_config.color1 = 0xFF0000;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].priority             = 250;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].effect_config.anchor_left = true;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].event                     = CAN_EVENT_BLINDSPOT_LEFT_LV2;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].effect_config.color1      = 0xFF0000;
+  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].priority                  = 250;
 
   // Blindspot droite LV2 (symétrique)
   create_symmetric_event_pair(profile, CAN_EVENT_BLINDSPOT_LEFT_LV2, CAN_EVENT_BLINDSPOT_RIGHT_LV2);
 
   // Forward colission
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].event                                  = CAN_EVENT_FORWARD_COLLISION;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].action_type                            = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].profile_id                             = -1;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.effect                   = EFFECT_HAZARD;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.brightness               = 255;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.speed                    = 255;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.color1                   = 0xFF0000;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].duration_ms                            = 0;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].priority                               = 220;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].enabled                                = false;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].event                          = CAN_EVENT_FORWARD_COLLISION;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].action_type                    = EVENT_ACTION_APPLY_EFFECT;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].profile_id                     = -1;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.effect           = EFFECT_HAZARD;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.brightness       = 255;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.speed            = 255;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.color1           = 0xFF0000;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].duration_ms                    = 0;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].priority                       = 220;
+  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].enabled                        = false;
 
   // Dépassement de ligne
   profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].event                    = CAN_EVENT_LANE_DEPARTURE_LEFT_LV1;
@@ -661,7 +662,7 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
 
   // Dépassement de ligne LV2 (basé sur LV1 avec couleur et priorité différentes)
   memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].event                 = CAN_EVENT_LANE_DEPARTURE_LEFT_LV2;
+  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].event                = CAN_EVENT_LANE_DEPARTURE_LEFT_LV2;
   profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].effect_config.color1 = 0xFF0000;
   profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].priority             = 250;
 
@@ -669,28 +670,28 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   create_symmetric_event_pair(profile, CAN_EVENT_LANE_DEPARTURE_LEFT_LV2, CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2);
 
   // Hazard/Warning (clignotants de détresse)
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].event                                      = CAN_EVENT_TURN_HAZARD;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].action_type                                = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].profile_id                                 = -1;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.effect                       = EFFECT_HAZARD;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.brightness                   = 255;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.speed                        = 100;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.color1                       = 0xFF8000;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].duration_ms                                = 0;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].priority                                   = 220;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].enabled                                    = true;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].event                        = CAN_EVENT_TURN_HAZARD;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].action_type                  = EVENT_ACTION_APPLY_EFFECT;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].profile_id                   = -1;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.effect         = EFFECT_HAZARD;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.brightness     = 255;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.speed          = 100;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.color1         = 0xFF8000;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].duration_ms                  = 0;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].priority                     = 220;
+  profile->event_effects[CAN_EVENT_TURN_HAZARD].enabled                      = true;
 
   // Charge complète
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].event                                  = CAN_EVENT_CHARGE_COMPLETE;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].action_type                            = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].profile_id                             = -1;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.effect                   = EFFECT_BREATHING;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.brightness               = 200;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.speed                    = 30;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.color1                   = 0x00FF00;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].duration_ms                            = 0;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].priority                               = 140;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].enabled                                = true;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].event                    = CAN_EVENT_CHARGE_COMPLETE;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].action_type              = EVENT_ACTION_APPLY_EFFECT;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].profile_id               = -1;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.effect     = EFFECT_BREATHING;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.brightness = 200;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.speed      = 30;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.color1     = 0x00FF00;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].duration_ms              = 0;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].priority                 = 140;
+  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].enabled                  = true;
 
   // Câble connecté
   memcpy(&profile->event_effects[CAN_EVENT_CHARGING_STARTED], &profile->event_effects[CAN_EVENT_CHARGE_COMPLETE], sizeof(can_event_effect_t));
@@ -852,18 +853,17 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   profile->event_effects[CAN_EVENT_SENTRY_ALERT].priority                 = 240;
   profile->event_effects[CAN_EVENT_SENTRY_ALERT].enabled                  = true;
 
-
   for (int e = 0; e < CAN_EVENT_MAX; e++) {
-    profile->event_effects[e].enabled =true;
+    profile->event_effects[e].enabled = true;
   }
 
   // Paramètres généraux
-  profile->auto_night_mode                                                = false; // Désactivé par défaut, l'utilisateur peut l'activer manuellement
-  profile->night_brightness                                               = 30;
+  profile->auto_night_mode    = false; // Désactivé par défaut, l'utilisateur peut l'activer manuellement
+  profile->night_brightness   = 30;
 
-  profile->active                                                         = false;
-  profile->created_timestamp                                              = (uint32_t)time(NULL);
-  profile->modified_timestamp                                             = profile->created_timestamp;
+  profile->active             = false;
+  profile->created_timestamp  = (uint32_t)time(NULL);
+  profile->modified_timestamp = profile->created_timestamp;
 }
 
 bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority) {
@@ -915,12 +915,15 @@ bool config_manager_process_can_event(can_event_type_t event) {
     memcpy(&effect_to_apply, &event_effect->effect_config, sizeof(effect_config_t));
     duration_ms = event_effect->duration_ms;
     priority    = event_effect->priority;
+    // if(effect_to_apply.segment_length == 0) {
+    //   effect_to_apply.segment_length = total_leds;
+    // }
 
-    ESP_LOGI(TAG_CONFIG, "Event %s: segment_start=%d, segment_length=%d, anchor_left=%d, reverse=%d",
+    ESP_LOGI(TAG_CONFIG,
+             "Event %s: segment_start=%d, segment_length=%d, reverse=%d",
              config_manager_enum_to_id(event),
              effect_to_apply.segment_start,
              effect_to_apply.segment_length,
-             effect_to_apply.anchor_left,
              effect_to_apply.reverse);
 
     // Trouver un slot libre pour l'événement
@@ -1016,9 +1019,9 @@ void config_manager_stop_all_events(void) {
 }
 
 void config_manager_update(void) {
-  uint32_t now         = xTaskGetTickCount();
-  uint16_t total_leds  = led_effects_get_led_count();
-  bool any_active      = false;
+  uint32_t now        = xTaskGetTickCount();
+  uint16_t total_leds = led_effects_get_led_count();
+  bool any_active     = false;
 
   if (total_leds == 0) {
     total_leds = NUM_LEDS;
@@ -1050,34 +1053,23 @@ void config_manager_update(void) {
   memset(composed_buffer, 0, total_leds * sizeof(led_rgb_t));
 
   uint32_t frame_counter = led_effects_get_frame_counter();
-  bool needs_fft = false;
+  bool needs_fft         = false;
 
   // Première passe : marquer les segments réservés par les événements actifs
-  int reserved_count = 0;
+  int reserved_count     = 0;
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (!active_events[i].active)
       continue;
 
     uint16_t start  = active_events[i].effect_config.segment_start;
     uint16_t length = active_events[i].effect_config.segment_length;
-    bool anchor_left = active_events[i].effect_config.anchor_left;
 
-    // Convertir segment_start selon anchor_left
-    if (!anchor_left) {
-      // Ancré à droite : inverser le point de départ
-      // Vérifier validité des coordonnées right-anchored
-      if (start >= total_leds) {
-        ESP_LOGW(TAG_CONFIG, "Event skipped: right-anchored start >= total_leds (start=%d, total=%d)", start, total_leds);
-        continue;
-      }
-      if (start + length > total_leds) {
-        ESP_LOGW(TAG_CONFIG, "Event length trimmed for right-anchor: %d -> %d", length, total_leds - start);
-        length = total_leds - start;
-      }
-      start = total_leds - start - length;
+    // Normaliser length == 0 → full strip
+    if (length == 0) {
+      length = total_leds;
     }
 
-    // Vérifier validité des coordonnées finales (après conversion)
+    // Vérifier validité du segment
     if (start >= total_leds) {
       ESP_LOGW(TAG_CONFIG, "Event skipped: start >= total_leds (start=%d, total=%d)", start, total_leds);
       continue;
@@ -1110,7 +1102,6 @@ void config_manager_update(void) {
     effect_config_t base = profiles[active_profile_id].default_effect;
     base.segment_start   = 0;
     base.segment_length  = total_leds;
-    base.anchor_left     = true;
 
     memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
     led_effects_render_to_buffer(&base, 0, total_leds, frame_counter, temp_buffer);
@@ -1132,7 +1123,11 @@ void config_manager_update(void) {
 
     uint16_t start  = active_events[i].effect_config.segment_start;
     uint16_t length = active_events[i].effect_config.segment_length;
-    bool anchor_left = active_events[i].effect_config.anchor_left;
+
+    // Normaliser length == 0 → full strip
+    if (length == 0) {
+      length = total_leds;
+    }
 
     // Vérifier si ce segment a bien été réservé pour cet événement
     bool segment_reserved = true;
@@ -1458,7 +1453,6 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
   cJSON_AddBoolToObject(default_effect, "audio_reactive", profile->default_effect.audio_reactive);
   cJSON_AddNumberToObject(default_effect, "segment_start", profile->default_effect.segment_start);
   cJSON_AddNumberToObject(default_effect, "segment_length", profile->default_effect.segment_length);
-  cJSON_AddBoolToObject(default_effect, "anchor_left", profile->default_effect.anchor_left);
   cJSON_AddItemToObject(root, "default_effect", default_effect);
 
   // Effet mode nuit
@@ -1473,7 +1467,6 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
   cJSON_AddBoolToObject(night_effect, "audio_reactive", profile->night_mode_effect.audio_reactive);
   cJSON_AddNumberToObject(night_effect, "segment_start", profile->night_mode_effect.segment_start);
   cJSON_AddNumberToObject(night_effect, "segment_length", profile->night_mode_effect.segment_length);
-  cJSON_AddBoolToObject(night_effect, "anchor_left", profile->night_mode_effect.anchor_left);
   cJSON_AddItemToObject(root, "night_mode_effect", night_effect);
 
   // Événements CAN
@@ -1499,7 +1492,6 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
       cJSON_AddBoolToObject(event_effect, "audio_reactive", profile->event_effects[i].effect_config.audio_reactive);
       cJSON_AddNumberToObject(event_effect, "segment_start", profile->event_effects[i].effect_config.segment_start);
       cJSON_AddNumberToObject(event_effect, "segment_length", profile->event_effects[i].effect_config.segment_length);
-      cJSON_AddBoolToObject(event_effect, "anchor_left", profile->event_effects[i].effect_config.anchor_left);
       cJSON_AddItemToObject(event, "effect_config", event_effect);
 
       cJSON_AddItemToArray(events, event);
@@ -1603,8 +1595,6 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
       imported_profile->default_effect.segment_start = item->valueint;
     if ((item = cJSON_GetObjectItem(default_effect, "segment_length")) && cJSON_IsNumber(item))
       imported_profile->default_effect.segment_length = item->valueint;
-    if ((item = cJSON_GetObjectItem(default_effect, "anchor_left")) && cJSON_IsBool(item))
-      imported_profile->default_effect.anchor_left = cJSON_IsTrue(item);
   }
 
   // Effet mode nuit
@@ -1631,8 +1621,6 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
       imported_profile->night_mode_effect.segment_start = item->valueint;
     if ((item = cJSON_GetObjectItem(night_effect, "segment_length")) && cJSON_IsNumber(item))
       imported_profile->night_mode_effect.segment_length = item->valueint;
-    if ((item = cJSON_GetObjectItem(night_effect, "anchor_left")) && cJSON_IsBool(item))
-      imported_profile->night_mode_effect.anchor_left = cJSON_IsTrue(item);
   }
 
   // Événements CAN
@@ -1698,8 +1686,6 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
           imported_profile->event_effects[evt].effect_config.segment_start = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "segment_length")) && cJSON_IsNumber(item))
           imported_profile->event_effects[evt].effect_config.segment_length = item->valueint;
-        if ((item = cJSON_GetObjectItem(effect_config, "anchor_left")) && cJSON_IsBool(item))
-          imported_profile->event_effects[evt].effect_config.anchor_left = cJSON_IsTrue(item);
       }
     }
   }

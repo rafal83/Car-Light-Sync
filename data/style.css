@@ -184,8 +184,8 @@ body {
 .header h1 {
     font-size: 28px;
     margin-bottom: 10px;
-    font-weight: 300;
-    letter-spacing: 2px;
+    font-weight: bold;
+    letter-spacing: -2px;
 }
 .header p {
     font-size: 14px;

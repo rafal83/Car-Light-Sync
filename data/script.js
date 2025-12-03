@@ -1219,7 +1219,6 @@ function renderEventsTable() {
             eventTypesList
                 .filter(evt => evt.id !== 'NONE')
                 .forEach(evt => {
-                    const isRight = evt.id && evt.id.includes('RIGHT');
                     eventsConfigData.push({
                         ev: evt.id,
                         fx: defaultEffectId,
@@ -1233,8 +1232,7 @@ function renderEventsTable() {
                         pid: -1,
                         csp: false,
                         st: 0,
-                        ln: 0,
-                        al: !isRight
+                        ln: 0
                     });
                 });
         }
@@ -1278,9 +1276,8 @@ function renderEventsTable() {
             // Apply Effect
             const effectName = getEffectName(event.fx);
             const colorHex = '#' + event.c1.toString(16).padStart(6, '0');
-            const anchor = event.al !== false ? '⇦' : '⇨';
             const displayLength = (event.ln ?? 0) === 0 ? maxLeds : event.ln;
-            const segmentInfo = `[${event.st ?? 0}→${(event.st ?? 0) + displayLength}] ${anchor}`;
+            const segmentInfo = `[${event.st ?? 0}→${(event.st ?? 0) + displayLength}]`;
             summaryHTML += `
                 <div class="event-accordion-summary-item effect-item">
                     <span class="event-accordion-summary-label">${t('eventsConfig.effect')}:</span>
@@ -1365,6 +1362,11 @@ function renderEventsTable() {
                         <input type="color" value="#${event.c1.toString(16).padStart(6, '0')}"
                             onchange="updateEventConfig(${index}, 'c1', parseInt(this.value.substring(1), 16))" ${!event.en ? 'disabled' : ''}>
                     </div>
+                    <div class="event-form-field checkbox-field">
+                        <label class="event-form-label" data-i18n="eventsConfig.reverse">${t('eventsConfig.reverse')}</label>
+                        <input type="checkbox" ${event.rv ? 'checked' : ''} ${!event.en ? 'disabled' : ''}
+                            onchange="updateEventConfig(${index}, 'rv', this.checked)">
+                    </div>
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.duration">${t('eventsConfig.duration')}</label>
                         <input type="number" min="0" max="60000" step="100" value="${event.dur}"
@@ -1393,11 +1395,6 @@ function renderEventsTable() {
                                 <span data-i18n="eventsConfig.length">${t('eventsConfig.length')}</span>: <span id="segment-value-length-${index}">${(event.ln ?? 0) === 0 ? maxLeds : event.ln}</span>
                             </div>
                         </div>
-                    </div>
-                    <div class="event-form-field checkbox-field">
-                        <label class="event-form-label" data-i18n="eventsConfig.anchorLeft">${t('eventsConfig.anchorLeft')}</label>
-                        <input type="checkbox" ${event.al !== false ? 'checked' : ''} ${!event.en ? 'disabled' : ''}
-                            onchange="updateEventConfig(${index}, 'al', this.checked)">
                     </div>
                     ` : ''}
                 </div>
@@ -1576,9 +1573,8 @@ function updateEventSummary(index) {
     if (actionType === 0) {
         const effectName = getEffectName(event.fx);
         const colorHex = '#' + event.c1.toString(16).padStart(6, '0');
-        const anchor = event.al !== false ? '⇦' : '⇨';
         const displayLength = (event.ln ?? 0) === 0 ? maxLeds : event.ln;
-        const segmentInfo = `[${event.st ?? 0}→${(event.st ?? 0) + displayLength}] ${anchor}`;
+        const segmentInfo = `[${event.st ?? 0}→${(event.st ?? 0) + displayLength}]`;
         summaryHTML += `
             <div class="event-accordion-summary-item effect-item">
                 <span class="event-accordion-summary-label">${t('eventsConfig.effect')}:</span>
@@ -1621,9 +1617,9 @@ function buildEventPayload(event) {
         return null;
     }
     const allowedKeys = [
-        'ev', 'fx', 'br', 'sp', 'c1',
+        'ev', 'fx', 'br', 'sp', 'c1', 'rv',
         'dur', 'pri', 'en', 'at', 'pid', 'csp',
-        'st', 'ln', 'al'
+        'st', 'ln'
     ];
     const payload = {};
     allowedKeys.forEach(key => {
