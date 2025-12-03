@@ -1,0 +1,210 @@
+{
+  "name": "Cyberpunk 2077",
+  "description": "Futur dystopique - néons violet/cyan, glitchs et pulses",
+  "default_effect": {
+    "effect_id": "THEATER_CHASE",
+    "brightness": 200,
+    "speed": 190,
+    "color1": 9055407,
+    "color2": 65535,
+    "reverse": false,
+    "audio_reactive": false,
+    "segment_start": 0,
+    "segment_length": 0
+  },
+  "dynamic_brightness_enabled": false,
+  "dynamic_brightness_rate": 50,
+  "event_effects": [
+    {
+      "event_id": "TURN_LEFT",
+      "enabled": true,
+      "priority": 135,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "KNIGHT_RIDER",
+        "brightness": 240,
+        "speed": 220,
+        "color1": 16711935,
+        "reverse": true,
+        "segment_start": 0,
+        "segment_length": 12
+      }
+    },
+    {
+      "event_id": "TURN_RIGHT",
+      "enabled": true,
+      "priority": 135,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "KNIGHT_RIDER",
+        "brightness": 240,
+        "speed": 220,
+        "color1": 16711935,
+        "reverse": false,
+        "segment_start": 110,
+        "segment_length": 12
+      }
+    },
+    {
+      "event_id": "TURN_HAZARD",
+      "enabled": true,
+      "priority": 125,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "STROBE",
+        "brightness": 230,
+        "speed": 240,
+        "color1": 16711935,
+        "color2": 65535,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    },
+    {
+      "event_id": "BRAKE_ON",
+      "enabled": true,
+      "priority": 200,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "STROBE",
+        "brightness": 255,
+        "speed": 250,
+        "color1": 16711680,
+        "segment_start": 45,
+        "segment_length": 32
+      }
+    },
+    {
+      "event_id": "BLINDSPOT_LEFT_LV1",
+      "enabled": true,
+      "priority": 180,
+      "duration_ms": 700,
+      "effect_config": {
+        "effect_id": "SCAN",
+        "brightness": 255,
+        "speed": 230,
+        "color1": 65535,
+        "reverse": true,
+        "segment_start": 14,
+        "segment_length": 10
+      }
+    },
+    {
+      "event_id": "BLINDSPOT_RIGHT_LV1",
+      "enabled": true,
+      "priority": 180,
+      "duration_ms": 700,
+      "effect_config": {
+        "effect_id": "SCAN",
+        "brightness": 255,
+        "speed": 230,
+        "color1": 65535,
+        "reverse": false,
+        "segment_start": 98,
+        "segment_length": 10
+      }
+    },
+    {
+      "event_id": "LANE_DEPARTURE_LEFT_LV1",
+      "enabled": true,
+      "priority": 155,
+      "duration_ms": 800,
+      "effect_config": {
+        "effect_id": "STROBE",
+        "brightness": 250,
+        "speed": 240,
+        "color1": 16711935,
+        "reverse": true,
+        "segment_start": 14,
+        "segment_length": 8
+      }
+    },
+    {
+      "event_id": "LANE_DEPARTURE_RIGHT_LV1",
+      "enabled": true,
+      "priority": 155,
+      "duration_ms": 800,
+      "effect_config": {
+        "effect_id": "STROBE",
+        "brightness": 250,
+        "speed": 240,
+        "color1": 16711935,
+        "reverse": false,
+        "segment_start": 98,
+        "segment_length": 8
+      }
+    },
+    {
+      "event_id": "LOCKED",
+      "enabled": true,
+      "priority": 45,
+      "duration_ms": 1000,
+      "effect_config": {
+        "effect_id": "SCAN",
+        "brightness": 180,
+        "speed": 200,
+        "color1": 9055407,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    },
+    {
+      "event_id": "UNLOCKED",
+      "enabled": true,
+      "priority": 55,
+      "duration_ms": 1200,
+      "effect_config": {
+        "effect_id": "KNIGHT_RIDER",
+        "brightness": 200,
+        "speed": 210,
+        "color1": 65535,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    },
+    {
+      "event_id": "CHARGING",
+      "enabled": true,
+      "priority": 80,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "THEATER_CHASE",
+        "brightness": 180,
+        "speed": 170,
+        "color1": 65535,
+        "color2": 9055407,
+        "segment_start": 45,
+        "segment_length": 32
+      }
+    },
+    {
+      "event_id": "CHARGE_COMPLETE",
+      "enabled": true,
+      "priority": 90,
+      "duration_ms": 3500,
+      "effect_config": {
+        "effect_id": "STROBE",
+        "brightness": 200,
+        "speed": 180,
+        "color1": 65535,
+        "segment_start": 45,
+        "segment_length": 32
+      }
+    },
+    {
+      "event_id": "DOOR_OPEN",
+      "enabled": true,
+      "priority": 65,
+      "duration_ms": 2000,
+      "effect_config": {
+        "effect_id": "SCAN",
+        "brightness": 190,
+        "speed": 190,
+        "color1": 16711935,
+        "color2": 65535,
+        "segment_start": 0,
+        "segment_length": 0
+      }
+    }
+  ]
+}
