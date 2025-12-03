@@ -42,7 +42,7 @@
 
 // Constantes pour les limites du système
 #define LED_COUNT_MIN           1
-#define LED_COUNT_MAX           1000
+#define LED_COUNT_MAX           200
 #define MAX_CONTENT_LENGTH      4096
 
 // Constantes de timing
@@ -555,7 +555,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
 
   // Validation
   if (led_count < LED_COUNT_MIN || led_count > LED_COUNT_MAX) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "led_count must be 1-1000");
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "led_count must be 1-200");
     cJSON_Delete(root);
     return ESP_FAIL;
   }
@@ -623,6 +623,9 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddNumberToObject(default_effect_obj, "sp", profile->default_effect.speed);
     cJSON_AddNumberToObject(default_effect_obj, "c1", profile->default_effect.color1);
     cJSON_AddBoolToObject(default_effect_obj, "ar", profile->default_effect.audio_reactive);
+    cJSON_AddBoolToObject(default_effect_obj, "rv", profile->default_effect.reverse);
+    cJSON_AddNumberToObject(default_effect_obj, "st", profile->default_effect.segment_start);
+    cJSON_AddNumberToObject(default_effect_obj, "ln", profile->default_effect.segment_length);
     cJSON_AddItemToObject(profile_obj, "default_effect", default_effect_obj);
 
     cJSON_AddItemToArray(profiles_array, profile_obj);
@@ -844,6 +847,9 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   const cJSON *speed_json          = cJSON_GetObjectItem(root, "sp");
   const cJSON *color_json          = cJSON_GetObjectItem(root, "c1");
   const cJSON *audio_reactive_json = cJSON_GetObjectItem(root, "ar");
+  const cJSON *reverse_json        = cJSON_GetObjectItem(root, "rv");
+  const cJSON *segment_start_json  = cJSON_GetObjectItem(root, "st");
+  const cJSON *segment_length_json = cJSON_GetObjectItem(root, "ln");
 
   if (effect_json) {
     profile->default_effect.effect = (led_effect_t)effect_json->valueint;
@@ -863,6 +869,18 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
   if (audio_reactive_json && cJSON_IsBool(audio_reactive_json)) {
     profile->default_effect.audio_reactive = cJSON_IsTrue(audio_reactive_json);
+    default_effect_updated                 = true;
+  }
+  if (reverse_json && cJSON_IsBool(reverse_json)) {
+    profile->default_effect.reverse = cJSON_IsTrue(reverse_json);
+    default_effect_updated          = true;
+  }
+  if (segment_start_json) {
+    profile->default_effect.segment_start = (uint16_t)segment_start_json->valueint;
+    default_effect_updated                = true;
+  }
+  if (segment_length_json) {
+    profile->default_effect.segment_length = (uint16_t)segment_length_json->valueint;
     default_effect_updated                 = true;
   }
 

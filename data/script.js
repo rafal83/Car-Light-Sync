@@ -1112,6 +1112,58 @@ const defaultAudioReactive = $('default-audio-reactive');
 if (defaultAudioReactive) {
     defaultAudioReactive.addEventListener('change', scheduleDefaultEffectSave);
 }
+const defaultReverse = $('default-reverse');
+if (defaultReverse) {
+    defaultReverse.addEventListener('change', scheduleDefaultEffectSave);
+}
+// Fonction pour mettre à jour le segment range de l'effet par défaut
+function updateDefaultSegmentRange(triggerSave = true) {
+    const minSlider = $('default-segment-range-min');
+    const maxSlider = $('default-segment-range-max');
+    const selected = $('default-segment-range-selected');
+    const startValue = $('default-segment-value-start');
+    const lengthValue = $('default-segment-value-length');
+
+    if (!minSlider || !maxSlider || !selected || !startValue || !lengthValue) {
+        return;
+    }
+
+    const MIN_LENGTH = 10;
+    let min = parseInt(minSlider.value);
+    let max = parseInt(maxSlider.value);
+
+    // Empêcher longueur < MIN_LENGTH
+    if (max - min < MIN_LENGTH) {
+        if (minSlider === document.activeElement) {
+            max = min + MIN_LENGTH;
+            if (max > maxLeds) {
+                max = maxLeds;
+                min = max - MIN_LENGTH;
+            }
+            maxSlider.value = max;
+        } else {
+            min = max - MIN_LENGTH;
+            if (min < 0) {
+                min = 0;
+                max = MIN_LENGTH;
+            }
+            minSlider.value = min;
+        }
+    }
+
+    // Mettre à jour l'affichage
+    const percent1 = (min / maxLeds) * 100;
+    const percent2 = (max / maxLeds) * 100;
+    selected.style.left = percent1 + '%';
+    selected.style.width = (percent2 - percent1) + '%';
+
+    startValue.textContent = min;
+    lengthValue.textContent = max - min;
+
+    if (triggerSave) {
+        scheduleDefaultEffectSave();
+    }
+}
 // Notification helper
 function showNotification(elementId, message, type, timeout = 2000) {
     const notification = $(elementId);
@@ -1934,6 +1986,23 @@ async function saveProfile(params = {}) {
         payload.c1 = parseInt($('default-color1').value.substring(1), 16);
         const audioReactiveCheckbox = $('default-audio-reactive');
         payload.ar = audioReactiveCheckbox ? audioReactiveCheckbox.checked : false;
+
+        // Reverse
+        const reverseCheckbox = $('default-reverse');
+        payload.rv = reverseCheckbox ? reverseCheckbox.checked : false;
+
+        // Segment range
+        const minSlider = $('default-segment-range-min');
+        const maxSlider = $('default-segment-range-max');
+        if (minSlider && maxSlider) {
+            const start = parseInt(minSlider.value);
+            const end = parseInt(maxSlider.value);
+            const length = end - start;
+            payload.st = start;
+            // Si length == maxLeds, enregistrer 0 (= toute la strip)
+            payload.ln = (length === maxLeds) ? 0 : length;
+            console.log(`[Profile] Saving default effect segment: st=${start}, ln=${payload.ln} (end=${end}, maxLeds=${maxLeds})`);
+        }
     }
 
     try {
@@ -2169,6 +2238,27 @@ async function loadActiveProfileDefaultEffect() {
             const audioReactiveCheckbox = $('default-audio-reactive');
             if (audioReactiveCheckbox && defaultEffect.ar !== undefined) {
                 audioReactiveCheckbox.checked = defaultEffect.ar;
+            }
+
+            // Reverse
+            const reverseCheckbox = $('default-reverse');
+            if (reverseCheckbox && defaultEffect.rv !== undefined) {
+                reverseCheckbox.checked = defaultEffect.rv;
+            }
+
+            // Segment range
+            const minSlider = $('default-segment-range-min');
+            const maxSlider = $('default-segment-range-max');
+            if (minSlider && maxSlider) {
+                const start = defaultEffect.st !== undefined ? defaultEffect.st : 0;
+                const length = (defaultEffect.ln !== undefined && defaultEffect.ln !== 0) ? defaultEffect.ln : maxLeds;
+                console.log(`[Profile] Loading default effect segment: st=${start}, ln=${defaultEffect.ln}, calculated length=${length}, maxLeds=${maxLeds}`);
+                minSlider.value = start;
+                maxSlider.value = start + length;
+                minSlider.max = maxLeds;
+                maxSlider.max = maxLeds;
+                // Mettre à jour l'affichage du segment (sans sauvegarder)
+                updateDefaultSegmentRange(false);
             }
         }
     } catch (e) {

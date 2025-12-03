@@ -31,8 +31,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LED_COUNT 1000 // Align with config_manager_set_led_hardware validation
-
 // Limitation de puissance pour éviter brownout sur alimentation USB
 #define MAX_POWER_MILLIAMPS 2000 // Consommation max en mA (USB peut fournir ~2A max)
 #define LED_MILLIAMPS_PER_LED 60 // Consommation max par LED en blanc à pleine luminosité (mA)
@@ -1030,6 +1028,7 @@ static void effect_audio_reactive(void) {
   rgb_t base_color = color_to_rgb(current_config.color1);
 
   for (int i = 0; i < led_count; i++) {
+    int led_index = current_config.reverse ? (led_count - 1 - i) : i;
     if (i < lit_leds) {
       // Couleur dégradée selon le niveau
       float intensity = (float)(i + 1) / lit_leds;
@@ -1037,9 +1036,9 @@ static void effect_audio_reactive(void) {
       color.r = (uint8_t)(base_color.r * intensity);
       color.g = (uint8_t)(base_color.g * intensity);
       color.b = (uint8_t)(base_color.b * intensity);
-      leds[i] = apply_brightness(color, current_config.brightness);
+      leds[led_index] = apply_brightness(color, current_config.brightness);
     } else {
-      leds[i] = (rgb_t){0, 0, 0};
+      leds[led_index] = (rgb_t){0, 0, 0};
     }
   }
 }
@@ -1105,7 +1104,8 @@ static void effect_fft_spectrum(void) {
 
     // Allumer les LEDs pour cette bande
     for (int i = 0; i < leds_per_band && (band * leds_per_band + i) < led_count; i++) {
-      int led_idx = band * leds_per_band + i;
+      int pos = band * leds_per_band + i;
+      int led_idx = current_config.reverse ? (led_count - 1 - pos) : pos;
       if (i < height) {
         // Dégradé de bas en haut
         float intensity = (float)(i + 1) / height;
@@ -1168,6 +1168,7 @@ static void effect_fft_vocal_wave(void) {
   int width  = (int)(fft_data.mid_energy * 20.0f); // Largeur proportionnelle à l'énergie mid
 
   for (int i = 0; i < led_count; i++) {
+    int led_index = current_config.reverse ? (led_count - 1 - i) : i;
     int distance = abs(i - center);
     if (distance < width) {
       // Dégradé vers la voix
@@ -1176,9 +1177,9 @@ static void effect_fft_vocal_wave(void) {
       color.r = (uint8_t)(vocal_color.r * (1.0f - mix) + base_color.r * mix);
       color.g = (uint8_t)(vocal_color.g * (1.0f - mix) + base_color.g * mix);
       color.b = (uint8_t)(vocal_color.b * (1.0f - mix) + base_color.b * mix);
-      leds[i] = apply_brightness(color, current_config.brightness);
+      leds[led_index] = apply_brightness(color, current_config.brightness);
     } else {
-      leds[i] = apply_brightness(base_color, current_config.brightness / 4);
+      leds[led_index] = apply_brightness(base_color, current_config.brightness / 4);
     }
   }
 }
@@ -1197,22 +1198,24 @@ static void effect_fft_energy_bar(void) {
   // Section Bass (rouge)
   int bass_leds    = (int)(fft_data.bass_energy * section_size);
   for (int i = 0; i < section_size; i++) {
+    int led_index = current_config.reverse ? (led_count - 1 - i) : i;
     if (i < bass_leds) {
       rgb_t color = {255, 0, 0}; // Rouge
-      leds[i]     = apply_brightness(color, current_config.brightness);
+      leds[led_index] = apply_brightness(color, current_config.brightness);
     } else {
-      leds[i] = (rgb_t){0, 0, 0};
+      leds[led_index] = (rgb_t){0, 0, 0};
     }
   }
 
   // Section Mid (vert)
   int mid_leds = (int)(fft_data.mid_energy * section_size);
   for (int i = 0; i < section_size; i++) {
-    int led_idx = section_size + i;
-    if (i < mid_leds && led_idx < led_count) {
+    int pos = section_size + i;
+    int led_idx = current_config.reverse ? (led_count - 1 - pos) : pos;
+    if (i < mid_leds && pos < led_count) {
       rgb_t color   = {0, 255, 0}; // Vert
       leds[led_idx] = apply_brightness(color, current_config.brightness);
-    } else if (led_idx < led_count) {
+    } else if (pos < led_count) {
       leds[led_idx] = (rgb_t){0, 0, 0};
     }
   }
@@ -1220,11 +1223,12 @@ static void effect_fft_energy_bar(void) {
   // Section Treble (bleu)
   int treble_leds = (int)(fft_data.treble_energy * section_size);
   for (int i = 0; i < section_size; i++) {
-    int led_idx = section_size * 2 + i;
-    if (i < treble_leds && led_idx < led_count) {
+    int pos = section_size * 2 + i;
+    int led_idx = current_config.reverse ? (led_count - 1 - pos) : pos;
+    if (i < treble_leds && pos < led_count) {
       rgb_t color   = {0, 0, 255}; // Bleu
       leds[led_idx] = apply_brightness(color, current_config.brightness);
-    } else if (led_idx < led_count) {
+    } else if (pos < led_count) {
       leds[led_idx] = (rgb_t){0, 0, 0};
     }
   }
@@ -1510,7 +1514,56 @@ void led_effects_update(void) {
     if (current_config.effect == EFFECT_OFF) {
       fill_solid((rgb_t){0, 0, 0});
     } else if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
-      effect_functions[current_config.effect]();
+      // Si un segment est défini, ne rendre que ce segment
+      uint16_t segment_start = current_config.segment_start;
+      uint16_t segment_length = current_config.segment_length;
+
+      // Normaliser le segment (0 = full strip)
+      if (segment_length == 0 || segment_length > led_count) {
+        segment_length = led_count;
+      }
+      if (segment_start >= led_count) {
+        segment_start = 0;
+      }
+      if ((segment_start + segment_length) > led_count) {
+        segment_length = led_count - segment_start;
+      }
+
+      // Si segment = toute la strip, rendu direct
+      if (segment_start == 0 && segment_length == led_count) {
+        ESP_LOGI(TAG_LED, "Rendu full strip (start=%d, len=%d)", segment_start, segment_length);
+        effect_functions[current_config.effect]();
+      } else {
+        // Rendre uniquement le segment
+        ESP_LOGI(TAG_LED, "Rendu segment (start=%d, len=%d, total=%d)", segment_start, segment_length, led_count);
+        // Sauvegarder l'état courant
+        uint16_t saved_led_count = led_count;
+
+        // Mettre tout en noir d'abord
+        fill_solid((rgb_t){0, 0, 0});
+
+        // Travailler sur le segment uniquement
+        led_count = segment_length;
+        effect_functions[current_config.effect]();
+
+        // Copier le résultat dans le segment de destination
+        rgb_t segment_buffer[MAX_LED_COUNT];
+        for (uint16_t i = 0; i < segment_length; i++) {
+          segment_buffer[i] = leds[i];
+        }
+
+        // Restaurer led_count et remettre tout en noir
+        led_count = saved_led_count;
+        fill_solid((rgb_t){0, 0, 0});
+
+        // Appliquer le segment au bon endroit
+        for (uint16_t i = 0; i < segment_length; i++) {
+          uint16_t idx = segment_start + i;
+          if (idx < led_count) {
+            leds[idx] = segment_buffer[i];
+          }
+        }
+      }
     }
   }
 

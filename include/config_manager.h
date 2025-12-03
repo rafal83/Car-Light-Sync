@@ -302,7 +302,7 @@ uint16_t config_manager_get_led_count(void);
 
 /**
  * @brief Définit le nombre de LEDs
- * @param led_count Nombre de LEDs (1-1000)
+ * @param led_count Nombre de LEDs (1-200)
  * @return true si succès et sauvegardé en NVS
  */
 bool config_manager_set_led_count(uint16_t led_count);

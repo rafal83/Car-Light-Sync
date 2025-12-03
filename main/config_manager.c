@@ -41,10 +41,11 @@ typedef struct {
 
 static active_event_t active_events[MAX_ACTIVE_EVENTS];
 static bool effect_override_active = false;
-#define MAX_LED_BUFFER 1000
-static led_rgb_t composed_buffer[MAX_LED_BUFFER];
-static led_rgb_t temp_buffer[MAX_LED_BUFFER];
-static uint8_t priority_buffer[MAX_LED_BUFFER];
+
+// Buffers pour le rendu composé des effets LED
+static led_rgb_t composed_buffer[MAX_LED_COUNT];
+static led_rgb_t temp_buffer[MAX_LED_COUNT];
+static uint8_t priority_buffer[MAX_LED_COUNT];
 
 static inline bool event_is_left(can_event_type_t event) {
   switch (event) {
@@ -1026,8 +1027,8 @@ void config_manager_update(void) {
   if (total_leds == 0) {
     total_leds = NUM_LEDS;
   }
-  if (total_leds == 0 || total_leds > MAX_LED_BUFFER) {
-    total_leds = MAX_LED_BUFFER;
+  if (total_leds == 0 || total_leds > MAX_LED_COUNT) {
+    total_leds = MAX_LED_COUNT;
   }
 
   // Vérifier et expirer les événements actifs
@@ -1100,11 +1101,24 @@ void config_manager_update(void) {
   // Deuxième passe : rendre l'effet par défaut uniquement sur les zones non réservées
   if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
     effect_config_t base = profiles[active_profile_id].default_effect;
-    base.segment_start   = 0;
-    base.segment_length  = total_leds;
+
+    // Utiliser le segment configuré dans le profil (ou toute la strip si non configuré)
+    uint16_t default_start = base.segment_start;
+    uint16_t default_length = base.segment_length;
+
+    // Normaliser le segment (0 = full strip)
+    if (default_length == 0 || default_length > total_leds) {
+      default_length = total_leds;
+    }
+    if (default_start >= total_leds) {
+      default_start = 0;
+    }
+    if ((default_start + default_length) > total_leds) {
+      default_length = total_leds - default_start;
+    }
 
     memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
-    led_effects_render_to_buffer(&base, 0, total_leds, frame_counter, temp_buffer);
+    led_effects_render_to_buffer(&base, default_start, default_length, frame_counter, temp_buffer);
 
     // Copier uniquement les LEDs non réservées (priority == 0)
     for (uint16_t idx = 0; idx < total_leds; idx++) {
@@ -1734,8 +1748,8 @@ uint16_t config_manager_get_led_count(void) {
 
 bool config_manager_set_led_count(uint16_t led_count) {
   // Validation
-  if (led_count < 1 || led_count > 1000) {
-    ESP_LOGE(TAG_CONFIG, "Nombre de LEDs invalide: %d (1-1000)", led_count);
+  if (led_count < 1 || led_count > 200) {
+    ESP_LOGE(TAG_CONFIG, "Nombre de LEDs invalide: %d (1-200)", led_count);
     return false;
   }
 

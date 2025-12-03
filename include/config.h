@@ -64,4 +64,11 @@ void config_init_device_names(void);
 #define DEFAULT_SPEED 50
 #define MAX_BRIGHTNESS 255
 
+// Configuration LED matérielle
+/**
+ * Nombre maximum de LEDs supportées par le système.
+ * Limité à 200 pour éviter les problèmes de mémoire sur ESP32.
+ */
+#define MAX_LED_COUNT 200
+
 #endif // CONFIG_H
