@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #define TAG_CONFIG "ConfigMgr"
-#define MAX_PROFILES 10
+#define MAX_PROFILE_SCAN_LIMIT 1000  // Limite de scan pour éviter une boucle infinie
 #define PROFILE_NAME_MAX_LEN 32
 
 // IDs alphanumériques stables pour les événements CAN (ne changent jamais)
@@ -156,11 +156,11 @@ bool config_manager_init(void);
 
 /**
  * @brief Sauvegarde un profil en NVS
- * @param profile_id ID du profil (0-9)
+ * @param profile_id ID du profil (0-999)
  * @param profile Profil à sauvegarder
  * @return true si succès
  */
-bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *profile);
+bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile);
 
 /**
  * @brief Charge un profil depuis NVS
@@ -168,21 +168,21 @@ bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *pro
  * @param profile Pointeur vers le profil
  * @return true si succès
  */
-bool config_manager_load_profile(uint8_t profile_id, config_profile_t *profile);
+bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile);
 
 /**
  * @brief Supprime un profil
  * @param profile_id ID du profil
  * @return true si succès
  */
-bool config_manager_delete_profile(uint8_t profile_id);
+bool config_manager_delete_profile(uint16_t profile_id);
 
 /**
  * @brief Active un profil
  * @param profile_id ID du profil
  * @return true si succès
  */
-bool config_manager_activate_profile(uint8_t profile_id);
+bool config_manager_activate_profile(uint16_t profile_id);
 
 /**
  * @brief Renomme un profil
@@ -190,7 +190,7 @@ bool config_manager_activate_profile(uint8_t profile_id);
  * @param new_name Nouveau nom du profil
  * @return true si succès
  */
-bool config_manager_rename_profile(uint8_t profile_id, const char *new_name);
+bool config_manager_rename_profile(uint16_t profile_id, const char *new_name);
 
 /**
  * @brief Obtient le profil actif
@@ -229,7 +229,7 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
  * @param priority Priorité
  * @return true si succès
  */
-bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority);
+bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority);
 
 /**
  * @brief Active ou désactive un événement
@@ -238,7 +238,7 @@ bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event,
  * @param enabled true pour activer, false pour désactiver
  * @return true si succès
  */
-bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event, bool enabled);
+bool config_manager_set_event_enabled(uint16_t profile_id, can_event_type_t event, bool enabled);
 
 /**
  * @brief Traite un événement CAN et applique l'effet correspondant
@@ -273,7 +273,7 @@ bool config_manager_has_active_events(void);
  * @param buffer_size Taille du buffer
  * @return true si succès
  */
-bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t buffer_size);
+bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size);
 
 /**
  * @brief Importe un profil depuis JSON
@@ -281,7 +281,7 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
  * @param json_string JSON du profil
  * @return true si succès
  */
-bool config_manager_import_profile(uint8_t profile_id, const char *json_string);
+bool config_manager_import_profile(uint16_t profile_id, const char *json_string);
 
 /**
  * @brief Obtient la configuration d'effet pour un événement spécifique

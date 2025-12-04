@@ -164,7 +164,7 @@ bool config_manager_init(void) {
   if (err == ESP_OK) {
     int32_t saved_active_id = -1;
     err = nvs_get_i32(nvs_handle, "active_id", &saved_active_id);
-    if (err == ESP_OK && saved_active_id >= 0 && saved_active_id < MAX_PROFILES) {
+    if (err == ESP_OK && saved_active_id >= 0) {
       active_profile_id = saved_active_id;
     }
     nvs_close(nvs_handle);
@@ -172,7 +172,7 @@ bool config_manager_init(void) {
 
   // Essayer de charger le profil actif
   bool profile_exists = false;
-  if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
+  if (active_profile_id >= 0) {
     profile_exists = config_manager_load_profile(active_profile_id, &active_profile);
     if (profile_exists) {
       active_profile_loaded = true;
@@ -207,8 +207,67 @@ bool config_manager_init(void) {
 
 // Cette fonction n'est plus nécessaire - on charge uniquement le profil actif à la demande
 
-bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *profile) {
-  if (profile_id >= MAX_PROFILES || profile == NULL) {
+/**
+ * @brief Compte le nombre de profils existants dans NVS
+ * @return Nombre de profils trouvés
+ */
+static int config_manager_count_profiles(void) {
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+
+  if (err != ESP_OK) {
+    return 0;
+  }
+
+  int count = 0;
+  char key[16];
+
+  // Scanner tous les IDs possibles
+  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
+    snprintf(key, sizeof(key), "profile_%d", i);
+    size_t required_size;
+    err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+    if (err == ESP_OK) {
+      count++;
+    }
+  }
+
+  nvs_close(nvs_handle);
+  return count;
+}
+
+/**
+ * @brief Trouve le prochain ID de profil disponible
+ * @return ID disponible (>= 0) ou -1 si erreur
+ */
+static int config_manager_find_next_profile_id(void) {
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+
+  if (err != ESP_OK) {
+    return -1;
+  }
+
+  char key[16];
+  int next_id = -1;
+
+  // Chercher le premier ID libre
+  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
+    snprintf(key, sizeof(key), "profile_%d", i);
+    size_t required_size;
+    err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+      next_id = i;
+      break;
+    }
+  }
+
+  nvs_close(nvs_handle);
+  return next_id;
+}
+
+bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile) {
+  if (profile == NULL) {
     return false;
   }
 
@@ -260,8 +319,8 @@ bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *pro
   return true;
 }
 
-bool config_manager_load_profile(uint8_t profile_id, config_profile_t *profile) {
-  if (profile_id >= MAX_PROFILES || profile == NULL) {
+bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile) {
+  if (profile == NULL) {
     return false;
   }
 
@@ -302,11 +361,7 @@ bool config_manager_load_profile(uint8_t profile_id, config_profile_t *profile) 
   return (err == ESP_OK);
 }
 
-bool config_manager_delete_profile(uint8_t profile_id) {
-  if (profile_id >= MAX_PROFILES) {
-    return false;
-  }
-
+bool config_manager_delete_profile(uint16_t profile_id) {
   nvs_handle_t nvs_handle;
   esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
 
@@ -326,7 +381,7 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   }
 
   // Vérifier que le profil n'est pas utilisé dans des événements d'autres profils
-  // On doit charger tous les profils pour cette vérification
+  // Scanner dynamiquement tous les profils existants
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
     nvs_close(nvs_handle);
@@ -334,7 +389,8 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     return false;
   }
 
-  for (int p = 0; p < MAX_PROFILES; p++) {
+  // Scanner tous les IDs possibles
+  for (int p = 0; p < MAX_PROFILE_SCAN_LIMIT; p++) {
     if (p == profile_id) continue;  // Ignorer le profil qu'on veut supprimer
 
     snprintf(key, sizeof(key), "profile_%d", p);
@@ -375,7 +431,8 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   }
 
   bool needs_compression = false;
-  for (int i = profile_id + 1; i < MAX_PROFILES; i++) {
+  // Scanner dynamiquement les profils suivants
+  for (int i = profile_id + 1; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     snprintf(key, sizeof(key), "profile_%d", i);
     required_size = sizeof(config_profile_t);
     if (nvs_get_blob(nvs_handle, key, NULL, &required_size) == ESP_OK) {
@@ -387,7 +444,8 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   if (needs_compression) {
     ESP_LOGI(TAG_CONFIG, "Compression des IDs de profils après suppression du profil %d", profile_id);
 
-    for (int i = profile_id; i < MAX_PROFILES - 1; i++) {
+    // Scanner et décaler les profils
+    for (int i = profile_id; i < MAX_PROFILE_SCAN_LIMIT - 1; i++) {
       char next_key[16];
       snprintf(next_key, sizeof(next_key), "profile_%d", i + 1);
 
@@ -420,7 +478,8 @@ bool config_manager_delete_profile(uint8_t profile_id) {
       active_profile_id = -1;
       active_profile_loaded = false;
 
-      for (int i = 0; i < MAX_PROFILES; i++) {
+      // Scanner dynamiquement tous les profils
+      for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
         snprintf(key, sizeof(key), "profile_%d", i);
         required_size = sizeof(config_profile_t);
         if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
@@ -445,7 +504,7 @@ bool config_manager_delete_profile(uint8_t profile_id) {
       active_profile_id = -1;
       active_profile_loaded = false;
 
-      for (int i = 0; i < MAX_PROFILES; i++) {
+      for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
         snprintf(key, sizeof(key), "profile_%d", i);
         required_size = sizeof(config_profile_t);
         if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
@@ -473,8 +532,8 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   return true;
 }
 
-bool config_manager_rename_profile(uint8_t profile_id, const char *new_name) {
-  if (profile_id >= MAX_PROFILES || new_name == NULL) {
+bool config_manager_rename_profile(uint16_t profile_id, const char *new_name) {
+  if (new_name == NULL) {
     return false;
   }
 
@@ -512,11 +571,7 @@ bool config_manager_rename_profile(uint8_t profile_id, const char *new_name) {
   return success;
 }
 
-bool config_manager_activate_profile(uint8_t profile_id) {
-  if (profile_id >= MAX_PROFILES) {
-    return false;
-  }
-
+bool config_manager_activate_profile(uint16_t profile_id) {
   // Charger le nouveau profil depuis NVS
   if (!config_manager_load_profile(profile_id, &active_profile)) {
     ESP_LOGE(TAG_CONFIG, "Profil %d inexistant", profile_id);
@@ -576,13 +631,20 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
   int count = 0;
   char key[16];
 
-  for (int i = 0; i < MAX_PROFILES && count < max_profiles; i++) {
+  // Scanner dynamiquement tous les profils
+  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT && count < max_profiles; i++) {
     snprintf(key, sizeof(key), "profile_%d", i);
-    size_t required_size = sizeof(config_profile_t);
 
-    err = nvs_get_blob(nvs_handle, key, &profile_list[count], &required_size);
+    // D'abord vérifier si la clé existe
+    size_t required_size = 0;
+    err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+
+    // Si la clé existe et a la bonne taille, la charger
     if (err == ESP_OK && required_size == sizeof(config_profile_t)) {
-      count++;
+      err = nvs_get_blob(nvs_handle, key, &profile_list[count], &required_size);
+      if (err == ESP_OK) {
+        count++;
+      }
     }
   }
 
@@ -642,8 +704,8 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   profile->modified_timestamp = profile->created_timestamp;
 }
 
-bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority) {
-  if (profile_id >= MAX_PROFILES || event >= CAN_EVENT_MAX || effect_config == NULL) {
+bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority) {
+  if (event >= CAN_EVENT_MAX || effect_config == NULL) {
     return false;
   }
 
@@ -681,8 +743,8 @@ bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event,
   return success;
 }
 
-bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event, bool enabled) {
-  if (profile_id >= MAX_PROFILES || event >= CAN_EVENT_MAX) {
+bool config_manager_set_event_enabled(uint16_t profile_id, can_event_type_t event, bool enabled) {
+  if (event >= CAN_EVENT_MAX) {
     return false;
   }
 
@@ -725,7 +787,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
   // Gérer le changement de profil si configuré (indépendant du flag enabled)
   if (event_effect->action_type != EVENT_ACTION_APPLY_EFFECT) {
     // EVENT_ACTION_SWITCH_PROFILE
-    if (event_effect->profile_id >= 0 && event_effect->profile_id < MAX_PROFILES) {
+    if (event_effect->profile_id >= 0) {
       ESP_LOGI(TAG_CONFIG, "Event %d: Switching to profile %d", event, event_effect->profile_id);
       config_manager_activate_profile(event_effect->profile_id);
 
@@ -1256,8 +1318,8 @@ static uint8_t percent_to_value(uint8_t percent) {
   return (percent * 255 + 50) / 100; // Arrondi au plus proche
 }
 
-bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t buffer_size) {
-  if (profile_id > MAX_PROFILES || json_buffer == NULL) {
+bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size) {
+  if (json_buffer == NULL) {
     return false;
   }
 
@@ -1539,8 +1601,8 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   return true;
 }
 
-bool config_manager_import_profile(uint8_t profile_id, const char *json_string) {
-  if (profile_id > MAX_PROFILES || json_string == NULL) {
+bool config_manager_import_profile(uint16_t profile_id, const char *json_string) {
+  if (json_string == NULL) {
     return false;
   }
 
@@ -1656,10 +1718,10 @@ bool config_manager_can_create_profile(void) {
   }
 
   // Un profil nécessite environ 1 entry (clé) + entries pour le blob
-  // Taille d'un profil : sizeof(config_profile_t) ≈ 17KB
-  // NVS entry = 32 bytes, donc un profil ≈ 17KB/32 ≈ 544 entries
-  // On garde une marge de sécurité : on vérifie qu'il reste au moins 600 entries libres
-  const size_t ENTRIES_PER_PROFILE = 600;
+  // Taille d'un profil : sizeof(config_profile_t) ≈ 2KB
+  // NVS entry = 32 bytes, donc un profil ≈ 2KB/32 ≈ 64 entries
+  // On garde une marge de sécurité : on vérifie qu'il reste au moins 100 entries libres
+  const size_t ENTRIES_PER_PROFILE = 100;
   const size_t MIN_FREE_ENTRIES = ENTRIES_PER_PROFILE;
 
   bool can_create = nvs_stats.free_entries >= MIN_FREE_ENTRIES;

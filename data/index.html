@@ -88,14 +88,172 @@
             <div id="app-content" class="app-content">
         <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" data-tab="vehicle" onclick="switchTab('vehicle', event)" data-i18n="tabs.vehicle">Véhicule</button>
-          <button class="tab" data-tab="profiles" onclick="switchTab('profiles', event)" data-i18n="tabs.profiles">Profils</button>
+          <button class="tab active" data-tab="profiles" onclick="switchTab('profiles', event)" data-i18n="tabs.profiles">Profils</button>
           <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)" data-i18n="tabs.eventsConfig">Événements</button>
+          <button class="tab" data-tab="vehicle" onclick="switchTab('vehicle', event)" data-i18n="tabs.vehicle">Véhicule</button>
           <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.hardware">Matérielle</button>
           <button class="tab" data-tab="ota" onclick="switchTab('ota', event)" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
+        <!-- Tab: Profils -->
+        <div id="profiles-tab" class="tab-content active">
+            <div class="section-title" data-i18n="profiles.title">Gestion des Profils</div>
+            <div id="profiles-notification" class="notification"></div>
+
+            <!-- Section: Sélection du profil -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="profiles.profileSelection">Sélection du Profil</h3>
+                </div>
+                <div class="profile-section-content">
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
+                        <select id="profile-select" onchange="activateProfile()">
+                            <option value="-1" data-i18n="profiles.loading">Chargement...</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="storage-info" style="margin-top: 10px; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <label class="control-label" data-i18n="profiles.storage">Stockage Profils</label>
+                            <span id="storage-text" style="font-size: 0.9em; color: #aaa;">-</span>
+                        </div>
+                        <div style="width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden;">
+                            <div id="storage-bar" style="height: 100%; background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336); width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button id="profile-new-button" class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
+                        <button class="btn-secondary" onclick="showRenameProfileDialog()" data-i18n="profiles.rename">Renommer</button>
+                        <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
+                        <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
+                        <button id="profile-import-button" class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Luminosité Dynamique -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="profiles.dynamicBrightness">Luminosité Dynamique</h3>
+                    <p data-i18n="profiles.dynamicBrightnessDesc">Ajuste automatiquement la luminosité en fonction de la luminosité de l'écran de la voiture</p>
+                </div>
+                <div class="profile-section-content">
+                    <label class="toggle-container" for="dynamic-brightness-enabled">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="dynamic-brightness-enabled">
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label" data-i18n="profiles.dynamicBrightnessEnable">Activer la luminosité dynamique</span>
+                    </label>
+                    <div class="control-group" style="margin-top: 15px;">
+                        <label class="control-label" data-i18n="profiles.dynamicBrightnessRate">Taux d'Application (%)</label>
+                        <div class="slider-container">
+                            <input type="range" id="dynamic-brightness-rate" min="1" max="100" value="50">
+                            <span class="slider-value" id="dynamic-brightness-rate-value">50%</span>
+                        </div>
+                        <p style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;" data-i18n="profiles.dynamicBrightnessHelp">
+                            Exemple: Si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16.8%
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Effet par Défaut -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="profiles.defaultEffect">Effet par Défaut</h3>
+                    <p data-i18n="profiles.defaultEffectDesc">Effet affiché quand aucun événement CAN n'est actif</p>
+                </div>
+                <div class="profile-section-content">
+                    <!-- Effet et paramètres de base -->
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="effects.effect">Effet</label>
+                        <select id="default-effect-select" data-effect-options="true">
+                            <!-- Will be populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
+                            <div class="slider-container">
+                                <input type="range" id="default-brightness-slider" min="1" max="100" value="50">
+                                <span class="slider-value" id="default-brightness-value">50%</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" data-i18n="effects.speed">Vitesse</label>
+                            <div class="slider-container">
+                                <input type="range" id="default-speed-slider" min="1" max="100" value="50">
+                                <span class="slider-value" id="default-speed-value">50%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="effects.color">Couleur</label>
+                        <input type="color" id="default-color1" value="#ff0000">
+                    </div>
+
+                    <!-- Options avancées -->
+                    <div class="control-row">
+                        <label class="toggle-container" for="default-reverse">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="default-reverse">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span class="toggle-label" data-i18n="eventsConfig.reverse">Inverser le sens</span>
+                        </label>
+                        <label class="toggle-container" for="default-audio-reactive">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="default-audio-reactive">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span class="toggle-label" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</span>
+                        </label>
+                    </div>
+
+                    <!-- Plage de segment -->
+                    <div class="control-group" style="margin-top: 20px;">
+                        <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
+                        <div class="segment-range-container">
+                            <div class="segment-range-slider" id="default-segment-range">
+                                <div class="segment-range-track"></div>
+                                <div class="segment-range-selected" id="default-segment-range-selected"></div>
+                                <input type="range" min="0" max="300" step="1" value="0"
+                                    class="segment-range-min" id="default-segment-range-min"
+                                    oninput="updateDefaultSegmentRange()">
+                                <input type="range" min="0" max="300" step="1" value="300"
+                                    class="segment-range-max" id="default-segment-range-max"
+                                    oninput="updateDefaultSegmentRange()">
+                            </div>
+                            <div class="segment-range-values">
+                                <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span> |
+                                <span data-i18n="eventsConfig.length">Longueur</span>: <span id="default-segment-value-length">300</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Tab: Events Configuration -->
+        <div id="events-config-tab" class="tab-content">
+            <div class="section-title" data-i18n="eventsConfig.title">Configuration des Événements</div>
+            <div id="events-notification" class="notification"></div>
+            <div id="events-loading" class="loading" data-i18n="eventsConfig.loading">Chargement de la configuration...</div>
+            <div id="events-content" style="display: none;">
+                <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="eventsConfig.description">
+                    Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
+                </p>
+                <div class="events-accordion-wrapper">
+                    <div id="events-accordion-container">
+                        <!-- Will be populated dynamically with accordion items -->
+                    </div>
+                </div>
+                <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>
+            </div>
+        </div>
         <!-- Tab: Véhicule -->
-        <div id="vehicle-tab" class="tab-content active">
+        <div id="vehicle-tab" class="tab-content">
             <div class="section-title" data-i18n="vehicle.title">Données Véhicule</div>
 
             <!-- Section: État général -->
@@ -315,164 +473,6 @@
                 </div>
             </div>
                 </div>
-            </div>
-        </div>
-        <!-- Tab: Profils -->
-        <div id="profiles-tab" class="tab-content">
-            <div class="section-title" data-i18n="profiles.title">Gestion des Profils</div>
-            <div id="profiles-notification" class="notification"></div>
-
-            <!-- Section: Sélection du profil -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="profiles.profileSelection">Sélection du Profil</h3>
-                </div>
-                <div class="profile-section-content">
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
-                        <select id="profile-select" onchange="activateProfile()">
-                            <option value="-1" data-i18n="profiles.loading">Chargement...</option>
-                        </select>
-                    </div>
-                    <div class="control-group" id="storage-info" style="margin-top: 10px; display: none;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <label class="control-label" data-i18n="profiles.storage">Stockage Profils</label>
-                            <span id="storage-text" style="font-size: 0.9em; color: #aaa;">-</span>
-                        </div>
-                        <div style="width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden;">
-                            <div id="storage-bar" style="height: 100%; background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336); width: 0%; transition: width 0.3s;"></div>
-                        </div>
-                    </div>
-                    <div class="button-group">
-                        <button class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
-                        <button class="btn-secondary" onclick="showRenameProfileDialog()" data-i18n="profiles.rename">Renommer</button>
-                        <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
-                        <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
-                        <button class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section: Luminosité Dynamique -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="profiles.dynamicBrightness">Luminosité Dynamique</h3>
-                    <p data-i18n="profiles.dynamicBrightnessDesc">Ajuste automatiquement la luminosité en fonction de la luminosité de l'écran de la voiture</p>
-                </div>
-                <div class="profile-section-content">
-                    <label class="toggle-container" for="dynamic-brightness-enabled">
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="dynamic-brightness-enabled">
-                            <span class="toggle-slider"></span>
-                        </div>
-                        <span class="toggle-label" data-i18n="profiles.dynamicBrightnessEnable">Activer la luminosité dynamique</span>
-                    </label>
-                    <div class="control-group" style="margin-top: 15px;">
-                        <label class="control-label" data-i18n="profiles.dynamicBrightnessRate">Taux d'Application (%)</label>
-                        <div class="slider-container">
-                            <input type="range" id="dynamic-brightness-rate" min="1" max="100" value="50">
-                            <span class="slider-value" id="dynamic-brightness-rate-value">50%</span>
-                        </div>
-                        <p style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;" data-i18n="profiles.dynamicBrightnessHelp">
-                            Exemple: Si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16.8%
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section: Effet par Défaut -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="profiles.defaultEffect">Effet par Défaut</h3>
-                    <p data-i18n="profiles.defaultEffectDesc">Effet affiché quand aucun événement CAN n'est actif</p>
-                </div>
-                <div class="profile-section-content">
-                    <!-- Effet et paramètres de base -->
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="effects.effect">Effet</label>
-                        <select id="default-effect-select" data-effect-options="true">
-                            <!-- Will be populated dynamically -->
-                        </select>
-                    </div>
-
-                    <div class="control-row">
-                        <div class="control-group">
-                            <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
-                            <div class="slider-container">
-                                <input type="range" id="default-brightness-slider" min="1" max="100" value="50">
-                                <span class="slider-value" id="default-brightness-value">50%</span>
-                            </div>
-                        </div>
-                        <div class="control-group">
-                            <label class="control-label" data-i18n="effects.speed">Vitesse</label>
-                            <div class="slider-container">
-                                <input type="range" id="default-speed-slider" min="1" max="100" value="50">
-                                <span class="slider-value" id="default-speed-value">50%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="effects.color">Couleur</label>
-                        <input type="color" id="default-color1" value="#ff0000">
-                    </div>
-
-                    <!-- Options avancées -->
-                    <div class="control-row">
-                        <label class="toggle-container" for="default-reverse">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="default-reverse">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="eventsConfig.reverse">Inverser le sens</span>
-                        </label>
-                        <label class="toggle-container" for="default-audio-reactive">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="default-audio-reactive">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</span>
-                        </label>
-                    </div>
-
-                    <!-- Plage de segment -->
-                    <div class="control-group" style="margin-top: 20px;">
-                        <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
-                        <div class="segment-range-container">
-                            <div class="segment-range-slider" id="default-segment-range">
-                                <div class="segment-range-track"></div>
-                                <div class="segment-range-selected" id="default-segment-range-selected"></div>
-                                <input type="range" min="0" max="300" step="1" value="0"
-                                    class="segment-range-min" id="default-segment-range-min"
-                                    oninput="updateDefaultSegmentRange()">
-                                <input type="range" min="0" max="300" step="1" value="300"
-                                    class="segment-range-max" id="default-segment-range-max"
-                                    oninput="updateDefaultSegmentRange()">
-                            </div>
-                            <div class="segment-range-values">
-                                <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span> |
-                                <span data-i18n="eventsConfig.length">Longueur</span>: <span id="default-segment-value-length">300</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Tab: Events Configuration -->
-        <div id="events-config-tab" class="tab-content">
-            <div class="section-title" data-i18n="eventsConfig.title">Configuration des Événements</div>
-            <div id="events-notification" class="notification"></div>
-            <div id="events-loading" class="loading" data-i18n="eventsConfig.loading">Chargement de la configuration...</div>
-            <div id="events-content" style="display: none;">
-                <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="eventsConfig.description">
-                    Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
-                </p>
-                <div class="events-accordion-wrapper">
-                    <div id="events-accordion-container">
-                        <!-- Will be populated dynamically with accordion items -->
-                    </div>
-                </div>
-                <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>
             </div>
         </div>
         <!-- Tab: Configuration -->
@@ -710,6 +710,4 @@
 <script src="i18n.js"></script>
 <script src="script.js"></script>
 </html>
-
-
 

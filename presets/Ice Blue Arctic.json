@@ -12,7 +12,7 @@
     "segment_start": 0,
     "segment_length": 0
   },
-  "dynamic_brightness_enabled": true,
+  "dynamic_brightness_enabled": false,
   "dynamic_brightness_rate": 65,
   "event_effects": [
     {

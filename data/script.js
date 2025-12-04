@@ -1822,10 +1822,10 @@ async function loadProfiles() {
                 storageBar.style.background = '#F44336';
             }
 
-            // Désactiver les boutons de création si espace insuffisant (< 600 entries libres)
-            const canCreate = free >= 600;
-            const newButton = document.querySelector('button[onclick="showNewProfileDialog()"]');
-            const importButton = document.querySelector('button[onclick="showImportDialog()"]');
+            // Désactiver les boutons de création si espace insuffisant (< 200 entries libres)
+            const canCreate = free >= 200;
+            const newButton = $('profile-new-button');
+            const importButton = $('profile-import-button');
             if (newButton) {
                 newButton.disabled = !canCreate;
                 newButton.title = canCreate ? '' : 'Espace de stockage insuffisant';

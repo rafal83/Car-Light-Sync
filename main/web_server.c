@@ -609,8 +609,8 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
   cJSON *root           = cJSON_CreateObject();
   cJSON *profiles_array = cJSON_CreateArray();
 
-  // Charger chaque profil un par un
-  for (int i = 0; i < MAX_PROFILES; i++) {
+  // Charger chaque profil un par un (scanner dynamiquement)
+  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     if (!config_manager_load_profile(i, profile)) {
       continue; // Profil n'existe pas, passer au suivant
     }
@@ -741,8 +741,8 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Trouver un slot libre
-  for (int i = 0; i < MAX_PROFILES; i++) {
+  // Trouver un slot libre (scanner dynamiquement)
+  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     if (!config_manager_load_profile(i, temp)) {
       // Slot libre
       ESP_LOGI(TAG_WEBSERVER, "Création profil '%s' dans slot %d", name->valuestring, i);
@@ -823,7 +823,7 @@ static esp_err_t profile_rename_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  bool success = config_manager_rename_profile((uint8_t)profile_id->valueint, name->valuestring);
+  bool success = config_manager_rename_profile((uint16_t)profile_id->valueint, name->valuestring);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, success ? "{\"st\":\"ok\"}" : "{\"st\":\"error\"}");
@@ -875,7 +875,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  uint8_t profile_id        = (uint8_t)profile_id_json->valueint;
+  uint16_t profile_id = (uint16_t)profile_id_json->valueint;
 
   // Allouer dynamiquement pour éviter stack overflow
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
@@ -1050,7 +1050,7 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  uint8_t profile_id = atoi(param_value);
+  uint16_t profile_id = atoi(param_value);
 
   // Allouer un buffer pour le JSON (16KB devrait suffire pour un profil complet)
   char *json_buffer  = malloc(BUFFER_SIZE_PROFILE);
@@ -1089,14 +1089,14 @@ static int find_free_profile_slot(int preferred_id) {
 
   int target_id = -1;
 
-  if (preferred_id >= 0 && preferred_id < MAX_PROFILES) {
-    if (!config_manager_load_profile((uint8_t)preferred_id, profile)) {
+  if (preferred_id >= 0) {
+    if (!config_manager_load_profile((uint16_t)preferred_id, profile)) {
       target_id = preferred_id;
     }
   }
 
   if (target_id < 0) {
-    for (int i = 0; i < MAX_PROFILES; i++) {
+    for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
       if (!config_manager_load_profile(i, profile)) {
         target_id = i;
         break;
@@ -1157,7 +1157,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  bool success = config_manager_import_profile((uint8_t)target_id, profile_json);
+  bool success = config_manager_import_profile((uint16_t)target_id, profile_json);
 
   free(profile_json);
   cJSON_Delete(root);
@@ -1166,7 +1166,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "application/json");
   if (success) {
     // Activer le profil importé
-    config_manager_activate_profile((uint8_t)target_id);
+    config_manager_activate_profile((uint16_t)target_id);
 
     char response[64];
     snprintf(response, sizeof(response), "{\"st\":\"ok\",\"pid\":%d}", target_id);
