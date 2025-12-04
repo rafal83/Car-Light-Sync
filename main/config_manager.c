@@ -30,6 +30,10 @@ static config_profile_t active_profile;
 static int active_profile_id = -1;
 static bool active_profile_loaded = false;
 
+// Commande par boutons volant (opt-in)
+static bool wheel_control_enabled         = false;
+static uint8_t wheel_control_speed_limit  = 5; // km/h
+
 // Système d'événements multiples
 #define MAX_ACTIVE_EVENTS 5
 typedef struct {
@@ -72,6 +76,31 @@ static inline bool event_is_right(can_event_type_t event) {
     return true;
   default:
     return false;
+  }
+}
+
+static void load_wheel_control_settings(void) {
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("settings", NVS_READONLY, &nvs_handle);
+  if (err == ESP_OK) {
+    uint8_t enabled_u8 = 0;
+    uint8_t speed_kph = wheel_control_speed_limit;
+    nvs_get_u8(nvs_handle, "wheel_ctl", &enabled_u8);
+    esp_err_t err_spd = nvs_get_u8(nvs_handle, "wheel_spd", &speed_kph);
+    if (err_spd != ESP_OK) {
+      // Compat ancien stockage en décikm/h (u16)
+      uint16_t legacy = 0;
+      if (nvs_get_u16(nvs_handle, "wheel_spd", &legacy) == ESP_OK) {
+        speed_kph = (uint8_t)(legacy / 10);
+      }
+    }
+    wheel_control_enabled = enabled_u8 != 0;
+    wheel_control_speed_limit = speed_kph;
+    nvs_close(nvs_handle);
+  }
+  // Clamp
+  if (wheel_control_speed_limit > 100) {
+    wheel_control_speed_limit = 100;
   }
 }
 
@@ -157,6 +186,9 @@ bool config_manager_init(void) {
   memset(&active_profile, 0, sizeof(active_profile));
   active_profile_loaded = false;
 
+  // Charger les réglages de contrôle volant (opt-in)
+  load_wheel_control_settings();
+
   // Charger l'ID du profil actif depuis NVS
   nvs_handle_t nvs_handle;
   esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
@@ -184,22 +216,33 @@ bool config_manager_init(void) {
 
   // Si aucun profil n'existe, créer un profil par défaut
   if (!profile_exists) {
-    ESP_LOGI(TAG_CONFIG, "Aucun profil trouvé, création du profil par défaut");
+    ESP_LOGI(TAG_CONFIG, "Aucun profil trouvé, création du profil par défaut + profil Eteint");
     config_manager_create_default_profile(&active_profile, "Default");
-    config_manager_save_profile(0, &active_profile);
-    active_profile_id = 0;
+    config_manager_save_profile(1, &active_profile);
+    active_profile_id = 1;
     active_profile_loaded = true;
+
+    config_profile_t off_profile;
+    config_manager_create_off_profile(&off_profile, "Eteint");
+    config_manager_save_profile(0, &off_profile);
 
     // Sauvegarder l'ID actif
     err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK) {
-      nvs_set_i32(nvs_handle, "active_id", 0);
+      nvs_set_i32(nvs_handle, "active_id", active_profile_id);
       nvs_commit(nvs_handle);
       nvs_close(nvs_handle);
     }
 
     led_effects_set_config(&active_profile.default_effect);
     effect_override_active = false;
+  }
+
+  // S'assurer qu'un profil "Eteint" existe (ID 0 réservé)
+  config_profile_t off_profile;
+  if (!config_manager_load_profile(0, &off_profile)) {
+    config_manager_create_off_profile(&off_profile, "Eteint");
+    config_manager_save_profile(0, &off_profile);
   }
 
   return true;
@@ -615,6 +658,77 @@ int config_manager_get_active_profile_id(void) {
   return active_profile_id;
 }
 
+bool config_manager_cycle_active_profile(int direction) {
+  if (!active_profile_loaded || (direction != 1 && direction != -1)) {
+    return false;
+  }
+
+  int start_id = active_profile_id < 0 ? 0 : active_profile_id;
+  for (int step = 1; step < MAX_PROFILE_SCAN_LIMIT; step++) {
+    int candidate = start_id + direction * step;
+    if (candidate < 0 || candidate >= MAX_PROFILE_SCAN_LIMIT) {
+      break;
+    }
+    config_profile_t temp;
+    if (config_manager_load_profile((uint16_t)candidate, &temp)) {
+      return config_manager_activate_profile((uint16_t)candidate);
+    }
+  }
+  return false;
+}
+
+bool config_manager_get_wheel_control_enabled(void) {
+  return wheel_control_enabled;
+}
+
+bool config_manager_set_wheel_control_enabled(bool enabled) {
+  wheel_control_enabled = enabled;
+
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("settings", NVS_READWRITE, &nvs_handle);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to open NVS settings for wheel_ctl: %s", esp_err_to_name(err));
+    return false;
+  }
+  err = nvs_set_u8(nvs_handle, "wheel_ctl", enabled ? 1 : 0);
+  if (err == ESP_OK) {
+    nvs_commit(nvs_handle);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Failed to save wheel_ctl: %s", esp_err_to_name(err));
+  }
+  nvs_close(nvs_handle);
+  return err == ESP_OK;
+}
+
+int config_manager_get_wheel_control_speed_limit(void) {
+  return (int)wheel_control_speed_limit;
+}
+
+bool config_manager_set_wheel_control_speed_limit(int speed_kph) {
+  if (speed_kph < 0) {
+    speed_kph = 0;
+  }
+  if (speed_kph > 100) {
+    speed_kph = 100;
+  }
+  wheel_control_speed_limit = (uint8_t)speed_kph;
+
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("settings", NVS_READWRITE, &nvs_handle);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to open NVS settings for wheel_spd: %s", esp_err_to_name(err));
+    return false;
+  }
+  err = nvs_set_u8(nvs_handle, "wheel_spd", wheel_control_speed_limit);
+  if (err == ESP_OK) {
+    nvs_commit(nvs_handle);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Failed to save wheel_spd: %s", esp_err_to_name(err));
+  }
+  nvs_close(nvs_handle);
+  return err == ESP_OK;
+}
+
 int config_manager_list_profiles(config_profile_t *profile_list, int max_profiles) {
   if (profile_list == NULL || max_profiles <= 0) {
     return 0;
@@ -702,6 +816,47 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   profile->active             = false;
   profile->created_timestamp  = (uint32_t)time(NULL);
   profile->modified_timestamp = profile->created_timestamp;
+}
+
+void config_manager_create_off_profile(config_profile_t *profile, const char *name) {
+  memset(profile, 0, sizeof(config_profile_t));
+  strncpy(profile->name, name ? name : "Eteint", PROFILE_NAME_MAX_LEN - 1);
+
+  profile->default_effect.effect     = EFFECT_OFF;
+  profile->default_effect.brightness = 0;
+  profile->default_effect.speed      = 1;
+  profile->default_effect.color1     = 0;
+  profile->default_effect.segment_start  = 0;
+  profile->default_effect.segment_length = 0;
+  profile->default_effect.audio_reactive = false;
+  profile->default_effect.reverse        = false;
+  profile->default_effect.sync_mode      = SYNC_OFF;
+
+  for (int i = 0; i < CAN_EVENT_MAX; i++) {
+    profile->event_effects[i].event      = (can_event_type_t)i;
+    profile->event_effects[i].action_type = EVENT_ACTION_APPLY_EFFECT;
+    profile->event_effects[i].enabled    = false;
+    profile->event_effects[i].priority   = 0;
+    profile->event_effects[i].duration_ms = 0;
+    profile->event_effects[i].profile_id = -1;
+    profile->event_effects[i].effect_config.effect         = EFFECT_OFF;
+    profile->event_effects[i].effect_config.brightness     = 0;
+    profile->event_effects[i].effect_config.speed          = 1;
+    profile->event_effects[i].effect_config.color1         = 0;
+    profile->event_effects[i].effect_config.color2         = 0;
+    profile->event_effects[i].effect_config.color3         = 0;
+    profile->event_effects[i].effect_config.segment_start  = 0;
+    profile->event_effects[i].effect_config.segment_length = 0;
+    profile->event_effects[i].effect_config.audio_reactive = false;
+    profile->event_effects[i].effect_config.reverse        = false;
+    profile->event_effects[i].effect_config.sync_mode      = SYNC_OFF;
+  }
+
+  profile->dynamic_brightness_enabled = false;
+  profile->dynamic_brightness_rate    = 0;
+  profile->active                     = false;
+  profile->created_timestamp          = (uint32_t)time(NULL);
+  profile->modified_timestamp         = profile->created_timestamp;
 }
 
 bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority) {
@@ -1287,16 +1442,43 @@ bool config_manager_factory_reset(void) {
     nvs_commit(nvs_handle);
     nvs_close(nvs_handle);
   }
+  wheel_control_enabled     = false;
+  wheel_control_speed_limit = 5;
+
+  // Effacer les réglages globaux (wheel control, etc.)
+  err = nvs_open("settings", NVS_READWRITE, &nvs_handle);
+  if (err == ESP_OK) {
+    nvs_erase_all(nvs_handle);
+    nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+  }
 
   // Réinitialiser le profil actif en RAM
   memset(&active_profile, 0, sizeof(active_profile));
   active_profile_id = -1;
   active_profile_loaded = false;
 
-  // Créer un profil par défaut
-  config_manager_create_default_profile(&active_profile, "Default");
-  config_manager_save_profile(0, &active_profile);
-  config_manager_activate_profile(0);
+  // Créer les profils de base sans utiliser la stack (éviter overflow httpd)
+  config_profile_t *default_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *off_profile     = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (off_profile) {
+    config_manager_create_off_profile(off_profile, "Eteint");
+    config_manager_save_profile(0, off_profile);
+  }
+  if (default_profile) {
+    config_manager_create_default_profile(default_profile, "Default");
+    config_manager_save_profile(1, default_profile);
+    memcpy(&active_profile, default_profile, sizeof(config_profile_t));
+    active_profile_id     = 1;
+    active_profile_loaded = true;
+  }
+  config_manager_activate_profile(1);
+  if (default_profile) {
+    free(default_profile);
+  }
+  if (off_profile) {
+    free(off_profile);
+  }
 
   ESP_LOGI(TAG_CONFIG, "Factory reset complete. Default profile created.");
   return true;

@@ -119,8 +119,7 @@ static bool dual_directional_mode                  = false;
 static effect_config_t left_directional_config;
 static effect_config_t right_directional_config;
 
-// Global LED strip direction (false = normal, true = reversed)
-static bool global_reverse_direction = true;
+// Global LED strip direction (false = normal)
 static uint16_t led_count            = NUM_LEDS;
 
 static void cleanup_rmt_channel(void);
@@ -134,6 +133,28 @@ static rgb_t color_to_rgb(uint32_t color) {
   rgb.g = (color >> 8) & 0xFF;
   rgb.b = color & 0xFF;
   return rgb;
+}
+
+static rgb_t rgb_lerp(rgb_t a, rgb_t b, float t) {
+  if (t < 0.0f) {
+    t = 0.0f;
+  } else if (t > 1.0f) {
+    t = 1.0f;
+  }
+
+  rgb_t out;
+  out.r = (uint8_t)(a.r + (b.r - a.r) * t);
+  out.g = (uint8_t)(a.g + (b.g - a.g) * t);
+  out.b = (uint8_t)(a.b + (b.b - a.b) * t);
+  return out;
+}
+
+static rgb_t rgb_max(rgb_t a, rgb_t b) {
+  rgb_t out;
+  out.r = (a.r > b.r) ? a.r : b.r;
+  out.g = (a.g > b.g) ? a.g : b.g;
+  out.b = (a.b > b.b) ? a.b : b.b;
+  return out;
 }
 
 static void fill_solid(rgb_t color);
@@ -288,7 +309,7 @@ static void led_strip_show(void) {
   // Préparer les données au format GRB pour WS2812B
   // Appliquer le reverse global si activé
   for (int i = 0; i < led_count; i++) {
-    int led_index       = global_reverse_direction ? (led_count - 1 - i) : i;
+    int led_index       = (led_count - 1 - i);
     led_data[i * 3 + 0] = leds[led_index].g; // Green
     led_data[i * 3 + 1] = leds[led_index].r; // Red
     led_data[i * 3 + 2] = leds[led_index].b; // Blue
@@ -849,6 +870,268 @@ static void effect_hazard(void) {
   // Sinon tout reste éteint (pause)
 }
 
+// Effet: Comète avec traînée douce
+static void effect_comet(void) {
+  fill_solid((rgb_t){0, 0, 0});
+
+  if (led_count == 0) {
+    return;
+  }
+
+  int trail_length = led_count / 8;
+  if (trail_length < 3)
+    trail_length = 3;
+  if (trail_length > 20)
+    trail_length = 20;
+
+  int speed_divider = 256 - current_config.speed;
+  if (speed_divider < 10)
+    speed_divider = 10;
+  int head_pos = (effect_counter * 100 / speed_divider) % led_count;
+  if (current_config.reverse) {
+    head_pos = (led_count - 1) - head_pos;
+  }
+
+  rgb_t head_color = color_to_rgb(current_config.color1);
+
+  for (int i = 0; i < trail_length; i++) {
+    int offset = current_config.reverse ? i : -i;
+    int idx    = head_pos + offset;
+    if (idx < 0 || idx >= led_count) {
+      continue;
+    }
+
+    uint8_t trail_brightness = (uint8_t)((current_config.brightness * (trail_length - i)) / trail_length);
+    rgb_t color              = apply_brightness(head_color, trail_brightness);
+    leds[idx]                = color;
+  }
+}
+
+// Effet: Pluie de météores multiples
+static void effect_meteor_shower(void) {
+  fill_solid((rgb_t){0, 0, 0});
+
+  if (led_count == 0) {
+    return;
+  }
+
+  int tail_length = led_count / 10;
+  if (tail_length < 4)
+    tail_length = 4;
+  if (tail_length > 24)
+    tail_length = 24;
+
+  int meteor_count = 3;
+  int speed_divider = 80 - ((current_config.speed * 65) / 255);
+  if (speed_divider < 5)
+    speed_divider = 5;
+
+  int cycle = led_count + tail_length;
+  int step  = (effect_counter * 100 / speed_divider) % cycle;
+
+  rgb_t meteor_color = color_to_rgb(current_config.color1);
+
+  for (int m = 0; m < meteor_count; m++) {
+    int offset    = (m * cycle) / meteor_count;
+    int head_pos  = (step + offset) % cycle;
+
+    for (int t = 0; t < tail_length; t++) {
+      int pos = head_pos - t;
+      if (pos < 0) {
+        pos += cycle;
+      }
+      if (pos >= led_count) {
+        continue; // portion hors du ruban visible
+      }
+
+      int idx = current_config.reverse ? (led_count - 1 - pos) : pos;
+
+      uint8_t trail_brightness = (uint8_t)((current_config.brightness * (tail_length - t)) / tail_length);
+      rgb_t color              = apply_brightness(meteor_color, trail_brightness);
+      leds[idx]                = rgb_max(leds[idx], color);
+    }
+  }
+}
+
+// Effet: Onde concentrique qui se propage depuis le centre
+static void effect_ripple_wave(void) {
+  fill_solid((rgb_t){0, 0, 0});
+
+  if (led_count == 0) {
+    return;
+  }
+
+  float center     = (led_count - 1) / 2.0f;
+  float max_radius = center;
+  float thickness  = (float)led_count / 12.0f + 1.5f;
+  if (thickness < 2.0f)
+    thickness = 2.0f;
+
+  float speed_factor = (current_config.speed + 10) / 12.0f;
+  float radius       = fmodf(effect_counter * speed_factor, max_radius + thickness);
+  if (current_config.reverse) {
+    radius = max_radius - radius;
+  }
+
+  rgb_t color = color_to_rgb(current_config.color1);
+
+  for (int i = 0; i < led_count; i++) {
+    float dist  = fabsf((float)i - center);
+    float delta = fabsf(dist - radius);
+    if (delta > thickness) {
+      continue;
+    }
+
+    float intensity       = 1.0f - (delta / thickness);
+    uint8_t px_brightness = (uint8_t)(current_config.brightness * intensity);
+    int target_idx        = current_config.reverse ? (led_count - 1 - i) : i;
+    leds[target_idx]      = apply_brightness(color, px_brightness);
+  }
+}
+
+// Effet: Double dégradé qui respire lentement
+static void effect_dual_gradient(void) {
+  if (led_count == 0) {
+    return;
+  }
+
+  float period = 400.0f + (255 - current_config.speed) * 3.0f; // vitesse modère la respiration
+  float phase  = fmodf(effect_counter, period) / period;       // 0-1
+  bool second  = phase >= 0.5f;
+  float local  = second ? (phase - 0.5f) * 2.0f : phase * 2.0f;
+
+  rgb_t start_color = second ? color_to_rgb(current_config.color3 ? current_config.color3 : current_config.color1)
+                             : color_to_rgb(current_config.color1);
+  rgb_t end_color   = second ? color_to_rgb(current_config.color1)
+                             : color_to_rgb(current_config.color2 ? current_config.color2 : current_config.color1);
+
+  float breath           = 0.6f + 0.4f * (1.0f - fabsf(local - 0.5f) * 2.0f);
+  uint8_t base_brightness = (uint8_t)(current_config.brightness * breath);
+
+  int denom = (led_count > 1) ? (led_count - 1) : 1;
+  for (int i = 0; i < led_count; i++) {
+    float pos   = (float)i / denom;
+    rgb_t color = rgb_lerp(start_color, end_color, pos);
+    int idx     = current_config.reverse ? (led_count - 1 - i) : i;
+    leds[idx]   = apply_brightness(color, base_brightness);
+  }
+}
+
+// Effet: Fond discret + scintilles courtes
+static void effect_sparkle_overlay(void) {
+  if (led_count == 0) {
+    return;
+  }
+
+  // Fade rapide pour que les scintilles restent courtes
+  for (int i = 0; i < led_count; i++) {
+    leds[i].r = (leds[i].r * 92) / 100;
+    leds[i].g = (leds[i].g * 92) / 100;
+    leds[i].b = (leds[i].b * 92) / 100;
+  }
+
+  rgb_t base_color   = color_to_rgb(current_config.color1);
+  rgb_t base_applied = apply_brightness(base_color, current_config.brightness / 4);
+  for (int i = 0; i < led_count; i++) {
+    leds[i] = rgb_max(leds[i], base_applied);
+  }
+
+  int sparkle_slots    = 1 + (current_config.speed / 128);
+  uint8_t spawn_chance = (uint8_t)(4 + current_config.speed / 10); // %
+  if (spawn_chance > 90)
+    spawn_chance = 90;
+
+  rgb_t sparkle_color = color_to_rgb(current_config.color2 ? current_config.color2 : current_config.color1);
+  for (int s = 0; s < sparkle_slots; s++) {
+    if ((esp_random() % 100) < spawn_chance) {
+      int idx       = esp_random() % led_count;
+      rgb_t applied = apply_brightness(sparkle_color, current_config.brightness);
+      leds[idx]     = rgb_max(leds[idx], applied);
+    }
+  }
+}
+
+// Effet: Double scan centre <-> bords (reverse = bords -> centre)
+static void effect_center_out_scan(void) {
+  fill_solid((rgb_t){0, 0, 0});
+
+  if (led_count == 0) {
+    return;
+  }
+
+  int half          = led_count / 2;
+  bool has_center   = (led_count % 2) != 0;
+  int speed_divider = 256 - current_config.speed;
+  if (speed_divider < 10)
+    speed_divider = 10;
+
+  int max_pos = half;
+  int pos     = (effect_counter * 100 / speed_divider) % (max_pos + 1);
+
+  int width = 3;
+  if (width > half) {
+    width = (half > 0) ? half : 1;
+  }
+
+  rgb_t color = color_to_rgb(current_config.color1);
+
+  if (!current_config.reverse) {
+    // Centre -> bords
+    int left_head  = half - 1 - pos;
+    int right_head = has_center ? (half + pos + 1) : (half + pos);
+
+    if (has_center && pos == 0) {
+      leds[half] = apply_brightness(color, current_config.brightness);
+    }
+
+    for (int t = 0; t < width; t++) {
+      uint8_t trail_brightness = (uint8_t)((current_config.brightness * (width - t)) / width);
+
+      int l_raw = left_head + t;
+      if (l_raw >= 0 && l_raw < led_count) {
+        leds[l_raw] = apply_brightness(color, trail_brightness);
+      }
+
+      int r_raw = right_head - t;
+      if (r_raw >= 0 && r_raw < led_count) {
+        leds[r_raw] = apply_brightness(color, trail_brightness);
+      }
+    }
+  } else {
+    // Bords -> centre
+    int left_head  = pos;
+    int right_head = led_count - 1 - pos;
+
+    // Allumer le centre quand les têtes se rejoignent
+    if (has_center && pos >= half) {
+      leds[half] = apply_brightness(color, current_config.brightness);
+    } else if (!has_center && pos >= (half - 1)) {
+      int c1 = half - 1;
+      int c2 = half;
+      if (c1 >= 0 && c1 < led_count) {
+        leds[c1] = apply_brightness(color, current_config.brightness);
+      }
+      if (c2 >= 0 && c2 < led_count) {
+        leds[c2] = apply_brightness(color, current_config.brightness);
+      }
+    }
+
+    for (int t = 0; t < width; t++) {
+      uint8_t trail_brightness = (uint8_t)((current_config.brightness * (width - t)) / width);
+
+      int l_raw = left_head + t;
+      if (l_raw >= 0 && l_raw < led_count && l_raw <= right_head) {
+        leds[l_raw] = apply_brightness(color, trail_brightness);
+      }
+
+      int r_raw = right_head - t;
+      if (r_raw >= 0 && r_raw < led_count && r_raw >= left_head) {
+        leds[r_raw] = apply_brightness(color, trail_brightness);
+      }
+    }
+  }
+}
+
 // Effet: Feux de stop
 static void effect_brake_light(void) {
   rgb_t color = last_vehicle_state.brake_pressed ? (rgb_t){255, 0, 0} : (rgb_t){64, 0, 0};
@@ -1265,6 +1548,12 @@ static const effect_func_t effect_functions[] = {
     [EFFECT_FFT_BASS_PULSE]  = effect_fft_bass_pulse,
     [EFFECT_FFT_VOCAL_WAVE]  = effect_fft_vocal_wave,
     [EFFECT_FFT_ENERGY_BAR]  = effect_fft_energy_bar,
+    [EFFECT_COMET]           = effect_comet,
+    [EFFECT_METEOR_SHOWER]   = effect_meteor_shower,
+    [EFFECT_RIPPLE_WAVE]     = effect_ripple_wave,
+    [EFFECT_DUAL_GRADIENT]   = effect_dual_gradient,
+    [EFFECT_SPARKLE_OVERLAY] = effect_sparkle_overlay,
+    [EFFECT_CENTER_OUT_SCAN] = effect_center_out_scan,
 };
 
 typedef struct {
@@ -1300,6 +1589,12 @@ static const led_effect_descriptor_t effect_descriptors[] = {
     {EFFECT_FFT_BASS_PULSE, EFFECT_ID_FFT_BASS_PULSE, "FFT Bass Pulse", false},
     {EFFECT_FFT_VOCAL_WAVE, EFFECT_ID_FFT_VOCAL_WAVE, "FFT Vocal Wave", false},
     {EFFECT_FFT_ENERGY_BAR, EFFECT_ID_FFT_ENERGY_BAR, "FFT Energy Bar", false},
+    {EFFECT_COMET, EFFECT_ID_COMET, "Comet", false},
+    {EFFECT_METEOR_SHOWER, EFFECT_ID_METEOR_SHOWER, "Meteor Shower", false},
+    {EFFECT_RIPPLE_WAVE, EFFECT_ID_RIPPLE_WAVE, "Ripple Wave", false},
+    {EFFECT_DUAL_GRADIENT, EFFECT_ID_DUAL_GRADIENT, "Dual Gradient", false},
+    {EFFECT_SPARKLE_OVERLAY, EFFECT_ID_SPARKLE_OVERLAY, "Sparkle Overlay", false},
+    {EFFECT_CENTER_OUT_SCAN, EFFECT_ID_CENTER_OUT_SCAN, "Center Out Scan", false},
 };
 
 #define EFFECT_DESCRIPTOR_COUNT (sizeof(effect_descriptors) / sizeof(effect_descriptors[0]))
@@ -1590,14 +1885,6 @@ void led_effects_set_enabled(bool enable) {
 
 void led_effects_set_brightness(uint8_t brightness) {
   current_config.brightness = brightness;
-}
-
-void led_effects_set_reverse(bool reverse) {
-  global_reverse_direction = reverse;
-}
-
-bool led_effects_get_reverse(void) {
-  return global_reverse_direction;
 }
 
 void led_effects_set_speed(uint8_t speed) {

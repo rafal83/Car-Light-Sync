@@ -455,8 +455,10 @@ static esp_err_t config_handler(httpd_req_t *req) {
   // Ajouter la configuration matérielle LED
   cJSON_AddNumberToObject(root, "lc", config_manager_get_led_count());
 
-  // Ajouter la configuration du sens de la strip
-  cJSON_AddBoolToObject(root, "srv", led_effects_get_reverse());
+
+  // Réglages globaux (wheel control)
+  cJSON_AddBoolToObject(root, "wheel_ctl", config_manager_get_wheel_control_enabled());
+  cJSON_AddNumberToObject(root, "wheel_spd", config_manager_get_wheel_control_speed_limit());
 
   const char *json_string = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -542,7 +544,8 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
   }
 
   const cJSON *led_count_json     = cJSON_GetObjectItem(root, "lc");
-  const cJSON *strip_reverse_json = cJSON_GetObjectItem(root, "srv");
+  const cJSON *wheel_ctl_json     = cJSON_GetObjectItem(root, "wheel_ctl");
+  const cJSON *wheel_spd_json     = cJSON_GetObjectItem(root, "wheel_spd");
 
   if (led_count_json == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing led_count");
@@ -552,9 +555,12 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
 
   uint16_t led_count = (uint16_t)led_count_json->valueint;
 
-  // Appliquer le strip_reverse si présent
-  if (strip_reverse_json != NULL) {
-    led_effects_set_reverse(cJSON_IsTrue(strip_reverse_json));
+  // Appliquer réglages wheel control (optionnels)
+  if (wheel_ctl_json && cJSON_IsBool(wheel_ctl_json)) {
+    config_manager_set_wheel_control_enabled(cJSON_IsTrue(wheel_ctl_json));
+  }
+  if (wheel_spd_json && cJSON_IsNumber(wheel_spd_json)) {
+    config_manager_set_wheel_control_speed_limit((float)wheel_spd_json->valuedouble);
   }
 
   // Validation

@@ -1732,6 +1732,12 @@ async function loadHardwareConfig() {
         if (config.lc !== undefined) {
             $('led-count').value = config.lc;
         }
+        if (config.wheel_ctl !== undefined) {
+            $('wheel-control-toggle').checked = !!config.wheel_ctl;
+        }
+        if (config.wheel_spd !== undefined) {
+            $('wheel-speed-limit').value = config.wheel_spd;
+        }
     } catch (e) {
         console.error('Error:', e);
         showNotification('config-notification', t('config.loadError'), 'error');
@@ -1740,6 +1746,8 @@ async function loadHardwareConfig() {
 async function saveHardwareConfig() {
     const config = {
         lc: parseInt($('led-count').value),
+        wheel_ctl: $('wheel-control-toggle').checked,
+        wheel_spd: parseInt($('wheel-speed-limit').value, 10) || 0
     };
     try {
         const response = await fetch(API_BASE + '/api/config', {
@@ -2338,6 +2346,21 @@ async function loadActiveProfileDefaultEffect() {
 
 let audioEnabled = false;
 let audioUpdateInterval = null;
+function applyAudioEffectAvailability() {
+    const selects = doc.querySelectorAll('[data-effect-options="true"]');
+    selects.forEach(select => {
+        Array.from(select.options).forEach(opt => {
+            if (opt.getAttribute('data-audio-effect') === 'true') {
+                opt.disabled = !audioEnabled;
+                if (!audioEnabled) {
+                    opt.classList.add('audio-disabled');
+                } else {
+                    opt.classList.remove('audio-disabled');
+                }
+            }
+        });
+    });
+}
 
 // Charger le statut audio
 async function loadAudioStatus() {
@@ -2359,6 +2382,7 @@ async function loadAudioStatus() {
             statusEl.textContent = t(`audio.${audioEnabled ? 'enabled' : 'disabled'}`);
             statusEl.style.color = audioEnabled ? '#10B981' : 'var(--color-muted)';
         }
+        applyAudioEffectAvailability();
 
         // Afficher/masquer les paramètres
         const settingsEl = $('audio-settings');
@@ -2392,6 +2416,7 @@ async function toggleAudio(enabled) {
                 statusEl.textContent = t(`audio.${enabled ? 'enabled' : 'disabled'}`);
                 statusEl.style.color = enabled ? '#10B981' : 'var(--color-muted)';
             }
+            applyAudioEffectAvailability();
 
             // Afficher/masquer les paramètres
             const settingsEl = $('audio-settings');
@@ -2997,6 +3022,18 @@ function getEffectName(effectId) {
 }
 // Charger la liste des effets depuis l'API
 let effectsList = [];
+function effectDisplayName(effect) {
+    return (translateEffectId(effect.id) || effect.n || effect.id || '').toString().toLowerCase();
+}
+function sortEffectsByName(effects) {
+    return [...effects].sort((a, b) => {
+        const na = effectDisplayName(a);
+        const nb = effectDisplayName(b);
+        if (na < nb) return -1;
+        if (na > nb) return 1;
+        return 0;
+    });
+}
 // Helper: Convertir enum numérique en ID string
 function effectEnumToId(enumValue) {
     if (effectsList[enumValue]) {
@@ -3014,6 +3051,15 @@ async function loadEffects() {
         const response = await fetch('/api/effects');
         const data = await response.json();
         effectsList = data.effects;
+        const allEffects = data.effects || [];
+        const offEffect = allEffects.find(e => e.id === 'OFF');
+        const audioEffects = sortEffectsByName(allEffects.filter(e => e.ae && e.id !== 'OFF'));
+        const baseEffects = sortEffectsByName(allEffects.filter(e => !e.ae && e.id !== 'OFF'));
+        const displayEffects = [
+            ...(offEffect ? [offEffect] : []),
+            ...baseEffects,
+            ...audioEffects
+        ];
         // Mettre à jour tous les dropdowns d'effets
         const effectSelects = [
             $('default-effect-select'),
@@ -3029,7 +3075,8 @@ async function loadEffects() {
                 // filtrer les effets qui nécessitent le CAN bus
                 // Pour le sélecteur d'événement, filtrer aussi les effets audio
                 const isEventSelector = select.id === 'event-effect-select';
-                effectsList.forEach(effect => {
+                let separatorInserted = false;
+                displayEffects.forEach(effect => {
                     // Filtrer les effets CAN si ce n'est pas le sélecteur d'événement
                     if (!isEventSelector && effect.cr) {
                         return; // Skip cet effet
@@ -3038,10 +3085,23 @@ async function loadEffects() {
                     if (isEventSelector && effect.ae) {
                         return; // Skip cet effet audio
                     }
+                    if (effect.ae && !separatorInserted) {
+                        separatorInserted = true;
+                        const separator = doc.createElement('option');
+                        separator.disabled = true;
+                        separator.value = '';
+                        separator.textContent = '---- Audio ----';
+                        separator.setAttribute('data-separator', 'true');
+                        select.appendChild(separator);
+                    }
                     const option = doc.createElement('option');
                     option.value = effect.id;
                     option.textContent = translateEffectId(effect.id) || effect.n;
                     option.setAttribute('data-effect-name', effect.n);
+                    if (effect.ae) {
+                        option.setAttribute('data-audio-effect', 'true');
+                        option.disabled = !audioEnabled;
+                    }
                     select.appendChild(option);
                 });
                 // Restaurer la valeur sélectionnée si elle existe encore
@@ -3051,6 +3111,7 @@ async function loadEffects() {
             }
         });
         refreshEffectOptionLabels();
+        applyAudioEffectAvailability();
         console.log('Loaded', effectsList.length, 'effects from API');
     } catch (error) {
         console.error('Failed to load effects:', error);

@@ -206,6 +206,13 @@ bool config_manager_get_active_profile(config_profile_t *profile);
 int config_manager_get_active_profile_id(void);
 
 /**
+ * @brief Change le profil actif vers le précédent/suivant disponible
+ * @param direction +1 = suivant, -1 = précédent
+ * @return true si un profil a été activé
+ */
+bool config_manager_cycle_active_profile(int direction);
+
+/**
  * @brief Liste tous les profils disponibles
  * @param profiles Array pour stocker les profils
  * @param max_profiles Taille max du array
@@ -219,6 +226,13 @@ int config_manager_list_profiles(config_profile_t *profiles, int max_profiles);
  * @param name Nom du profil
  */
 void config_manager_create_default_profile(config_profile_t *profile, const char *name);
+void config_manager_create_off_profile(config_profile_t *profile, const char *name);
+
+// Steering wheel profile control (opt-in)
+bool config_manager_get_wheel_control_enabled(void);
+bool config_manager_set_wheel_control_enabled(bool enabled);
+int config_manager_get_wheel_control_speed_limit(void);
+bool config_manager_set_wheel_control_speed_limit(int speed_kph);
 
 /**
  * @brief Associe un effet à un événement CAN

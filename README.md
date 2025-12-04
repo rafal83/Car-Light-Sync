@@ -160,6 +160,16 @@ vehicle_can_unified_config.generated.c → Définitions messages/signaux (auto-g
 | `BLINDSPOT_FLASH` | Blindspot Flash | Flash angle mort |
 | `AUDIO_REACTIVE` | Audio Reactive | VU-mètre audio visuel |
 | `AUDIO_BPM` | Audio BPM | Flash synchronisé BPM |
+| `FFT_SPECTRUM` | FFT Spectrum | Spectre FFT complet |
+| `FFT_BASS_PULSE` | FFT Bass Pulse | Pulse sur les basses |
+| `FFT_VOCAL_WAVE` | FFT Vocal Wave | Onde réactive aux voix |
+| `FFT_ENERGY_BAR` | FFT Energy Bar | Barre d'énergie spectrale |
+| `COMET` | Comet | Comète douce avec traînée |
+| `METEOR_SHOWER` | Meteor Shower | Pluie de météores discrète |
+| `RIPPLE_WAVE` | Ripple Wave | Onde concentrique depuis le centre |
+| `DUAL_GRADIENT` | Dual Gradient | Dégradé double qui respire |
+| `SPARKLE_OVERLAY` | Sparkle Overlay | Fond tamisé + scintilles courtes |
+| `CENTER_OUT_SCAN` | Center Out Scan | Double scan centre → bords |
 
 ## 🎵 Mode Audio Réactif (INMP441)
 
@@ -658,4 +668,3 @@ Si ce projet vous est utile et que vous souhaitez soutenir son développement, v
 ---
 
 **Développé avec ❤️ pour la communauté automobile**
-

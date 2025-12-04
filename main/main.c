@@ -51,6 +51,32 @@
 
 static vehicle_state_t last_vehicle_state = {0};
 
+static void handle_wheel_profile_control(const vehicle_state_t *current, const vehicle_state_t *previous) {
+  // Opt-in global
+  if (!config_manager_get_wheel_control_enabled()) {
+    return;
+  }
+
+  // Bloquer si autopilot/régulateur pas totalement désactivé
+  if (current->autopilot != 0) {
+    return;
+  }
+
+  // Bloquer au-dessus du seuil de vitesse
+  if (current->speed_kph > config_manager_get_wheel_control_speed_limit()) {
+    return;
+  }
+
+  bool up_trigger   = current->right_btn_scroll_up && !previous->right_btn_scroll_up;
+  bool down_trigger = current->right_btn_scroll_down && !previous->right_btn_scroll_down;
+
+  if (up_trigger) {
+    config_manager_cycle_active_profile(+1);
+  } else if (down_trigger) {
+    config_manager_cycle_active_profile(-1);
+  }
+}
+
 // Callback pour les frames CAN (des deux bus)
 static void vehicle_can_callback(const can_frame_t *frame, can_bus_type_t bus_type, void *user_data) {
   vehicle_can_process_frame_static(frame, &last_vehicle_state);
@@ -304,6 +330,9 @@ static void can_event_task(void *pvParameters) {
     } else {
       config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
     }
+
+    // Contrôle des profils via molette droite (opt-in, vitesse limitée, régulateur désactivé)
+    handle_wheel_profile_control(&current_state, &previous_state);
 
     // Sauvegarder l'état précédent
     memcpy(&previous_state, &current_state, sizeof(vehicle_state_t));

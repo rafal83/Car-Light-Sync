@@ -34,6 +34,12 @@
 #define EFFECT_ID_FFT_BASS_PULSE "FFT_BASS_PULSE"
 #define EFFECT_ID_FFT_VOCAL_WAVE "FFT_VOCAL_WAVE"
 #define EFFECT_ID_FFT_ENERGY_BAR "FFT_ENERGY_BAR"
+#define EFFECT_ID_COMET "COMET"
+#define EFFECT_ID_METEOR_SHOWER "METEOR_SHOWER"
+#define EFFECT_ID_RIPPLE_WAVE "RIPPLE_WAVE"
+#define EFFECT_ID_DUAL_GRADIENT "DUAL_GRADIENT"
+#define EFFECT_ID_SPARKLE_OVERLAY "SPARKLE_OVERLAY"
+#define EFFECT_ID_CENTER_OUT_SCAN "CENTER_OUT_SCAN"
 
 #define EFFECT_ID_MAX_LEN 32 // Longueur max d'un ID d'effet
 
@@ -64,6 +70,12 @@ typedef enum {
   EFFECT_FFT_BASS_PULSE,  // Pulse sur les basses (kick)
   EFFECT_FFT_VOCAL_WAVE,  // Vague réactive aux voix
   EFFECT_FFT_ENERGY_BAR,  // Barre d'énergie spectrale
+  EFFECT_COMET,           // Comete avec trainee
+  EFFECT_METEOR_SHOWER,   // Pluie de meteores
+  EFFECT_RIPPLE_WAVE,     // Onde concentrique depuis le centre
+  EFFECT_DUAL_GRADIENT,   // Double degrade qui respire
+  EFFECT_SPARKLE_OVERLAY, // Fond doux + scintilles rares
+  EFFECT_CENTER_OUT_SCAN, // Double scan centre -> bords
   EFFECT_MAX
 } led_effect_t;
 
@@ -187,12 +199,6 @@ void led_effects_set_brightness(uint8_t brightness);
  * @param speed Vitesse (0-255)
  */
 void led_effects_set_speed(uint8_t speed);
-
-/**
- * @brief Définit le sens de la strip LED
- * @param reverse true pour inverser, false pour normal
- */
-void led_effects_set_reverse(bool reverse);
 
 /**
  * @brief Obtient le sens actuel de la strip LED
