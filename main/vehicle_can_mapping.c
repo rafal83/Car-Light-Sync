@@ -255,8 +255,8 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
     if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
       // ESP_LOGI(TAG_CAN, "%s %f", name, value);
-      state->blindspot_left_lv2  = value == 1 || value == 3 ? 1 : 0;
-      state->blindspot_right_lv2 = value == 2 || value == 3 ? 1 : 0;
+      state->side_collision_left  = value == 1 || value == 3 ? 1 : 0;
+      state->side_collision_right = value == 2 || value == 3 ? 1 : 0;
       return;
     }
     if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
@@ -264,13 +264,13 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
-      int v                     = (int)(value + 0.5f);
-      state->blindspot_left_lv1 = (v >= 1) ? 1 : 0;
+      int v                  = (int)(value + 0.5f);
+      state->blindspot_left = (v >= 1) ? 1 : 0;
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
-      int v                      = (int)(value + 0.5f);
-      state->blindspot_right_lv1 = (v >= 1) ? 1 : 0;
+      int v                   = (int)(value + 0.5f);
+      state->blindspot_right = (v >= 1) ? 1 : 0;
       return;
     }
     return;

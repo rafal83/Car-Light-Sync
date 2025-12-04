@@ -52,8 +52,8 @@ static uint8_t priority_buffer[MAX_LED_COUNT];
 static inline bool event_is_left(can_event_type_t event) {
   switch (event) {
   case CAN_EVENT_TURN_LEFT:
-  case CAN_EVENT_BLINDSPOT_LEFT_LV1:
-  case CAN_EVENT_BLINDSPOT_LEFT_LV2:
+  case CAN_EVENT_BLINDSPOT_LEFT:
+  case CAN_EVENT_SIDE_COLLISION_LEFT:
   case CAN_EVENT_LANE_DEPARTURE_LEFT_LV1:
   case CAN_EVENT_LANE_DEPARTURE_LEFT_LV2:
     return true;
@@ -65,8 +65,8 @@ static inline bool event_is_left(can_event_type_t event) {
 static inline bool event_is_right(can_event_type_t event) {
   switch (event) {
   case CAN_EVENT_TURN_RIGHT:
-  case CAN_EVENT_BLINDSPOT_RIGHT_LV1:
-  case CAN_EVENT_BLINDSPOT_RIGHT_LV2:
+  case CAN_EVENT_BLINDSPOT_RIGHT:
+  case CAN_EVENT_SIDE_COLLISION_RIGHT:
   case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1:
   case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2:
     return true;
@@ -1104,14 +1104,14 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
     return EVENT_ID_UNLOCKED;
   case CAN_EVENT_BRAKE_ON:
     return EVENT_ID_BRAKE_ON;
-  case CAN_EVENT_BLINDSPOT_LEFT_LV1:
-    return EVENT_ID_BLINDSPOT_LEFT_LV1;
-  case CAN_EVENT_BLINDSPOT_LEFT_LV2:
-    return EVENT_ID_BLINDSPOT_LEFT_LV2;
-  case CAN_EVENT_BLINDSPOT_RIGHT_LV1:
-    return EVENT_ID_BLINDSPOT_RIGHT_LV1;
-  case CAN_EVENT_BLINDSPOT_RIGHT_LV2:
-    return EVENT_ID_BLINDSPOT_RIGHT_LV2;
+  case CAN_EVENT_BLINDSPOT_LEFT:
+    return EVENT_ID_BLINDSPOT_LEFT;
+    case CAN_EVENT_BLINDSPOT_RIGHT:
+    return EVENT_ID_BLINDSPOT_RIGHT;
+    case CAN_EVENT_SIDE_COLLISION_LEFT:
+      return EVENT_ID_SIDE_COLLISION_LEFT;
+  case CAN_EVENT_SIDE_COLLISION_RIGHT:
+    return EVENT_ID_SIDE_COLLISION_RIGHT;
   case CAN_EVENT_FORWARD_COLLISION:
     return EVENT_ID_FORWARD_COLLISION;
   case CAN_EVENT_LANE_DEPARTURE_LEFT_LV1:
@@ -1184,14 +1184,14 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_UNLOCKED;
   if (strcmp(id, EVENT_ID_BRAKE_ON) == 0)
     return CAN_EVENT_BRAKE_ON;
-  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT_LV1) == 0)
-    return CAN_EVENT_BLINDSPOT_LEFT_LV1;
-  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT_LV2) == 0)
-    return CAN_EVENT_BLINDSPOT_LEFT_LV2;
-  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT_LV1) == 0)
-    return CAN_EVENT_BLINDSPOT_RIGHT_LV1;
-  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT_LV2) == 0)
-    return CAN_EVENT_BLINDSPOT_RIGHT_LV2;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT) == 0)
+    return CAN_EVENT_BLINDSPOT_LEFT;
+    if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)
+    return CAN_EVENT_BLINDSPOT_RIGHT;
+    if (strcmp(id, EVENT_ID_SIDE_COLLISION_LEFT) == 0)
+      return CAN_EVENT_SIDE_COLLISION_LEFT;
+  if (strcmp(id, EVENT_ID_SIDE_COLLISION_RIGHT) == 0)
+    return CAN_EVENT_SIDE_COLLISION_RIGHT;
   if (strcmp(id, EVENT_ID_FORWARD_COLLISION) == 0)
     return CAN_EVENT_FORWARD_COLLISION;
   if (strcmp(id, EVENT_ID_LANE_DEPARTURE_LEFT_LV1) == 0)

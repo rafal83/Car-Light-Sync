@@ -109,10 +109,10 @@
  *   va  = vehicle_active (bool)
  *   nm  = night_mode (bool)
  *   ap  = autopilot (0-3)
- *   bl1 = blindspot_left_lv1 (bool)
- *   bl2 = blindspot_left_lv2 (bool)
- *   br1 = blindspot_right_lv1 (bool)
- *   br2 = blindspot_right_lv2 (bool)
+ *   bl  = blindspot_left (bool)
+ *   br  = blindspot_right (bool)
+ *   scl = side_colission_left (bool)
+ *   scr = side_colission_right (bool)
  */
 
 static httpd_handle_t server                 = NULL;
@@ -392,12 +392,12 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
   // Sécurité
   cJSON *safety = cJSON_CreateObject();
-  cJSON_AddBoolToObject(safety, "bl1", current_vehicle_state.blindspot_left_lv1);
-  cJSON_AddBoolToObject(safety, "bl2", current_vehicle_state.blindspot_left_lv2);
-  cJSON_AddBoolToObject(safety, "br1", current_vehicle_state.blindspot_right_lv1);
-  cJSON_AddBoolToObject(safety, "br2", current_vehicle_state.blindspot_right_lv2);
+  cJSON_AddBoolToObject(safety, "bsl", current_vehicle_state.blindspot_left);
+  cJSON_AddBoolToObject(safety, "bsr", current_vehicle_state.blindspot_right);
+  cJSON_AddBoolToObject(safety, "scl", current_vehicle_state.side_collision_left);
+  cJSON_AddBoolToObject(safety, "scr", current_vehicle_state.side_collision_right);
   cJSON_AddBoolToObject(safety, "nm", current_vehicle_state.night_mode);
-  cJSON_AddNumberToObject(safety, "br", current_vehicle_state.brightness);
+  cJSON_AddNumberToObject(safety, "bri", current_vehicle_state.brightness);
   cJSON_AddBoolToObject(safety, "sm", current_vehicle_state.sentry_mode);
   cJSON_AddNumberToObject(safety, "ap", current_vehicle_state.autopilot);
   cJSON_AddBoolToObject(safety, "sa", current_vehicle_state.sentry_alert);

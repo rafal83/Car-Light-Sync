@@ -74,7 +74,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_LEFT_LV1",
+      "event_id": "BLINDSPOT_LEFT",
       "enabled": true,
       "priority": 67,
       "duration_ms": 0,
@@ -89,7 +89,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_RIGHT_LV1",
+      "event_id": "BLINDSPOT_RIGHT",
       "enabled": true,
       "priority": 67,
       "duration_ms": 0,

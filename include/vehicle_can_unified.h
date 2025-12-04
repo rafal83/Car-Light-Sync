@@ -75,10 +75,10 @@ typedef struct {
   float battery_voltage_LV;
   float battery_voltage_HV;
   float odometer_km;
-  uint8_t blindspot_left_lv1;
-  uint8_t blindspot_left_lv2;
-  uint8_t blindspot_right_lv1;
-  uint8_t blindspot_right_lv2;
+  uint8_t blindspot_left;
+  uint8_t blindspot_right;
+  uint8_t side_collision_left;
+  uint8_t side_collision_right;
 
   uint8_t lane_departure_left_lv1;
   uint8_t lane_departure_left_lv2;

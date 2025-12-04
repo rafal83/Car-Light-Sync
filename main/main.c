@@ -155,32 +155,32 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Blindspot
-    if (current_state.blindspot_left_lv1 != previous_state.blindspot_left_lv1) {
-      if (current_state.blindspot_left_lv1) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_LEFT_LV1);
+    if (current_state.blindspot_left != previous_state.blindspot_left) {
+      if (current_state.blindspot_left) {
+        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_LEFT);
       } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_LEFT_LV1);
+        config_manager_stop_event(CAN_EVENT_BLINDSPOT_LEFT);
       }
     }
-    if (current_state.blindspot_right_lv1 != previous_state.blindspot_right_lv1) {
-      if (current_state.blindspot_right_lv1) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_RIGHT_LV1);
+    if (current_state.blindspot_right != previous_state.blindspot_right) {
+      if (current_state.blindspot_right) {
+        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_RIGHT);
       } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_RIGHT_LV1);
+        config_manager_stop_event(CAN_EVENT_BLINDSPOT_RIGHT);
       }
     }
-    if (current_state.blindspot_left_lv2 != previous_state.blindspot_left_lv2) {
-      if (current_state.blindspot_left_lv2) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_LEFT_LV2);
+    if (current_state.side_collision_left != previous_state.side_collision_left) {
+      if (current_state.side_collision_left) {
+        config_manager_process_can_event(CAN_EVENT_SIDE_COLLISION_LEFT);
       } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_LEFT_LV2);
+        config_manager_stop_event(CAN_EVENT_SIDE_COLLISION_LEFT);
       }
     }
-    if (current_state.blindspot_right_lv2 != previous_state.blindspot_right_lv2) {
-      if (current_state.blindspot_right_lv2) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_RIGHT_LV2);
+    if (current_state.side_collision_right != previous_state.side_collision_right) {
+      if (current_state.side_collision_right) {
+        config_manager_process_can_event(CAN_EVENT_SIDE_COLLISION_RIGHT);
       } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_RIGHT_LV2);
+        config_manager_stop_event(CAN_EVENT_SIDE_COLLISION_RIGHT);
       }
     }
     if (current_state.forward_collision != previous_state.forward_collision) {

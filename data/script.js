@@ -657,10 +657,15 @@ const simulationSections = [
     {
         titleKey: 'simulation.blindspot',
         events: [
-            { id: 'BLINDSPOT_LEFT_LV1', labelKey: 'simulation.blindspotLeftLv1' },
-            { id: 'BLINDSPOT_LEFT_LV2', labelKey: 'simulation.blindspotLeftLv2' },
-            { id: 'BLINDSPOT_RIGHT_LV1', labelKey: 'simulation.blindspotRightLv1' },
-            { id: 'BLINDSPOT_RIGHT_LV2', labelKey: 'simulation.blindspotRightLv2' }
+            { id: 'BLINDSPOT_LEFT', labelKey: 'simulation.blindspotLeft' },
+            { id: 'BLINDSPOT_RIGHT', labelKey: 'simulation.blindspotRight' }
+        ]
+    },
+    {
+        titleKey: 'simulation.sideCollision',
+        events: [
+            { id: 'SIDE_COLLISION_LEFT', labelKey: 'simulation.sideCollisionLeft' },
+            { id: 'SIDE_COLLISION_RIGHT', labelKey: 'simulation.sideCollisionRight' }
         ]
     },
     {
@@ -2167,11 +2172,11 @@ async function updateStatus() {
             // Sécurité
             if (v.safety) {
                 $('v-night').textContent = v.safety.nm ? t('status.active') : t('status.inactive');
-                $('v-brightness').textContent = v.safety.br + '%';
-                $('v-blindspot-left-lv1').textContent = v.safety.bl1 ? t('status.active') : t('status.inactive');
-                $('v-blindspot-left-lv2').textContent = v.safety.bl2 ? t('status.active') : t('status.inactive');
-                $('v-blindspot-right-lv1').textContent = v.safety.br1 ? t('status.active') : t('status.inactive');
-                $('v-blindspot-right-lv2').textContent = v.safety.br2 ? t('status.active') : t('status.inactive');
+                $('v-brightness').textContent = v.safety.bri + '%';
+                $('v-blindspot-left').textContent = v.safety.bsl ? t('status.active') : t('status.inactive');
+                $('v-blindspot-right').textContent = v.safety.bsr ? t('status.active') : t('status.inactive');
+                $('v-side-collision-left').textContent = v.safety.scl ? t('status.active') : t('status.inactive');
+                $('v-side-collision-right').textContent = v.safety.scr ? t('status.active') : t('status.inactive');
 
                 $('v-lane-departure-left-lv1').textContent = v.safety.ldl1 ? t('status.active') : t('status.inactive');
                 $('v-lane-departure-left-lv2').textContent = v.safety.ldl2 ? t('status.active') : t('status.inactive');
@@ -2220,9 +2225,9 @@ async function updateStatus() {
                 'v-door-fl', 'v-door-fr', 'v-door-rl', 'v-door-rr', 'v-trunk', 'v-frunk',
                 'v-charging', 'v-charge', 'v-charge-power',
                 'v-headlights', 'v-high-beams', 'v-fog-lights', 'v-turn-signal',
-                'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness', 
-                'v-blindspot-left-lv1', 'v-blindspot-right-lv1',
-                'v-blindspot-left-lv2', 'v-blindspot-right-lv2',
+                'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness',
+                'v-blindspot-left', 'v-blindspot-right',
+                'v-side-collision-left', 'v-side-collision-right',
                 'v-lane-departure-left-lv1', 'v-lane-departure-right-lv1',
                 'v-lane-departure-left-lv2', 'v-lane-departure-right-lv2',
                 'v-sentry-mode', 'v-autopilot', 'v-sentry-alert'
@@ -2925,11 +2930,11 @@ const EVENT_TO_COMMON = {
     'DOOR_CLOSE': 'doorClose',
     'LOCKED': 'locked', 
     'UNLOCKED': 'unlocked',
-    'BRAKE_ON': 'brakeOn', 
-    'BLINDSPOT_LEFT_LV1': 'blindspotLeftLv1', 
-    'BLINDSPOT_LEFT_LV2': 'blindspotLeftLv2',
-    'BLINDSPOT_RIGHT_LV1': 'blindspotRightLv1', 
-    'BLINDSPOT_RIGHT_LV2': 'blindspotRightLv2',
+    'BRAKE_ON': 'brakeOn',
+    'BLINDSPOT_LEFT': 'blindspotLeft',
+    'BLINDSPOT_RIGHT': 'blindspotRight',
+    'SIDE_COLLISION_LEFT': 'sideCollisionLeft',
+    'SIDE_COLLISION_RIGHT': 'sideCollisionRight',
     'LANE_DEPARTURE_LEFT_LV1': 'laneDepartureLeftLv1', 
     'LANE_DEPARTURE_LEFT_LV2': 'laneDepartureLeftLv2',
     'LANE_DEPARTURE_RIGHT_LV1': 'laneDepartureRightLv1',

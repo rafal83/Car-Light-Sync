@@ -74,7 +74,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_LEFT_LV1",
+      "event_id": "BLINDSPOT_LEFT",
       "enabled": true,
       "priority": 61,
       "duration_ms": 0,
@@ -89,7 +89,22 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_LEFT_LV2",
+      "event_id": "BLINDSPOT_RIGHT",
+      "enabled": true,
+      "priority": 61,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "BLINDSPOT_FLASH",
+        "brightness": 100,
+        "speed": 86,
+        "color1": 819922,
+        "reverse": false,
+        "segment_start": 98,
+        "segment_length": 8
+      }
+    },    
+    {
+      "event_id": "SIDE_COLLISION_LEFT",
       "enabled": true,
       "priority": 67,
       "duration_ms": 0,
@@ -104,22 +119,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_RIGHT_LV1",
-      "enabled": true,
-      "priority": 61,
-      "duration_ms": 0,
-      "effect_config": {
-        "effect_id": "BLINDSPOT_FLASH",
-        "brightness": 100,
-        "speed": 86,
-        "color1": 819922,
-        "reverse": false,
-        "segment_start": 98,
-        "segment_length": 8
-      }
-    },
-    {
-      "event_id": "BLINDSPOT_RIGHT_LV2",
+      "event_id": "SIDE_COLLISION_RIGHT",
       "enabled": true,
       "priority": 67,
       "duration_ms": 0,

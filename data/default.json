@@ -87,7 +87,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_LEFT_LV1",
+      "event_id": "BLINDSPOT_LEFT",
       "enabled": true,
       "priority": 75,
       "duration_ms": 0,
@@ -105,7 +105,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_RIGHT_LV1",
+      "event_id": "BLINDSPOT_RIGHT",
       "enabled": true,
       "priority": 75,
       "duration_ms": 0,
@@ -123,7 +123,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_LEFT_LV2",
+      "event_id": "SIDE_COLLISION_LEFT",
       "enabled": true,
       "priority": 78,
       "duration_ms": 0,
@@ -141,7 +141,7 @@
       }
     },
     {
-      "event_id": "BLINDSPOT_RIGHT_LV2",
+      "event_id": "SIDE_COLLISION_RIGHT",
       "enabled": true,
       "priority": 78,
       "duration_ms": 0,
