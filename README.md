@@ -15,7 +15,7 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 ### Intégration CAN Unifiée
 - **Architecture Modulaire** : Système CAN unifié basé sur DBC avec décodage générique
 - **Support Multi-Véhicules** : Configuration par fichier pour différents véhicules (Tesla Model 3, Y, S, etc.)
-- **22+ Événements CAN** : Détection intelligente des événements véhicule (clignotants, portes, charge, blindspot, autopilot, etc.)
+- **34 Événements CAN** : Détection intelligente des événements véhicule (clignotants, portes, charge, blindspot, collision latérale, lane departure, autopilot, sentry, etc.)
 - **Mapping Signal → État** : Mapping automatique des signaux CAN vers l'état du véhicule
 - **Gestion d'Événements** : Support des conditions RISING_EDGE, FALLING_EDGE, VALUE_EQUALS, THRESHOLD, etc.
 
@@ -30,7 +30,7 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 - **Association Événements CAN → Effets** : Chaque événement déclenche un effet LED personnalisé
 - **Système de Priorité** : Gestion intelligente des effets simultanés (0-255)
 - **Effets Temporaires** : Durée configurable avec retour automatique à l'effet par défaut
-- **Blindspot Detection** : Alertes visuelles pour détection angle mort (priorité maximale)
+- **Détection de Sécurité** : Alertes visuelles pour angle mort et collision latérale (priorité maximale)
 - **Synchronisation Véhicule** : Les LEDs réagissent en temps réel à l'état du véhicule
 - **LED Indicateur de Statut** : LED WS2812 intégrée (GPIO 21 S3 / GPIO 8 C6) avec états visuels
 - **Bouton Reset Physique** : GPIO 4, maintenir 5s = factory reset complet
@@ -38,9 +38,14 @@ Système de contrôle LED RGB WS2812 avec connexion CAN Bus directe, intégratio
 ## 📋 Prérequis
 
 ### Matériel
-- **ESP32-S3** : ESP32-S3-DevKitC avec PSRAM (support PSRAM requis) — [ESP32-S3 recommandé](https://fr.aliexpress.com/item/1005006963045909.html)
+- **ESP32-C6** : **Recommandé** - ESP32-C6-DevKitC avec **double interface TWAI** (2 bus CAN indépendants) — [ESP32-C6 recommandé](https://fr.aliexpress.com/item/1005007243114374.html)
+  - Alternative : ESP32-S3-DevKitC avec PSRAM (support PSRAM requis, 1 seul TWAI)
 - **Ruban LED** : WS2812 ou WS2812B (60-150 LEDs recommandé) — [Ruban 110 cm compatible](https://fr.aliexpress.com/item/1005008483452231.html)
-- **Connecteur porte** : Faisceau 20 broches pour récupérer le bus CAN au niveau de la porte — [Connecteur 20 pin](https://fr.aliexpress.com/item/1005003434204981.html)
+  - ⚠️ **ATTENTION CÂBLAGE** : Sur certains rubans, le **fil ROUGE est GND** et le **fil NOIR est VCC (+5V)** (inversé !)
+  - 🔧 **TESTER OBLIGATOIREMENT** avec une faible tension (3.3V) avant de connecter à l'alimentation principale pour vérifier la polarité
+- **Connecteur CAN** : Câble pour accéder au bus CAN au niveau de la porte/pilier A
+  - **Recommandé** : [Enhauto Tesla Gen 2 Cable](https://www.enhauto.com/products/tesla-gen-2-cable?variant=41214470094923) - Accès CAN Body + Chassis
+  - **Alternative** : [Connecteur 20 pin AliExpress](https://fr.aliexpress.com/item/1005003434204981.html) - CAN Body uniquement (modification nécessaire pour accès Chassis)
 - **Alimentation** : 5V 3-10A selon nombre de LEDs
 - **Module CAN** : Transceiver CAN (ex: SN65HVD230, MCP2551) connecté au bus CAN du véhicule — [Module CAN MCP2551](https://fr.aliexpress.com/item/1005008251308592.html)
 - **Micro INMP441** (optionnel) : Microphone I2S MEMS pour mode audio-réactif avec détection BPM
@@ -193,30 +198,44 @@ L/R       -----> GND (canal gauche)
 
 ## 🚗 Événements CAN Supportés
 
-Le système détecte 22+ événements CAN du véhicule Tesla :
+Le système détecte 34 événements CAN du véhicule Tesla :
 
-| Événement | Déclencheur | Priorité Suggérée |
-|-----------|-------------|-------------------|
-| `TURN_LEFT` | Clignotant gauche actif | 200 |
-| `TURN_RIGHT` | Clignotant droit actif | 200 |
-| `TURN_HAZARD` | Warning activé | 220 |
-| `CHARGING` | Début de charge | 150 |
-| `CHARGE_COMPLETE` | Charge ≥ 80% terminée | 140 |
-| `DOOR_OPEN` | Ouverture d'une porte | 100 |
-| `DOOR_CLOSE` | Fermeture portes | 90 |
-| `LOCKED` | Véhicule verrouillé | 110 |
-| `UNLOCKED` | Véhicule déverrouillé | 110 |
-| `BRAKE_ON` | Frein appuyé | 180 |
-| `BLINDSPOT_LEFT` | Angle mort gauche détecté | 250 |
-| `BLINDSPOT_RIGHT` | Angle mort droit détecté | 250 |
-| `NIGHT_MODE_ON` | Mode nuit activé | 0 (auto) |
-| `NIGHT_MODE_OFF` | Mode nuit désactivé | 0 (auto) |
-| `AUTOPILOT_ENGAGED` | Autopilot activé | 120 |
-| `AUTOPILOT_DISENGAGED` | Autopilot désactivé | 120 |
-| `GEAR_DRIVE` | Passage en mode Drive (D) | 80 |
-| `GEAR_REVERSE` | Passage en marche arrière (R) | 80 |
-| `GEAR_PARK` | Passage en mode Park (P) | 80 |
-| `SPEED_THRESHOLD` | Vitesse > seuil configurable | 60 |
+| Événement | Déclencheur |
+|-----------|-------------|
+| `TURN_LEFT` | Clignotant gauche actif |
+| `TURN_RIGHT` | Clignotant droit actif |
+| `TURN_HAZARD` | Warning activé |
+| `CHARGING` | Charge en cours |
+| `CHARGE_COMPLETE` | Charge terminée |
+| `CHARGING_STARTED` | Début de charge |
+| `CHARGING_STOPPED` | Arrêt de charge |
+| `CHARGING_CABLE_CONNECTED` | Câble branché |
+| `CHARGING_CABLE_DISCONNECTED` | Câble débranché |
+| `CHARGING_PORT_OPENED` | Port de charge ouvert |
+| `DOOR_OPEN` | Ouverture d'une porte |
+| `DOOR_CLOSE` | Fermeture des portes |
+| `LOCKED` | Véhicule verrouillé |
+| `UNLOCKED` | Véhicule déverrouillé |
+| `BRAKE_ON` | Frein appuyé |
+| `BLINDSPOT_LEFT` | Angle mort gauche |
+| `BLINDSPOT_RIGHT` | Angle mort droit |
+| `SIDE_COLLISION_LEFT` | Alerte collision gauche |
+| `SIDE_COLLISION_RIGHT` | Alerte collision droite |
+| `FORWARD_COLLISION` | Collision avant imminente |
+| `LANE_DEPARTURE_LEFT_LV1` | Départ ligne gauche Niv1 |
+| `LANE_DEPARTURE_LEFT_LV2` | Départ ligne gauche Niv2 |
+| `LANE_DEPARTURE_RIGHT_LV1` | Départ ligne droite Niv1 |
+| `LANE_DEPARTURE_RIGHT_LV2` | Départ ligne droite Niv2 |
+| `SPEED_THRESHOLD` | Vitesse > seuil configurable |
+| `AUTOPILOT_ENGAGED` | Autopilot activé |
+| `AUTOPILOT_DISENGAGED` | Autopilot désactivé |
+| `AUTOPILOT_ABORTING` | Autopilot annulé |
+| `GEAR_DRIVE` | Passage en Drive (D) |
+| `GEAR_REVERSE` | Marche arrière (R) |
+| `GEAR_PARK` | Mode Park (P) |
+| `SENTRY_MODE_ON` | Sentry mode activé |
+| `SENTRY_MODE_OFF` | Sentry mode désactivé |
+| `SENTRY_ALERT` | Alerte sentry détectée |
 
 ## 🌐 Interface Web
 
