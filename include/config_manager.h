@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #define TAG_CONFIG "ConfigMgr"
-#define MAX_PROFILE_SCAN_LIMIT 1000  // Limite de scan pour éviter une boucle infinie
+#define MAX_PROFILE_SCAN_LIMIT 100  // Limite de scan pour éviter une boucle infinie
 #define PROFILE_NAME_MAX_LEN 32
 
 // IDs alphanumériques stables pour les événements CAN (ne changent jamais)
