@@ -25,8 +25,10 @@
 #include <string.h>
 #include <time.h>
 
-static config_profile_t profiles[MAX_PROFILES];
+// Nouveau: on ne garde que le profil actif en RAM (~17KB au lieu de ~170KB)
+static config_profile_t active_profile;
 static int active_profile_id = -1;
+static bool active_profile_loaded = false;
 
 // Système d'événements multiples
 #define MAX_ACTIVE_EVENTS 5
@@ -151,96 +153,59 @@ static void apply_segment_defaults(can_event_type_t event, effect_config_t *cfg,
 }
 
 bool config_manager_init(void) {
-  // Initialiser les profils
-  memset(profiles, 0, sizeof(profiles));
+  // Initialiser le profil actif
+  memset(&active_profile, 0, sizeof(active_profile));
+  active_profile_loaded = false;
 
-  // Charger les profils depuis NVS
-  int loaded = config_manager_load_profiles();
-  ESP_LOGI(TAG_CONFIG, "%d profil(s) chargé(s)", loaded);
+  // Charger l'ID du profil actif depuis NVS
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
 
-  // Si aucun profil, créer un profil par défaut
-  if (loaded == 0) {
-    // Allouer dynamiquement pour éviter le stack overflow
-    config_profile_t *default_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
-    if (default_profile == NULL) {
-      ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour profil par défaut");
-      return false;
+  if (err == ESP_OK) {
+    int32_t saved_active_id = -1;
+    err = nvs_get_i32(nvs_handle, "active_id", &saved_active_id);
+    if (err == ESP_OK && saved_active_id >= 0 && saved_active_id < MAX_PROFILES) {
+      active_profile_id = saved_active_id;
     }
-    config_manager_create_default_profile(default_profile, "Default");
-    config_manager_save_profile(0, default_profile);
-    free(default_profile);
-    config_manager_activate_profile(0);
-    ESP_LOGI(TAG_CONFIG, "Profil par défaut créé");
-  } else {
-    // Appliquer le profil actif chargé depuis NVS
-    if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
-      ESP_LOGI(TAG_CONFIG, "Application du profil actif %d: %s", active_profile_id, profiles[active_profile_id].name);
-      led_effects_set_config(&profiles[active_profile_id].default_effect);
+    nvs_close(nvs_handle);
+  }
+
+  // Essayer de charger le profil actif
+  bool profile_exists = false;
+  if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
+    profile_exists = config_manager_load_profile(active_profile_id, &active_profile);
+    if (profile_exists) {
+      active_profile_loaded = true;
+      ESP_LOGI(TAG_CONFIG, "Profil actif %d chargé: %s", active_profile_id, active_profile.name);
+      led_effects_set_config(&active_profile.default_effect);
       effect_override_active = false;
-    } else {
-      ESP_LOGW(TAG_CONFIG, "Aucun profil actif trouvé, activation du profil 0");
-      config_manager_activate_profile(0);
     }
+  }
+
+  // Si aucun profil n'existe, créer un profil par défaut
+  if (!profile_exists) {
+    ESP_LOGI(TAG_CONFIG, "Aucun profil trouvé, création du profil par défaut");
+    config_manager_create_default_profile(&active_profile, "Default");
+    config_manager_save_profile(0, &active_profile);
+    active_profile_id = 0;
+    active_profile_loaded = true;
+
+    // Sauvegarder l'ID actif
+    err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
+    if (err == ESP_OK) {
+      nvs_set_i32(nvs_handle, "active_id", 0);
+      nvs_commit(nvs_handle);
+      nvs_close(nvs_handle);
+    }
+
+    led_effects_set_config(&active_profile.default_effect);
+    effect_override_active = false;
   }
 
   return true;
 }
 
-int config_manager_load_profiles(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS profiles");
-    return 0;
-  }
-
-  int count = 0;
-  char key[16];
-
-  for (int i = 0; i < MAX_PROFILES; i++) {
-    snprintf(key, sizeof(key), "profile_%d", i);
-    size_t required_size = 0;
-
-    // Vérifier d'abord la taille du blob
-    err                  = nvs_get_blob(nvs_handle, key, NULL, &required_size);
-    if (err == ESP_OK) {
-      // Vérifier que la taille correspond à la structure actuelle
-      if (required_size != sizeof(config_profile_t)) {
-        ESP_LOGW(TAG_CONFIG, "Profile %d a une taille incompatible (%d vs %d) - ignoré", i, required_size, sizeof(config_profile_t));
-        continue;
-      }
-
-      // Charger le profil
-      required_size = sizeof(config_profile_t);
-      err           = nvs_get_blob(nvs_handle, key, &profiles[i], &required_size);
-      if (err == ESP_OK) {
-        count++;
-        if (profiles[i].active) {
-          active_profile_id = i;
-        }
-      }
-    }
-  }
-
-  // Charger l'ID du profil actif
-  int32_t active_id;
-  err = nvs_get_i32(nvs_handle, "active_id", &active_id);
-  if (err == ESP_OK) {
-    active_profile_id = active_id;
-  }
-
-  nvs_close(nvs_handle);
-
-  // Si aucun profil compatible n'a été chargé, avertir l'utilisateur
-  if (count == 0) {
-    ESP_LOGW(TAG_CONFIG,
-             "Aucun profil compatible trouvé - un factory reset peut être "
-             "nécessaire");
-  }
-
-  return count;
-}
+// Cette fonction n'est plus nécessaire - on charge uniquement le profil actif à la demande
 
 bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *profile) {
   if (profile_id >= MAX_PROFILES || profile == NULL) {
@@ -283,8 +248,12 @@ bool config_manager_save_profile(uint8_t profile_id, const config_profile_t *pro
   nvs_commit(nvs_handle);
   nvs_close(nvs_handle);
 
-  // Mettre à jour la copie en mémoire
-  memcpy(&profiles[profile_id], profile_copy, sizeof(config_profile_t));
+  // Mettre à jour le profil actif en RAM si c'est celui qu'on vient de sauvegarder
+  if (profile_id == active_profile_id) {
+    memcpy(&active_profile, profile_copy, sizeof(config_profile_t));
+    active_profile_loaded = true;
+  }
+
   free(profile_copy);
 
   ESP_LOGI(TAG_CONFIG, "Profil %d sauvegardé: %s", profile_id, profile->name);
@@ -338,27 +307,6 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     return false;
   }
 
-  // Vérifier que le profil n'est pas utilisé dans un événement
-  for (int p = 0; p < MAX_PROFILES; p++) {
-    if (profiles[p].name[0] == '\0')
-      continue; // Profil vide
-
-    for (int e = 0; e < CAN_EVENT_MAX; e++) {
-      // Ignorer les événements qui ne changent pas de profil
-      if (profiles[p].event_effects[e].action_type != EVENT_ACTION_SWITCH_PROFILE)
-        continue;
-
-      // Ignorer les événements sans profil associé valide
-      if (profiles[p].event_effects[e].profile_id < 0)
-        continue;
-
-      if ((profiles[p].event_effects[e].profile_id == profile_id) && (profile_id != p)) {
-        ESP_LOGW(TAG_CONFIG, "Cannot delete profile %d: used by event %d in profile %d", profile_id, e, p);
-        return false;
-      }
-    }
-  }
-
   nvs_handle_t nvs_handle;
   esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
 
@@ -366,8 +314,49 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     return false;
   }
 
-  // Supprimer le profil
+  // Vérifier que le profil existe
   char key[16];
+  snprintf(key, sizeof(key), "profile_%d", profile_id);
+  size_t required_size = 0;
+  err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+  if (err != ESP_OK) {
+    nvs_close(nvs_handle);
+    ESP_LOGW(TAG_CONFIG, "Profil %d n'existe pas", profile_id);
+    return false;
+  }
+
+  // Vérifier que le profil n'est pas utilisé dans des événements d'autres profils
+  // On doit charger tous les profils pour cette vérification
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    nvs_close(nvs_handle);
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+    return false;
+  }
+
+  for (int p = 0; p < MAX_PROFILES; p++) {
+    if (p == profile_id) continue;  // Ignorer le profil qu'on veut supprimer
+
+    snprintf(key, sizeof(key), "profile_%d", p);
+    required_size = sizeof(config_profile_t);
+    err = nvs_get_blob(nvs_handle, key, temp_profile, &required_size);
+
+    if (err == ESP_OK) {
+      // Vérifier si ce profil référence le profil à supprimer
+      for (int e = 0; e < CAN_EVENT_MAX; e++) {
+        if (temp_profile->event_effects[e].action_type == EVENT_ACTION_SWITCH_PROFILE &&
+            temp_profile->event_effects[e].profile_id == profile_id) {
+          ESP_LOGW(TAG_CONFIG, "Cannot delete profile %d: used by event %d in profile %d", profile_id, e, p);
+          free(temp_profile);
+          nvs_close(nvs_handle);
+          return false;
+        }
+      }
+    }
+  }
+  free(temp_profile);
+
+  // Supprimer le profil de la NVS
   snprintf(key, sizeof(key), "profile_%d", profile_id);
   err = nvs_erase_key(nvs_handle, key);
 
@@ -376,13 +365,20 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     return false;
   }
 
-  // Marquer comme supprimé dans le tableau RAM
-  memset(&profiles[profile_id], 0, sizeof(config_profile_t));
-
   // Compresser les IDs : décaler tous les profils suivants
+  config_profile_t *shift_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (shift_profile == NULL) {
+    nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour compression");
+    return false;
+  }
+
   bool needs_compression = false;
   for (int i = profile_id + 1; i < MAX_PROFILES; i++) {
-    if (profiles[i].name[0] != '\0') {
+    snprintf(key, sizeof(key), "profile_%d", i);
+    required_size = sizeof(config_profile_t);
+    if (nvs_get_blob(nvs_handle, key, NULL, &required_size) == ESP_OK) {
       needs_compression = true;
       break;
     }
@@ -391,28 +387,24 @@ bool config_manager_delete_profile(uint8_t profile_id) {
   if (needs_compression) {
     ESP_LOGI(TAG_CONFIG, "Compression des IDs de profils après suppression du profil %d", profile_id);
 
-    // Décaler tous les profils dans NVS et RAM
     for (int i = profile_id; i < MAX_PROFILES - 1; i++) {
-      // Charger le profil suivant
       char next_key[16];
       snprintf(next_key, sizeof(next_key), "profile_%d", i + 1);
 
-      size_t required_size = sizeof(config_profile_t);
-      esp_err_t read_err   = nvs_get_blob(nvs_handle, next_key, &profiles[i], &required_size);
+      required_size = sizeof(config_profile_t);
+      esp_err_t read_err = nvs_get_blob(nvs_handle, next_key, shift_profile, &required_size);
 
       if (read_err == ESP_OK) {
-        // Sauvegarder au nouvel emplacement (i au lieu de i+1)
+        // Sauvegarder au nouvel emplacement
         char current_key[16];
         snprintf(current_key, sizeof(current_key), "profile_%d", i);
-        nvs_set_blob(nvs_handle, current_key, &profiles[i], sizeof(config_profile_t));
+        nvs_set_blob(nvs_handle, current_key, shift_profile, sizeof(config_profile_t));
 
         // Effacer l'ancien emplacement
         nvs_erase_key(nvs_handle, next_key);
 
         ESP_LOGI(TAG_CONFIG, "Profil %d déplacé vers ID %d", i + 1, i);
       } else {
-        // Plus de profils à décaler
-        memset(&profiles[i], 0, sizeof(config_profile_t));
         break;
       }
     }
@@ -420,18 +412,30 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     // Mettre à jour l'ID du profil actif
     if (active_profile_id > profile_id) {
       active_profile_id--;
+      memcpy(&active_profile, shift_profile, sizeof(config_profile_t));
       nvs_set_i32(nvs_handle, "active_id", active_profile_id);
       ESP_LOGI(TAG_CONFIG, "ID du profil actif mis à jour: %d", active_profile_id);
     } else if (active_profile_id == profile_id) {
-      // Le profil actif a été supprimé, activer le profil 0 s'il existe
-      if (profiles[0].name[0] != '\0') {
-        active_profile_id = 0;
-        nvs_set_i32(nvs_handle, "active_id", 0);
-        ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, activation du profil 0");
-      } else {
-        active_profile_id = -1;
+      // Le profil actif a été supprimé, chercher le premier profil disponible
+      active_profile_id = -1;
+      active_profile_loaded = false;
+
+      for (int i = 0; i < MAX_PROFILES; i++) {
+        snprintf(key, sizeof(key), "profile_%d", i);
+        required_size = sizeof(config_profile_t);
+        if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
+          active_profile_id = i;
+          active_profile_loaded = true;
+          nvs_set_i32(nvs_handle, "active_id", i);
+          ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, activation du profil %d", i);
+          break;
+        }
+      }
+
+      if (active_profile_id == -1) {
         nvs_erase_key(nvs_handle, "active_id");
-        ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, aucun profil disponible");
+        memset(&active_profile, 0, sizeof(active_profile));
+        ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
       }
     }
   } else {
@@ -439,9 +443,14 @@ bool config_manager_delete_profile(uint8_t profile_id) {
     if (active_profile_id == profile_id) {
       // Chercher le premier profil disponible
       active_profile_id = -1;
+      active_profile_loaded = false;
+
       for (int i = 0; i < MAX_PROFILES; i++) {
-        if (profiles[i].name[0] != '\0') {
+        snprintf(key, sizeof(key), "profile_%d", i);
+        required_size = sizeof(config_profile_t);
+        if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
           active_profile_id = i;
+          active_profile_loaded = true;
           nvs_set_i32(nvs_handle, "active_id", i);
           ESP_LOGI(TAG_CONFIG, "Activation automatique du profil %d", i);
           break;
@@ -450,11 +459,13 @@ bool config_manager_delete_profile(uint8_t profile_id) {
 
       if (active_profile_id == -1) {
         nvs_erase_key(nvs_handle, "active_id");
+        memset(&active_profile, 0, sizeof(active_profile));
         ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
       }
     }
   }
 
+  free(shift_profile);
   nvs_commit(nvs_handle);
   nvs_close(nvs_handle);
 
@@ -506,25 +517,17 @@ bool config_manager_activate_profile(uint8_t profile_id) {
     return false;
   }
 
-  // Vérifier que le profil existe
-  if (profiles[profile_id].name[0] == '\0') {
-    // Profil vide, essayer de charger depuis NVS
-    if (!config_manager_load_profile(profile_id, &profiles[profile_id])) {
-      ESP_LOGE(TAG_CONFIG, "Profil %d inexistant", profile_id);
-      return false;
-    }
+  // Charger le nouveau profil depuis NVS
+  if (!config_manager_load_profile(profile_id, &active_profile)) {
+    ESP_LOGE(TAG_CONFIG, "Profil %d inexistant", profile_id);
+    return false;
   }
 
-  // Désactiver l'ancien profil
-  if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
-    profiles[active_profile_id].active = false;
-  }
+  // Mettre à jour l'ID actif
+  active_profile_id = profile_id;
+  active_profile_loaded = true;
 
-  // Activer le nouveau profil
-  active_profile_id           = profile_id;
-  profiles[profile_id].active = true;
-
-  // Sauvegarder l'ID actif
+  // Sauvegarder l'ID actif dans NVS
   nvs_handle_t nvs_handle;
   esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
   if (err == ESP_OK) {
@@ -537,22 +540,19 @@ bool config_manager_activate_profile(uint8_t profile_id) {
   config_manager_stop_all_events();
 
   // Appliquer l'effet par défaut
-  led_effects_set_config(&profiles[profile_id].default_effect);
+  led_effects_set_config(&active_profile.default_effect);
   effect_override_active = false;
 
-  ESP_LOGI(TAG_CONFIG,
-           "Profil %d activé: %s",
-           profile_id,
-           profiles[profile_id].name);
+  ESP_LOGI(TAG_CONFIG, "Profil %d activé: %s", profile_id, active_profile.name);
   return true;
 }
 
 bool config_manager_get_active_profile(config_profile_t *profile) {
-  if (active_profile_id < 0 || active_profile_id >= MAX_PROFILES || profile == NULL) {
+  if (!active_profile_loaded || profile == NULL) {
     return false;
   }
 
-  memcpy(profile, &profiles[active_profile_id], sizeof(config_profile_t));
+  memcpy(profile, &active_profile, sizeof(config_profile_t));
   return true;
 }
 
@@ -561,15 +561,32 @@ int config_manager_get_active_profile_id(void) {
 }
 
 int config_manager_list_profiles(config_profile_t *profile_list, int max_profiles) {
+  if (profile_list == NULL || max_profiles <= 0) {
+    return 0;
+  }
+
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS profiles");
+    return 0;
+  }
+
   int count = 0;
+  char key[16];
 
   for (int i = 0; i < MAX_PROFILES && count < max_profiles; i++) {
-    if (profiles[i].name[0] != '\0') {
-      memcpy(&profile_list[count], &profiles[i], sizeof(config_profile_t));
+    snprintf(key, sizeof(key), "profile_%d", i);
+    size_t required_size = sizeof(config_profile_t);
+
+    err = nvs_get_blob(nvs_handle, key, &profile_list[count], &required_size);
+    if (err == ESP_OK && required_size == sizeof(config_profile_t)) {
       count++;
     }
   }
 
+  nvs_close(nvs_handle);
   return count;
 }
 
@@ -630,13 +647,38 @@ bool config_manager_set_event_effect(uint8_t profile_id, can_event_type_t event,
     return false;
   }
 
-  profiles[profile_id].event_effects[event].event = event;
-  memcpy(&profiles[profile_id].event_effects[event].effect_config, effect_config, sizeof(effect_config_t));
-  profiles[profile_id].event_effects[event].duration_ms = duration_ms;
-  profiles[profile_id].event_effects[event].priority    = priority;
-  profiles[profile_id].event_effects[event].enabled     = true;
+  // Si c'est le profil actif, modifier directement
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    active_profile.event_effects[event].event = event;
+    memcpy(&active_profile.event_effects[event].effect_config, effect_config, sizeof(effect_config_t));
+    active_profile.event_effects[event].duration_ms = duration_ms;
+    active_profile.event_effects[event].priority    = priority;
+    active_profile.event_effects[event].enabled     = true;
+    return true;
+  }
 
-  return true;
+  // Sinon, charger le profil, le modifier et le sauvegarder
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+    return false;
+  }
+
+  if (!config_manager_load_profile(profile_id, temp_profile)) {
+    free(temp_profile);
+    return false;
+  }
+
+  temp_profile->event_effects[event].event = event;
+  memcpy(&temp_profile->event_effects[event].effect_config, effect_config, sizeof(effect_config_t));
+  temp_profile->event_effects[event].duration_ms = duration_ms;
+  temp_profile->event_effects[event].priority    = priority;
+  temp_profile->event_effects[event].enabled     = true;
+
+  bool success = config_manager_save_profile(profile_id, temp_profile);
+  free(temp_profile);
+
+  return success;
 }
 
 bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event, bool enabled) {
@@ -644,16 +686,38 @@ bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event
     return false;
   }
 
-  profiles[profile_id].event_effects[event].enabled = enabled;
-  return true;
-}
+  // Si c'est le profil actif, modifier directement
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    active_profile.event_effects[event].enabled = enabled;
+    return true;
+  }
 
-bool config_manager_process_can_event(can_event_type_t event) {
-  if (active_profile_id < 0 || event > CAN_EVENT_MAX) {
+  // Sinon, charger le profil, le modifier et le sauvegarder
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
     return false;
   }
 
-  can_event_effect_t *event_effect = &profiles[active_profile_id].event_effects[event];
+  if (!config_manager_load_profile(profile_id, temp_profile)) {
+    free(temp_profile);
+    return false;
+  }
+
+  temp_profile->event_effects[event].enabled = enabled;
+
+  bool success = config_manager_save_profile(profile_id, temp_profile);
+  free(temp_profile);
+
+  return success;
+}
+
+bool config_manager_process_can_event(can_event_type_t event) {
+  if (!active_profile_loaded || event > CAN_EVENT_MAX) {
+    return false;
+  }
+
+  can_event_effect_t *event_effect = &active_profile.event_effects[event];
   effect_config_t effect_to_apply;
   uint16_t duration_ms = 0;
   uint8_t priority     = 0;
@@ -862,8 +926,8 @@ void config_manager_update(void) {
   }
 
   // Deuxième passe : rendre l'effet par défaut uniquement sur les zones non réservées
-  if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
-    effect_config_t base = profiles[active_profile_id].default_effect;
+  if (active_profile_loaded) {
+    effect_config_t base = active_profile.default_effect;
 
     // Utiliser le segment configuré dans le profil (ou toute la strip si non configuré)
     uint16_t default_start = base.segment_start;
@@ -890,7 +954,7 @@ void config_manager_update(void) {
       }
     }
 
-    needs_fft |= led_effects_requires_fft(profiles[active_profile_id].default_effect.effect);
+    needs_fft |= led_effects_requires_fft(active_profile.default_effect.effect);
   }
 
   // Troisième passe : rendre les événements sur leurs segments réservés
@@ -1162,21 +1226,14 @@ bool config_manager_factory_reset(void) {
     nvs_close(nvs_handle);
   }
 
-  // Réinitialiser les profils en RAM
-  memset(profiles, 0, sizeof(profiles));
-  active_profile_id                 = -1;
+  // Réinitialiser le profil actif en RAM
+  memset(&active_profile, 0, sizeof(active_profile));
+  active_profile_id = -1;
+  active_profile_loaded = false;
 
-  // Créer un profil par défaut (allouer dynamiquement pour éviter stack
-  // overflow)
-  config_profile_t *default_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
-  if (default_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour profil par défaut");
-    return false;
-  }
-  config_manager_create_default_profile(default_profile, "Default");
-  profiles[0] = *default_profile;
-  config_manager_save_profile(0, default_profile);
-  free(default_profile);
+  // Créer un profil par défaut
+  config_manager_create_default_profile(&active_profile, "Default");
+  config_manager_save_profile(0, &active_profile);
   config_manager_activate_profile(0);
 
   ESP_LOGI(TAG_CONFIG, "Factory reset complete. Default profile created.");
@@ -1204,12 +1261,26 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
     return false;
   }
 
-  config_profile_t *profile = &profiles[profile_id];
+  // Charger le profil (ou utiliser le profil actif si c'est celui-là)
+  config_profile_t *profile = NULL;
+  config_profile_t *temp_profile = NULL;
 
-  // Vérifier que le profil existe
-  if (profile->name[0] == '\0') {
-    ESP_LOGW(TAG_CONFIG, "Profil %d inexistant, impossible d'exporter", profile_id);
-    return false;
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    profile = &active_profile;
+  } else {
+    temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+    if (temp_profile == NULL) {
+      ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+      return false;
+    }
+
+    if (!config_manager_load_profile(profile_id, temp_profile)) {
+      ESP_LOGW(TAG_CONFIG, "Profil %d inexistant, impossible d'exporter", profile_id);
+      free(temp_profile);
+      return false;
+    }
+
+    profile = temp_profile;
   }
 
   cJSON *root = cJSON_CreateObject();
@@ -1270,22 +1341,28 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
 
   // Convertir en chaîne JSON
   char *json_str = cJSON_PrintUnformatted(root);
+  bool success = false;
+
   if (json_str) {
     size_t len = strlen(json_str);
     if (len < buffer_size) {
       strcpy(json_buffer, json_str);
-      free(json_str);
-      cJSON_Delete(root);
       ESP_LOGI(TAG_CONFIG, "Profil %d exporté avec succès (%d octets)", profile_id, len);
-      return true;
+      success = true;
     } else {
       ESP_LOGE(TAG_CONFIG, "Buffer trop petit: %d nécessaires, %d disponibles", len + 1, buffer_size);
-      free(json_str);
     }
+    free(json_str);
   }
 
   cJSON_Delete(root);
-  return false;
+
+  // Libérer le profil temporaire si on l'a alloué
+  if (temp_profile != NULL) {
+    free(temp_profile);
+  }
+
+  return success;
 }
 
 bool config_manager_import_profile_from_json(const char *json_string, config_profile_t *profile) {
@@ -1493,11 +1570,11 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
 }
 
 bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t *event_effect) {
-  if (active_profile_id < 0 || active_profile_id >= MAX_PROFILES || event >= CAN_EVENT_MAX || event_effect == NULL) {
+  if (!active_profile_loaded || event >= CAN_EVENT_MAX || event_effect == NULL) {
     return false;
   }
 
-  memcpy(event_effect, &profiles[active_profile_id].event_effects[event], sizeof(can_event_effect_t));
+  memcpy(event_effect, &active_profile.event_effects[event], sizeof(can_event_effect_t));
   return true;
 }
 
@@ -1550,14 +1627,14 @@ bool config_manager_set_led_count(uint16_t led_count) {
 }
 
 void config_manager_reapply_default_effect(void) {
-  if (active_profile_id < 0 || active_profile_id >= MAX_PROFILES) {
+  if (!active_profile_loaded) {
     ESP_LOGW(TAG_CONFIG, "Aucun profil actif, impossible de réappliquer l'effet");
     return;
   }
 
   // Réappliquer l'effet par défaut du profil actif
-  led_effects_set_config(&profiles[active_profile_id].default_effect);
-  ESP_LOGI(TAG_CONFIG, "Effet par défaut réappliqué (audio_reactive=%d)", profiles[active_profile_id].default_effect.audio_reactive);
+  led_effects_set_config(&active_profile.default_effect);
+  ESP_LOGI(TAG_CONFIG, "Effet par défaut réappliqué (audio_reactive=%d)", active_profile.default_effect.audio_reactive);
 }
 
 bool config_manager_can_create_profile(void) {

@@ -155,12 +155,6 @@ typedef struct {
 bool config_manager_init(void);
 
 /**
- * @brief Charge tous les profils depuis NVS
- * @return Nombre de profils chargés
- */
-int config_manager_load_profiles(void);
-
-/**
  * @brief Sauvegarde un profil en NVS
  * @param profile_id ID du profil (0-9)
  * @param profile Profil à sauvegarder
