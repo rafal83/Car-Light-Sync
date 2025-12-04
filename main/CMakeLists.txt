@@ -57,7 +57,8 @@ idf_component_register(
         "../data/i18n.js.gz"
         "../data/script.js.gz"
         "../data/style.css.gz"
-        "../data/carlightsync64.png"        
+        "../data/carlightsync64.png"
+        "../data/default.json"
     REQUIRES
         ${component_requires}
 )

@@ -3,8 +3,8 @@
   "description": "Inspiré piste - vert/jaune/rouge progressifs selon vitesse",
   "default_effect": {
     "effect_id": "RUNNING_LIGHTS",
-    "brightness": 200,
-    "speed": 200,
+    "brightness": 78,
+    "speed": 78,
     "color1": 65280,
     "color2": 16776960,
     "reverse": false,
@@ -18,12 +18,12 @@
     {
       "event_id": "TURN_LEFT",
       "enabled": true,
-      "priority": 140,
+      "priority": 55,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "SCAN",
-        "brightness": 245,
-        "speed": 230,
+        "brightness": 96,
+        "speed": 90,
         "color1": 16776960,
         "reverse": true,
         "segment_start": 0,
@@ -33,12 +33,12 @@
     {
       "event_id": "TURN_RIGHT",
       "enabled": true,
-      "priority": 140,
+      "priority": 55,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "SCAN",
-        "brightness": 245,
-        "speed": 230,
+        "brightness": 96,
+        "speed": 90,
         "color1": 16776960,
         "reverse": false,
         "segment_start": 110,
@@ -48,12 +48,12 @@
     {
       "event_id": "TURN_HAZARD",
       "enabled": true,
-      "priority": 130,
+      "priority": 51,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 240,
-        "speed": 240,
+        "brightness": 94,
+        "speed": 94,
         "color1": 16776960,
         "segment_start": 0,
         "segment_length": 0
@@ -62,12 +62,12 @@
     {
       "event_id": "BRAKE_ON",
       "enabled": true,
-      "priority": 205,
+      "priority": 80,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "BRAKE_LIGHT",
-        "brightness": 255,
-        "speed": 230,
+        "brightness": 100,
+        "speed": 90,
         "color1": 16711680,
         "segment_start": 45,
         "segment_length": 32
@@ -76,12 +76,12 @@
     {
       "event_id": "SPEED_THRESHOLD",
       "enabled": true,
-      "priority": 105,
+      "priority": 41,
       "duration_ms": 4000,
       "effect_config": {
         "effect_id": "RUNNING_LIGHTS",
-        "brightness": 255,
-        "speed": 240,
+        "brightness": 100,
+        "speed": 94,
         "color1": 16711680,
         "color2": 16744192,
         "segment_start": 0,
@@ -91,12 +91,12 @@
     {
       "event_id": "BLINDSPOT_LEFT_LV1",
       "enabled": true,
-      "priority": 175,
-      "duration_ms": 650,
+      "priority": 69,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 250,
-        "speed": 235,
+        "brightness": 98,
+        "speed": 92,
         "color1": 16776960,
         "reverse": true,
         "segment_start": 14,
@@ -106,12 +106,12 @@
     {
       "event_id": "BLINDSPOT_RIGHT_LV1",
       "enabled": true,
-      "priority": 175,
-      "duration_ms": 650,
+      "priority": 69,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 250,
-        "speed": 235,
+        "brightness": 98,
+        "speed": 92,
         "color1": 16776960,
         "reverse": false,
         "segment_start": 98,
@@ -121,12 +121,12 @@
     {
       "event_id": "GEAR_DRIVE",
       "enabled": true,
-      "priority": 50,
+      "priority": 20,
       "duration_ms": 1000,
       "effect_config": {
         "effect_id": "SCAN",
-        "brightness": 180,
-        "speed": 200,
+        "brightness": 71,
+        "speed": 78,
         "color1": 65280,
         "segment_start": 0,
         "segment_length": 0
@@ -135,12 +135,12 @@
     {
       "event_id": "GEAR_REVERSE",
       "enabled": true,
-      "priority": 95,
+      "priority": 37,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 200,
-        "speed": 180,
+        "brightness": 78,
+        "speed": 71,
         "color1": 16777215,
         "segment_start": 45,
         "segment_length": 32

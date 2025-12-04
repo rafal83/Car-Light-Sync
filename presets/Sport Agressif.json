@@ -3,8 +3,8 @@
   "description": "Performance maximale - rouge vif, effets rapides et réactifs",
   "default_effect": {
     "effect_id": "KNIGHT_RIDER",
-    "brightness": 220,
-    "speed": 200,
+    "brightness": 86,
+    "speed": 78,
     "color1": 16711680,
     "reverse": false,
     "audio_reactive": false,
@@ -17,12 +17,12 @@
     {
       "event_id": "TURN_LEFT",
       "enabled": true,
-      "priority": 145,
+      "priority": 57,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "SCAN",
-        "brightness": 255,
-        "speed": 240,
+        "brightness": 100,
+        "speed": 94,
         "color1": 16744192,
         "reverse": true,
         "segment_start": 0,
@@ -32,12 +32,12 @@
     {
       "event_id": "TURN_RIGHT",
       "enabled": true,
-      "priority": 145,
+      "priority": 57,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "SCAN",
-        "brightness": 255,
-        "speed": 240,
+        "brightness": 100,
+        "speed": 94,
         "color1": 16744192,
         "reverse": false,
         "segment_start": 110,
@@ -47,12 +47,12 @@
     {
       "event_id": "TURN_HAZARD",
       "enabled": true,
-      "priority": 135,
+      "priority": 53,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 255,
-        "speed": 250,
+        "brightness": 100,
+        "speed": 98,
         "color1": 16744192,
         "segment_start": 0,
         "segment_length": 0
@@ -61,12 +61,12 @@
     {
       "event_id": "BRAKE_ON",
       "enabled": true,
-      "priority": 210,
+      "priority": 82,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "BRAKE_LIGHT",
-        "brightness": 255,
-        "speed": 250,
+        "brightness": 100,
+        "speed": 98,
         "color1": 16711680,
         "segment_start": 45,
         "segment_length": 32
@@ -75,12 +75,12 @@
     {
       "event_id": "BLINDSPOT_LEFT_LV1",
       "enabled": true,
-      "priority": 185,
-      "duration_ms": 600,
+      "priority": 73,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 255,
-        "speed": 250,
+        "brightness": 100,
+        "speed": 98,
         "color1": 16744192,
         "reverse": true,
         "segment_start": 14,
@@ -90,12 +90,12 @@
     {
       "event_id": "BLINDSPOT_RIGHT_LV1",
       "enabled": true,
-      "priority": 185,
-      "duration_ms": 600,
+      "priority": 73,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 255,
-        "speed": 250,
+        "brightness": 100,
+        "speed": 98,
         "color1": 16744192,
         "reverse": false,
         "segment_start": 98,
@@ -105,12 +105,12 @@
     {
       "event_id": "SPEED_THRESHOLD",
       "enabled": true,
-      "priority": 100,
+      "priority": 39,
       "duration_ms": 3000,
       "effect_config": {
         "effect_id": "RUNNING_LIGHTS",
-        "brightness": 255,
-        "speed": 230,
+        "brightness": 100,
+        "speed": 90,
         "color1": 16711680,
         "color2": 16744192,
         "segment_start": 0,
@@ -120,12 +120,12 @@
     {
       "event_id": "CHARGING",
       "enabled": true,
-      "priority": 80,
+      "priority": 31,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "CHARGE_STATUS",
-        "brightness": 190,
-        "speed": 160,
+        "brightness": 75,
+        "speed": 63,
         "color1": 65280,
         "segment_start": 45,
         "segment_length": 32

@@ -3,8 +3,8 @@
   "description": "Multicolore festif - toutes les couleurs en mouvement",
   "default_effect": {
     "effect_id": "RAINBOW_CYCLE",
-    "brightness": 200,
-    "speed": 180,
+    "brightness": 78,
+    "speed": 71,
     "color1": 16711680,
     "reverse": false,
     "audio_reactive": false,
@@ -17,12 +17,12 @@
     {
       "event_id": "TURN_LEFT",
       "enabled": true,
-      "priority": 125,
+      "priority": 49,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "RAINBOW",
-        "brightness": 220,
-        "speed": 200,
+        "brightness": 86,
+        "speed": 78,
         "color1": 16744192,
         "reverse": true,
         "segment_start": 0,
@@ -32,12 +32,12 @@
     {
       "event_id": "TURN_RIGHT",
       "enabled": true,
-      "priority": 125,
+      "priority": 49,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "RAINBOW",
-        "brightness": 220,
-        "speed": 200,
+        "brightness": 86,
+        "speed": 78,
         "color1": 16744192,
         "reverse": false,
         "segment_start": 110,
@@ -47,12 +47,12 @@
     {
       "event_id": "TURN_HAZARD",
       "enabled": true,
-      "priority": 115,
+      "priority": 45,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "RAINBOW_CYCLE",
-        "brightness": 210,
-        "speed": 220,
+        "brightness": 82,
+        "speed": 86,
         "color1": 16744192,
         "segment_start": 0,
         "segment_length": 0
@@ -61,12 +61,12 @@
     {
       "event_id": "BRAKE_ON",
       "enabled": true,
-      "priority": 190,
+      "priority": 75,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "SOLID",
-        "brightness": 255,
-        "speed": 0,
+        "brightness": 100,
+        "speed": 1,
         "color1": 16711680,
         "segment_start": 45,
         "segment_length": 32
@@ -75,12 +75,12 @@
     {
       "event_id": "LOCKED",
       "enabled": true,
-      "priority": 40,
+      "priority": 16,
       "duration_ms": 1200,
       "effect_config": {
         "effect_id": "RAINBOW",
-        "brightness": 150,
-        "speed": 180,
+        "brightness": 59,
+        "speed": 71,
         "color1": 16711680,
         "segment_start": 0,
         "segment_length": 0
@@ -89,12 +89,12 @@
     {
       "event_id": "UNLOCKED",
       "enabled": true,
-      "priority": 50,
+      "priority": 20,
       "duration_ms": 1500,
       "effect_config": {
         "effect_id": "RAINBOW_CYCLE",
-        "brightness": 180,
-        "speed": 200,
+        "brightness": 71,
+        "speed": 78,
         "color1": 65280,
         "segment_start": 0,
         "segment_length": 0
@@ -103,12 +103,12 @@
     {
       "event_id": "CHARGING",
       "enabled": true,
-      "priority": 75,
+      "priority": 29,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "RAINBOW",
-        "brightness": 170,
-        "speed": 160,
+        "brightness": 67,
+        "speed": 63,
         "color1": 65280,
         "segment_start": 45,
         "segment_length": 32
@@ -117,12 +117,12 @@
     {
       "event_id": "DOOR_OPEN",
       "enabled": true,
-      "priority": 60,
+      "priority": 24,
       "duration_ms": 2000,
       "effect_config": {
         "effect_id": "RAINBOW_CYCLE",
-        "brightness": 190,
-        "speed": 190,
+        "brightness": 75,
+        "speed": 75,
         "color1": 16777215,
         "segment_start": 0,
         "segment_length": 0

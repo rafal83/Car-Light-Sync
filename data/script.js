@@ -1367,13 +1367,21 @@ function renderEventsTable() {
                     </div>
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.brightness">${t('eventsConfig.brightness')}</label>
-                        <input type="number" min="0" max="255" value="${event.br}"
-                            onchange="updateEventConfig(${index}, 'br', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                        <div class="slider-container">
+                            <input type="range" id="event-brightness-${index}" min="1" max="100" value="${to255ToPercent(event.br)}"
+                                oninput="$('event-brightness-value-${index}').textContent = this.value + '%'"
+                                onchange="updateEventConfig(${index}, 'br', percentTo255(parseInt(this.value)))" ${!event.en ? 'disabled' : ''}>
+                            <span class="slider-value" id="event-brightness-value-${index}">${to255ToPercent(event.br)}%</span>
+                        </div>
                     </div>
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.speed">${t('eventsConfig.speed')}</label>
-                        <input type="number" min="0" max="255" value="${event.sp}"
-                            onchange="updateEventConfig(${index}, 'sp', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                        <div class="slider-container">
+                            <input type="range" id="event-speed-${index}" min="1" max="100" value="${to255ToPercent(event.sp)}"
+                                oninput="$('event-speed-value-${index}').textContent = this.value + '%'"
+                                onchange="updateEventConfig(${index}, 'sp', percentTo255(parseInt(this.value)))" ${!event.en ? 'disabled' : ''}>
+                            <span class="slider-value" id="event-speed-value-${index}">${to255ToPercent(event.sp)}%</span>
+                        </div>
                     </div>
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.color">${t('eventsConfig.color')}</label>
@@ -1392,8 +1400,12 @@ function renderEventsTable() {
                     </div>
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.priority">${t('eventsConfig.priority')}</label>
-                        <input type="number" min="0" max="255" value="${event.pri}"
-                            onchange="updateEventConfig(${index}, 'pri', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                        <div class="slider-container">
+                            <input type="range" id="event-priority-${index}" min="1" max="100" value="${to255ToPercent(event.pri)}"
+                                oninput="$('event-priority-value-${index}').textContent = this.value"
+                                onchange="updateEventConfig(${index}, 'pri', percentTo255(parseInt(this.value)))" ${!event.en ? 'disabled' : ''}>
+                            <span class="slider-value" id="event-priority-value-${index}">${to255ToPercent(event.pri)}</span>
+                        </div>
                     </div>
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.segmentRange">${t('eventsConfig.segmentRange')}</label>

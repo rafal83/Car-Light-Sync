@@ -3,8 +3,8 @@
   "description": "Clignos ambres lents, frein rouge uni, animations sobres",
   "default_effect": {
     "effect_id": "SOLID",
-    "brightness": 80,
-    "speed": 0,
+    "brightness": 31,
+    "speed": 1,
     "color1": 16777215,
     "segment_start": 0,
     "segment_length": 0
@@ -15,12 +15,12 @@
     {
       "event_id": "TURN_LEFT",
       "enabled": true,
-      "priority": 140,
+      "priority": 55,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "TURN_SIGNAL",
-        "brightness": 220,
-        "speed": 140,
+        "brightness": 86,
+        "speed": 55,
         "color1": 16746496,
         "reverse": true,
         "segment_start": 0,
@@ -30,12 +30,12 @@
     {
       "event_id": "TURN_RIGHT",
       "enabled": true,
-      "priority": 140,
+      "priority": 55,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "TURN_SIGNAL",
-        "brightness": 220,
-        "speed": 140,
+        "brightness": 86,
+        "speed": 55,
         "color1": 16746496,
         "reverse": false,
         "segment_start": 110,
@@ -45,12 +45,12 @@
     {
       "event_id": "TURN_HAZARD",
       "enabled": true,
-      "priority": 130,
+      "priority": 51,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "HAZARD",
-        "brightness": 210,
-        "speed": 120,
+        "brightness": 82,
+        "speed": 47,
         "color1": 16746496,
         "segment_start": 0,
         "segment_length": 0
@@ -59,12 +59,12 @@
     {
       "event_id": "BRAKE_ON",
       "enabled": true,
-      "priority": 200,
+      "priority": 78,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "BRAKE_LIGHT",
-        "brightness": 255,
-        "speed": 180,
+        "brightness": 100,
+        "speed": 71,
         "color1": 16711680,
         "segment_start": 45,
         "segment_length": 32
@@ -73,12 +73,12 @@
     {
       "event_id": "BLINDSPOT_LEFT_LV1",
       "enabled": true,
-      "priority": 180,
-      "duration_ms": 800,
+      "priority": 71,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "BLINDSPOT_FLASH",
-        "brightness": 255,
-        "speed": 180,
+        "brightness": 100,
+        "speed": 71,
         "color1": 16746496,
         "reverse": true,
         "segment_start": 14,
@@ -88,12 +88,12 @@
     {
       "event_id": "BLINDSPOT_RIGHT_LV1",
       "enabled": true,
-      "priority": 180,
-      "duration_ms": 800,
+      "priority": 71,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "BLINDSPOT_FLASH",
-        "brightness": 255,
-        "speed": 180,
+        "brightness": 100,
+        "speed": 71,
         "color1": 16746496,
         "reverse": false,
         "segment_start": 98,
@@ -103,12 +103,12 @@
     {
       "event_id": "LANE_DEPARTURE_LEFT_LV1",
       "enabled": true,
-      "priority": 150,
-      "duration_ms": 900,
+      "priority": 59,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 220,
-        "speed": 180,
+        "brightness": 86,
+        "speed": 71,
         "color1": 16766720,
         "reverse": true,
         "segment_start": 14,
@@ -118,12 +118,12 @@
     {
       "event_id": "LANE_DEPARTURE_RIGHT_LV1",
       "enabled": true,
-      "priority": 150,
-      "duration_ms": 900,
+      "priority": 59,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 220,
-        "speed": 180,
+        "brightness": 86,
+        "speed": 71,
         "color1": 16766720,
         "reverse": false,
         "segment_start": 98,
@@ -133,12 +133,12 @@
     {
       "event_id": "CHARGING",
       "enabled": true,
-      "priority": 90,
+      "priority": 35,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "CHARGE_STATUS",
-        "brightness": 180,
-        "speed": 140,
+        "brightness": 71,
+        "speed": 55,
         "color1": 65280,
         "segment_start": 45,
         "segment_length": 32
@@ -147,12 +147,12 @@
     {
       "event_id": "CHARGE_COMPLETE",
       "enabled": true,
-      "priority": 100,
+      "priority": 39,
       "duration_ms": 3000,
       "effect_config": {
         "effect_id": "SOLID",
-        "brightness": 140,
-        "speed": 0,
+        "brightness": 55,
+        "speed": 1,
         "color1": 3394763,
         "segment_start": 45,
         "segment_length": 32
@@ -161,12 +161,12 @@
     {
       "event_id": "DOOR_OPEN",
       "enabled": true,
-      "priority": 80,
+      "priority": 31,
       "duration_ms": 2000,
       "effect_config": {
         "effect_id": "BREATHING",
-        "brightness": 180,
-        "speed": 120,
+        "brightness": 71,
+        "speed": 47,
         "color1": 16777215,
         "segment_start": 0,
         "segment_length": 0

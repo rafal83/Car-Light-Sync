@@ -350,4 +350,12 @@ void config_manager_reapply_default_effect(void);
  */
 bool config_manager_can_create_profile(void);
 
+/**
+ * @brief Importe un profil depuis une chaîne JSON dans une structure config_profile_t
+ * @param json_string String JSON du preset
+ * @param profile Pointeur vers la structure à remplir
+ * @return true si succès, false sinon
+ */
+bool config_manager_import_profile_from_json(const char *json_string, config_profile_t *profile);
+
 #endif // CONFIG_MANAGER_H

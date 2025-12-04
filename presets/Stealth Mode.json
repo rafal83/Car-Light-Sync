@@ -3,8 +3,8 @@
   "description": "Ultra discret - lumières minimales, priorité sécurité",
   "default_effect": {
     "effect_id": "SOLID",
-    "brightness": 40,
-    "speed": 0,
+    "brightness": 16,
+    "speed": 1,
     "color1": 1644825,
     "reverse": false,
     "audio_reactive": false,
@@ -17,12 +17,12 @@
     {
       "event_id": "TURN_LEFT",
       "enabled": true,
-      "priority": 120,
+      "priority": 47,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "TURN_SIGNAL",
-        "brightness": 120,
-        "speed": 100,
+        "brightness": 47,
+        "speed": 39,
         "color1": 16746496,
         "reverse": true,
         "segment_start": 0,
@@ -32,12 +32,12 @@
     {
       "event_id": "TURN_RIGHT",
       "enabled": true,
-      "priority": 120,
+      "priority": 47,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "TURN_SIGNAL",
-        "brightness": 120,
-        "speed": 100,
+        "brightness": 47,
+        "speed": 39,
         "color1": 16746496,
         "reverse": false,
         "segment_start": 110,
@@ -47,12 +47,12 @@
     {
       "event_id": "TURN_HAZARD",
       "enabled": true,
-      "priority": 110,
+      "priority": 43,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "HAZARD",
-        "brightness": 115,
-        "speed": 90,
+        "brightness": 45,
+        "speed": 35,
         "color1": 16746496,
         "segment_start": 0,
         "segment_length": 0
@@ -61,12 +61,12 @@
     {
       "event_id": "BRAKE_ON",
       "enabled": true,
-      "priority": 180,
+      "priority": 71,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "SOLID",
-        "brightness": 180,
-        "speed": 0,
+        "brightness": 71,
+        "speed": 1,
         "color1": 8388608,
         "segment_start": 45,
         "segment_length": 32
@@ -75,12 +75,12 @@
     {
       "event_id": "BLINDSPOT_LEFT_LV1",
       "enabled": true,
-      "priority": 160,
-      "duration_ms": 1000,
+      "priority": 63,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "FADE",
-        "brightness": 140,
-        "speed": 120,
+        "brightness": 55,
+        "speed": 47,
         "color1": 8421504,
         "reverse": true,
         "segment_start": 14,
@@ -90,12 +90,12 @@
     {
       "event_id": "BLINDSPOT_RIGHT_LV1",
       "enabled": true,
-      "priority": 160,
-      "duration_ms": 1000,
+      "priority": 63,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "FADE",
-        "brightness": 140,
-        "speed": 120,
+        "brightness": 55,
+        "speed": 47,
         "color1": 8421504,
         "reverse": false,
         "segment_start": 98,
@@ -105,12 +105,12 @@
     {
       "event_id": "LOCKED",
       "enabled": true,
-      "priority": 30,
+      "priority": 12,
       "duration_ms": 800,
       "effect_config": {
         "effect_id": "FADE",
-        "brightness": 60,
-        "speed": 80,
+        "brightness": 24,
+        "speed": 31,
         "color1": 663626,
         "segment_start": 0,
         "segment_length": 0
@@ -119,12 +119,12 @@
     {
       "event_id": "UNLOCKED",
       "enabled": true,
-      "priority": 35,
+      "priority": 14,
       "duration_ms": 900,
       "effect_config": {
         "effect_id": "BREATHING",
-        "brightness": 80,
-        "speed": 90,
+        "brightness": 31,
+        "speed": 35,
         "color1": 1644825,
         "segment_start": 0,
         "segment_length": 0
@@ -133,12 +133,12 @@
     {
       "event_id": "CHARGING",
       "enabled": true,
-      "priority": 70,
+      "priority": 27,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "BREATHING",
-        "brightness": 100,
-        "speed": 100,
+        "brightness": 39,
+        "speed": 39,
         "color1": 32768,
         "segment_start": 45,
         "segment_length": 32

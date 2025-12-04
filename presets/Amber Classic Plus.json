@@ -3,8 +3,8 @@
   "description": "OEM amélioré - clignotants ambre optimisés, transitions douces",
   "default_effect": {
     "effect_id": "SOLID",
-    "brightness": 90,
-    "speed": 0,
+    "brightness": 14,
+    "speed": 1,
     "color1": 16777215,
     "reverse": false,
     "audio_reactive": false,
@@ -17,12 +17,12 @@
     {
       "event_id": "TURN_LEFT",
       "enabled": true,
-      "priority": 135,
+      "priority": 53,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "TURN_SIGNAL",
-        "brightness": 230,
-        "speed": 150,
+        "brightness": 35,
+        "speed": 23,
         "color1": 16746496,
         "reverse": true,
         "segment_start": 0,
@@ -32,12 +32,12 @@
     {
       "event_id": "TURN_RIGHT",
       "enabled": true,
-      "priority": 135,
+      "priority": 53,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "TURN_SIGNAL",
-        "brightness": 230,
-        "speed": 150,
+        "brightness": 35,
+        "speed": 23,
         "color1": 16746496,
         "reverse": false,
         "segment_start": 110,
@@ -47,12 +47,12 @@
     {
       "event_id": "TURN_HAZARD",
       "enabled": true,
-      "priority": 125,
+      "priority": 49,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "HAZARD",
-        "brightness": 220,
-        "speed": 130,
+        "brightness": 34,
+        "speed": 20,
         "color1": 16746496,
         "segment_start": 0,
         "segment_length": 0
@@ -61,12 +61,12 @@
     {
       "event_id": "BRAKE_ON",
       "enabled": true,
-      "priority": 200,
+      "priority": 78,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "BRAKE_LIGHT",
-        "brightness": 255,
-        "speed": 190,
+        "brightness": 39,
+        "speed": 29,
         "color1": 16711680,
         "segment_start": 45,
         "segment_length": 32
@@ -75,12 +75,12 @@
     {
       "event_id": "BLINDSPOT_LEFT_LV1",
       "enabled": true,
-      "priority": 175,
-      "duration_ms": 850,
+      "priority": 69,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "BLINDSPOT_FLASH",
-        "brightness": 245,
-        "speed": 190,
+        "brightness": 38,
+        "speed": 29,
         "color1": 16746496,
         "reverse": true,
         "segment_start": 14,
@@ -90,12 +90,12 @@
     {
       "event_id": "BLINDSPOT_RIGHT_LV1",
       "enabled": true,
-      "priority": 175,
-      "duration_ms": 850,
+      "priority": 69,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "BLINDSPOT_FLASH",
-        "brightness": 245,
-        "speed": 190,
+        "brightness": 38,
+        "speed": 29,
         "color1": 16746496,
         "reverse": false,
         "segment_start": 98,
@@ -105,12 +105,12 @@
     {
       "event_id": "LANE_DEPARTURE_LEFT_LV1",
       "enabled": true,
-      "priority": 150,
-      "duration_ms": 900,
+      "priority": 59,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "FADE",
-        "brightness": 210,
-        "speed": 170,
+        "brightness": 32,
+        "speed": 26,
         "color1": 16766720,
         "reverse": true,
         "segment_start": 14,
@@ -120,12 +120,12 @@
     {
       "event_id": "LANE_DEPARTURE_RIGHT_LV1",
       "enabled": true,
-      "priority": 150,
-      "duration_ms": 900,
+      "priority": 59,
+      "duration_ms": 0,
       "effect_config": {
         "effect_id": "FADE",
-        "brightness": 210,
-        "speed": 170,
+        "brightness": 32,
+        "speed": 26,
         "color1": 16766720,
         "reverse": false,
         "segment_start": 98,
@@ -135,12 +135,12 @@
     {
       "event_id": "LOCKED",
       "enabled": true,
-      "priority": 50,
+      "priority": 20,
       "duration_ms": 1100,
       "effect_config": {
         "effect_id": "FADE",
-        "brightness": 130,
-        "speed": 110,
+        "brightness": 20,
+        "speed": 17,
         "color1": 16746496,
         "segment_start": 0,
         "segment_length": 0
@@ -149,12 +149,12 @@
     {
       "event_id": "UNLOCKED",
       "enabled": true,
-      "priority": 60,
+      "priority": 24,
       "duration_ms": 1400,
       "effect_config": {
         "effect_id": "BREATHING",
-        "brightness": 160,
-        "speed": 130,
+        "brightness": 25,
+        "speed": 20,
         "color1": 16777215,
         "segment_start": 0,
         "segment_length": 0
@@ -163,12 +163,12 @@
     {
       "event_id": "CHARGING",
       "enabled": true,
-      "priority": 85,
+      "priority": 33,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "CHARGE_STATUS",
-        "brightness": 180,
-        "speed": 150,
+        "brightness": 28,
+        "speed": 23,
         "color1": 65280,
         "segment_start": 45,
         "segment_length": 32
@@ -177,12 +177,12 @@
     {
       "event_id": "CHARGE_COMPLETE",
       "enabled": true,
-      "priority": 95,
+      "priority": 37,
       "duration_ms": 3200,
       "effect_config": {
         "effect_id": "BREATHING",
-        "brightness": 150,
-        "speed": 120,
+        "brightness": 23,
+        "speed": 18,
         "color1": 3394611,
         "segment_start": 45,
         "segment_length": 32
@@ -191,12 +191,12 @@
     {
       "event_id": "DOOR_OPEN",
       "enabled": true,
-      "priority": 70,
+      "priority": 27,
       "duration_ms": 2100,
       "effect_config": {
         "effect_id": "BREATHING",
-        "brightness": 170,
-        "speed": 130,
+        "brightness": 26,
+        "speed": 20,
         "color1": 16777215,
         "segment_start": 0,
         "segment_length": 0
@@ -205,12 +205,12 @@
     {
       "event_id": "GEAR_REVERSE",
       "enabled": true,
-      "priority": 90,
+      "priority": 35,
       "duration_ms": 0,
       "effect_config": {
         "effect_id": "STROBE",
-        "brightness": 200,
-        "speed": 160,
+        "brightness": 31,
+        "speed": 25,
         "color1": 16777215,
         "segment_start": 45,
         "segment_length": 32

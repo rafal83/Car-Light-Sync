@@ -573,296 +573,53 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
   return count;
 }
 
+// Fichier JSON embarqué - default.json
+extern const uint8_t default_json_start[] asm("_binary_default_json_start");
+extern const uint8_t default_json_end[] asm("_binary_default_json_end");
+
 void config_manager_create_default_profile(config_profile_t *profile, const char *name) {
-  memset(profile, 0, sizeof(config_profile_t));
+  bool success = false;
 
-  strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
+  // 1. Charger le fichier JSON embarqué (default.json)
+  size_t json_size = default_json_end - default_json_start;
 
-  // Effet par défaut: rainbow
-  profile->default_effect.effect            = EFFECT_SCAN;
-  profile->default_effect.brightness        = 128;
-  profile->default_effect.speed             = 50;
-  profile->default_effect.color1            = 0xFF0000;
-  profile->default_effect.segment_start     = 0;
-  profile->default_effect.segment_length    = 0; // full strip par defaut
+  // Allouer un buffer pour le JSON (avec null terminator)
+  char *embedded_json = (char *)malloc(json_size + 1);
+  if (embedded_json != NULL) {
+    memcpy(embedded_json, default_json_start, json_size);
+    embedded_json[json_size] = '\0'; // Null terminator
 
-  // Défauts segment: LEFT sur moitié gauche, RIGHT sur moitié droite
-  // Cette boucle initialise les segments AVANT la configuration manuelle des événements
-  for (int e = 0; e < CAN_EVENT_MAX; e++) {
-    if (event_is_left((can_event_type_t)e)) {
-      profile->event_effects[e].effect_config.segment_start  = 0;
-      profile->event_effects[e].effect_config.segment_length = config_manager_get_led_count() / 2;
-      profile->event_effects[e].effect_config.reverse        = true;  // Animation vers la gauche
-    } else if (event_is_right((can_event_type_t)e)) {
-      profile->event_effects[e].effect_config.segment_start  = config_manager_get_led_count() / 2;
-      profile->event_effects[e].effect_config.segment_length = config_manager_get_led_count() / 2;
-      profile->event_effects[e].effect_config.reverse        = false; // Animation vers la droite
-    } else {
-      profile->event_effects[e].effect_config.segment_start  = 0;
-      profile->event_effects[e].effect_config.segment_length = config_manager_get_led_count();
-      profile->event_effects[e].effect_config.reverse        = false;
-    }
+    ESP_LOGI(TAG_CONFIG, "Loading embedded default.json (%zu bytes)", json_size);
+    success = config_manager_import_profile_from_json(embedded_json, profile);
+    free(embedded_json);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Failed to allocate memory for embedded JSON");
   }
 
-  // Configurer les effets pour événements
-  // Clignotant gauche
-  profile->event_effects[CAN_EVENT_TURN_LEFT].event                    = CAN_EVENT_TURN_LEFT;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.effect     = EFFECT_TURN_SIGNAL;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.brightness = 200;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.speed      = 200;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.color1     = 0xFF8000;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.reverse    = true; // Animation depuis centre vers gauche
-  profile->event_effects[CAN_EVENT_TURN_LEFT].duration_ms              = 0;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].priority                 = 200;
-  profile->event_effects[CAN_EVENT_TURN_LEFT].enabled                  = true;
-
-  // Clignotant droite (symétrique)
-  create_symmetric_event_pair(profile, CAN_EVENT_TURN_LEFT, CAN_EVENT_TURN_RIGHT);
-
-  // Charge
-  profile->event_effects[CAN_EVENT_CHARGING].event                              = CAN_EVENT_CHARGING;
-  profile->event_effects[CAN_EVENT_CHARGING].action_type                        = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_CHARGING].profile_id                         = -1;
-  profile->event_effects[CAN_EVENT_CHARGING].effect_config.effect               = EFFECT_CHARGE_STATUS;
-  profile->event_effects[CAN_EVENT_CHARGING].effect_config.brightness           = 150;
-  profile->event_effects[CAN_EVENT_CHARGING].effect_config.speed                = 50;
-  profile->event_effects[CAN_EVENT_CHARGING].effect_config.color1               = 0x00FF00;
-  profile->event_effects[CAN_EVENT_CHARGING].duration_ms                        = 0;
-  profile->event_effects[CAN_EVENT_CHARGING].priority                           = 150;
-  profile->event_effects[CAN_EVENT_CHARGING].enabled                            = true;
-
-  // Blindspot
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].event                    = CAN_EVENT_BLINDSPOT_LEFT_LV1;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.effect     = EFFECT_SOLID;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.brightness = 255;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.speed      = 255;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.color1     = 0xFFFF00;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].effect_config.reverse    = true; // Animation depuis centre vers gauche
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].duration_ms              = 0;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].priority                 = 230;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1].enabled                  = true;
-
-  // Blindspot droite LV1 (symétrique)
-  create_symmetric_event_pair(profile, CAN_EVENT_BLINDSPOT_LEFT_LV1, CAN_EVENT_BLINDSPOT_RIGHT_LV1);
-
-  // Blindspot LV2 (basé sur LV1 avec couleur et priorité différentes)
-  memcpy(&profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2], &profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV1], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].event                     = CAN_EVENT_BLINDSPOT_LEFT_LV2;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].effect_config.color1      = 0xFF0000;
-  profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT_LV2].priority                  = 250;
-
-  // Blindspot droite LV2 (symétrique)
-  create_symmetric_event_pair(profile, CAN_EVENT_BLINDSPOT_LEFT_LV2, CAN_EVENT_BLINDSPOT_RIGHT_LV2);
-
-  // Forward colission
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].event                          = CAN_EVENT_FORWARD_COLLISION;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].action_type                    = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].profile_id                     = -1;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.effect           = EFFECT_HAZARD;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.brightness       = 255;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.speed            = 255;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].effect_config.color1           = 0xFF0000;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].duration_ms                    = 0;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].priority                       = 220;
-  profile->event_effects[CAN_EVENT_FORWARD_COLLISION].enabled                        = false;
-
-  // Dépassement de ligne
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].event                    = CAN_EVENT_LANE_DEPARTURE_LEFT_LV1;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.effect     = EFFECT_SOLID;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.brightness = 255;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.speed      = 255;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.color1     = 0xFFF000;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].effect_config.reverse    = true; // Animation depuis centre vers gauche
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].duration_ms              = 0;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].priority                 = 220;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1].enabled                  = false;
-
-  // Dépassement de ligne droite LV1 (symétrique)
-  create_symmetric_event_pair(profile, CAN_EVENT_LANE_DEPARTURE_LEFT_LV1, CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1);
-
-  // Dépassement de ligne LV2 (basé sur LV1 avec couleur et priorité différentes)
-  memcpy(&profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2], &profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV1], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].event                = CAN_EVENT_LANE_DEPARTURE_LEFT_LV2;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].effect_config.color1 = 0xFF0000;
-  profile->event_effects[CAN_EVENT_LANE_DEPARTURE_LEFT_LV2].priority             = 250;
-
-  // Dépassement de ligne droite LV2 (symétrique)
-  create_symmetric_event_pair(profile, CAN_EVENT_LANE_DEPARTURE_LEFT_LV2, CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2);
-
-  // Hazard/Warning (clignotants de détresse)
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].event                        = CAN_EVENT_TURN_HAZARD;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].action_type                  = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].profile_id                   = -1;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.effect         = EFFECT_HAZARD;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.brightness     = 255;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.speed          = 100;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.color1         = 0xFF8000;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].duration_ms                  = 0;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].priority                     = 220;
-  profile->event_effects[CAN_EVENT_TURN_HAZARD].enabled                      = true;
-
-  // Charge complète
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].event                    = CAN_EVENT_CHARGE_COMPLETE;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.effect     = EFFECT_BREATHING;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.brightness = 200;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.speed      = 30;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.color1     = 0x00FF00;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].duration_ms              = 0;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].priority                 = 140;
-  profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].enabled                  = true;
-
-  // Câble connecté
-  memcpy(&profile->event_effects[CAN_EVENT_CHARGING_STARTED], &profile->event_effects[CAN_EVENT_CHARGE_COMPLETE], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_CHARGING_STARTED].event       = CAN_EVENT_CHARGING_STARTED;
-  profile->event_effects[CAN_EVENT_CHARGING_STARTED].enabled     = false;
-  profile->event_effects[CAN_EVENT_CHARGING_STARTED].duration_ms = 500;
-
-  memcpy(&profile->event_effects[CAN_EVENT_CHARGING_STOPPED], &profile->event_effects[CAN_EVENT_CHARGING_STARTED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_CHARGING_STOPPED].event = CAN_EVENT_CHARGING_STOPPED;
-
-  memcpy(&profile->event_effects[CAN_EVENT_CHARGING_CABLE_CONNECTED], &profile->event_effects[CAN_EVENT_CHARGING_STARTED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_CHARGING_CABLE_CONNECTED].event = CAN_EVENT_CHARGING_CABLE_CONNECTED;
-
-  memcpy(&profile->event_effects[CAN_EVENT_CHARGING_CABLE_DISCONNECTED], &profile->event_effects[CAN_EVENT_CHARGING_STARTED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_CHARGING_CABLE_DISCONNECTED].event = CAN_EVENT_CHARGING_CABLE_DISCONNECTED;
-  memcpy(&profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED], &profile->event_effects[CAN_EVENT_CHARGING_STARTED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_CHARGING_PORT_OPENED].event               = CAN_EVENT_CHARGING_PORT_OPENED;
-
-  // Porte ouverte
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].event                          = CAN_EVENT_DOOR_OPEN;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].action_type                    = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].profile_id                     = -1;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.effect           = EFFECT_BREATHING;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.brightness       = 180;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.speed            = 80;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.color1           = 0xFFFFFF;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].duration_ms                    = 5000; // 5 secondes
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].priority                       = 100;
-  profile->event_effects[CAN_EVENT_DOOR_OPEN].enabled                        = true;
-
-  // Porte fermée
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].event                         = CAN_EVENT_DOOR_CLOSE;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].action_type                   = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].profile_id                    = -1;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.effect          = EFFECT_BREATHING;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.brightness      = 100;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.speed           = 120;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.color1          = 0x0000FF;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].duration_ms                   = 2000; // 2 secondes
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].priority                      = 90;
-  profile->event_effects[CAN_EVENT_DOOR_CLOSE].enabled                       = true;
-
-  // Verrouillé
-  profile->event_effects[CAN_EVENT_LOCKED].event                             = CAN_EVENT_LOCKED;
-  profile->event_effects[CAN_EVENT_LOCKED].action_type                       = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_LOCKED].profile_id                        = -1;
-  profile->event_effects[CAN_EVENT_LOCKED].effect_config.effect              = EFFECT_STROBE;
-  profile->event_effects[CAN_EVENT_LOCKED].effect_config.brightness          = 200;
-  profile->event_effects[CAN_EVENT_LOCKED].effect_config.speed               = 150;
-  profile->event_effects[CAN_EVENT_LOCKED].effect_config.color1              = 0xFF0000;
-  profile->event_effects[CAN_EVENT_LOCKED].duration_ms                       = 1000; // 1 seconde
-  profile->event_effects[CAN_EVENT_LOCKED].priority                          = 110;
-  profile->event_effects[CAN_EVENT_LOCKED].enabled                           = true;
-
-  // Déverrouillé
-  profile->event_effects[CAN_EVENT_UNLOCKED].event                           = CAN_EVENT_UNLOCKED;
-  profile->event_effects[CAN_EVENT_UNLOCKED].action_type                     = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_UNLOCKED].profile_id                      = -1;
-  profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.effect            = EFFECT_BREATHING;
-  profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.brightness        = 200;
-  profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.speed             = 100;
-  profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.color1            = 0x00FF00;
-  profile->event_effects[CAN_EVENT_UNLOCKED].duration_ms                     = 1500; // 1.5 secondes
-  profile->event_effects[CAN_EVENT_UNLOCKED].priority                        = 110;
-  profile->event_effects[CAN_EVENT_UNLOCKED].enabled                         = true;
-
-  // Frein activé
-  profile->event_effects[CAN_EVENT_BRAKE_ON].event                           = CAN_EVENT_BRAKE_ON;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].action_type                     = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].profile_id                      = -1;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.effect            = EFFECT_BRAKE_LIGHT;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.brightness        = 255;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.speed             = 100;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.color1            = 0xFF0000;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].duration_ms                     = 0;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].priority                        = 180;
-  profile->event_effects[CAN_EVENT_BRAKE_ON].enabled                         = true;
-
-  // Seuil de vitesse
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].event                    = CAN_EVENT_SPEED_THRESHOLD;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.effect     = EFFECT_RUNNING_LIGHTS;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.brightness = 200;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.speed      = 120;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.color1     = 0x00FFFF;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].duration_ms              = 0;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].priority                 = 60;
-  profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].enabled                  = false; // Désactivé par défaut
-
-  memcpy(&profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED], &profile->event_effects[CAN_EVENT_SPEED_THRESHOLD], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED].event       = CAN_EVENT_AUTOPILOT_ENGAGED;
-  profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED].duration_ms = 500;
-
-  memcpy(&profile->event_effects[CAN_EVENT_AUTOPILOT_DISENGAGED], &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_AUTOPILOT_DISENGAGED].event = CAN_EVENT_AUTOPILOT_DISENGAGED;
-
-  memcpy(&profile->event_effects[CAN_EVENT_AUTOPILOT_ABORTING], &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_AUTOPILOT_ABORTING].event = CAN_EVENT_AUTOPILOT_ABORTING;
-
-  memcpy(&profile->event_effects[CAN_EVENT_GEAR_DRIVE], &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_GEAR_DRIVE].event = CAN_EVENT_GEAR_DRIVE;
-
-  memcpy(&profile->event_effects[CAN_EVENT_GEAR_REVERSE], &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_GEAR_REVERSE].event = CAN_EVENT_GEAR_REVERSE;
-
-  memcpy(&profile->event_effects[CAN_EVENT_GEAR_PARK], &profile->event_effects[CAN_EVENT_AUTOPILOT_ENGAGED], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_GEAR_PARK].event                         = CAN_EVENT_GEAR_PARK;
-
-  // Mode Sentry armé/désarmé
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].event                    = CAN_EVENT_SENTRY_MODE_ON;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.effect     = EFFECT_BREATHING;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.brightness = 180;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.speed      = 40;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].effect_config.color1     = 0xFF0000;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].duration_ms              = 0;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].priority                 = 160;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_ON].enabled                  = false;
-
-  memcpy(&profile->event_effects[CAN_EVENT_SENTRY_MODE_OFF], &profile->event_effects[CAN_EVENT_SENTRY_MODE_ON], sizeof(can_event_effect_t));
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_OFF].event                 = CAN_EVENT_SENTRY_MODE_OFF;
-  profile->event_effects[CAN_EVENT_SENTRY_MODE_OFF].effect_config.color1  = 0x0040FF;
-
-  // Alerte Sentry
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].event                    = CAN_EVENT_SENTRY_ALERT;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].action_type              = EVENT_ACTION_APPLY_EFFECT;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].profile_id               = -1;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.effect     = EFFECT_STROBE;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.brightness = 255;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.speed      = 220;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].effect_config.color1     = 0xFF2020;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].duration_ms              = 3000;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].priority                 = 240;
-  profile->event_effects[CAN_EVENT_SENTRY_ALERT].enabled                  = true;
-
-  for (int e = 0; e < CAN_EVENT_MAX; e++) {
-    profile->event_effects[e].enabled = true;
+  // 2. Si échec, fallback minimal
+  if (!success) {
+    ESP_LOGE(TAG_CONFIG, "Failed to import embedded preset, using minimal fallback");
+    memset(profile, 0, sizeof(config_profile_t));
+    strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
+    profile->default_effect.effect = EFFECT_SOLID;
+    profile->default_effect.brightness = 20;
+    profile->default_effect.speed = 1;
+    profile->default_effect.color1 = 0xFFFFFF;
+    profile->active = false;
+    profile->created_timestamp = (uint32_t)time(NULL);
+    profile->modified_timestamp = profile->created_timestamp;
+    return;
   }
 
-  // Paramètres de luminosité dynamique
-  profile->dynamic_brightness_enabled = false; // Désactivé par défaut
-  profile->dynamic_brightness_rate    = 50;    // 50% par défaut
+  // Optionnel: Override le nom si fourni
+  if (name != NULL && strlen(name) > 0) {
+    strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
+  }
 
+  // Note: Les événements manquants sont déjà complétés par la fonction d'import
+  // avec des valeurs disabled par défaut (voir config_manager_import_profile_from_json)
+
+  // Paramètres de timestamps
   profile->active             = false;
   profile->created_timestamp  = (uint32_t)time(NULL);
   profile->modified_timestamp = profile->created_timestamp;
@@ -1426,6 +1183,22 @@ bool config_manager_factory_reset(void) {
   return true;
 }
 
+// Conversion 0-255 vers pourcentage 1-100
+static uint8_t value_to_percent(uint8_t value) {
+  if (value == 0) {
+    return 1;
+  }
+  uint8_t percent = (value * 100 + 127) / 255; // Arrondi au plus proche
+  return (percent < 1) ? 1 : (percent > 100) ? 100 : percent;
+}
+
+// Conversion pourcentage 1-100 vers 0-255
+static uint8_t percent_to_value(uint8_t percent) {
+  if (percent < 1) percent = 1;
+  if (percent > 100) percent = 100;
+  return (percent * 255 + 50) / 100; // Arrondi au plus proche
+}
+
 bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t buffer_size) {
   if (profile_id > MAX_PROFILES || json_buffer == NULL) {
     return false;
@@ -1447,11 +1220,11 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
   cJSON_AddNumberToObject(root, "created_timestamp", profile->created_timestamp);
   cJSON_AddNumberToObject(root, "modified_timestamp", profile->modified_timestamp);
 
-  // Effet par défaut
+  // Effet par défaut - Convertir en pourcentage pour l'export
   cJSON *default_effect = cJSON_CreateObject();
   cJSON_AddStringToObject(default_effect, "effect_id", led_effects_enum_to_id(profile->default_effect.effect));
-  cJSON_AddNumberToObject(default_effect, "brightness", profile->default_effect.brightness);
-  cJSON_AddNumberToObject(default_effect, "speed", profile->default_effect.speed);
+  cJSON_AddNumberToObject(default_effect, "brightness", value_to_percent(profile->default_effect.brightness));
+  cJSON_AddNumberToObject(default_effect, "speed", value_to_percent(profile->default_effect.speed));
   cJSON_AddNumberToObject(default_effect, "color1", profile->default_effect.color1);
   cJSON_AddNumberToObject(default_effect, "color2", profile->default_effect.color2);
   cJSON_AddNumberToObject(default_effect, "color3", profile->default_effect.color3);
@@ -1474,13 +1247,13 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
       const char *event_id = config_manager_enum_to_id(profile->event_effects[i].event);
       cJSON_AddStringToObject(event, "event_id", event_id);
       cJSON_AddBoolToObject(event, "enabled", profile->event_effects[i].enabled);
-      cJSON_AddNumberToObject(event, "priority", profile->event_effects[i].priority);
+      cJSON_AddNumberToObject(event, "priority", value_to_percent(profile->event_effects[i].priority));
       cJSON_AddNumberToObject(event, "duration_ms", profile->event_effects[i].duration_ms);
 
       cJSON *event_effect = cJSON_CreateObject();
       cJSON_AddStringToObject(event_effect, "effect_id", led_effects_enum_to_id(profile->event_effects[i].effect_config.effect));
-      cJSON_AddNumberToObject(event_effect, "brightness", profile->event_effects[i].effect_config.brightness);
-      cJSON_AddNumberToObject(event_effect, "speed", profile->event_effects[i].effect_config.speed);
+      cJSON_AddNumberToObject(event_effect, "brightness", value_to_percent(profile->event_effects[i].effect_config.brightness));
+      cJSON_AddNumberToObject(event_effect, "speed", value_to_percent(profile->event_effects[i].effect_config.speed));
       cJSON_AddNumberToObject(event_effect, "color1", profile->event_effects[i].effect_config.color1);
       cJSON_AddNumberToObject(event_effect, "color2", profile->event_effects[i].effect_config.color2);
       cJSON_AddNumberToObject(event_effect, "color3", profile->event_effects[i].effect_config.color3);
@@ -1515,8 +1288,8 @@ bool config_manager_export_profile(uint8_t profile_id, char *json_buffer, size_t
   return false;
 }
 
-bool config_manager_import_profile(uint8_t profile_id, const char *json_string) {
-  if (profile_id > MAX_PROFILES || json_string == NULL) {
+bool config_manager_import_profile_from_json(const char *json_string, config_profile_t *profile) {
+  if (json_string == NULL || profile == NULL) {
     return false;
   }
 
@@ -1526,84 +1299,76 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
     return false;
   }
 
-  // Allouer dynamiquement pour éviter stack overflow
-  config_profile_t *imported_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
-  if (imported_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
-    cJSON_Delete(root);
-    return false;
-  }
-  memset(imported_profile, 0, sizeof(config_profile_t));
+  memset(profile, 0, sizeof(config_profile_t));
 
   // Métadonnées
   const cJSON *name = cJSON_GetObjectItem(root, "name");
   if (name && cJSON_IsString(name)) {
-    strncpy(imported_profile->name, name->valuestring, PROFILE_NAME_MAX_LEN - 1);
+    strncpy(profile->name, name->valuestring, PROFILE_NAME_MAX_LEN - 1);
   } else {
     ESP_LOGE(TAG_CONFIG, "Champ 'name' manquant ou invalide");
     cJSON_Delete(root);
-    free(imported_profile);
     return false;
   }
 
   const cJSON *created = cJSON_GetObjectItem(root, "created_timestamp");
   if (created && cJSON_IsNumber(created)) {
-    imported_profile->created_timestamp = created->valueint;
+    profile->created_timestamp = created->valueint;
   }
 
   const cJSON *modified = cJSON_GetObjectItem(root, "modified_timestamp");
   if (modified && cJSON_IsNumber(modified)) {
-    imported_profile->modified_timestamp = modified->valueint;
+    profile->modified_timestamp = modified->valueint;
   }
 
-  if (imported_profile->created_timestamp == 0) {
-    imported_profile->created_timestamp = (uint32_t)time(NULL);
+  if (profile->created_timestamp == 0) {
+    profile->created_timestamp = (uint32_t)time(NULL);
   }
-  if (imported_profile->modified_timestamp == 0) {
-    imported_profile->modified_timestamp = imported_profile->created_timestamp;
+  if (profile->modified_timestamp == 0) {
+    profile->modified_timestamp = profile->created_timestamp;
   }
-  imported_profile->active = false;
+  profile->active = false;
 
   // Effet par défaut
   const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
   if (default_effect && cJSON_IsObject(default_effect)) {
     cJSON *item;
     if ((item = cJSON_GetObjectItem(default_effect, "effect_id")) && cJSON_IsString(item)) {
-      imported_profile->default_effect.effect = led_effects_id_to_enum(item->valuestring);
+      profile->default_effect.effect = led_effects_id_to_enum(item->valuestring);
     }
     if ((item = cJSON_GetObjectItem(default_effect, "brightness")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.brightness = item->valueint;
+      profile->default_effect.brightness = percent_to_value(item->valueint);
     if ((item = cJSON_GetObjectItem(default_effect, "speed")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.speed = item->valueint;
+      profile->default_effect.speed = percent_to_value(item->valueint);
     if ((item = cJSON_GetObjectItem(default_effect, "color1")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.color1 = item->valueint;
+      profile->default_effect.color1 = item->valueint;
     if ((item = cJSON_GetObjectItem(default_effect, "color2")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.color2 = item->valueint;
+      profile->default_effect.color2 = item->valueint;
     if ((item = cJSON_GetObjectItem(default_effect, "color3")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.color3 = item->valueint;
+      profile->default_effect.color3 = item->valueint;
     if ((item = cJSON_GetObjectItem(default_effect, "reverse")) && cJSON_IsBool(item))
-      imported_profile->default_effect.reverse = cJSON_IsTrue(item);
+      profile->default_effect.reverse = cJSON_IsTrue(item);
     if ((item = cJSON_GetObjectItem(default_effect, "audio_reactive")) && cJSON_IsBool(item))
-      imported_profile->default_effect.audio_reactive = cJSON_IsTrue(item);
+      profile->default_effect.audio_reactive = cJSON_IsTrue(item);
     if ((item = cJSON_GetObjectItem(default_effect, "segment_start")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.segment_start = item->valueint;
+      profile->default_effect.segment_start = item->valueint;
     if ((item = cJSON_GetObjectItem(default_effect, "segment_length")) && cJSON_IsNumber(item))
-      imported_profile->default_effect.segment_length = item->valueint;
+      profile->default_effect.segment_length = item->valueint;
   }
 
   // Paramètres de luminosité dynamique
   const cJSON *dyn_bright_enabled = cJSON_GetObjectItem(root, "dynamic_brightness_enabled");
   if (dyn_bright_enabled && cJSON_IsBool(dyn_bright_enabled)) {
-    imported_profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled);
+    profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled);
   } else {
-    imported_profile->dynamic_brightness_enabled = false; // Défaut
+    profile->dynamic_brightness_enabled = false; // Défaut
   }
 
   const cJSON *dyn_bright_rate = cJSON_GetObjectItem(root, "dynamic_brightness_rate");
   if (dyn_bright_rate && cJSON_IsNumber(dyn_bright_rate)) {
-    imported_profile->dynamic_brightness_rate = dyn_bright_rate->valueint;
+    profile->dynamic_brightness_rate = dyn_bright_rate->valueint;
   } else {
-    imported_profile->dynamic_brightness_rate = 50; // Défaut
+    profile->dynamic_brightness_rate = 50; // Défaut
   }
 
   // Événements CAN
@@ -1631,50 +1396,48 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
 
       const cJSON *enabled = cJSON_GetObjectItem(event, "enabled");
       if (enabled && cJSON_IsBool(enabled)) {
-        imported_profile->event_effects[evt].enabled = cJSON_IsTrue(enabled);
+        profile->event_effects[evt].enabled = cJSON_IsTrue(enabled);
       }
 
       const cJSON *priority = cJSON_GetObjectItem(event, "priority");
       if (priority && cJSON_IsNumber(priority)) {
-        imported_profile->event_effects[evt].priority = priority->valueint;
+        profile->event_effects[evt].priority = percent_to_value(priority->valueint);
       }
 
       const cJSON *duration = cJSON_GetObjectItem(event, "duration_ms");
       if (duration && cJSON_IsNumber(duration)) {
-        imported_profile->event_effects[evt].duration_ms = duration->valueint;
+        profile->event_effects[evt].duration_ms = duration->valueint;
       }
 
-      imported_profile->event_effects[evt].event = evt;
+      profile->event_effects[evt].event = evt;
 
       const cJSON *effect_config                 = cJSON_GetObjectItem(event, "effect_config");
       if (effect_config && cJSON_IsObject(effect_config)) {
         cJSON *item;
         if ((item = cJSON_GetObjectItem(effect_config, "effect_id")) && cJSON_IsString(item)) {
-          imported_profile->event_effects[evt].effect_config.effect = led_effects_id_to_enum(item->valuestring);
+          profile->event_effects[evt].effect_config.effect = led_effects_id_to_enum(item->valuestring);
         }
         if ((item = cJSON_GetObjectItem(effect_config, "brightness")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.brightness = item->valueint;
+          profile->event_effects[evt].effect_config.brightness = percent_to_value(item->valueint);
         if ((item = cJSON_GetObjectItem(effect_config, "speed")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.speed = item->valueint;
+          profile->event_effects[evt].effect_config.speed = percent_to_value(item->valueint);
         if ((item = cJSON_GetObjectItem(effect_config, "color1")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.color1 = item->valueint;
+          profile->event_effects[evt].effect_config.color1 = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "color2")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.color2 = item->valueint;
+          profile->event_effects[evt].effect_config.color2 = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "color3")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.color3 = item->valueint;
+          profile->event_effects[evt].effect_config.color3 = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "reverse")) && cJSON_IsBool(item))
-          imported_profile->event_effects[evt].effect_config.reverse = cJSON_IsTrue(item);
+          profile->event_effects[evt].effect_config.reverse = cJSON_IsTrue(item);
         if ((item = cJSON_GetObjectItem(effect_config, "audio_reactive")) && cJSON_IsBool(item))
-          imported_profile->event_effects[evt].effect_config.audio_reactive = cJSON_IsTrue(item);
+          profile->event_effects[evt].effect_config.audio_reactive = cJSON_IsTrue(item);
         if ((item = cJSON_GetObjectItem(effect_config, "segment_start")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.segment_start = item->valueint;
+          profile->event_effects[evt].effect_config.segment_start = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "segment_length")) && cJSON_IsNumber(item))
-          imported_profile->event_effects[evt].effect_config.segment_length = item->valueint;
+          profile->event_effects[evt].effect_config.segment_length = item->valueint;
       }
     }
   }
-
-  cJSON_Delete(root);
 
   // Compléter tous les événements manquants avec des valeurs par défaut (désactivés)
   // Cela permet de gérer les nouveaux événements ajoutés après la création du preset
@@ -1682,16 +1445,39 @@ bool config_manager_import_profile(uint8_t profile_id, const char *json_string) 
     // Si l'événement n'a pas été initialisé (effect_config.effect == 0 et enabled == false)
     // ET que ce n'est pas NONE, on le complète avec des valeurs par défaut
     if (evt != CAN_EVENT_NONE &&
-        imported_profile->event_effects[evt].event == 0 &&
-        !imported_profile->event_effects[evt].enabled) {
-      imported_profile->event_effects[evt].event = evt;
-      imported_profile->event_effects[evt].enabled = false;
-      imported_profile->event_effects[evt].effect_config.effect = EFFECT_OFF;
-      imported_profile->event_effects[evt].priority = 0;
-      imported_profile->event_effects[evt].duration_ms = 0;
-      imported_profile->event_effects[evt].action_type = EVENT_ACTION_APPLY_EFFECT;
-      imported_profile->event_effects[evt].profile_id = -1;
+        profile->event_effects[evt].event == 0 &&
+        !profile->event_effects[evt].enabled) {
+      profile->event_effects[evt].event = evt;
+      profile->event_effects[evt].enabled = false;
+      profile->event_effects[evt].effect_config.effect = EFFECT_OFF;
+      profile->event_effects[evt].priority = 1;
+      profile->event_effects[evt].duration_ms = 0;
+      profile->event_effects[evt].action_type = EVENT_ACTION_APPLY_EFFECT;
+      profile->event_effects[evt].profile_id = -1;
     }
+  }
+
+  cJSON_Delete(root);
+  ESP_LOGI(TAG_CONFIG, "Profil importé avec succès: %s", profile->name);
+  return true;
+}
+
+bool config_manager_import_profile(uint8_t profile_id, const char *json_string) {
+  if (profile_id > MAX_PROFILES || json_string == NULL) {
+    return false;
+  }
+
+  // Allouer dynamiquement pour éviter stack overflow
+  config_profile_t *imported_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (imported_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+    return false;
+  }
+
+  // Utiliser la fonction générique pour parser le JSON
+  if (!config_manager_import_profile_from_json(json_string, imported_profile)) {
+    free(imported_profile);
+    return false;
   }
 
   // Sauvegarder le profil importé
