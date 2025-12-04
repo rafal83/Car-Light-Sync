@@ -119,6 +119,42 @@
       }
     },
     {
+      "event_id": "SIDE_COLLISION_LEFT",
+      "enabled": true,
+      "priority": 75,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "STROBE",
+        "brightness": 100,
+        "speed": 100,
+        "color1": 16711680,
+        "color2": 0,
+        "color3": 0,
+        "reverse": true,
+        "audio_reactive": false,
+        "segment_start": 14,
+        "segment_length": 9
+      }
+    },
+    {
+      "event_id": "SIDE_COLLISION_RIGHT",
+      "enabled": true,
+      "priority": 75,
+      "duration_ms": 0,
+      "effect_config": {
+        "effect_id": "STROBE",
+        "brightness": 100,
+        "speed": 100,
+        "color1": 16711680,
+        "color2": 0,
+        "color3": 0,
+        "reverse": false,
+        "audio_reactive": false,
+        "segment_start": 98,
+        "segment_length": 9
+      }
+    },
+    {
       "event_id": "GEAR_DRIVE",
       "enabled": true,
       "priority": 20,
