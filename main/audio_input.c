@@ -8,6 +8,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+#include <float.h>
 #include <math.h>
 #include <string.h>
 
@@ -20,6 +21,13 @@ static TaskHandle_t audio_task_handle    = NULL;
 
 // Configuration
 static audio_config_t current_config     = {.enabled = false, .sensitivity = 128, .gain = 128, .auto_gain = true, .fft_enabled = false};
+static audio_calibration_t calibration   = {.calibrated = false, .noise_floor = 0.0f, .peak_level = 1.0f};
+static audio_calibration_t calib_result  = {0};
+static volatile bool calibration_running = false;
+static volatile bool calibration_ready   = false;
+static TickType_t calibration_end_tick   = 0;
+static float calibration_min             = 0.0f;
+static float calibration_max             = 0.0f;
 
 // Données audio
 static audio_data_t current_audio_data   = {0};
@@ -42,6 +50,12 @@ static uint8_t energy_index                      = 0;
 // Forward declarations pour les fonctions FFT
 static void compute_fft_magnitude(int32_t *audio_samples, int num_samples);
 static void group_fft_into_bands(audio_fft_data_t *fft_data);
+// Calibration helpers
+static void calibration_reset_state(uint32_t duration_ms);
+static void calibration_process_sample(float amplitude);
+static float apply_calibration(float amplitude);
+static bool audio_input_save_calibration(void);
+static bool audio_input_load_calibration(void);
 
 // Fonction pour calculer l'amplitude RMS
 static float calculate_rms(int32_t *buffer, size_t size) {
@@ -94,6 +108,68 @@ static void calculate_frequency_bands(int32_t *buffer, size_t size, float *bass,
     *mid    = 0.0f;
     *treble = 0.0f;
   }
+}
+
+// Réinitialise l'état de calibration et démarre une nouvelle fenêtre
+static void calibration_reset_state(uint32_t duration_ms) {
+  calibration_running = true;
+  calibration_ready   = false;
+  calibration_min     = FLT_MAX;
+  calibration_max     = 0.0f;
+  calib_result        = (audio_calibration_t){0};
+  calibration_end_tick =
+      xTaskGetTickCount() + pdMS_TO_TICKS(duration_ms > 0 ? duration_ms : 3000);
+}
+
+// Capture min/max amplitude pendant la calibration et finalise quand la fenêtre est écoulée
+static void calibration_process_sample(float amplitude) {
+  if (!calibration_running) {
+    return;
+  }
+
+  if (amplitude < calibration_min) {
+    calibration_min = amplitude;
+  }
+  if (amplitude > calibration_max) {
+    calibration_max = amplitude;
+  }
+
+  if (xTaskGetTickCount() >= calibration_end_tick) {
+    calibration_running       = false;
+    calibration_ready         = true;
+    calib_result.calibrated   = true;
+    calib_result.noise_floor  = (calibration_min == FLT_MAX) ? 0.0f : calibration_min;
+    calib_result.peak_level   = calibration_max;
+
+    // Garantir une plage minimale pour la normalisation
+    if (calib_result.peak_level < calib_result.noise_floor + 0.05f) {
+      calib_result.peak_level = calib_result.noise_floor + 0.1f;
+    }
+  }
+}
+
+// Applique la calibration (suppression du bruit de fond et normalisation sur le pic)
+static float apply_calibration(float amplitude) {
+  if (!calibration.calibrated) {
+    return amplitude;
+  }
+
+  float range     = calibration.peak_level - calibration.noise_floor;
+  if (range < 0.05f) {
+    range = 0.05f;
+  }
+
+  float adjusted  = amplitude - calibration.noise_floor;
+  if (adjusted < 0.0f) {
+    adjusted = 0.0f;
+  }
+
+  float normalized = adjusted / range;
+  if (normalized > 1.0f) {
+    normalized = 1.0f;
+  }
+
+  return normalized;
 }
 
 // Détection de battement simple basée sur l'énergie
@@ -190,6 +266,14 @@ static void audio_task(void *pvParameters) {
     if (amplitude > 1.0f)
       amplitude = 1.0f;
 
+    float raw_amplitude = amplitude;
+
+    // Collecte des bornes min/max pendant la calibration
+    calibration_process_sample(raw_amplitude);
+
+    // Application de la calibration (suppression du bruit de fond)
+    amplitude = apply_calibration(raw_amplitude);
+
     // Calculer les bandes de fréquence
     float bass, mid, treble;
     calculate_frequency_bands(audio_buffer, samples, &bass, &mid, &treble);
@@ -234,6 +318,7 @@ bool audio_input_init(void) {
 
   // Charger la configuration sauvegardée
   audio_input_load_config();
+  audio_input_load_calibration();
 
   // Créer le canal I2S RX
   i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
@@ -413,6 +498,28 @@ bool audio_input_save_config(void) {
   return true;
 }
 
+static bool audio_input_save_calibration(void) {
+  nvs_handle_t nvs_handle;
+  esp_err_t ret = nvs_open("audio_config", NVS_READWRITE, &nvs_handle);
+
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG_AUDIO, "Erreur ouverture NVS (calibration): %s", esp_err_to_name(ret));
+    return false;
+  }
+
+  ret = nvs_set_blob(nvs_handle, "calib", &calibration, sizeof(audio_calibration_t));
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG_AUDIO, "Erreur sauvegarde calibration: %s", esp_err_to_name(ret));
+    nvs_close(nvs_handle);
+    return false;
+  }
+
+  nvs_commit(nvs_handle);
+  nvs_close(nvs_handle);
+  ESP_LOGI(TAG_AUDIO, "Calibration sauvegardée (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
+  return true;
+}
+
 bool audio_input_load_config(void) {
   nvs_handle_t nvs_handle;
   esp_err_t ret = nvs_open("audio_config", NVS_READONLY, &nvs_handle);
@@ -435,13 +542,91 @@ bool audio_input_load_config(void) {
   return true;
 }
 
+static bool audio_input_load_calibration(void) {
+  nvs_handle_t nvs_handle;
+  esp_err_t ret = nvs_open("audio_config", NVS_READONLY, &nvs_handle);
+
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG_AUDIO, "Pas de calibration sauvegardée");
+    return false;
+  }
+
+  size_t required_size = sizeof(audio_calibration_t);
+  ret                  = nvs_get_blob(nvs_handle, "calib", &calibration, &required_size);
+  nvs_close(nvs_handle);
+
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG_AUDIO, "Calibration absente ou invalide (%s)", esp_err_to_name(ret));
+    return false;
+  }
+
+  ESP_LOGI(TAG_AUDIO, "Calibration chargée (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
+  return calibration.calibrated;
+}
+
 void audio_input_reset_config(void) {
   current_config.enabled     = false;
   current_config.sensitivity = 128;
   current_config.gain        = 128;
   current_config.auto_gain   = true;
 
+  calibration.calibrated = false;
+  calibration.noise_floor = 0.0f;
+  calibration.peak_level  = 1.0f;
+
   ESP_LOGI(TAG_AUDIO, "Configuration réinitialisée");
+}
+
+bool audio_input_run_calibration(uint32_t duration_ms, audio_calibration_t *result) {
+  if (!initialized) {
+    ESP_LOGE(TAG_AUDIO, "Module audio non initialisé");
+    return false;
+  }
+
+  if (!enabled) {
+    ESP_LOGE(TAG_AUDIO, "Micro désactivé : activer avant calibration");
+    return false;
+  }
+
+  if (calibration_running) {
+    ESP_LOGW(TAG_AUDIO, "Calibration déjà en cours");
+    return false;
+  }
+
+  uint32_t window_ms = duration_ms > 0 ? duration_ms : 5000;
+  calibration_reset_state(window_ms);
+
+  // Attendre la fin de la fenêtre de calibration (boucle courte)
+  TickType_t guard_tick = calibration_end_tick + pdMS_TO_TICKS(1000);
+  while (calibration_running) {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    if (xTaskGetTickCount() > guard_tick) {
+      calibration_running = false;
+      break;
+    }
+  }
+
+  if (!calibration_ready || !calib_result.calibrated) {
+    ESP_LOGE(TAG_AUDIO, "Calibration échouée (pas de données)");
+    return false;
+  }
+
+  // Mettre à jour la calibration active et sauvegarder
+  calibration = calib_result;
+  audio_input_save_calibration();
+
+  if (result) {
+    memcpy(result, &calibration, sizeof(audio_calibration_t));
+  }
+
+  ESP_LOGI(TAG_AUDIO, "Calibration réussie (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
+  return true;
+}
+
+void audio_input_get_calibration(audio_calibration_t *out_calibration) {
+  if (out_calibration) {
+    memcpy(out_calibration, &calibration, sizeof(audio_calibration_t));
+  }
 }
 
 // ============================================================================

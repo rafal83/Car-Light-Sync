@@ -18,7 +18,7 @@
 
 // Paramètres de traitement audio
 #define AUDIO_FFT_SIZE 512
-#define AUDIO_FFT_BANDS 32 // Nombre de bandes FFT (puissance de 2)
+#define AUDIO_FFT_BANDS 16 // Nombre de bandes FFT (puissance de 2)
 #define AUDIO_BPM_MIN 60
 #define AUDIO_BPM_MAX 180
 #define AUDIO_BPM_HISTORY_SIZE 4
@@ -64,6 +64,13 @@ typedef struct {
   bool auto_gain;      // Gain automatique
   bool fft_enabled;    // FFT activée/désactivée
 } audio_config_t;
+
+// Données de calibration micro (bruit de fond / pic mesuré)
+typedef struct {
+  bool calibrated;    // true si une calibration est disponible
+  float noise_floor;  // Niveau RMS observé en silence
+  float peak_level;   // Pic observé pendant la calibration
+} audio_calibration_t;
 
 /**
  * @brief Initialise le module audio I2S
@@ -162,5 +169,19 @@ void audio_input_set_fft_enabled(bool enable);
  * @return true si FFT activée
  */
 bool audio_input_is_fft_enabled(void);
+
+/**
+ * @brief Lance une calibration du micro (mesure bruit de fond + pic)
+ * @param duration_ms Durée d'échantillonnage en millisecondes
+ * @param result Résultat de la calibration (optionnel)
+ * @return true si succès (calibration sauvegardée en NVS)
+ */
+bool audio_input_run_calibration(uint32_t duration_ms, audio_calibration_t *result);
+
+/**
+ * @brief Récupère l'état de calibration courant
+ * @param calibration Pointeur pour recevoir la calibration
+ */
+void audio_input_get_calibration(audio_calibration_t *calibration);
 
 #endif // AUDIO_INPUT_H

@@ -575,6 +575,22 @@
                         </label>
                     </div>
 
+                    <div id="audio-calibration-box" class="section" style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <div>
+                                <div class="section-title" data-i18n="audio.calibrationTitle">Calibration micro</div>
+                                <div id="audio-calibration-status" style="font-weight: 600; color: var(--color-muted);" data-i18n="audio.notCalibrated">Non calibré</div>
+                                <div style="font-size: 13px; color: var(--color-muted); margin-top: 4px;">
+                                    <span data-i18n="audio.calibrationNoise">Bruit de fond</span>: <strong id="audio-calibration-noise">-</strong>
+                                    <span style="margin: 0 6px;">|</span>
+                                    <span data-i18n="audio.calibrationPeak">Pic</span>: <strong id="audio-calibration-peak">-</strong>
+                                </div>
+                            </div>
+                            <button id="audio-calibrate-btn" class="btn-primary" onclick="startAudioCalibration()" data-i18n="audio.calibrate">Calibrer</button>
+                        </div>
+                        <p style="font-size: 12px; color: var(--color-muted); margin: 8px 0 0 0;" data-i18n="audio.calibrationHint">3s de silence puis 3s de musique normale près du micro (ou un clap).</p>
+                    </div>
+
                     <div id="audio-data" class="section" style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
                         <h4 style="margin: 0 0 15px 0;" data-i18n="audio.liveData">Données en Direct</h4>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">

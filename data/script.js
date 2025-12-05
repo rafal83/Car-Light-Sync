@@ -2392,11 +2392,46 @@ function applyAudioEnabledState(enabled) {
         statusEl.style.color = enabled ? '#10B981' : 'var(--color-muted)';
     }
 
+    const calibrationBtn = $('audio-calibrate-btn');
+    if (calibrationBtn) {
+        calibrationBtn.disabled = !enabled;
+    }
+
     applyAudioEffectAvailability();
 
     const settingsEl = $('audio-settings');
     if (settingsEl) {
         settingsEl.style.display = enabled ? 'block' : 'none';
+    }
+}
+
+function applyAudioCalibrationState(calibration) {
+    const statusEl = $('audio-calibration-status');
+    const noiseEl = $('audio-calibration-noise');
+    const peakEl = $('audio-calibration-peak');
+
+    if (!statusEl) {
+        return;
+    }
+
+    if (calibration && calibration.av) {
+        statusEl.textContent = t('audio.calibrated');
+        statusEl.style.color = '#10B981';
+        if (noiseEl) {
+            noiseEl.textContent = `${Math.round((calibration.nf || 0) * 100)}%`;
+        }
+        if (peakEl) {
+            peakEl.textContent = `${Math.round((calibration.pk || 1) * 100)}%`;
+        }
+    } else {
+        statusEl.textContent = t('audio.notCalibrated');
+        statusEl.style.color = 'var(--color-muted)';
+        if (noiseEl) {
+            noiseEl.textContent = '-';
+        }
+        if (peakEl) {
+            peakEl.textContent = '-';
+        }
     }
 }
 
@@ -2412,12 +2447,54 @@ async function loadAudioStatus() {
         $('audio-gain').value = data.gn;
         $('audio-gain-value').textContent = data.gn;
         $('audio-auto-gain').checked = data.ag;
+        applyAudioCalibrationState(data.cal);
 
         if (audioEnabled) {
             startAudioDataPolling();
         }
     } catch (error) {
         console.error('Failed to load audio status:', error);
+    }
+}
+
+// Lancer une calibration ponctuelle du micro
+async function startAudioCalibration() {
+    if (!audioEnabled) {
+        showNotification('config-notification', t('audio.calibrationNeedsMic'), 'warning');
+        return;
+    }
+
+    const btn = $('audio-calibrate-btn');
+    const originalText = btn ? btn.textContent : '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = t('audio.calibrating');
+    }
+
+    try {
+        const response = await fetch(API_BASE + '/api/audio/calibrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dur: 6000 })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.ok) {
+            applyAudioCalibrationState(data.cal);
+            showNotification('config-notification', t('audio.calibrationSaved'), 'success');
+        } else {
+            showNotification('config-notification', t('audio.calibrationFailed'), 'error');
+        }
+    } catch (error) {
+        console.error('Failed to calibrate microphone:', error);
+        showNotification('config-notification', t('audio.calibrationFailed'), 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = !audioEnabled;
+            btn.textContent = originalText || t('audio.calibrate');
+        }
     }
 }
 
@@ -2557,6 +2634,10 @@ let audioFFTEnabled = false;
 
 // Draw FFT spectrum on canvas
 function drawFFTSpectrum(bands) {
+    // Affiche une bande sur deux (0,2,4...) et limite aux 8 premières
+    const displayBands = bands
+        ? bands.filter((_, idx) => idx % 2 === 0).slice(0, 8)
+        : [];
     const fftBox = $('fftStatusBox');
     if (fftBox && audioFFTEnabled) {
         fftBox.style.display = 'block';
@@ -2571,7 +2652,7 @@ function drawFFTSpectrum(bands) {
         return;
     }
 
-    if (!bands || bands.length === 0) {
+    if (!displayBands || displayBands.length === 0) {
         console.warn('No FFT bands data to draw');
         return;
     }
@@ -2584,14 +2665,14 @@ function drawFFTSpectrum(bands) {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, width, height);
 
-    const barWidth = width / bands.length;
+    const barWidth = width / displayBands.length;
 
     // Draw bars
-    for (let i = 0; i < bands.length; i++) {
-        const barHeight = bands[i] * height;
+    for (let i = 0; i < displayBands.length; i++) {
+        const barHeight = displayBands[i] * height;
 
         // Calculate rainbow color (bass = red, treble = blue)
-        const hue = (i / bands.length) * 255;
+        const hue = (i / displayBands.length) * 255;
         const r = Math.floor(255 * Math.sin((hue / 255) * Math.PI));
         const g = Math.floor(255 * Math.sin(((hue / 255) + 0.33) * Math.PI));
         const b = Math.floor(255 * Math.sin(((hue / 255) + 0.66) * Math.PI));

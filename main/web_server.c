@@ -1444,6 +1444,17 @@ static esp_err_t audio_status_handler(httpd_req_t *req) {
   cJSON_AddBoolToObject(root, "ag", config.auto_gain);
   cJSON_AddBoolToObject(root, "ffe", config.fft_enabled);
 
+  // Informations de calibration micro
+  audio_calibration_t calibration;
+  audio_input_get_calibration(&calibration);
+  cJSON *calibration_obj = cJSON_CreateObject();
+  cJSON_AddBoolToObject(calibration_obj, "av", calibration.calibrated);
+  if (calibration.calibrated) {
+    cJSON_AddNumberToObject(calibration_obj, "nf", calibration.noise_floor);
+    cJSON_AddNumberToObject(calibration_obj, "pk", calibration.peak_level);
+  }
+  cJSON_AddItemToObject(root, "cal", calibration_obj);
+
   const char *json_str = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, json_str);
@@ -1537,6 +1548,64 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   cJSON_Delete(response);
 
   ESP_LOGI(TAG_WEBSERVER, "Configuration audio mise à jour");
+  return ESP_OK;
+}
+
+// Handler POST /api/audio/calibrate - Lance une calibration ponctuelle
+static esp_err_t audio_calibrate_handler(httpd_req_t *req) {
+  uint32_t duration_ms = 5000; // fenêtre par défaut
+  char buf[BUFFER_SIZE_SMALL];
+  cJSON *root = NULL;
+
+  if (req->content_len > 0) {
+    if (parse_json_request(req, buf, sizeof(buf), &root) != ESP_OK) {
+      return ESP_FAIL;
+    }
+
+    const cJSON *duration = cJSON_GetObjectItem(root, "dur");
+    if (duration && cJSON_IsNumber(duration)) {
+      duration_ms = (uint32_t)duration->valuedouble;
+    }
+  }
+
+  if (!audio_input_is_enabled()) {
+    if (root) {
+      cJSON_Delete(root);
+    }
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Microphone disabled");
+    return ESP_FAIL;
+  }
+
+  audio_calibration_t calibration_result;
+  if (!audio_input_run_calibration(duration_ms, &calibration_result)) {
+    if (root) {
+      cJSON_Delete(root);
+    }
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Calibration failed");
+    return ESP_FAIL;
+  }
+
+  if (root) {
+    cJSON_Delete(root);
+  }
+
+  cJSON *response = cJSON_CreateObject();
+  cJSON_AddBoolToObject(response, "ok", true);
+  cJSON_AddNumberToObject(response, "dur", duration_ms);
+
+  cJSON *cal_obj = cJSON_CreateObject();
+  cJSON_AddBoolToObject(cal_obj, "av", calibration_result.calibrated);
+  cJSON_AddNumberToObject(cal_obj, "nf", calibration_result.noise_floor);
+  cJSON_AddNumberToObject(cal_obj, "pk", calibration_result.peak_level);
+  cJSON_AddItemToObject(response, "cal", cal_obj);
+
+  const char *json_str = cJSON_PrintUnformatted(response);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(response);
+
   return ESP_OK;
 }
 
@@ -1708,6 +1777,9 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t audio_config_uri = {.uri = "/api/audio/config", .method = HTTP_POST, .handler = audio_config_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_config_uri);
+
+    httpd_uri_t audio_calibrate_uri = {.uri = "/api/audio/calibrate", .method = HTTP_POST, .handler = audio_calibrate_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_calibrate_uri);
 
     httpd_uri_t audio_data_uri = {.uri = "/api/audio/data", .method = HTTP_GET, .handler = audio_data_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_data_uri);
