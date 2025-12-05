@@ -114,11 +114,6 @@ static const TickType_t OTA_PROGRESS_REFRESH_LIMIT = pdMS_TO_TICKS(500);
 // Accumulateur flottant pour animation de charge fluide
 static float charge_anim_position                  = 0.0f;
 
-// Dual directional mode state
-static bool dual_directional_mode                  = false;
-static effect_config_t left_directional_config;
-static effect_config_t right_directional_config;
-
 // Global LED strip direction (false = normal)
 static uint16_t led_count            = NUM_LEDS;
 
@@ -1687,21 +1682,6 @@ void led_effects_set_config(const effect_config_t *config) {
   }
 }
 
-void led_effects_set_dual_directional(const effect_config_t *left_config, const effect_config_t *right_config) {
-  // Active le mode dual directionnel et stocke les configurations
-  dual_directional_mode = true;
-
-  if (left_config != NULL) {
-    memcpy(&left_directional_config, left_config, sizeof(effect_config_t));
-    left_directional_config.reverse = true; // Force côté gauche
-  }
-
-  if (right_config != NULL) {
-    memcpy(&right_directional_config, right_config, sizeof(effect_config_t));
-    right_directional_config.reverse = false; // Force côté droit
-  }
-}
-
 void led_effects_get_config(effect_config_t *config) {
   if (config != NULL) {
     memcpy(config, &current_config, sizeof(effect_config_t));
@@ -1718,7 +1698,6 @@ void led_effects_update(void) {
   if (!enabled && !ota_progress_mode && !ota_ready_mode && !ota_error_mode) {
     fill_solid((rgb_t){0, 0, 0});
     led_strip_show();
-    dual_directional_mode = false;
     return;
   }
 
@@ -1757,109 +1736,57 @@ void led_effects_update(void) {
     return;
   }
 
-  // Mode dual directionnel (deux effets simultanés gauche/droite)
-  if (dual_directional_mode) {
-    int half = led_count / 2;
+  // Mode normal
+  if (current_config.effect == EFFECT_OFF) {
+    fill_solid((rgb_t){0, 0, 0});
+  } else if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
+    // Si un segment est défini, ne rendre que ce segment
+    uint16_t segment_start = current_config.segment_start;
+    uint16_t segment_length = current_config.segment_length;
 
-    // Initialiser à noir
-    for (int i = 0; i < half; i++) {
-      left_led_buffer[i]  = (rgb_t){0, 0, 0};
-      right_led_buffer[i] = (rgb_t){0, 0, 0};
+    // Normaliser le segment (0 = full strip)
+    if (segment_length == 0 || segment_length > led_count) {
+      segment_length = led_count;
+    }
+    if (segment_start >= led_count) {
+      segment_start = 0;
+    }
+    if ((segment_start + segment_length) > led_count) {
+      segment_length = led_count - segment_start;
     }
 
-    // Rendu effet gauche
-    if (left_directional_config.effect != EFFECT_OFF) {
-      effect_config_t saved = current_config;
-      memcpy(&current_config, &left_directional_config, sizeof(effect_config_t));
+    // Si segment = toute la strip, rendu direct
+    if (segment_start == 0 && segment_length == led_count) {
+      ESP_LOGI(TAG_LED, "Rendu full strip (start=%d, len=%d)", segment_start, segment_length);
+      effect_functions[current_config.effect]();
+    } else {
+      // Rendre uniquement le segment
+      ESP_LOGI(TAG_LED, "Rendu segment (start=%d, len=%d, total=%d)", segment_start, segment_length, led_count);
+      // Sauvegarder l'état courant
+      uint16_t saved_led_count = led_count;
+
+      // Mettre tout en noir d'abord
       fill_solid((rgb_t){0, 0, 0});
 
-      if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
-        effect_functions[current_config.effect]();
+      // Travailler sur le segment uniquement
+      led_count = segment_length;
+      effect_functions[current_config.effect]();
+
+      // Copier le résultat dans le segment de destination
+      rgb_t segment_buffer[MAX_LED_COUNT];
+      for (uint16_t i = 0; i < segment_length; i++) {
+        segment_buffer[i] = leds[i];
       }
 
-      // Copier uniquement la moitié gauche dans le buffer
-      for (int i = 0; i < half; i++) {
-        left_led_buffer[i] = leds[i];
-      }
-      memcpy(&current_config, &saved, sizeof(effect_config_t));
-    }
-
-    // Rendu effet droit
-    if (right_directional_config.effect != EFFECT_OFF) {
-      memcpy(&current_config, &right_directional_config, sizeof(effect_config_t));
+      // Restaurer led_count et remettre tout en noir
+      led_count = saved_led_count;
       fill_solid((rgb_t){0, 0, 0});
 
-      if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
-        effect_functions[current_config.effect]();
-      }
-
-      // Copier uniquement la moitié droite dans le buffer
-      for (int i = 0; i < half; i++) {
-        right_led_buffer[i] = leds[half + i];
-      }
-    }
-
-    // Combiner
-    for (int i = 0; i < half; i++) {
-      leds[i]        = left_led_buffer[i];
-      leds[half + i] = right_led_buffer[i];
-    }
-
-    // Réinitialiser le mode après affichage
-    dual_directional_mode = false;
-  } else {
-    // Mode normal: un seul effet
-    if (current_config.effect == EFFECT_OFF) {
-      fill_solid((rgb_t){0, 0, 0});
-    } else if (current_config.effect < EFFECT_MAX && effect_functions[current_config.effect] != NULL) {
-      // Si un segment est défini, ne rendre que ce segment
-      uint16_t segment_start = current_config.segment_start;
-      uint16_t segment_length = current_config.segment_length;
-
-      // Normaliser le segment (0 = full strip)
-      if (segment_length == 0 || segment_length > led_count) {
-        segment_length = led_count;
-      }
-      if (segment_start >= led_count) {
-        segment_start = 0;
-      }
-      if ((segment_start + segment_length) > led_count) {
-        segment_length = led_count - segment_start;
-      }
-
-      // Si segment = toute la strip, rendu direct
-      if (segment_start == 0 && segment_length == led_count) {
-        ESP_LOGI(TAG_LED, "Rendu full strip (start=%d, len=%d)", segment_start, segment_length);
-        effect_functions[current_config.effect]();
-      } else {
-        // Rendre uniquement le segment
-        ESP_LOGI(TAG_LED, "Rendu segment (start=%d, len=%d, total=%d)", segment_start, segment_length, led_count);
-        // Sauvegarder l'état courant
-        uint16_t saved_led_count = led_count;
-
-        // Mettre tout en noir d'abord
-        fill_solid((rgb_t){0, 0, 0});
-
-        // Travailler sur le segment uniquement
-        led_count = segment_length;
-        effect_functions[current_config.effect]();
-
-        // Copier le résultat dans le segment de destination
-        rgb_t segment_buffer[MAX_LED_COUNT];
-        for (uint16_t i = 0; i < segment_length; i++) {
-          segment_buffer[i] = leds[i];
-        }
-
-        // Restaurer led_count et remettre tout en noir
-        led_count = saved_led_count;
-        fill_solid((rgb_t){0, 0, 0});
-
-        // Appliquer le segment au bon endroit
-        for (uint16_t i = 0; i < segment_length; i++) {
-          uint16_t idx = segment_start + i;
-          if (idx < led_count) {
-            leds[idx] = segment_buffer[i];
-          }
+      // Appliquer le segment au bon endroit
+      for (uint16_t i = 0; i < segment_length; i++) {
+        uint16_t idx = segment_start + i;
+        if (idx < led_count) {
+          leds[idx] = segment_buffer[i];
         }
       }
     }
@@ -1903,7 +1830,6 @@ void led_effects_start_progress_display(void) {
   ota_progress_percent      = 0;
   ota_displayed_percent     = 255;
   ota_last_progress_refresh = 0;
-  dual_directional_mode     = false;
 }
 
 void led_effects_update_progress(uint8_t percent) {

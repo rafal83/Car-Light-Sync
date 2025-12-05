@@ -325,10 +325,12 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Seuil de vitesse
-    if (current_state.speed_kph > current_state.speed_threshold) {
-      config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
-    } else {
-      config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
+    if (current_state.speed_kph != previous_state.speed_kph) {
+      if (current_state.speed_kph > current_state.speed_threshold) {
+        config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
+      } else {
+        config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
+      }
     }
 
     // Contrôle des profils via molette droite (opt-in, vitesse limitée, régulateur désactivé)

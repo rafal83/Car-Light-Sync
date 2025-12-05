@@ -159,13 +159,6 @@ void led_effects_deinit(void);
 void led_effects_set_config(const effect_config_t *config);
 
 /**
- * @brief Configure deux effets directionnels simultanés (gauche et droite)
- * @param left_config Configuration pour le côté gauche (peut être NULL)
- * @param right_config Configuration pour le côté droit (peut être NULL)
- */
-void led_effects_set_dual_directional(const effect_config_t *left_config, const effect_config_t *right_config);
-
-/**
  * @brief Obtient la configuration actuelle
  * @param config Pointeur vers la structure de configuration
  */
