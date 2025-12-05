@@ -213,18 +213,6 @@ void led_effects_set_solid_color(uint32_t color);
 const char *led_effects_get_name(led_effect_t effect);
 
 /**
- * @brief Sauvegarde la configuration en mémoire non-volatile
- * @return true si succès
- */
-bool led_effects_save_config(void);
-
-/**
- * @brief Charge la configuration depuis la mémoire non-volatile
- * @return true si succès
- */
-bool led_effects_load_config(void);
-
-/**
  * @brief Réinitialise la configuration par défaut
  */
 void led_effects_reset_config(void);

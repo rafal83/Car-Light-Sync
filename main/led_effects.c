@@ -1627,8 +1627,7 @@ bool led_effects_init(void) {
   // Configuration par défaut
   led_effects_reset_config();
 
-  // Charger la config sauvegardée
-  led_effects_load_config();
+  // La configuration LED est maintenant gérée par config_manager via les profils
 
   ESP_LOGI(TAG_LED, "LEDs initialisées (%d LEDs sur GPIO %d)", led_count, LED_PIN);
   return true;
@@ -1921,51 +1920,6 @@ bool led_effects_is_audio_effect(led_effect_t effect) {
   default:
     return false;
   }
-}
-
-bool led_effects_save_config(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t ret = nvs_open("led_config", NVS_READWRITE, &nvs_handle);
-
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_LED, "Erreur ouverture NVS: %s", esp_err_to_name(ret));
-    return false;
-  }
-
-  ret = nvs_set_blob(nvs_handle, "config", &current_config, sizeof(effect_config_t));
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_LED, "Erreur sauvegarde config: %s", esp_err_to_name(ret));
-    nvs_close(nvs_handle);
-    return false;
-  }
-
-  nvs_commit(nvs_handle);
-  nvs_close(nvs_handle);
-
-  ESP_LOGI(TAG_LED, "Configuration sauvegardée");
-  return true;
-}
-
-bool led_effects_load_config(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t ret = nvs_open("led_config", NVS_READONLY, &nvs_handle);
-
-  if (ret != ESP_OK) {
-    ESP_LOGW(TAG_LED, "Pas de config sauvegardée");
-    return false;
-  }
-
-  size_t required_size = sizeof(effect_config_t);
-  ret                  = nvs_get_blob(nvs_handle, "config", &current_config, &required_size);
-  nvs_close(nvs_handle);
-
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_LED, "Erreur lecture config: %s", esp_err_to_name(ret));
-    return false;
-  }
-
-  ESP_LOGI(TAG_LED, "Configuration chargée");
-  return true;
 }
 
 void led_effects_reset_config(void) {
