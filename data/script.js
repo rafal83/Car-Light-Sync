@@ -1070,7 +1070,53 @@ const defaultReverse = $('default-reverse');
 if (defaultReverse) {
     defaultReverse.addEventListener('change', scheduleDefaultEffectSave);
 }
-// Fonction pour mettre à jour le segment range de l'effet par défaut
+const SEGMENT_MIN_LENGTH = 10;
+
+// Normalise une plage de segment (min/max) pour garantir une longueur minimale et borne max
+function normalizeSegmentRange(minSlider, maxSlider, minLength = SEGMENT_MIN_LENGTH, maxValue = maxLeds) {
+    let min = parseInt(minSlider.value);
+    let max = parseInt(maxSlider.value);
+
+    if (max - min < minLength) {
+        if (minSlider === document.activeElement) {
+            max = Math.min(min + minLength, maxValue);
+            if (max - min < minLength) {
+                min = Math.max(0, max - minLength);
+            }
+            maxSlider.value = max;
+        } else {
+            min = Math.max(0, max - minLength);
+            if (max - min < minLength) {
+                max = Math.min(maxValue, min + minLength);
+            }
+            minSlider.value = min;
+        }
+    }
+
+    return { start: min, end: max, length: max - min };
+}
+
+// Met à jour l'affichage visuel d'un segment (slider + valeurs)
+function renderSegmentRange(minSlider, maxSlider, selectedEl, startEl, lengthEl, maxValue = maxLeds) {
+    const { start, end, length } = normalizeSegmentRange(minSlider, maxSlider, SEGMENT_MIN_LENGTH, maxValue);
+
+    if (selectedEl) {
+        const percent1 = (start / maxValue) * 100;
+        const percent2 = (end / maxValue) * 100;
+        selectedEl.style.left = percent1 + '%';
+        selectedEl.style.width = (percent2 - percent1) + '%';
+    }
+    if (startEl) {
+        startEl.textContent = start;
+    }
+    if (lengthEl) {
+        lengthEl.textContent = length;
+    }
+
+    return { start, length };
+}
+
+// Helpers pour les sliders de segment par défaut
 function updateDefaultSegmentRange(triggerSave = true) {
     const minSlider = $('default-segment-range-min');
     const maxSlider = $('default-segment-range-max');
@@ -1082,41 +1128,39 @@ function updateDefaultSegmentRange(triggerSave = true) {
         return;
     }
 
-    const MIN_LENGTH = 10;
-    let min = parseInt(minSlider.value);
-    let max = parseInt(maxSlider.value);
-
-    // Empêcher longueur < MIN_LENGTH
-    if (max - min < MIN_LENGTH) {
-        if (minSlider === document.activeElement) {
-            max = min + MIN_LENGTH;
-            if (max > maxLeds) {
-                max = maxLeds;
-                min = max - MIN_LENGTH;
-            }
-            maxSlider.value = max;
-        } else {
-            min = max - MIN_LENGTH;
-            if (min < 0) {
-                min = 0;
-                max = MIN_LENGTH;
-            }
-            minSlider.value = min;
-        }
-    }
-
-    // Mettre à jour l'affichage
-    const percent1 = (min / maxLeds) * 100;
-    const percent2 = (max / maxLeds) * 100;
-    selected.style.left = percent1 + '%';
-    selected.style.width = (percent2 - percent1) + '%';
-
-    startValue.textContent = min;
-    lengthValue.textContent = max - min;
+    renderSegmentRange(minSlider, maxSlider, selected, startValue, lengthValue);
 
     if (triggerSave) {
         scheduleDefaultEffectSave();
     }
+}
+
+function getDefaultSegmentRange() {
+    const minSlider = $('default-segment-range-min');
+    const maxSlider = $('default-segment-range-max');
+    if (!minSlider || !maxSlider) {
+        return null;
+    }
+    const start = parseInt(minSlider.value);
+    const length = parseInt(maxSlider.value) - start;
+    // 0 signifie pleine longueur
+    return { start, length: length === maxLeds ? 0 : length };
+}
+
+function setDefaultSegmentRange(start, length) {
+    const minSlider = $('default-segment-range-min');
+    const maxSlider = $('default-segment-range-max');
+    if (!minSlider || !maxSlider) {
+        return;
+    }
+    const resolvedStart = start ?? 0;
+    const resolvedLength = (length !== undefined && length !== 0) ? length : maxLeds;
+    minSlider.max = maxLeds;
+    maxSlider.max = maxLeds;
+    minSlider.value = resolvedStart;
+    maxSlider.value = resolvedStart + resolvedLength;
+    // Mise à jour visuelle sans déclencher de sauvegarde
+    updateDefaultSegmentRange(false);
 }
 // Notification helper
 function showNotification(elementId, message, type, timeout = 2000) {
@@ -1466,45 +1510,12 @@ function updateSegmentRange(index) {
     const startValue = $('segment-value-start-' + index);
     const lengthValue = $('segment-value-length-' + index);
 
-    const MIN_LENGTH = 10;
-    let min = parseInt(minSlider.value);
-    let max = parseInt(maxSlider.value);
-
-    // Empêcher longueur < MIN_LENGTH
-    if (max - min < MIN_LENGTH) {
-        if (minSlider === document.activeElement) {
-            // L'utilisateur bouge le min, ajuster le max
-            max = min + MIN_LENGTH;
-            if (max > maxLeds) {
-                max = maxLeds;
-                min = max - MIN_LENGTH;
-            }
-            maxSlider.value = max;
-        } else {
-            // L'utilisateur bouge le max, ajuster le min
-            min = max - MIN_LENGTH;
-            if (min < 0) {
-                min = 0;
-                max = MIN_LENGTH;
-            }
-            minSlider.value = min;
-        }
+    if (!minSlider || !maxSlider) {
+        return;
     }
 
-    const start = min;
-    let length = max - min;
-
-    // Si length == maxLeds, enregistrer 0 (= toute la strip)
+    const { start, length } = renderSegmentRange(minSlider, maxSlider, selected, startValue, lengthValue);
     const lengthToSave = (length === maxLeds) ? 0 : length;
-
-    // Mettre à jour l'affichage
-    const percent1 = (min / maxLeds) * 100;
-    const percent2 = (max / maxLeds) * 100;
-    selected.style.left = percent1 + '%';
-    selected.style.width = (percent2 - percent1) + '%';
-
-    startValue.textContent = start;
-    lengthValue.textContent = length;
 
     // Mettre à jour les données
     updateEventConfig(index, 'st', start);
@@ -2087,16 +2098,11 @@ async function saveProfile(params = {}) {
         payload.rv = reverseCheckbox ? reverseCheckbox.checked : false;
 
         // Segment range
-        const minSlider = $('default-segment-range-min');
-        const maxSlider = $('default-segment-range-max');
-        if (minSlider && maxSlider) {
-            const start = parseInt(minSlider.value);
-            const end = parseInt(maxSlider.value);
-            const length = end - start;
-            payload.st = start;
-            // Si length == maxLeds, enregistrer 0 (= toute la strip)
-            payload.ln = (length === maxLeds) ? 0 : length;
-            console.log(`[Profile] Saving default effect segment: st=${start}, ln=${payload.ln} (end=${end}, maxLeds=${maxLeds})`);
+        const segment = getDefaultSegmentRange();
+        if (segment) {
+            payload.st = segment.start;
+            payload.ln = segment.length;
+            console.log(`[Profile] Saving default effect segment: st=${segment.start}, ln=${segment.length}`);
         }
     }
 
@@ -2327,19 +2333,10 @@ async function loadActiveProfileDefaultEffect() {
             }
 
             // Segment range
-            const minSlider = $('default-segment-range-min');
-            const maxSlider = $('default-segment-range-max');
-            if (minSlider && maxSlider) {
-                const start = defaultEffect.st !== undefined ? defaultEffect.st : 0;
-                const length = (defaultEffect.ln !== undefined && defaultEffect.ln !== 0) ? defaultEffect.ln : maxLeds;
-                console.log(`[Profile] Loading default effect segment: st=${start}, ln=${defaultEffect.ln}, calculated length=${length}, maxLeds=${maxLeds}`);
-                minSlider.value = start;
-                maxSlider.value = start + length;
-                minSlider.max = maxLeds;
-                maxSlider.max = maxLeds;
-                // Mettre à jour l'affichage du segment (sans sauvegarder)
-                updateDefaultSegmentRange(false);
-            }
+            const start = defaultEffect.st !== undefined ? defaultEffect.st : 0;
+            const length = (defaultEffect.ln !== undefined && defaultEffect.ln !== 0) ? defaultEffect.ln : maxLeds;
+            console.log(`[Profile] Loading default effect segment: st=${start}, ln=${defaultEffect.ln}, calculated length=${length}, maxLeds=${maxLeds}`);
+            setDefaultSegmentRange(start, length);
 
             // Luminosité dynamique
             const dynBrightEnabled = $('dynamic-brightness-enabled');
@@ -2382,33 +2379,39 @@ function applyAudioEffectAvailability() {
     });
 }
 
+function applyAudioEnabledState(enabled) {
+    audioEnabled = enabled;
+    const checkbox = $('audio-enable');
+    if (checkbox) {
+        checkbox.checked = enabled;
+    }
+
+    const statusEl = $('audio-status');
+    if (statusEl) {
+        statusEl.textContent = t(`audio.${enabled ? 'enabled' : 'disabled'}`);
+        statusEl.style.color = enabled ? '#10B981' : 'var(--color-muted)';
+    }
+
+    applyAudioEffectAvailability();
+
+    const settingsEl = $('audio-settings');
+    if (settingsEl) {
+        settingsEl.style.display = enabled ? 'block' : 'none';
+    }
+}
+
 // Charger le statut audio
 async function loadAudioStatus() {
     try {
         const response = await fetch(API_BASE + '/api/audio/status');
         const data = await response.json();
 
-        audioEnabled = data.en;
-        $('audio-enable').checked = audioEnabled;
+        applyAudioEnabledState(data.en);
         $('audio-sensitivity').value = data.sen;
         $('audio-sensitivity-value').textContent = data.sen;
         $('audio-gain').value = data.gn;
         $('audio-gain-value').textContent = data.gn;
         $('audio-auto-gain').checked = data.ag;
-
-        // Mettre à jour le statut
-        const statusEl = $('audio-status');
-        if (statusEl) {
-            statusEl.textContent = t(`audio.${audioEnabled ? 'enabled' : 'disabled'}`);
-            statusEl.style.color = audioEnabled ? '#10B981' : 'var(--color-muted)';
-        }
-        applyAudioEffectAvailability();
-
-        // Afficher/masquer les paramètres
-        const settingsEl = $('audio-settings');
-        if (settingsEl) {
-            settingsEl.style.display = audioEnabled ? 'block' : 'none';
-        }
 
         if (audioEnabled) {
             startAudioDataPolling();
@@ -2428,21 +2431,7 @@ async function toggleAudio(enabled) {
         });
 
         if (response.ok) {
-            audioEnabled = enabled;
-
-            // Mettre à jour le statut
-            const statusEl = $('audio-status');
-            if (statusEl) {
-                statusEl.textContent = t(`audio.${enabled ? 'enabled' : 'disabled'}`);
-                statusEl.style.color = enabled ? '#10B981' : 'var(--color-muted)';
-            }
-            applyAudioEffectAvailability();
-
-            // Afficher/masquer les paramètres
-            const settingsEl = $('audio-settings');
-            if (settingsEl) {
-                settingsEl.style.display = enabled ? 'block' : 'none';
-            }
+            applyAudioEnabledState(enabled);
 
             if (enabled) {
                 loadFFTStatus();
