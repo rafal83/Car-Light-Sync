@@ -1874,8 +1874,6 @@ bool led_effects_requires_can(led_effect_t effect) {
 
 bool led_effects_requires_fft(led_effect_t effect) {
   switch (effect) {
-  case EFFECT_AUDIO_REACTIVE:
-  case EFFECT_AUDIO_BPM:
   case EFFECT_FFT_SPECTRUM:
   case EFFECT_FFT_BASS_PULSE:
   case EFFECT_FFT_VOCAL_WAVE:
