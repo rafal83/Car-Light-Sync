@@ -1801,27 +1801,6 @@ void led_effects_update_vehicle_state(const vehicle_state_t *state) {
   }
 }
 
-void led_effects_set_enabled(bool enable) {
-  enabled = enable;
-  if (!enabled) {
-    fill_solid((rgb_t){0, 0, 0});
-    led_strip_show();
-  }
-}
-
-void led_effects_set_brightness(uint8_t brightness) {
-  current_config.brightness = brightness;
-}
-
-void led_effects_set_speed(uint8_t speed) {
-  current_config.speed = speed;
-}
-
-void led_effects_set_solid_color(uint32_t color) {
-  current_config.effect = EFFECT_SOLID;
-  current_config.color1 = color;
-}
-
 void led_effects_start_progress_display(void) {
   ota_ready_mode            = false;
   ota_error_mode            = false;

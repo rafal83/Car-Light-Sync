@@ -176,36 +176,6 @@ void led_effects_update(void);
 void led_effects_update_vehicle_state(const vehicle_state_t *state);
 
 /**
- * @brief Active/désactive les LEDs
- * @param enabled true pour activer
- */
-void led_effects_set_enabled(bool enabled);
-
-/**
- * @brief Définit la luminosité globale
- * @param brightness Luminosité (0-255)
- */
-void led_effects_set_brightness(uint8_t brightness);
-
-/**
- * @brief Définit la vitesse de l'effet
- * @param speed Vitesse (0-255)
- */
-void led_effects_set_speed(uint8_t speed);
-
-/**
- * @brief Obtient le sens actuel de la strip LED
- * @return true si inversé, false sinon
- */
-bool led_effects_get_reverse(void);
-
-/**
- * @brief Définit une couleur unie
- * @param color Couleur au format 0xRRGGBB
- */
-void led_effects_set_solid_color(uint32_t color);
-
-/**
  * @brief Obtient le nom d'un effet
  * @param effect Type d'effet
  * @return Nom de l'effet

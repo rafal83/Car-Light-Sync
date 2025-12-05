@@ -3,8 +3,6 @@ const API_BASE = '';
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => document.querySelector(sel);
 const doc = document;
-const hide = (el) => el.style.display = 'none';
-const show = (el, displayType = 'block') => el.style.display = displayType;
 // Translations
 let currentLang = 'en';
 let currentTheme = 'dark';
