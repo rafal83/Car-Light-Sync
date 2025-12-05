@@ -23,8 +23,8 @@
             <div id="loading-error" class="loading-error" style="display: none;">
                 <p id="loading-error-message"></p>
                 <div class="loading-error-actions">
-                    <button onclick="restartESP32()" class="btn-secondary" data-i18n="loading.restart">Redémarrer ESP32</button>
-                    <button onclick="factoryResetESP32()" class="btn-danger" data-i18n="loading.factoryReset">Reset usine</button>
+                    <button onclick="restart()" class="btn-secondary" data-i18n="loading.restart">Redémarrer</button>
+                    <button onclick="factoryReset()" class="btn-danger" data-i18n="loading.factoryReset">Reset usine</button>
                     <button onclick="retryLoading()" class="btn-primary" data-i18n="loading.retry">Réessayer</button>
                 </div>
             </div>
@@ -150,7 +150,7 @@
                             <input type="range" id="dynamic-brightness-rate" min="1" max="100" value="50">
                             <span class="slider-value" id="dynamic-brightness-rate-value">50%</span>
                         </div>
-                        <p style="font-size: 12px; color: rgba(255, 255, 255, 0.6); margin-top: 8px;" data-i18n="profiles.dynamicBrightnessHelp">
+                        <p style="font-size: 12px; color: var(--color-muted); margin-top: 8px;" data-i18n="profiles.dynamicBrightnessHelp">
                             Exemple: Si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16.8%
                         </p>
                     </div>
@@ -524,7 +524,7 @@
                     </div>
                     <div class="button-group" style="margin-top: 20px;">
                         <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
-                        <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
+                        <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restart">Redémarrer</button>
                     </div>
                 </div>
             </div>

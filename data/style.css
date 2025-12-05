@@ -22,6 +22,14 @@
     --carbon-d: #1d1d1d;
     --carbon-e: #1a1a1a;
     --carbon-f: #242424;
+
+    /* Palette de couleurs harmonieuse */
+    --color-primary: #E82127;      /* Rouge Tesla - accent principal */
+    --color-secondary: #3b82f6;    /* Bleu - pour les éléments secondaires */
+    --color-tertiary: #ffffff;     /* Violet - pour la variété */
+    --color-success: #10b981;      /* Vert - succès */
+    --color-warning: #f59e0b;      /* Orange - avertissements */
+    --color-info: #06b6d4;         /* Cyan - informations */
 }
 body.light-theme {
     --color-bg: #e9e9e4;
@@ -47,6 +55,14 @@ body.light-theme {
     --carbon-d: #e2e2e2;
     --carbon-e: #e5e5e5;
     --carbon-f: #dbdbdb;
+
+    /* Palette de couleurs harmonieuse pour le thème clair */
+    --color-primary: #E82127;
+    --color-secondary: #3b82f6;
+    --color-tertiary: #ffffff;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-info: #06b6d4;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -78,7 +94,7 @@ body {
     color: var(--color-text);
     padding: 30px;
     text-align: center;
-    border-bottom: 2px solid #E82127;
+    border-bottom: 2px solid var(--color-primary);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -257,7 +273,7 @@ body {
     font-weight: 500;
 }
 .status-online { color: #10b981; }
-.status-offline { color: #E82127; }
+.status-offline { color: var(--color-primary); }
 /* Tabs */
 .tabs {
     display: flex;
@@ -287,7 +303,7 @@ body {
 }
 .tab.active {
     color: var(--color-text);
-    border-bottom: 3px solid #E82127;
+    border-bottom: 3px solid var(--color-secondary);
     font-weight: 500;
 }
 .tab-content { display: none; padding: 15px; }
@@ -333,21 +349,21 @@ input[type="range"] {
     border-radius: 2px;
     background: var(--color-input-border);
     outline: none;
-    accent-color: #E82127;
+    accent-color: var(--color-tertiary);
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #E82127;
+    background: var(--color-tertiary);
     cursor: pointer;
 }
 .slider-value {
     min-width: 50px;
     text-align: right;
     font-weight: 500;
-    color: #E82127;
+    color: var(--color-tertiary);
 }
 select, input:not([type]), input[type="text"], input[type="password"], input[type="number"], input[type="file"] {
     width: 100%;
@@ -361,7 +377,7 @@ select, input:not([type]), input[type="text"], input[type="password"], input[typ
 }
 select:focus, input:focus {
     outline: none;
-    border-color: #E82127;
+    border-color: var(--color-secondary);
 }
 .color-picker {
     display: flex;
@@ -389,9 +405,9 @@ button {
     letter-spacing: 0.5px;
 }
 .btn-primary {
-    background: #E82127;
+    background: var(--color-primary);
     color: var(--color-text);
-    border: 1px solid #E82127;
+    border: 1px solid var(--color-primary);
 }
 .btn-primary:hover {
     background: #CC1D23;
@@ -411,7 +427,7 @@ button {
     background: var(--color-border);
 }
 .btn-danger {
-    background: #E82127;
+    background: var(--color-primary);
     color: var(--color-text);
 }
 .btn-danger:hover {
@@ -434,8 +450,8 @@ button {
     transition: all 0.3s;
 }
 .event-toggle-container.active {
-    background: rgba(232, 33, 39, 0.1);
-    border-color: #E82127;
+    background: rgba(59, 130, 246, 0.1);
+    border-color: var(--color-secondary);
 }
 .event-toggle-label {
     flex: 1;
@@ -488,7 +504,7 @@ button {
     border-radius: 50%;
 }
 .toggle-switch input:checked + .toggle-slider {
-    background-color: #E82127;
+    background-color: var(--color-info);
 }
 .toggle-switch input:checked + .toggle-slider:before {
     transform: translateX(24px);
@@ -510,7 +526,7 @@ button {
     padding: 12px;
     background: var(--color-panel);
     border-radius: 4px;
-    border-left: 3px solid #E82127;
+    border-left: 3px solid var(--color-info);
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -596,7 +612,7 @@ button {
     border-left: 4px solid #666;
 }
 .event-accordion-item.enabled {
-    border-left: 4px solid #E82127;
+    border-left: 4px solid var(--color-secondary);
 }
 .event-accordion-header {
     display: flex;
@@ -623,7 +639,7 @@ button {
 }
 .event-accordion-header.active {
     background: var(--color-border);
-    border-bottom: 2px solid #E82127;
+    border-bottom: 2px solid var(--color-primary);
 }
 .event-accordion-title {
     font-weight: 500;
@@ -806,7 +822,7 @@ button {
 }
 .notification.error {
     background: rgba(232, 33, 39, 0.5);
-    border-color: #E82127;
+    border-color: var(--color-primary);
     color: #FFFFFF;
 }
 .notification.info {
@@ -1007,10 +1023,10 @@ button {
     height: 4px;
     top: 50%;
     transform: translateY(-50%);
-    background: #E82127; /*var(--color-primary);*/
+    background: var(--color-tertiary);
     border-radius: 4px;
     pointer-events: none;
-    box-shadow: 0 0 8px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
 .segment-range-slider input[type="range"] {
@@ -1031,9 +1047,9 @@ button {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #E82127;
+    background: var(--color-tertiary);
     cursor: pointer;
-    border: 3px solid #E82127;
+    border: 3px solid var(--color-tertiary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
@@ -1042,9 +1058,9 @@ button {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #E82127;
+    background: var(--color-tertiary);
     cursor: pointer;
-    border: 3px solid #E82127;
+    border: 3px solid var(--color-tertiary);
 }
 
 /* Profile Section Layout */
@@ -1065,13 +1081,13 @@ button {
 
 .profile-section-header {
     margin-bottom: 15px;
-    border-bottom: 2px solid #E82127;
+    border-bottom: 2px solid var(--color-primary);
     padding-bottom: 10px;
 }
 
 .profile-section-header h3 {
     margin: 0;
-    color: #E82127;
+    color: var(--color-primary);
     font-size: 1.1em;
     font-weight: 600;
 }
@@ -1159,8 +1175,8 @@ button {
 }
 
 .toggle-switch input:checked + .toggle-slider {
-    background-color: #E82127;
-    border-color: #E82127;
+    background-color: var(--color-info);
+    border-color: var(--color-info);
 }
 
 .toggle-switch input:checked + .toggle-slider:before {

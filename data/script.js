@@ -3276,7 +3276,7 @@ function showLoadingError(message) {
     }
 }
 
-async function restartESP32() {
+async function restart() {
     try {
         await fetch('/api/system/restart', { method: 'POST' });
         $('loading-error-message').textContent = t('loading.connecting');
@@ -3288,7 +3288,7 @@ async function restartESP32() {
     }
 }
 
-async function factoryResetESP32() {
+async function factoryReset() {
     if (!confirm(t('loading.factoryReset') + '?')) return;
     try {
         await fetch('/api/system/factory-reset', { method: 'POST' });
