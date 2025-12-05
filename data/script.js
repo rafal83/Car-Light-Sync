@@ -9,6 +9,11 @@ const show = (el, displayType = 'block') => el.style.display = displayType;
 let currentLang = 'en';
 let currentTheme = 'dark';
 
+const EVENT_SAVE_DEBOUNCE_MS = 400;
+const DEFAULT_EFFECT_DEBOUNCE_MS = 400;
+const AUDIO_SAVE_DEBOUNCE_MS = 400;
+const HARDWARE_SAVE_DEBOUNCE_MS = 400;
+
 const OTA_STATE_KEYS = {
     0: 'idle',
     1: 'receiving',
@@ -941,6 +946,7 @@ function switchTab(tabName, evt) {
 
     // Gérer le polling audio et FFT selon l'onglet actif
     if (tabName === 'config') {
+      loadFFTStatus();
       startAudioDataPolling(); // Démarrera seulement si audioEnabled est true
     } else {
       stopAudioDataPolling(); // Arrêter le polling si on quitte l'onglet config
@@ -1139,8 +1145,6 @@ async function parseApiResponse(response) {
 }
 // Events Configuration
 let eventsConfigData = [];
-const EVENT_SAVE_DEBOUNCE_MS = 700;
-const DEFAULT_EFFECT_DEBOUNCE_MS = 700;
 const eventAutoSaveTimers = new Map();
 let defaultEffectSaveTimer = null;
 let eventsConfigLoadingPromise = null;
@@ -1743,7 +1747,25 @@ async function loadHardwareConfig() {
         showNotification('config-notification', t('config.loadError'), 'error');
     }
 }
+
+// Debounce timer pour saveHardwareConfig
+let saveHardwareConfigTimeout = null;
+
+// Sauvegarder la configuration matérielle avec debounce
 async function saveHardwareConfig() {
+    // Annuler le timer précédent
+    if (saveHardwareConfigTimeout) {
+        clearTimeout(saveHardwareConfigTimeout);
+    }
+
+    // Créer un nouveau timer
+    saveHardwareConfigTimeout = setTimeout(async () => {
+        await saveHardwareConfigImmediate();
+    }, HARDWARE_SAVE_DEBOUNCE_MS);
+}
+
+// Fonction interne pour sauvegarder immédiatement
+async function saveHardwareConfigImmediate() {
     const config = {
         lc: parseInt($('led-count').value),
         wheel_ctl: $('wheel-control-toggle').checked,
@@ -2425,26 +2447,44 @@ async function toggleAudio(enabled) {
             }
 
             if (enabled) {
+                loadFFTStatus();
                 startAudioDataPolling();
             } else {
                 stopAudioDataPolling();
             }
 
-            showNotification('audio', enabled ? 'Audio enabled' : 'Audio disabled', 'success');
+            showNotification('config-notification', enabled ? 'Audio enabled' : 'Audio disabled', 'success');
         }
     } catch (error) {
         console.error('Failed to toggle audio:', error);
-        showNotification('audio', 'Failed to toggle audio', 'error');
+        showNotification('config-notification', 'Failed to toggle audio', 'error');
     }
 }
+
+// Debounce timer pour saveAudioConfig
+let saveAudioConfigTimeout = null;
 
 // Mettre à jour les valeurs des sliders
 function updateAudioValue(param, value) {
     $(`audio-${param}-value`).textContent = value;
+    saveAudioConfig();
 }
 
-// Sauvegarder la configuration audio
+// Sauvegarder la configuration audio avec debounce
 async function saveAudioConfig() {
+    // Annuler le timer précédent
+    if (saveAudioConfigTimeout) {
+        clearTimeout(saveAudioConfigTimeout);
+    }
+
+    // Créer un nouveau timer
+    saveAudioConfigTimeout = setTimeout(async () => {
+        await saveAudioConfigImmediate();
+    }, AUDIO_SAVE_DEBOUNCE_MS);
+}
+
+// Fonction interne pour sauvegarder immédiatement
+async function saveAudioConfigImmediate() {
     const config = {
         sensitivity: parseInt($('audio-sensitivity').value),
         gain: parseInt($('audio-gain').value),
@@ -2460,11 +2500,11 @@ async function saveAudioConfig() {
         });
 
         if (response.ok) {
-            showNotification('audio', 'Audio configuration saved', 'success');
+            showNotification('config-notification', 'Audio configuration saved', 'success');
         }
     } catch (error) {
         console.error('Failed to save audio config:', error);
-        showNotification('audio', 'Failed to save audio config', 'error');
+        showNotification('config-notification', 'Failed to save audio config', 'error');
     }
 }
 
@@ -2530,6 +2570,14 @@ let audioFFTEnabled = false;
 
 // Draw FFT spectrum on canvas
 function drawFFTSpectrum(bands) {
+    const fftBox = $('fftStatusBox');
+    if (fftBox && audioFFTEnabled) {
+        fftBox.style.display = 'block';
+    } else if( fftBox) {
+        fftBox.style.display = 'none';
+    } else {
+      return;
+    }
     const canvas = $('fftSpectrumCanvas');
     if (!canvas) {
         console.warn('Canvas fftSpectrumCanvas not found');
@@ -3314,18 +3362,9 @@ async function loadInitialData() {
 
         // Étape 8: Audio et FFT
         updateProgress(8, t('loading.loadingConfig'));
-        if (isApMode) {
-            // Mode AP: séquentialiser
-            await loadAudioStatus();
-            await delay(baseDelay);
-            await loadFFTStatus();
-        } else {
-            // Mode Station: paralléliser
-            await Promise.all([
-                loadAudioStatus(),
-                loadFFTStatus()
-            ]);
-        }
+        await loadAudioStatus();
+        await delay(baseDelay);
+        await loadFFTStatus();
         await delay(baseDelay);
 
         // Étape 9: OTA

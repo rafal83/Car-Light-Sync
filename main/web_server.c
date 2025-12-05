@@ -560,7 +560,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     config_manager_set_wheel_control_enabled(cJSON_IsTrue(wheel_ctl_json));
   }
   if (wheel_spd_json && cJSON_IsNumber(wheel_spd_json)) {
-    config_manager_set_wheel_control_speed_limit((float)wheel_spd_json->valuedouble);
+    config_manager_set_wheel_control_speed_limit(wheel_spd_json->valueint);
   }
 
   // Validation
@@ -593,7 +593,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     free((void *)json_string);
     cJSON_Delete(response);
 
-    ESP_LOGI(TAG_WEBSERVER, "Configuration LED appliquée: %d LEDs, GPIO %d", led_count, LED_PIN);
+    ESP_LOGI(TAG_WEBSERVER, "Configuration appliquée: %d LEDs, Molette: %d, Vitesse: %d", led_count, config_manager_get_wheel_control_enabled(), config_manager_get_wheel_control_speed_limit());
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save configuration");
   }
@@ -796,7 +796,7 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
     if (!success) {
       cJSON_AddStringToObject(response, "msg", "Profile in use by an event or deletion failed");
     } else {
-      config_manager_activate_profile(0);
+      config_manager_activate_profile(profile_id->valueint-1);
     }
     const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");

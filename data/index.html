@@ -495,17 +495,21 @@
             <div class="profile-section">
                 <div class="profile-section-header">
                     <h3 data-i18n="config.ledSettings">Paramètres LED</h3>
-                    <p data-i18n="config.description">Configurez les paramètres matériels du contrôleur LED</p>
                 </div>
                 <div class="profile-section-content">
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
-                        <input type="number" id="led-count" value="" min="1" max="200">
-                    </div>
+                  <div class="control-group">
+                    <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
+                    <input type="number" id="led-count" value="" min="1" max="200" onchange="saveHardwareConfig()">
+                  </div>
+                </div>
+                <div class="profile-section-header">
+                    <h3 data-i18n="config.wheelSettings">Paramètres Molette</h3>
+                </div>                
+                <div class="profile-section-content">
                     <div class="control-row" style="margin-top: 12px;">
                         <label class="toggle-container" for="wheel-control-toggle">
                             <div class="toggle-switch">
-                                <input type="checkbox" id="wheel-control-toggle">
+                                <input type="checkbox" id="wheel-control-toggle" onchange="saveHardwareConfig()">
                                 <span class="toggle-slider"></span>
                             </div>
                             <span class="toggle-label" data-i18n="config.wheelControl">Molette droite = changement de profil (opt-in)</span>
@@ -514,12 +518,11 @@
                     <div class="control-group">
                         <label class="control-label" data-i18n="config.wheelControlDesc">Actif uniquement si vitesse ≤ seuil et régulateur/AP désactivé.</label>
                         <div style="display: flex; gap: 10px; align-items: center; max-width: 320px;">
-                            <input type="number" id="wheel-speed-limit" min="0" max="30" step="0.5" value="5" style="width: 120px;">
+                            <input type="number" id="wheel-speed-limit" min="0" max="100" step="5" value="5" style="width: 120px;" onchange="saveHardwareConfig()">
                             <span data-i18n="config.wheelSpeedLimit">Vitesse max (km/h)</span>
                         </div>
                     </div>
                     <div class="button-group" style="margin-top: 20px;">
-                        <button class="btn-primary" onclick="saveHardwareConfig()" data-i18n="config.save">Sauvegarder</button>
                         <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
                         <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restartEsp">Redémarrer</button>
                     </div>
@@ -565,7 +568,7 @@
 
                         <label class="toggle-container" for="audio-auto-gain">
                             <div class="toggle-switch">
-                                <input type="checkbox" id="audio-auto-gain">
+                                <input type="checkbox" id="audio-auto-gain" onchange="saveAudioConfig()">
                                 <span class="toggle-slider"></span>
                             </div>
                             <span class="toggle-label" data-i18n="audio.autoGain">Gain automatique</span>
@@ -600,7 +603,7 @@
 
                     <!-- FFT Advanced Mode -->
                     <div id="audio-fft-data" class="section" style="margin-top: 30px;">
-                        <div class="section-title" data-i18n="fft.title">🎼 FFT Advanced Spectrum Analysis</div>
+                        <div class="section-title" data-i18n="fft.title">🎼 Analyse Spectrale FFT Avancée</div>
 
                         <div style="background: var(--color-info); padding: 10px 15px; border-radius: 6px; margin-bottom: 15px;">
                             <small style="color: var(--color-text);" data-i18n="fft.autoInfo">
@@ -644,7 +647,6 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn-primary" onclick="saveAudioConfig()" style="margin-top: 15px;" data-i18n="audio.saveConfig">Sauvegarder Configuration</button>
                 </div>
             </div>
 
