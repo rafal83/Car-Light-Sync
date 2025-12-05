@@ -2000,8 +2000,11 @@ void led_effects_show_buffer(const led_rgb_t *buffer) {
   }
 
   // Calculer la consommation estimée en mA
-  // Formule: (nombre_leds * conso_max_par_led * luminosité_moyenne) / 255
-  uint32_t estimated_milliamps = (led_count * LED_MILLIAMPS_PER_LED * total_brightness) / (led_count * 255);
+  // Formule simplifiée: conso_max_par_led * luminosité_moyenne / 255
+  if (led_count == 0) {
+    return;
+  }
+  uint32_t estimated_milliamps = (LED_MILLIAMPS_PER_LED * total_brightness) / 255;
 
   // Si la consommation dépasse le seuil, réduire proportionnellement la luminosité
   if (estimated_milliamps > MAX_POWER_MILLIAMPS) {
