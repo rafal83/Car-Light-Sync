@@ -2472,6 +2472,13 @@ async function startAudioCalibration() {
         btn.textContent = t('audio.calibrating');
     }
 
+    // Feedback utilisateur sur les phases (silence puis musique)
+    showNotification('config-notification', t('audio.calibPhaseSilence'), 'info', 3000);
+    const phaseTimers = [];
+    phaseTimers.push(setTimeout(() => {
+        showNotification('config-notification', t('audio.calibPhaseMusic'), 'info', 3000);
+    }, 3200)); // après ~3s passer à la musique
+
     try {
         const response = await fetch(API_BASE + '/api/audio/calibrate', {
             method: 'POST',
@@ -2491,6 +2498,7 @@ async function startAudioCalibration() {
         console.error('Failed to calibrate microphone:', error);
         showNotification('config-notification', t('audio.calibrationFailed'), 'error');
     } finally {
+        phaseTimers.forEach(clearTimeout);
         if (btn) {
             btn.disabled = !audioEnabled;
             btn.textContent = originalText || t('audio.calibrate');
@@ -2583,6 +2591,12 @@ async function updateAudioData() {
         if (data.av !== false) {
             $('audio-amplitude-value').textContent =
                 (data.amp * 100).toFixed(0) + '%';
+            if ($('audio-raw-value') && data.ram !== undefined) {
+                $('audio-raw-value').textContent = (data.ram * 100).toFixed(0) + '%';
+            }
+            if ($('audio-calibrated-value') && data.cam !== undefined) {
+                $('audio-calibrated-value').textContent = (data.cam * 100).toFixed(0) + '%';
+            }
             $('audio-bpm-value').textContent =
                 data.bpm > 0 ? data.bpm.toFixed(1) : '-';
             $('audio-bass-value').textContent =

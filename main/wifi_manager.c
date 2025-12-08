@@ -200,7 +200,7 @@ esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
   sta_auto_reconnect = true;
   sta_retry_count    = 0;
 
-  ESP_LOGI(TAG_WIFI, "Connexion à %s... %s", ssid);
+  ESP_LOGI(TAG_WIFI, "Connexion à %s...", ssid);
   return ESP_OK;
 }
 

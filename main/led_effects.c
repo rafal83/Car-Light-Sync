@@ -31,6 +31,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+// ESP32-C6: only 2 TX channels and 4 memory blocks (48 symbols each).
+#if CONFIG_IDF_TARGET_ESP32C6
+// All 4 blocks dispo, on les réserve au strip principal
+#define LED_RMT_MEM_BLOCK_SYMBOLS 96
+#else
+#define LED_RMT_MEM_BLOCK_SYMBOLS 64
+#endif
+
 // Limitation de puissance pour éviter brownout sur alimentation USB
 #define MAX_POWER_MILLIAMPS 2000 // Consommation max en mA (USB peut fournir ~2A max)
 #define LED_MILLIAMPS_PER_LED 60 // Consommation max par LED en blanc à pleine luminosité (mA)
@@ -318,12 +326,12 @@ static void led_strip_show(void) {
 
   // Désactiver les interruptions WiFi pendant la transmission critique
   // pour éviter le flickering
-  portMUX_TYPE mux                = portMUX_INITIALIZER_UNLOCKED;
-  portENTER_CRITICAL(&mux);
+  // portMUX_TYPE mux                = portMUX_INITIALIZER_UNLOCKED;
+  // portENTER_CRITICAL(&mux);
 
   esp_err_t ret = rmt_transmit(led_chan, led_encoder, led_data, led_count * 3, &tx_config);
 
-  portEXIT_CRITICAL(&mux);
+  // portEXIT_CRITICAL(&mux);
 
   if (ret != ESP_OK) {
     ESP_LOGE(TAG_LED, "Erreur transmission RMT: %s", esp_err_to_name(ret));
@@ -374,7 +382,7 @@ static bool configure_rmt_channel(void) {
   rmt_tx_channel_config_t tx_chan_config = {
       .clk_src           = RMT_CLK_SRC_DEFAULT,
       .gpio_num          = LED_PIN,
-      .mem_block_symbols = 256,
+      .mem_block_symbols = LED_RMT_MEM_BLOCK_SYMBOLS,
       .resolution_hz     = 10000000,
       .trans_queue_depth = 4,
       .flags.invert_out  = false,

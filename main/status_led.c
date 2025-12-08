@@ -13,10 +13,13 @@
 #if CONFIG_IDF_TARGET_ESP32S3
 #define STATUS_LED_GPIO 21
 #elif CONFIG_IDF_TARGET_ESP32C6
-#define STATUS_LED_GPIO 8
+// Désactivé sur C6 pour libérer le RMT au profit du strip LED principal
+#define STATUS_LED_GPIO 8 // Pas de LED sur les autres boards
 #else
 #define STATUS_LED_GPIO -1 // Pas de LED sur les autres boards
 #endif
+
+#define STATUS_LED_MEM_BLOCK_SYMBOLS 48
 
 #define STATUS_LED_RMT_RESOLUTION 10000000 // 10MHz
 
@@ -42,7 +45,7 @@ static esp_err_t status_led_set_color(uint8_t r, uint8_t g, uint8_t b) {
     return ESP_ERR_INVALID_STATE;
   }
 
-  uint8_t led_data[3]             = {g*.3, r*.3, b*.3}; // WS2812 format: GRB 30% de la luminosité
+  uint8_t led_data[3]             = {g*.1, r*.1, b*.1}; // WS2812 format: GRB 10% de la luminosité
 
   rmt_transmit_config_t tx_config = {
       .loop_count = 0,
@@ -202,7 +205,7 @@ esp_err_t status_led_init(void) {
   rmt_tx_channel_config_t tx_chan_config = {
       .clk_src           = RMT_CLK_SRC_DEFAULT,
       .gpio_num          = STATUS_LED_GPIO,
-      .mem_block_symbols = 64,
+      .mem_block_symbols = STATUS_LED_MEM_BLOCK_SYMBOLS,
       .resolution_hz     = STATUS_LED_RMT_RESOLUTION,
       .trans_queue_depth = 4,
   };

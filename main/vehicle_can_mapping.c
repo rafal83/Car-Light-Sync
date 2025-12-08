@@ -254,7 +254,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
-      // ESP_LOGI(TAG_CAN, "%s %f", name, value);
+      ESP_LOGI(TAG_CAN, "%s %f", name, value);
       state->side_collision_left  = value == 1 || value == 3 ? 1 : 0;
       state->side_collision_right = value == 2 || value == 3 ? 1 : 0;
       return;

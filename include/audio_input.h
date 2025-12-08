@@ -40,6 +40,11 @@ typedef struct {
   float bpm;             // BPM détecté
   bool beat_detected;    // Battement détecté
   uint32_t last_beat_ms; // Timestamp du dernier battement
+  float raw_amplitude;        // Amplitude avant calibration/gate
+  float calibrated_amplitude; // Amplitude après calibration/gate
+  float auto_gain;            // Multiplicateur auto-gain appliqué
+  float noise_floor;          // Bruit de fond issu de la calibration
+  float peak_level;           // Pic de calibration
 } audio_data_t;
 
 // Structure pour les données FFT avancées

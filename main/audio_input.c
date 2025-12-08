@@ -28,7 +28,15 @@ static volatile bool calibration_ready   = false;
 static TickType_t calibration_end_tick   = 0;
 static float calibration_min             = 0.0f;
 static float calibration_max             = 0.0f;
+static const float CALIB_MIN_RANGE       = 0.20f; // Écart minimal bruit->pic pour garantir du headroom
+static const float NOISE_GATE_MARGIN     = 0.01f; // Marge au-dessus du bruit avant de commencer à réagir
 
+// Auto-gain simple : cherche à maintenir l'amplitude normalisée autour d'une cible
+static float auto_gain_multiplier        = 1.0f;
+static const float AUTO_GAIN_TARGET      = 0.4f;
+static const float AUTO_GAIN_ALPHA       = 0.02f;
+static const float AUTO_GAIN_MIN         = 0.5f;
+static const float AUTO_GAIN_MAX         = 5.0f;
 // Données audio
 static audio_data_t current_audio_data   = {0};
 static audio_fft_data_t current_fft_data = {0};
@@ -142,8 +150,8 @@ static void calibration_process_sample(float amplitude) {
     calib_result.peak_level   = calibration_max;
 
     // Garantir une plage minimale pour la normalisation
-    if (calib_result.peak_level < calib_result.noise_floor + 0.05f) {
-      calib_result.peak_level = calib_result.noise_floor + 0.1f;
+    if (calib_result.peak_level < calib_result.noise_floor + CALIB_MIN_RANGE) {
+      calib_result.peak_level = calib_result.noise_floor + CALIB_MIN_RANGE;
     }
   }
 }
@@ -155,11 +163,13 @@ static float apply_calibration(float amplitude) {
   }
 
   float range     = calibration.peak_level - calibration.noise_floor;
-  if (range < 0.05f) {
-    range = 0.05f;
+  if (range < CALIB_MIN_RANGE) {
+    range = CALIB_MIN_RANGE;
   }
 
-  float adjusted  = amplitude - calibration.noise_floor;
+  // Appliquer un gate doux pour filtrer les micro-variations autour du bruit de fond
+  float gate      = calibration.noise_floor + NOISE_GATE_MARGIN;
+  float adjusted  = amplitude - gate;
   if (adjusted < 0.0f) {
     adjusted = 0.0f;
   }
@@ -260,19 +270,33 @@ static void audio_task(void *pvParameters) {
     // Appliquer la sensibilité et le gain
     float sensitivity_factor = (float)current_config.sensitivity / 128.0f;
     float gain_factor        = (float)current_config.gain / 128.0f;
-    float amplitude          = rms * sensitivity_factor * gain_factor * 10.0f;
+    float amplitude_raw      = rms * sensitivity_factor * gain_factor * 10.0f;
 
     // Limiter à 0.0-1.0
-    if (amplitude > 1.0f)
-      amplitude = 1.0f;
-
-    float raw_amplitude = amplitude;
+    if (amplitude_raw > 1.0f)
+      amplitude_raw = 1.0f;
 
     // Collecte des bornes min/max pendant la calibration
-    calibration_process_sample(raw_amplitude);
+    calibration_process_sample(amplitude_raw);
 
     // Application de la calibration (suppression du bruit de fond)
-    amplitude = apply_calibration(raw_amplitude);
+    float amplitude_calibrated = apply_calibration(amplitude_raw);
+    float amplitude            = amplitude_calibrated;
+
+    // Auto-gain optionnel pour rehausser un signal faible
+    if (current_config.auto_gain) {
+      float error = AUTO_GAIN_TARGET - amplitude;
+      auto_gain_multiplier += error * AUTO_GAIN_ALPHA;
+      if (auto_gain_multiplier < AUTO_GAIN_MIN)
+        auto_gain_multiplier = AUTO_GAIN_MIN;
+      if (auto_gain_multiplier > AUTO_GAIN_MAX)
+        auto_gain_multiplier = AUTO_GAIN_MAX;
+      amplitude *= auto_gain_multiplier;
+      if (amplitude > 1.0f)
+        amplitude = 1.0f;
+    } else {
+      auto_gain_multiplier = 1.0f;
+    }
 
     // Calculer les bandes de fréquence
     float bass, mid, treble;
@@ -289,12 +313,17 @@ static void audio_task(void *pvParameters) {
     }
 
     // Mettre à jour les données
-    current_audio_data.amplitude     = amplitude;
-    current_audio_data.bass          = bass * amplitude;
-    current_audio_data.mid           = mid * amplitude;
-    current_audio_data.treble        = treble * amplitude;
-    current_audio_data.bpm           = bpm;
-    current_audio_data.beat_detected = beat;
+    current_audio_data.amplitude             = amplitude;
+    current_audio_data.raw_amplitude         = amplitude_raw;
+    current_audio_data.calibrated_amplitude  = amplitude_calibrated;
+    current_audio_data.auto_gain             = auto_gain_multiplier;
+    current_audio_data.noise_floor           = calibration.calibrated ? calibration.noise_floor : 0.0f;
+    current_audio_data.peak_level            = calibration.calibrated ? calibration.peak_level : 0.0f;
+    current_audio_data.bass                  = bass * amplitude;
+    current_audio_data.mid                   = mid * amplitude;
+    current_audio_data.treble                = treble * amplitude;
+    current_audio_data.bpm                   = bpm;
+    current_audio_data.beat_detected         = beat;
 
     audio_data_ready                 = true;
 

@@ -1619,6 +1619,11 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
   // Données audio de base
   if (audio_input_get_data(&audio_data)) {
     cJSON_AddNumberToObject(root, "amp", audio_data.amplitude);
+    cJSON_AddNumberToObject(root, "ram", audio_data.raw_amplitude);
+    cJSON_AddNumberToObject(root, "cam", audio_data.calibrated_amplitude);
+    cJSON_AddNumberToObject(root, "agn", audio_data.auto_gain);
+    cJSON_AddNumberToObject(root, "nf", audio_data.noise_floor);
+    cJSON_AddNumberToObject(root, "pk", audio_data.peak_level);
     cJSON_AddNumberToObject(root, "ba", audio_data.bass);
     cJSON_AddNumberToObject(root, "md", audio_data.mid);
     cJSON_AddNumberToObject(root, "tr", audio_data.treble);
