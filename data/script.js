@@ -2030,13 +2030,27 @@ function showImportDialog() {
     const input = doc.createElement('input');
     input.type = 'file';
     input.accept = '.json';
+    input.multiple = true; // Permettre la sélection multiple
     input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (event) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        showNotification('profiles-notification', t('profiles.importQueue', files.length), 'info');
+
+        // Créer une file d'attente pour uploader les fichiers un par un
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
             try {
-                const profileData = JSON.parse(event.target.result);
+                // Afficher une notification pour le fichier en cours
+                showNotification('profiles-notification', t('profiles.importing', file.name, i + 1, files.length), 'info');
+
+                const profileData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => resolve(JSON.parse(event.target.result));
+                    reader.onerror = (error) => reject(error);
+                    reader.readAsText(file);
+                });
+
                 const response = await fetch(API_BASE + '/api/profile/import', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2044,28 +2058,36 @@ function showImportDialog() {
                         profile_data: profileData
                     })
                 });
+
                 const result = await response.json();
+
                 if (result.st === 'ok') {
-                    await loadProfiles();
+                    // Recharger les profils après chaque import réussi pour mettre la liste à jour
+                    await loadProfiles(); 
                     if (typeof result.pid === 'number') {
                         const select = $('profile-select');
                         if (select) {
                             select.value = result.pid;
                         }
                     }
-                    // Charger la configuration complète du profil importé
-                    await loadConfig();
-                    showNotification('profiles-notification', t('profiles.importSuccess'), 'success');
                 } else {
-                    const message = result.msg || t('profiles.importError');
+                    const message = result.msg || t('profiles.importErrorFile', file.name);
                     showNotification('profiles-notification', message, 'error');
+                    // Arrêter la file d'attente en cas d'erreur
+                    break; 
                 }
-            } catch (e) {
-                console.error('Erreur import:', e);
-                showNotification('profiles-notification', t('profiles.importError'), 'error');
+            } catch (err) {
+                console.error('Erreur import:', err);
+                showNotification('profiles-notification', t('profiles.importErrorFile', file.name), 'error');
+                // Arrêter la file d'attente en cas d'erreur
+                break;
             }
-        };
-        reader.readAsText(file);
+        }
+
+        // Notification finale
+        showNotification('profiles-notification', t('profiles.importComplete'), 'success');
+        // Recharger la configuration complète du dernier profil importé (ou du profil actif)
+        await loadConfig();
     };
     input.click();
 }
