@@ -1836,7 +1836,7 @@ async function loadProfiles() {
             const option = doc.createElement('option');
             option.value = profile.id;
             option.dataset.name = profile.n;
-            const activeSuffix = profile.ac ? ' ✓' : '';
+            const activeSuffix = profile.ac ? ' ' + t('profiles.activeSuffix') : '';
             option.textContent = profile.n + activeSuffix;
             if (profile.ac) option.selected = true;
             select.appendChild(option);
@@ -1854,7 +1854,7 @@ async function loadProfiles() {
             const total = data.storage.total || 0;
             const free = data.storage.free || 0;
 
-            storageText.textContent = `${usagePct}% (${used}/${total} entries)`;
+            storageText.textContent = t('profiles.storageUsage', usagePct, used, total);
             storageBar.style.width = usagePct + '%';
 
             // Changer la couleur selon l'utilisation
@@ -1872,11 +1872,11 @@ async function loadProfiles() {
             const importButton = $('profile-import-button');
             if (newButton) {
                 newButton.disabled = !canCreate;
-                newButton.title = canCreate ? '' : 'Espace de stockage insuffisant';
+                newButton.title = canCreate ? '' : t('profiles.storageInsufficient');
             }
             if (importButton) {
                 importButton.disabled = !canCreate;
-                importButton.title = canCreate ? '' : 'Espace de stockage insuffisant';
+                importButton.title = canCreate ? '' : t('profiles.storageInsufficient');
             }
 
             storageInfo.style.display = 'block';

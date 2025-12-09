@@ -219,7 +219,7 @@ body {
     top: 0;
     z-index: 100;
     flex-wrap: wrap;
-    justify-content: space-evenly;
+    justify-content: space-between;
 }
 .status-item {
     min-width: 130px;
@@ -227,7 +227,6 @@ body {
     flex-direction: column;
     gap: 4px;
     font-size: 12px;
-    align-items: center;
 }
 .status-label {
     font-size: 12px;

@@ -11,7 +11,7 @@ import subprocess
 
 # Configuration
 _requested_env = os.environ.get("PIOENV") or os.environ.get("CAR_LIGHT_SYNC_BUILD_ENV")
-BUILD_DIR = os.path.join(".pio", "build", _requested_env) if _requested_env else ".pio/build/esp32s3_n4r2"
+BUILD_DIR = os.path.join(".pio", "build", _requested_env) if _requested_env else ".pio/build/esp32c6"
 RELEASE_DIR = "build"
 PROJECT_NAME = "car-light-sync"
 

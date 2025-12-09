@@ -51,6 +51,25 @@
 
 static vehicle_state_t last_vehicle_state = {0};
 
+static void reset_vehicle_state_and_effects(const char *reason, bool connected) {
+  memset(&last_vehicle_state, 0, sizeof(last_vehicle_state));
+  led_effects_update_vehicle_state(&last_vehicle_state);
+  web_server_update_vehicle_state(&last_vehicle_state);
+  config_manager_stop_all_events();
+  config_manager_reapply_default_effect();
+  ESP_LOGI(TAG_MAIN, "Vehicle state reset after %s %s", reason ? reason : "connection", connected ? "connected" : "disconnected");
+}
+
+static void handle_connection_change(const char *label, bool connected, bool *previous_state) {
+  if (!previous_state) {
+    return;
+  }
+  if (connected != *previous_state) {
+    *previous_state = connected;
+    reset_vehicle_state_and_effects(label, connected);
+  }
+}
+
 static void handle_wheel_profile_control(const vehicle_state_t *current, const vehicle_state_t *previous) {
   // Opt-in global
   if (!config_manager_get_wheel_control_enabled()) {
@@ -382,14 +401,33 @@ static void monitor_task(void *pvParameters) {
 
   TickType_t last_print          = 0;
   TickType_t last_activity_check = 0;
+  bool prev_ap_client_connected  = false;
+  bool prev_sta_connected        = false;
+  bool prev_ble_connected        = false;
+  bool prev_can_active           = false;
 
   while (1) {
     TickType_t now = xTaskGetTickCount();
+    wifi_status_t wifi_status;
+    wifi_manager_get_status(&wifi_status);
+
+    can_bus_status_t can_chassis_status, can_body_status;
+    can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
+    can_bus_get_status(CAN_BUS_BODY, &can_body_status);
+
+    bool ap_client_connected = wifi_status.ap_started && (wifi_status.connected_clients > 0);
+    bool sta_connected       = wifi_status.sta_connected;
+    bool ble_connected       = ble_api_service_is_connected();
+    bool can_active          = can_body_status.running || can_chassis_status.running;
+
+    handle_connection_change("WiFi AP", ap_client_connected, &prev_ap_client_connected);
+    handle_connection_change("WiFi STA", sta_connected, &prev_sta_connected);
+    handle_connection_change("BLE", ble_connected, &prev_ble_connected);
+    handle_connection_change("CAN bus", can_active, &prev_can_active);
 
     // Mettre à jour la LED de statut toutes les 5 secondes
     if (now - last_activity_check > pdMS_TO_TICKS(5000)) {
-      // Ne pas changer la LED si elle est en mode FACTORY_RESET (reset en
-      // cours)
+      // Ne pas changer la LED si elle est en mode FACTORY_RESET (reset en cours)
       if (status_led_get_state() != STATUS_LED_FACTORY_RESET) {
         update_status_led_internal();
       }
@@ -398,13 +436,6 @@ static void monitor_task(void *pvParameters) {
 
     // Afficher les stats toutes les 30 secondes
     if (now - last_print > pdMS_TO_TICKS(30000)) {
-      wifi_status_t wifi_status;
-      wifi_manager_get_status(&wifi_status);
-
-      can_bus_status_t can_chassis_status, can_body_status;
-      can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
-      can_bus_get_status(CAN_BUS_BODY, &can_body_status);
-
       ESP_LOGI(TAG_MAIN, "=== Statut ===");
       ESP_LOGI(TAG_MAIN, "WiFi AP: %s (IP: %s, Clients: %d)", wifi_status.ap_started ? "Actif" : "Inactif", wifi_status.ap_ip, wifi_status.connected_clients);
 

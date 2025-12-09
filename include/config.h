@@ -9,7 +9,7 @@
 
 #ifdef CONFIG_IDF_TARGET_ESP32C6
 // Configuration ESP32-C6
-#define LED_PIN 23
+#define LED_PIN 5
 
 // Pins I2S pour microphone INMP441
 #define I2S_WS_PIN 20

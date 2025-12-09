@@ -16,6 +16,8 @@ typedef struct {
   volatile uint32_t rx_count;
   volatile uint32_t tx_count;
   volatile uint32_t errors;
+  volatile TickType_t last_rx_tick;
+  volatile bool rx_active;
   volatile bool running;
   volatile bool initialized;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
@@ -59,6 +61,8 @@ static void can_rx_task(void *pvParameters) {
 
     if (ret == ESP_OK) {
       ctx->rx_count++;
+      ctx->last_rx_tick = xTaskGetTickCount();
+      ctx->rx_active    = true;
       if (s_callback) {
         can_frame_t frame = {0};
         frame.id          = msg.identifier;
@@ -104,6 +108,8 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   ctx->tx_gpio  = tx_gpio;
   ctx->rx_gpio  = rx_gpio;
   ctx->rx_count = ctx->tx_count = ctx->errors = 0;
+  ctx->last_rx_tick            = 0;
+  ctx->rx_active               = false;
   ctx->running                                = false;
   ctx->rx_task_handle                         = NULL;
 
@@ -320,6 +326,10 @@ esp_err_t can_bus_get_status(can_bus_type_t bus_type, can_bus_status_t *out) {
   out->rx_count          = ctx->rx_count;
   out->tx_count          = ctx->tx_count;
   out->errors            = ctx->errors;
-  out->running           = ctx->rx_count > 0; // Il faut au moins recevoir quelque chose
+  out->running           = ctx->running;
+  // receiving indique si des frames ont été vues récemment (seuil 1s)
+  TickType_t now         = xTaskGetTickCount();
+  out->receiving         = ctx->rx_active && ((now - ctx->last_rx_tick) <= pdMS_TO_TICKS(1000));
+  out->last_rx_ms        = ctx->rx_active ? (ctx->last_rx_tick * portTICK_PERIOD_MS) : 0;
   return ESP_OK;
 }
