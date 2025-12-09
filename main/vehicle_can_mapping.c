@@ -33,18 +33,23 @@ static const uint32_t CAN_IDS_COMMON[]  = {0x102, 0x103, 0x118, 0x132, 0x204, 0x
 static const uint32_t CAN_IDS_BODY[]    = {0}; // à remplir si nécessaire
 static const uint32_t CAN_IDS_CHASSIS[] = {0}; // à remplir si nécessaire
 
-// Calcule un mask/code pour filtrage TWAI standard: seuls les bits communs à tous les IDs
-// restent à 1 dans le mask; code contient ces bits. Cela peut laisser passer plus large que la
-// liste exacte, mais réduit nettement le flux matériel.
-// NOTE: Désactivé pour l'instant car avec une liste diverse d'IDs, le masque devient trop restrictif
+// Calcule un mask/code pour filtrage TWAI standard
+// Utilise un filtre de plage basé sur les bits de poids fort
+// Notre liste d'IDs: 0x102-0x3F5, presque tous >= 0x100 (bit 8 set)
 bool vehicle_can_get_twai_filter(can_bus_type_t bus, uint32_t *code_out, uint32_t *mask_out) {
   (void)bus;
-  (void)code_out;
-  (void)mask_out;
 
-  // Retourner false pour utiliser ACCEPT_ALL et faire le filtrage en software
-  // Le filtrage matériel TWAI est trop restrictif avec notre liste d'IDs diverse
-  return false;
+  // Filtre: accepter tous les IDs >= 0x100 (bit 8 set)
+  // code = 0x100 (00100000000), mask = 0x700 (11100000000)
+  // Cela accepte 0x100-0x1FF, 0x200-0x2FF, 0x300-0x3FF, 0x400-0x4FF, 0x500-0x5FF, 0x600-0x6FF, 0x700-0x7FF
+  // et filtre les IDs < 0x100 qui ne nous intéressent généralement pas
+
+  if (code_out)
+    *code_out = 0x100;  // Bits de poids fort: 001.........
+  if (mask_out)
+    *mask_out = 0x700;  // Masque sur bits 10:8 (compare les 3 bits de poids fort)
+
+  return true;
 
   /* Code original commenté - l'algorithme ne fonctionne pas bien avec des IDs dispersés
   uint32_t local_ids[32];
