@@ -1784,13 +1784,24 @@ void led_effects_update(void) {
         segment_length = 1; // Au moins 1 LED
     }
 
-    // Si c'était à l'origine full strip ET que accel_pedal_pos est activé, utiliser le mode segment
+    // Si c'était à l'origine full strip ET pas de modulation accel, rendu direct
     if (is_full_strip_originally && !current_config.accel_pedal_pos_enabled) {
-      ESP_LOGI(TAG_LED, "Rendu full strip (start=%d, len=%d)", segment_start, segment_length);
       effect_functions[current_config.effect]();
-    } else {
+    }
+    // Si full strip avec modulation accel : réduire temporairement led_count
+    else if (is_full_strip_originally && current_config.accel_pedal_pos_enabled) {
+      uint16_t saved_led_count = led_count;
+      led_count = segment_length; // Réduire temporairement
+      effect_functions[current_config.effect]();
+      // Éteindre le reste de la strip
+      for (uint16_t i = segment_length; i < saved_led_count; i++) {
+        leds[i] = (rgb_t){0, 0, 0};
+      }
+      led_count = saved_led_count; // Restaurer
+    }
+    // Segment personnalisé (non full strip)
+    else {
       // Rendre uniquement le segment
-      ESP_LOGI(TAG_LED, "Rendu segment (start=%d, len=%d, total=%d)", segment_start, segment_length, led_count);
       // Sauvegarder l'état courant
       uint16_t saved_led_count = led_count;
 
