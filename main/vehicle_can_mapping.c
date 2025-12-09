@@ -96,6 +96,13 @@ static void recompute_doors_open(vehicle_state_t *state) {
 // Mapping signaux -> vehicle_state_t
 // ============================================================================
 
+// Callback pour les événements de scroll wheel
+static vehicle_wheel_scroll_callback_t s_wheel_scroll_callback = NULL;
+
+void vehicle_can_set_wheel_scroll_callback(vehicle_wheel_scroll_callback_t callback) {
+  s_wheel_scroll_callback = callback;
+}
+
 void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_def_t *sig, float value, uint8_t bus_id, vehicle_state_t *state) {
   if (!msg || !sig || !state)
     return;
@@ -106,7 +113,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // Le bus_id est maintenant disponible pour les logs
   (void)bus_id; // Éviter warning unused pour l'instant
 
-  if (id == 0x3C2) {
+  if ((id == 0x3C2) && (bus_id == 0)) {
     if (strcmp(name, "VCLEFT_swcLeftScrollTicks") == 0) {
       if (value != 21 && value != 0) {
         state->left_btn_scroll_up   = value > 0 ? 1 : 0;
@@ -126,13 +133,18 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       state->left_btn_tilt_right = value == 2 ? 1 : 0;
       return;
     } else if (strcmp(name, "VCLEFT_swcRightScrollTicks") == 0) {
-      
+
       if (value != 21) {
         if(value != 0) {
           ESP_LOGI(TAG_CAN, "%d %s %f", bus_id, name, value);
         }
         state->right_btn_scroll_up   = value > 0 ? 1 : 0;
         state->right_btn_scroll_down = value < 0 ? 1 : 0;
+
+        // Appeler le callback immédiatement si un scroll est détecté
+        if (s_wheel_scroll_callback && value != 0) {
+          s_wheel_scroll_callback(state);
+        }
       }
       return;
     } else if (strcmp(name, "VCLEFT_swcRightDoublePress") == 0) {

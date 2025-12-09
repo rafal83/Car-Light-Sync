@@ -70,47 +70,35 @@ static void handle_connection_change(const char *label, bool connected, bool *pr
   }
 }
 
-static void handle_wheel_profile_control(const vehicle_state_t *current, const vehicle_state_t *previous) {
+// Callback pour les événements de scroll wheel (appelé depuis vehicle_state_apply_signal)
+static void on_wheel_scroll_event(const vehicle_state_t *state) {
   // Opt-in global
   if (!config_manager_get_wheel_control_enabled()) {
     return;
   }
 
   // Bloquer si autopilot/régulateur pas totalement désactivé
-  if (current->autopilot != 0) {
+  if (state->autopilot != 0) {
     return;
   }
 
   // Bloquer au-dessus du seuil de vitesse
-  if (current->speed_kph > config_manager_get_wheel_control_speed_limit()) {
+  if (state->speed_kph > config_manager_get_wheel_control_speed_limit()) {
     return;
   }
 
-  bool up_trigger   = current->right_btn_scroll_up   && !previous->right_btn_scroll_up;
-  bool down_trigger = current->right_btn_scroll_down && !previous->right_btn_scroll_down;
-
-  if (up_trigger) {
+  // Détecter scroll up ou down (les valeurs sont déjà des booléens dans state)
+  if (state->right_btn_scroll_up) {
     config_manager_cycle_active_profile(+1);
-  } else if (down_trigger) {
+  } else if (state->right_btn_scroll_down) {
     config_manager_cycle_active_profile(-1);
   }
 }
 
 // Callback pour les frames CAN (des deux bus)
 static void vehicle_can_callback(const can_frame_t *frame, can_bus_type_t bus_type, void *user_data) {
-  static vehicle_state_t prev_state_for_wheel = {0};
-
   vehicle_can_process_frame_static(frame, &last_vehicle_state);
   led_effects_update_vehicle_state(&last_vehicle_state);
-
-  // Appeler immédiatement pour ne pas rater les événements de scroll (qui reviennent vite à 0)
-  handle_wheel_profile_control(&last_vehicle_state, &prev_state_for_wheel);
-
-  // Sauvegarder les champs utilisés par handle_wheel_profile_control
-  prev_state_for_wheel.right_btn_scroll_up = last_vehicle_state.right_btn_scroll_up;
-  prev_state_for_wheel.right_btn_scroll_down = last_vehicle_state.right_btn_scroll_down;
-  prev_state_for_wheel.autopilot = last_vehicle_state.autopilot;
-  prev_state_for_wheel.speed_kph = last_vehicle_state.speed_kph;
   web_server_update_vehicle_state(&last_vehicle_state);
 }
 
@@ -594,6 +582,9 @@ void app_main(void) {
 
   // Enregistrer le callback partagé pour les deux bus
   ESP_ERROR_CHECK(can_bus_register_callback(vehicle_can_callback, NULL));
+
+  // Enregistrer le callback pour les événements de scroll wheel
+  vehicle_can_set_wheel_scroll_callback(on_wheel_scroll_event);
 
   // Démarrer les deux bus CAN
   ESP_ERROR_CHECK(can_bus_start(CAN_BUS_CHASSIS));

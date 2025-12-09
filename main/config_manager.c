@@ -666,6 +666,7 @@ bool config_manager_cycle_active_profile(int direction) {
   int start_id = active_profile_id < 0 ? 0 : active_profile_id;
   for (int step = 1; step < MAX_PROFILE_SCAN_LIMIT; step++) {
     int candidate = start_id + direction * step;
+    ESP_LOGI(TAG_CONFIG, "Change to %d", candidate);
     if (candidate < 0 || candidate >= MAX_PROFILE_SCAN_LIMIT) {
       break;
     }
