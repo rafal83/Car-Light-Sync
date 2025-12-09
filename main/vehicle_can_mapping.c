@@ -26,6 +26,63 @@ static uint8_t s_door_rear_left_open   = 0;
 static uint8_t s_door_front_right_open = 0;
 static uint8_t s_door_rear_right_open  = 0;
 
+// Listes d'IDs CAN utilisés par le mapping (standard 11 bits)
+// Commun à tous les bus pour l'instant; les tableaux BODY/CHASSIS sont prêts pour
+// des spécialisations futures.
+static const uint32_t CAN_IDS_COMMON[] = {
+    0x102, 0x103, 0x118, 0x132, 0x204, 0x212, 0x257, 0x25D, 0x261, 0x273, 0x284, 0x292, 0x2E1,
+    0x334, 0x399, 0x3C2, 0x3F3, 0x3F5};
+static const uint32_t CAN_IDS_BODY[]    = {0}; // à remplir si nécessaire
+static const uint32_t CAN_IDS_CHASSIS[] = {0}; // à remplir si nécessaire
+
+// Calcule un mask/code pour filtrage TWAI standard: seuls les bits communs à tous les IDs
+// restent à 1 dans le mask; code contient ces bits. Cela peut laisser passer plus large que la
+// liste exacte, mais réduit nettement le flux matériel.
+bool vehicle_can_get_twai_filter(can_bus_type_t bus, uint32_t *code_out, uint32_t *mask_out) {
+  uint32_t local_ids[32];
+  size_t count = 0;
+
+  // Collecter les IDs communs
+  for (size_t i = 0; i < sizeof(CAN_IDS_COMMON) / sizeof(CAN_IDS_COMMON[0]); i++) {
+    if (CAN_IDS_COMMON[i] != 0) {
+      local_ids[count++] = CAN_IDS_COMMON[i];
+    }
+  }
+  // Ajouter les IDs spécifiques bus (si présents)
+  const uint32_t *bus_list   = NULL;
+  size_t bus_list_len        = 0;
+  if (bus == CAN_BUS_BODY) {
+    bus_list     = CAN_IDS_BODY;
+    bus_list_len = sizeof(CAN_IDS_BODY) / sizeof(CAN_IDS_BODY[0]);
+  } else if (bus == CAN_BUS_CHASSIS) {
+    bus_list     = CAN_IDS_CHASSIS;
+    bus_list_len = sizeof(CAN_IDS_CHASSIS) / sizeof(CAN_IDS_CHASSIS[0]);
+  }
+  for (size_t i = 0; i < bus_list_len; i++) {
+    if (bus_list[i] != 0 && count < sizeof(local_ids) / sizeof(local_ids[0])) {
+      local_ids[count++] = bus_list[i];
+    }
+  }
+
+  if (count == 0) {
+    return false;
+  }
+
+  uint32_t code = local_ids[0] & 0x7FF;
+  uint32_t mask = 0x7FF;
+  for (size_t i = 1; i < count; i++) {
+    uint32_t id = local_ids[i] & 0x7FF;
+    mask &= ~(code ^ id); // gardez seulement les bits communs
+    code &= mask;
+  }
+
+  if (code_out)
+    *code_out = code;
+  if (mask_out)
+    *mask_out = mask;
+  return true;
+}
+
 static void recompute_doors_open(vehicle_state_t *state) {
   if (!state)
     return;
@@ -111,6 +168,10 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   if (id == 0x118) {
     if (strcmp(name, "DI_gear") == 0) {
       state->gear = (int8_t)(value + 0.5f);
+      return;
+    }
+    if (strcmp(name, "DI_accelPedalPos") == 0) {
+      state->accel_pedal_pos = (int8_t)(value + 0.5f);
       return;
     }
     return;
