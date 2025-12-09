@@ -96,12 +96,15 @@ static void recompute_doors_open(vehicle_state_t *state) {
 // Mapping signaux -> vehicle_state_t
 // ============================================================================
 
-void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_def_t *sig, float value, vehicle_state_t *state) {
+void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_def_t *sig, float value, uint8_t bus_id, vehicle_state_t *state) {
   if (!msg || !sig || !state)
     return;
 
   uint32_t id      = msg->id;
   const char *name = sig->name ? sig->name : "";
+
+  // Le bus_id est maintenant disponible pour les logs
+  (void)bus_id; // Éviter warning unused pour l'instant
 
   if (id == 0x3C2) {
     if (strcmp(name, "VCLEFT_swcLeftScrollTicks") == 0) {
@@ -123,7 +126,11 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       state->left_btn_tilt_right = value == 2 ? 1 : 0;
       return;
     } else if (strcmp(name, "VCLEFT_swcRightScrollTicks") == 0) {
-      if (value != 21 && value != 0) {
+      
+      if (value != 21) {
+        if(value != 0) {
+          ESP_LOGI(TAG_CAN, "%d %s %f", bus_id, name, value);
+        }
         state->right_btn_scroll_up   = value > 0 ? 1 : 0;
         state->right_btn_scroll_down = value < 0 ? 1 : 0;
       }
@@ -309,7 +316,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
-      ESP_LOGI(TAG_CAN, "%s %f", name, value);
+      // ESP_LOGI(TAG_CAN, "%s %f", name, value);
       state->side_collision_left  = value == 1 || value == 3 ? 1 : 0;
       state->side_collision_right = value == 2 || value == 3 ? 1 : 0;
       return;
@@ -406,7 +413,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     if (strcmp(name, "UI_intrusionSensorOn") == 0) {
-      state->sentry_mode = (value > 0.5f) ? 1 : 0;
+      // state->sentry_mode = (value > 0.5f) ? 1 : 0;
       return;
     }
     if (strcmp(name, "UI_lockRequest") == 0) {

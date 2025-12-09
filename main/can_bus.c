@@ -74,6 +74,7 @@ static void can_rx_task(void *pvParameters) {
           frame.data[i] = msg.data[i];
         }
         frame.timestamp_ms = xTaskGetTickCount();
+        frame.bus_id       = (uint8_t)bus_type; // 0=CAN0, 1=CAN1
 
         s_callback(&frame, bus_type, s_cb_user_data);
       }
@@ -123,13 +124,13 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   // Filtre : accepte toutes les trames par défaut
   twai_filter_config_t f_config               = TWAI_FILTER_CONFIG_ACCEPT_ALL();
   // Tenter un filtrage matériel sur les IDs connus
-  uint32_t filter_code = 0, filter_mask = 0;
-  if (vehicle_can_get_twai_filter(bus_type, &filter_code, &filter_mask)) {
-    // Format standard ID: bits 21-31 contiennent l'ID. Les bits mask=1 sont comparés.
-    f_config.single_filter   = true;
-    f_config.acceptance_code = filter_code << 21;
-    f_config.acceptance_mask = filter_mask << 21;
-  }
+  // uint32_t filter_code = 0, filter_mask = 0;
+  // if (vehicle_can_get_twai_filter(bus_type, &filter_code, &filter_mask)) {
+  //   // Format standard ID: bits 21-31 contiennent l'ID. Les bits mask=1 sont comparés.
+  //   f_config.single_filter   = true;
+  //   f_config.acceptance_code = filter_code << 21;
+  //   f_config.acceptance_mask = filter_mask << 21;
+  // }
 
   esp_err_t ret;
 

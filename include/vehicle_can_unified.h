@@ -16,6 +16,7 @@ typedef struct {
   uint8_t dlc;
   uint8_t data[8];
   uint32_t timestamp_ms;
+  uint8_t bus_id; // ID du bus CAN (0=CAN0, 1=CAN1, etc.)
 } can_frame_t;
 
 // Etat "métier" du véhicule : à enrichir selon les besoins
