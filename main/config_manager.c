@@ -1161,6 +1161,29 @@ void config_manager_update(void) {
       default_length = total_leds - default_start;
     }
 
+    // Modulation par accel_pedal_pos si activé
+    if (base.accel_pedal_pos_enabled) {
+      uint16_t original_length = default_length;
+
+      // Récupérer accel_pedal_pos (0-100)
+      uint8_t accel_percent = led_effects_get_accel_pedal_pos();
+      if (accel_percent > 100)
+        accel_percent = 100;
+
+      // Appliquer l'offset
+      uint8_t offset_percent = base.accel_pedal_offset;
+      if (offset_percent > 100)
+        offset_percent = 100;
+
+      // Calculer: offset + (accel × (100 - offset) / 100)
+      uint8_t effective_percent = offset_percent + ((accel_percent * (100 - offset_percent)) / 100);
+
+      // Appliquer à default_length
+      default_length = (original_length * effective_percent) / 100;
+      if (default_length < 1)
+        default_length = 1;
+    }
+
     memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
     led_effects_render_to_buffer(&base, default_start, default_length, frame_counter, temp_buffer);
 

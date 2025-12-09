@@ -1662,6 +1662,10 @@ uint16_t led_effects_get_led_count(void) {
   return led_count;
 }
 
+uint8_t led_effects_get_accel_pedal_pos(void) {
+  return last_vehicle_state.accel_pedal_pos;
+}
+
 void led_effects_set_config(const effect_config_t *config) {
   if (config != NULL) {
     memcpy(&current_config, config, sizeof(effect_config_t));

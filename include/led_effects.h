@@ -287,5 +287,6 @@ void led_effects_show_buffer(const led_rgb_t *buffer);
 uint32_t led_effects_get_frame_counter(void);
 void led_effects_advance_frame_counter(void);
 uint16_t led_effects_get_led_count(void);
+uint8_t led_effects_get_accel_pedal_pos(void);
 
 #endif // LED_EFFECTS_H
