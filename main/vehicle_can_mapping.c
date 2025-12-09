@@ -34,67 +34,16 @@ static const uint32_t CAN_IDS_BODY[]    = {0}; // à remplir si nécessaire
 static const uint32_t CAN_IDS_CHASSIS[] = {0}; // à remplir si nécessaire
 
 // Calcule un mask/code pour filtrage TWAI standard
-// Utilise un filtre de plage basé sur les bits de poids fort
-// Notre liste d'IDs: 0x102-0x3F5, presque tous >= 0x100 (bit 8 set)
+// Désactivé: on lit presque tous les messages du bus donc pas d'intérêt à filtrer en matériel
+// Le filtrage se fait en software via find_message_def() qui ne traite que les IDs connus
 bool vehicle_can_get_twai_filter(can_bus_type_t bus, uint32_t *code_out, uint32_t *mask_out) {
   (void)bus;
+  (void)code_out;
+  (void)mask_out;
 
-  // Filtre: accepter tous les IDs >= 0x100 (bit 8 set)
-  // code = 0x100 (00100000000), mask = 0x700 (11100000000)
-  // Cela accepte 0x100-0x1FF, 0x200-0x2FF, 0x300-0x3FF, 0x400-0x4FF, 0x500-0x5FF, 0x600-0x6FF, 0x700-0x7FF
-  // et filtre les IDs < 0x100 qui ne nous intéressent généralement pas
-
-  if (code_out)
-    *code_out = 0x100;  // Bits de poids fort: 001.........
-  if (mask_out)
-    *mask_out = 0x700;  // Masque sur bits 10:8 (compare les 3 bits de poids fort)
-
-  return true;
-
-  /* Code original commenté - l'algorithme ne fonctionne pas bien avec des IDs dispersés
-  uint32_t local_ids[32];
-  size_t count = 0;
-
-  // Collecter les IDs communs
-  for (size_t i = 0; i < sizeof(CAN_IDS_COMMON) / sizeof(CAN_IDS_COMMON[0]); i++) {
-    if (CAN_IDS_COMMON[i] != 0) {
-      local_ids[count++] = CAN_IDS_COMMON[i];
-    }
-  }
-  // Ajouter les IDs spécifiques bus (si présents)
-  const uint32_t *bus_list = NULL;
-  size_t bus_list_len      = 0;
-  if (bus == CAN_BUS_BODY) {
-    bus_list     = CAN_IDS_BODY;
-    bus_list_len = sizeof(CAN_IDS_BODY) / sizeof(CAN_IDS_BODY[0]);
-  } else if (bus == CAN_BUS_CHASSIS) {
-    bus_list     = CAN_IDS_CHASSIS;
-    bus_list_len = sizeof(CAN_IDS_CHASSIS) / sizeof(CAN_IDS_CHASSIS[0]);
-  }
-  for (size_t i = 0; i < bus_list_len; i++) {
-    if (bus_list[i] != 0 && count < sizeof(local_ids) / sizeof(local_ids[0])) {
-      local_ids[count++] = bus_list[i];
-    }
-  }
-
-  if (count == 0) {
-    return false;
-  }
-
-  uint32_t code = local_ids[0] & 0x7FF;
-  uint32_t mask = 0x7FF;
-  for (size_t i = 1; i < count; i++) {
-    uint32_t id = local_ids[i] & 0x7FF;
-    mask &= ~(code ^ id); // gardez seulement les bits communs
-    code &= mask;
-  }
-
-  if (code_out)
-    *code_out = code;
-  if (mask_out)
-    *mask_out = mask;
-  return true;
-  */
+  // Retourner false pour utiliser ACCEPT_ALL
+  // Plus simple et pas de risque de bloquer des messages
+  return false;
 }
 
 static void recompute_doors_open(vehicle_state_t *state) {
