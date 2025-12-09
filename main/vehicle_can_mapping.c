@@ -134,16 +134,13 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     } else if (strcmp(name, "VCLEFT_swcRightScrollTicks") == 0) {
 
-      if (value != 21) {
-        if(value != 0) {
-          ESP_LOGI(TAG_CAN, "%d %s %f", bus_id, name, value);
-        }
-        state->right_btn_scroll_up   = value > 0 ? 1 : 0;
-        state->right_btn_scroll_down = value < 0 ? 1 : 0;
+      if (value != 21 && value != 0) {
+        ESP_LOGI(TAG_CAN, "%d %s %f", bus_id, name, value);
 
-        // Appeler le callback immédiatement si un scroll est détecté
-        if (s_wheel_scroll_callback && value != 0) {
-          s_wheel_scroll_callback(state);
+        // Appeler le callback immédiatement avec la valeur du scroll
+        // value > 0 = scroll up, value < 0 = scroll down
+        if (s_wheel_scroll_callback) {
+          s_wheel_scroll_callback(value, state);
         }
       }
       return;

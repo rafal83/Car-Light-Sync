@@ -71,7 +71,7 @@ static void handle_connection_change(const char *label, bool connected, bool *pr
 }
 
 // Callback pour les événements de scroll wheel (appelé depuis vehicle_state_apply_signal)
-static void on_wheel_scroll_event(const vehicle_state_t *state) {
+static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
   // Opt-in global
   if (!config_manager_get_wheel_control_enabled()) {
     return;
@@ -87,10 +87,10 @@ static void on_wheel_scroll_event(const vehicle_state_t *state) {
     return;
   }
 
-  // Détecter scroll up ou down (les valeurs sont déjà des booléens dans state)
-  if (state->right_btn_scroll_up) {
+  // scroll_value > 0 = scroll up, scroll_value < 0 = scroll down
+  if (scroll_value > 0) {
     config_manager_cycle_active_profile(+1);
-  } else if (state->right_btn_scroll_down) {
+  } else if (scroll_value < 0) {
     config_manager_cycle_active_profile(-1);
   }
 }
