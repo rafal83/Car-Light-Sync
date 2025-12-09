@@ -1093,8 +1093,9 @@ void config_manager_update(void) {
     any_active = true;
   }
 
-  // Optimisation: si aucun événement actif, ne rien faire (évite calculs lourds)
+  // Optimisation: si aucun événement actif, laisser l'effet par défaut s'afficher
   if (!any_active) {
+    effect_override_active = false;
     return;
   }
 
