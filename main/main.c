@@ -86,8 +86,8 @@ static void handle_wheel_profile_control(const vehicle_state_t *current, const v
     return;
   }
 
-  bool up_trigger   = current->right_btn_scroll_up;   //&& !previous->right_btn_scroll_up;
-  bool down_trigger = current->right_btn_scroll_down; //&& !previous->right_btn_scroll_down;
+  bool up_trigger   = current->right_btn_scroll_up   && !previous->right_btn_scroll_up;
+  bool down_trigger = current->right_btn_scroll_down && !previous->right_btn_scroll_down;
 
   if (up_trigger) {
     config_manager_cycle_active_profile(+1);
@@ -98,8 +98,19 @@ static void handle_wheel_profile_control(const vehicle_state_t *current, const v
 
 // Callback pour les frames CAN (des deux bus)
 static void vehicle_can_callback(const can_frame_t *frame, can_bus_type_t bus_type, void *user_data) {
+  static vehicle_state_t prev_state_for_wheel = {0};
+
   vehicle_can_process_frame_static(frame, &last_vehicle_state);
   led_effects_update_vehicle_state(&last_vehicle_state);
+
+  // Appeler immédiatement pour ne pas rater les événements de scroll (qui reviennent vite à 0)
+  handle_wheel_profile_control(&last_vehicle_state, &prev_state_for_wheel);
+
+  // Sauvegarder les champs utilisés par handle_wheel_profile_control
+  prev_state_for_wheel.right_btn_scroll_up = last_vehicle_state.right_btn_scroll_up;
+  prev_state_for_wheel.right_btn_scroll_down = last_vehicle_state.right_btn_scroll_down;
+  prev_state_for_wheel.autopilot = last_vehicle_state.autopilot;
+  prev_state_for_wheel.speed_kph = last_vehicle_state.speed_kph;
   web_server_update_vehicle_state(&last_vehicle_state);
 }
 
@@ -125,6 +136,9 @@ static void can_event_task(void *pvParameters) {
   while (1) {
     // Copier l'état actuel
     memcpy(&current_state, &last_vehicle_state, sizeof(vehicle_state_t));
+
+    // Note: handle_wheel_profile_control est maintenant appelé directement dans vehicle_can_callback
+    // pour ne pas rater les événements de scroll qui reviennent vite à 0
 
     // Détecter les changements d'état et générer des événements
     // Clignotants - IMPORTANT: if séparés pour détecter chaque changement indépendamment
@@ -357,9 +371,6 @@ static void can_event_task(void *pvParameters) {
         config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
       }
     }
-
-    // Contrôle des profils via molette droite (opt-in, vitesse limitée, régulateur désactivé)
-    handle_wheel_profile_control(&current_state, &previous_state);
 
     // Sauvegarder l'état précédent
     memcpy(&previous_state, &current_state, sizeof(vehicle_state_t));
