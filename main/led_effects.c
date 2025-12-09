@@ -1782,10 +1782,23 @@ void led_effects_update(void) {
         segment_length = 1; // Au moins 1 LED
     }
 
-    // Si segment = toute la strip, rendu direct
+    // Si segment = toute la strip ET pas de modulation, rendu direct
     if (segment_start == 0 && segment_length == led_count && !current_config.accel_pedal_pos_enabled) {
       effect_functions[current_config.effect]();
-    } else {
+    }
+    // Si full strip AVEC modulation accel: simple réduction
+    else if (segment_start == 0 && current_config.accel_pedal_pos_enabled) {
+      uint16_t saved_led_count = led_count;
+      led_count = segment_length;
+      effect_functions[current_config.effect]();
+      // Éteindre le reste
+      for (uint16_t i = segment_length; i < saved_led_count; i++) {
+        leds[i] = (rgb_t){0, 0, 0};
+      }
+      led_count = saved_led_count;
+    }
+    // Segment personnalisé
+    else {
       // Rendre avec segment (ou full strip modulé)
       uint16_t saved_led_count = led_count;
 
