@@ -1150,16 +1150,8 @@ void config_manager_update(void) {
     uint16_t default_start  = base.segment_start;
     uint16_t default_length = base.segment_length;
 
-    // Normaliser le segment (0 = full strip)
-    if (default_length == 0 || default_length > total_leds) {
-      default_length = total_leds;
-    }
-    if (default_start >= total_leds) {
-      default_start = 0;
-    }
-    if ((default_start + default_length) > total_leds) {
-      default_length = total_leds - default_start;
-    }
+    // Normaliser le segment
+    led_effects_normalize_segment(&default_start, &default_length, total_leds);
 
     // Modulation par accel_pedal_pos si activé
     if (base.accel_pedal_pos_enabled) {

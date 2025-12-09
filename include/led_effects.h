@@ -298,4 +298,12 @@ uint8_t led_effects_get_accel_pedal_pos(void);
  */
 uint16_t led_effects_apply_accel_modulation(uint16_t original_length, uint8_t accel_pedal_pos, uint8_t offset_percent);
 
+/**
+ * @brief Normalise un segment (start, length) pour qu'il soit dans les limites de la strip
+ * @param segment_start Pointeur vers le start (sera modifié)
+ * @param segment_length Pointeur vers la length (sera modifié, 0 = full strip)
+ * @param total_leds Nombre total de LEDs
+ */
+void led_effects_normalize_segment(uint16_t *segment_start, uint16_t *segment_length, uint16_t total_leds);
+
 #endif // LED_EFFECTS_H

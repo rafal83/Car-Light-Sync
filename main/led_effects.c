@@ -1686,20 +1686,33 @@ uint16_t led_effects_apply_accel_modulation(uint16_t original_length, uint8_t ac
   return modulated_length;
 }
 
+void led_effects_normalize_segment(uint16_t *segment_start, uint16_t *segment_length, uint16_t total_leds) {
+  if (segment_start == NULL || segment_length == NULL) {
+    return;
+  }
+
+  // Normaliser length (0 = full strip)
+  if (*segment_length == 0 || *segment_length > total_leds) {
+    *segment_length = total_leds;
+  }
+
+  // Normaliser start
+  if (*segment_start >= total_leds) {
+    *segment_start = 0;
+  }
+
+  // Ajuster si débordement
+  if ((*segment_start + *segment_length) > total_leds) {
+    *segment_length = total_leds - *segment_start;
+  }
+}
+
 void led_effects_set_config(const effect_config_t *config) {
   if (config != NULL) {
     memcpy(&current_config, config, sizeof(effect_config_t));
 
-    // Normaliser le segment (0 = full strip)
-    if (current_config.segment_length == 0 || current_config.segment_length > led_count) {
-      current_config.segment_length = led_count;
-    }
-    if (current_config.segment_start >= led_count) {
-      current_config.segment_start = 0;
-    }
-    if ((current_config.segment_start + current_config.segment_length) > led_count) {
-      current_config.segment_length = led_count - current_config.segment_start;
-    }
+    // Normaliser le segment
+    led_effects_normalize_segment(&current_config.segment_start, &current_config.segment_length, led_count);
 
     // Activer/désactiver automatiquement le FFT selon l'effet
     bool needs_fft = led_effects_requires_fft(current_config.effect);
@@ -1771,16 +1784,8 @@ void led_effects_update(void) {
     uint16_t segment_start  = current_config.segment_start;
     uint16_t segment_length = current_config.segment_length;
 
-    // Normaliser le segment (0 = full strip)
-    if (segment_length == 0 || segment_length > led_count) {
-      segment_length = led_count;
-    }
-    if (segment_start >= led_count) {
-      segment_start = 0;
-    }
-    if ((segment_start + segment_length) > led_count) {
-      segment_length = led_count - segment_start;
-    }
+    // Normaliser le segment
+    led_effects_normalize_segment(&segment_start, &segment_length, led_count);
 
     // Calculer la longueur dynamique basée sur accel_pedal_pos si activé
     if (current_config.accel_pedal_pos_enabled) {
