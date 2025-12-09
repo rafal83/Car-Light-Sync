@@ -27,7 +27,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": true,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 12
       }
@@ -45,7 +44,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 110,
         "segment_length": 12
       }
@@ -63,7 +61,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -81,7 +78,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -99,7 +95,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": true,
-        "audio_reactive": false,
         "segment_start": 14,
         "segment_length": 8
       }
@@ -117,7 +112,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 98,
         "segment_length": 8
       }
@@ -135,7 +129,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": true,
-        "audio_reactive": false,
         "segment_start": 14,
         "segment_length": 8
       }
@@ -153,7 +146,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 98,
         "segment_length": 8
       }
@@ -171,7 +163,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": true,
-        "audio_reactive": false,
         "segment_start": 14,
         "segment_length": 8
       }
@@ -189,7 +180,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 98,
         "segment_length": 8
       }
@@ -207,7 +197,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": true,
-        "audio_reactive": false,
         "segment_start": 14,
         "segment_length": 8
       }
@@ -225,7 +214,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 98,
         "segment_length": 8
       }
@@ -243,7 +231,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -261,7 +248,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -279,7 +265,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -297,7 +282,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -315,7 +299,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -333,7 +316,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -351,7 +333,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -369,7 +350,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -387,7 +367,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -405,7 +384,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -423,7 +401,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -441,7 +418,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -459,7 +435,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -477,7 +452,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 45,
         "segment_length": 32
       }
@@ -495,7 +469,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -513,7 +486,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -531,7 +503,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -549,7 +520,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -567,7 +537,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -585,7 +554,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -603,7 +571,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }
@@ -621,7 +588,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 0,
         "segment_length": 0
       }

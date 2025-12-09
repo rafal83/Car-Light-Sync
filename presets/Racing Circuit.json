@@ -131,7 +131,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": true,
-        "audio_reactive": false,
         "segment_start": 14,
         "segment_length": 9
       }
@@ -149,7 +148,6 @@
         "color2": 0,
         "color3": 0,
         "reverse": false,
-        "audio_reactive": false,
         "segment_start": 98,
         "segment_length": 9
       }

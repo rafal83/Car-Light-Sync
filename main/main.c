@@ -181,11 +181,17 @@ static void can_event_task(void *pvParameters) {
     if (current_state.gear != previous_state.gear) {
       if (current_state.gear == 1) {
         config_manager_process_can_event(CAN_EVENT_GEAR_PARK);
+        config_manager_stop_event(CAN_EVENT_GEAR_REVERSE);
+        config_manager_stop_event(CAN_EVENT_GEAR_DRIVE);
       } else if (current_state.gear == 2) {
         config_manager_process_can_event(CAN_EVENT_GEAR_REVERSE);
+        config_manager_stop_event(CAN_EVENT_GEAR_PARK);
+        config_manager_stop_event(CAN_EVENT_GEAR_DRIVE);
       } else if (current_state.gear == 3) {
       } else if (current_state.gear == 4) {
         config_manager_process_can_event(CAN_EVENT_GEAR_DRIVE);
+        config_manager_stop_event(CAN_EVENT_GEAR_PARK);
+        config_manager_stop_event(CAN_EVENT_GEAR_REVERSE);
       }
     }
 
