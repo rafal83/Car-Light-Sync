@@ -140,10 +140,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     } else if (strcmp(name, "VCLEFT_swcRightTiltRight") == 0) {
       state->right_btn_tilt_right = value == 2 ? 1 : 0;
       return;
-    } else if (strcmp(name, "VCLEFT_screenDarkMode") == 0) {
-      ESP_LOGI(TAG_CAN, "%s %f", name, value);
-      state->night_mode = value > 0.5f;
-      return;
     }
     return;
   }
