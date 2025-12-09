@@ -1666,6 +1666,26 @@ uint8_t led_effects_get_accel_pedal_pos(void) {
   return last_vehicle_state.accel_pedal_pos;
 }
 
+uint16_t led_effects_apply_accel_modulation(uint16_t original_length, uint8_t accel_pedal_pos, uint8_t offset_percent) {
+  // Normaliser les valeurs
+  uint8_t accel_percent = accel_pedal_pos;
+  if (accel_percent > 100)
+    accel_percent = 100;
+
+  if (offset_percent > 100)
+    offset_percent = 100;
+
+  // Calculer le pourcentage effectif: offset + (accel × (100 - offset) / 100)
+  uint8_t effective_percent = offset_percent + ((accel_percent * (100 - offset_percent)) / 100);
+
+  // Appliquer ce pourcentage à la longueur
+  uint16_t modulated_length = (original_length * effective_percent) / 100;
+  if (modulated_length < 1)
+    modulated_length = 1; // Au moins 1 LED
+
+  return modulated_length;
+}
+
 void led_effects_set_config(const effect_config_t *config) {
   if (config != NULL) {
     memcpy(&current_config, config, sizeof(effect_config_t));
@@ -1764,26 +1784,7 @@ void led_effects_update(void) {
 
     // Calculer la longueur dynamique basée sur accel_pedal_pos si activé
     if (current_config.accel_pedal_pos_enabled) {
-      // Sauvegarder la longueur avant modulation
-      uint16_t original_length = segment_length;
-
-      // accel_pedal_pos est en pourcentage (0-100)
-      uint8_t accel_percent = last_vehicle_state.accel_pedal_pos;
-      if (accel_percent > 100)
-        accel_percent = 100;
-
-      // Appliquer l'offset (minimum de LEDs allumées)
-      uint8_t offset_percent = current_config.accel_pedal_offset;
-      if (offset_percent > 100)
-        offset_percent = 100;
-
-      // Calculer le pourcentage effectif: offset + (accel × (100 - offset) / 100)
-      uint8_t effective_percent = offset_percent + ((accel_percent * (100 - offset_percent)) / 100);
-
-      // Appliquer ce pourcentage à segment_length
-      segment_length = (original_length * effective_percent) / 100;
-      if (segment_length < 1)
-        segment_length = 1; // Au moins 1 LED
+      segment_length = led_effects_apply_accel_modulation(segment_length, last_vehicle_state.accel_pedal_pos, current_config.accel_pedal_offset);
     }
 
     // Optimisation: full strip sans segment personnalisé

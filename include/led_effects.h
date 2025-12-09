@@ -289,4 +289,13 @@ void led_effects_advance_frame_counter(void);
 uint16_t led_effects_get_led_count(void);
 uint8_t led_effects_get_accel_pedal_pos(void);
 
+/**
+ * @brief Applique la modulation accel_pedal_pos à une longueur de segment
+ * @param original_length Longueur originale du segment
+ * @param accel_pedal_pos Position de la pédale (0-100)
+ * @param offset_percent Offset minimum (0-100%)
+ * @return Longueur modulée (minimum 1)
+ */
+uint16_t led_effects_apply_accel_modulation(uint16_t original_length, uint8_t accel_pedal_pos, uint8_t offset_percent);
+
 #endif // LED_EFFECTS_H
