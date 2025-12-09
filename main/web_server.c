@@ -573,6 +573,8 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(default_effect_obj, "rv", profile->default_effect.reverse);
     cJSON_AddNumberToObject(default_effect_obj, "st", profile->default_effect.segment_start);
     cJSON_AddNumberToObject(default_effect_obj, "ln", profile->default_effect.segment_length);
+    cJSON_AddBoolToObject(default_effect_obj, "ape", profile->default_effect.accel_pedal_pos_enabled);
+    cJSON_AddNumberToObject(default_effect_obj, "apo", profile->default_effect.accel_pedal_offset);
     cJSON_AddItemToObject(profile_obj, "default_effect", default_effect_obj);
 
     // Ajouter les paramètres de luminosité dynamique
@@ -846,6 +848,8 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   const cJSON *reverse_json        = cJSON_GetObjectItem(root, "rv");
   const cJSON *segment_start_json  = cJSON_GetObjectItem(root, "st");
   const cJSON *segment_length_json = cJSON_GetObjectItem(root, "ln");
+  const cJSON *accel_pedal_enabled_json = cJSON_GetObjectItem(root, "ape");
+  const cJSON *accel_pedal_offset_json = cJSON_GetObjectItem(root, "apo");
   const cJSON *dyn_bright_enabled_json = cJSON_GetObjectItem(root, "dbe");
   const cJSON *dyn_bright_rate_json = cJSON_GetObjectItem(root, "dbr");
 
@@ -880,6 +884,14 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   if (segment_length_json) {
     profile->default_effect.segment_length = (uint16_t)segment_length_json->valueint;
     default_effect_updated                 = true;
+  }
+  if (accel_pedal_enabled_json && cJSON_IsBool(accel_pedal_enabled_json)) {
+    profile->default_effect.accel_pedal_pos_enabled = cJSON_IsTrue(accel_pedal_enabled_json);
+    default_effect_updated                          = true;
+  }
+  if (accel_pedal_offset_json) {
+    profile->default_effect.accel_pedal_offset = (uint8_t)accel_pedal_offset_json->valueint;
+    default_effect_updated                     = true;
   }
 
   // Mettre à jour les paramètres de luminosité dynamique

@@ -1070,6 +1070,17 @@ const defaultReverse = $('default-reverse');
 if (defaultReverse) {
     defaultReverse.addEventListener('change', scheduleDefaultEffectSave);
 }
+const defaultAccelPedalEnabled = $('default-accel-pedal-enabled');
+if (defaultAccelPedalEnabled) {
+    defaultAccelPedalEnabled.addEventListener('change', scheduleDefaultEffectSave);
+}
+const defaultAccelPedalOffsetSlider = $('default-accel-pedal-offset-slider');
+if (defaultAccelPedalOffsetSlider) {
+    defaultAccelPedalOffsetSlider.oninput = function() {
+        $('default-accel-pedal-offset-value').textContent = this.value + '%';
+        scheduleDefaultEffectSave();
+    };
+}
 const SEGMENT_MIN_LENGTH = 10;
 
 // Normalise une plage de segment (min/max) pour garantir une longueur minimale et borne max
@@ -2126,6 +2137,12 @@ async function saveProfile(params = {}) {
             payload.ln = segment.length;
             console.log(`[Profile] Saving default effect segment: st=${segment.start}, ln=${segment.length}`);
         }
+
+        // Accel pedal modulation
+        const accelPedalEnabledCheckbox = $('default-accel-pedal-enabled');
+        payload.ape = accelPedalEnabledCheckbox ? accelPedalEnabledCheckbox.checked : false;
+        const accelPedalOffsetSlider = $('default-accel-pedal-offset-slider');
+        payload.apo = accelPedalOffsetSlider ? parseInt(accelPedalOffsetSlider.value) : 0;
     }
 
     try {
@@ -2360,6 +2377,20 @@ async function loadActiveProfileDefaultEffect() {
             const length = (defaultEffect.ln !== undefined && defaultEffect.ln !== 0) ? defaultEffect.ln : maxLeds;
             console.log(`[Profile] Loading default effect segment: st=${start}, ln=${defaultEffect.ln}, calculated length=${length}, maxLeds=${maxLeds}`);
             setDefaultSegmentRange(start, length);
+
+            // Accel pedal modulation
+            const accelPedalEnabledCheckbox = $('default-accel-pedal-enabled');
+            if (accelPedalEnabledCheckbox && defaultEffect.ape !== undefined) {
+                accelPedalEnabledCheckbox.checked = defaultEffect.ape;
+            }
+            const accelPedalOffsetSlider = $('default-accel-pedal-offset-slider');
+            const accelPedalOffsetValue = $('default-accel-pedal-offset-value');
+            if (accelPedalOffsetSlider && defaultEffect.apo !== undefined) {
+                accelPedalOffsetSlider.value = defaultEffect.apo;
+                if (accelPedalOffsetValue) {
+                    accelPedalOffsetValue.textContent = defaultEffect.apo + '%';
+                }
+            }
 
             // Luminosité dynamique
             const dynBrightEnabled = $('dynamic-brightness-enabled');

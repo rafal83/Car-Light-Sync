@@ -102,6 +102,10 @@ const translations = {
       audioReactive: "Audio Réactif",
       audioBpm: "Audio BPM",
       audioReactiveMode: "Mode Audio Réactif",
+      accelPedalEnabled: "Moduler par pédale d'accélération",
+      accelPedalEnabledDesc: "Active la modulation dynamique de la longueur du segment selon la position de la pédale",
+      accelPedalOffset: "Offset minimum (%)",
+      accelPedalOffsetDesc: "Pourcentage minimum de LEDs allumées même sans appuyer sur la pédale",
     },
     audio: {
       title: "Configuration Audio",
@@ -512,6 +516,10 @@ const translations = {
       audioReactive: "Audio Reactive",
       audioBpm: "Audio BPM",
       audioReactiveMode: "Audio Reactive Mode",
+      accelPedalEnabled: "Modulate by accelerator pedal",
+      accelPedalEnabledDesc: "Enables dynamic modulation of segment length based on pedal position",
+      accelPedalOffset: "Minimum offset (%)",
+      accelPedalOffsetDesc: "Minimum percentage of LEDs lit even without pressing the pedal",
     },
     audio: {
       title: "Audio Configuration",
