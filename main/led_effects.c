@@ -1758,13 +1758,11 @@ void led_effects_update(void) {
       segment_length = led_count - segment_start;
     }
 
-    // Sauvegarder la configuration originale du segment
-    uint16_t original_segment_start = segment_start;
-    uint16_t original_segment_length = segment_length;
-    bool is_full_strip_originally = (segment_start == 0 && segment_length == led_count);
-
     // Calculer la longueur dynamique basée sur accel_pedal_pos si activé
     if (current_config.accel_pedal_pos_enabled) {
+      // Sauvegarder la longueur avant modulation
+      uint16_t original_length = segment_length;
+
       // accel_pedal_pos est en pourcentage (0-100)
       uint8_t accel_percent = last_vehicle_state.accel_pedal_pos;
       if (accel_percent > 100)
@@ -1779,30 +1777,16 @@ void led_effects_update(void) {
       uint8_t effective_percent = offset_percent + ((accel_percent * (100 - offset_percent)) / 100);
 
       // Appliquer ce pourcentage à segment_length
-      segment_length            = (original_segment_length * effective_percent) / 100;
+      segment_length = (original_length * effective_percent) / 100;
       if (segment_length < 1)
         segment_length = 1; // Au moins 1 LED
     }
 
-    // Si c'était à l'origine full strip ET pas de modulation accel, rendu direct
-    if (is_full_strip_originally && !current_config.accel_pedal_pos_enabled) {
+    // Si segment = toute la strip, rendu direct
+    if (segment_start == 0 && segment_length == led_count && !current_config.accel_pedal_pos_enabled) {
       effect_functions[current_config.effect]();
-    }
-    // Si full strip avec modulation accel : réduire temporairement led_count
-    else if (is_full_strip_originally && current_config.accel_pedal_pos_enabled) {
-      uint16_t saved_led_count = led_count;
-      led_count = segment_length; // Réduire temporairement
-      effect_functions[current_config.effect]();
-      // Éteindre le reste de la strip
-      for (uint16_t i = segment_length; i < saved_led_count; i++) {
-        leds[i] = (rgb_t){0, 0, 0};
-      }
-      led_count = saved_led_count; // Restaurer
-    }
-    // Segment personnalisé (non full strip)
-    else {
-      // Rendre uniquement le segment
-      // Sauvegarder l'état courant
+    } else {
+      // Rendre avec segment (ou full strip modulé)
       uint16_t saved_led_count = led_count;
 
       // Mettre tout en noir d'abord
