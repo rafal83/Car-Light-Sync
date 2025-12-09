@@ -175,13 +175,16 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   if (config_manager_get_active_profile(&active_profile)) {
     if (active_profile.dynamic_brightness_enabled) {
       // Formula: final_brightness = effect_brightness × (vehicle_brightness × rate / 100)
+      // Minimum 1% pour garantir que la strip reste visible
       float vehicle_brightness = last_vehicle_state.brightness;                                                                  // 0-100 from CAN
       float rate               = (active_profile.dynamic_brightness_rate ? active_profile.dynamic_brightness_rate : 1) / 100.0f; // 0-1
       float applied_brightness = vehicle_brightness * rate / 100.0f;                                                             // normalized to 0-1
+      if (applied_brightness < 0.01f)
+        applied_brightness = 0.01f; // Minimum 1%
 
-      result.r                 = (uint8_t)(result.r * applied_brightness);
-      result.g                 = (uint8_t)(result.g * applied_brightness);
-      result.b                 = (uint8_t)(result.b * applied_brightness);
+      result.r = (uint8_t)(result.r * applied_brightness);
+      result.g = (uint8_t)(result.g * applied_brightness);
+      result.b = (uint8_t)(result.b * applied_brightness);
     }
   }
 
