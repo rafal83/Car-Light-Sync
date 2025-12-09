@@ -36,7 +36,17 @@ static const uint32_t CAN_IDS_CHASSIS[] = {0}; // à remplir si nécessaire
 // Calcule un mask/code pour filtrage TWAI standard: seuls les bits communs à tous les IDs
 // restent à 1 dans le mask; code contient ces bits. Cela peut laisser passer plus large que la
 // liste exacte, mais réduit nettement le flux matériel.
+// NOTE: Désactivé pour l'instant car avec une liste diverse d'IDs, le masque devient trop restrictif
 bool vehicle_can_get_twai_filter(can_bus_type_t bus, uint32_t *code_out, uint32_t *mask_out) {
+  (void)bus;
+  (void)code_out;
+  (void)mask_out;
+
+  // Retourner false pour utiliser ACCEPT_ALL et faire le filtrage en software
+  // Le filtrage matériel TWAI est trop restrictif avec notre liste d'IDs diverse
+  return false;
+
+  /* Code original commenté - l'algorithme ne fonctionne pas bien avec des IDs dispersés
   uint32_t local_ids[32];
   size_t count = 0;
 
@@ -79,6 +89,7 @@ bool vehicle_can_get_twai_filter(can_bus_type_t bus, uint32_t *code_out, uint32_
   if (mask_out)
     *mask_out = mask;
   return true;
+  */
 }
 
 static void recompute_doors_open(vehicle_state_t *state) {
@@ -113,7 +124,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // Le bus_id est maintenant disponible pour les logs
   (void)bus_id; // Éviter warning unused pour l'instant
 
-  if ((id == 0x3C2) && (bus_id == 0)) {
+  if ((id == 0x3C2) && (bus_id == 1)) {
     if (strcmp(name, "VCLEFT_swcLeftScrollTicks") == 0) {
       if (value != 21 && value != 0) {
         state->left_btn_scroll_up   = value > 0 ? 1 : 0;
@@ -135,8 +146,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     } else if (strcmp(name, "VCLEFT_swcRightScrollTicks") == 0) {
 
       if (value != 21 && value != 0) {
-        ESP_LOGI(TAG_CAN, "%d %s %f", bus_id, name, value);
-
         // Appeler le callback immédiatement avec la valeur du scroll
         // value > 0 = scroll up, value < 0 = scroll down
         if (s_wheel_scroll_callback) {
