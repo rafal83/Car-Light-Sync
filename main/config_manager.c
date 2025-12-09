@@ -1574,11 +1574,8 @@ bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_
       cJSON_AddNumberToObject(event_effect, "color2", profile->event_effects[i].effect_config.color2);
       cJSON_AddNumberToObject(event_effect, "color3", profile->event_effects[i].effect_config.color3);
       cJSON_AddBoolToObject(event_effect, "reverse", profile->event_effects[i].effect_config.reverse);
-      cJSON_AddBoolToObject(event_effect, "audio_reactive", profile->event_effects[i].effect_config.audio_reactive);
       cJSON_AddNumberToObject(event_effect, "segment_start", profile->event_effects[i].effect_config.segment_start);
       cJSON_AddNumberToObject(event_effect, "segment_length", profile->event_effects[i].effect_config.segment_length);
-      cJSON_AddBoolToObject(event_effect, "accel_pedal_pos_enabled", profile->event_effects[i].effect_config.accel_pedal_pos_enabled);
-      cJSON_AddNumberToObject(event_effect, "accel_pedal_offset", profile->event_effects[i].effect_config.accel_pedal_offset);
       cJSON_AddItemToObject(event, "effect_config", event_effect);
 
       cJSON_AddItemToArray(events, event);
@@ -1757,16 +1754,10 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
           profile->event_effects[evt].effect_config.color3 = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "reverse")) && cJSON_IsBool(item))
           profile->event_effects[evt].effect_config.reverse = cJSON_IsTrue(item);
-        if ((item = cJSON_GetObjectItem(effect_config, "audio_reactive")) && cJSON_IsBool(item))
-          profile->event_effects[evt].effect_config.audio_reactive = cJSON_IsTrue(item);
         if ((item = cJSON_GetObjectItem(effect_config, "segment_start")) && cJSON_IsNumber(item))
           profile->event_effects[evt].effect_config.segment_start = item->valueint;
         if ((item = cJSON_GetObjectItem(effect_config, "segment_length")) && cJSON_IsNumber(item))
           profile->event_effects[evt].effect_config.segment_length = item->valueint;
-        if ((item = cJSON_GetObjectItem(effect_config, "accel_pedal_pos_enabled")) && cJSON_IsBool(item))
-          profile->event_effects[evt].effect_config.accel_pedal_pos_enabled = cJSON_IsTrue(item);
-        if ((item = cJSON_GetObjectItem(effect_config, "accel_pedal_offset")) && cJSON_IsNumber(item))
-          profile->event_effects[evt].effect_config.accel_pedal_offset = item->valueint;
       }
     }
   }
