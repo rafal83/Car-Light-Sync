@@ -27,12 +27,12 @@
 
 // Nouveau: on ne garde que le profil actif en RAM (~17KB au lieu de ~170KB)
 static config_profile_t active_profile;
-static int active_profile_id = -1;
-static bool active_profile_loaded = false;
+static int active_profile_id             = -1;
+static bool active_profile_loaded        = false;
 
 // Commande par boutons volant (opt-in)
-static bool wheel_control_enabled         = false;
-static uint8_t wheel_control_speed_limit  = 5; // km/h
+static bool wheel_control_enabled        = false;
+static uint8_t wheel_control_speed_limit = 5; // km/h
 
 // Système d'événements multiples
 #define MAX_ACTIVE_EVENTS 5
@@ -84,7 +84,7 @@ static void load_wheel_control_settings(void) {
   esp_err_t err = nvs_open("settings", NVS_READONLY, &nvs_handle);
   if (err == ESP_OK) {
     uint8_t enabled_u8 = 0;
-    uint8_t speed_kph = wheel_control_speed_limit;
+    uint8_t speed_kph  = wheel_control_speed_limit;
     nvs_get_u8(nvs_handle, "wheel_ctl", &enabled_u8);
     esp_err_t err_spd = nvs_get_u8(nvs_handle, "wheel_spd", &speed_kph);
     if (err_spd != ESP_OK) {
@@ -94,7 +94,7 @@ static void load_wheel_control_settings(void) {
         speed_kph = (uint8_t)(legacy / 10);
       }
     }
-    wheel_control_enabled = enabled_u8 != 0;
+    wheel_control_enabled     = enabled_u8 != 0;
     wheel_control_speed_limit = speed_kph;
     nvs_close(nvs_handle);
   }
@@ -195,7 +195,7 @@ bool config_manager_init(void) {
 
   if (err == ESP_OK) {
     int32_t saved_active_id = -1;
-    err = nvs_get_i32(nvs_handle, "active_id", &saved_active_id);
+    err                     = nvs_get_i32(nvs_handle, "active_id", &saved_active_id);
     if (err == ESP_OK && saved_active_id >= 0) {
       active_profile_id = saved_active_id;
     }
@@ -219,7 +219,7 @@ bool config_manager_init(void) {
     ESP_LOGI(TAG_CONFIG, "Aucun profil trouvé, création du profil par défaut + profil Eteint");
     config_manager_create_default_profile(&active_profile, "Default");
     config_manager_save_profile(1, &active_profile);
-    active_profile_id = 1;
+    active_profile_id     = 1;
     active_profile_loaded = true;
 
     config_profile_t off_profile;
@@ -416,7 +416,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   char key[16];
   snprintf(key, sizeof(key), "profile_%d", profile_id);
   size_t required_size = 0;
-  err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+  err                  = nvs_get_blob(nvs_handle, key, NULL, &required_size);
   if (err != ESP_OK) {
     nvs_close(nvs_handle);
     ESP_LOGW(TAG_CONFIG, "Profil %d n'existe pas", profile_id);
@@ -434,17 +434,17 @@ bool config_manager_delete_profile(uint16_t profile_id) {
 
   // Scanner tous les IDs possibles
   for (int p = 0; p < MAX_PROFILE_SCAN_LIMIT; p++) {
-    if (p == profile_id) continue;  // Ignorer le profil qu'on veut supprimer
+    if (p == profile_id)
+      continue; // Ignorer le profil qu'on veut supprimer
 
     snprintf(key, sizeof(key), "profile_%d", p);
     required_size = sizeof(config_profile_t);
-    err = nvs_get_blob(nvs_handle, key, temp_profile, &required_size);
+    err           = nvs_get_blob(nvs_handle, key, temp_profile, &required_size);
 
     if (err == ESP_OK) {
       // Vérifier si ce profil référence le profil à supprimer
       for (int e = 0; e < CAN_EVENT_MAX; e++) {
-        if (temp_profile->event_effects[e].action_type == EVENT_ACTION_SWITCH_PROFILE &&
-            temp_profile->event_effects[e].profile_id == profile_id) {
+        if (temp_profile->event_effects[e].action_type == EVENT_ACTION_SWITCH_PROFILE && temp_profile->event_effects[e].profile_id == profile_id) {
           ESP_LOGW(TAG_CONFIG, "Cannot delete profile %d: used by event %d in profile %d", profile_id, e, p);
           free(temp_profile);
           nvs_close(nvs_handle);
@@ -492,7 +492,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
       char next_key[16];
       snprintf(next_key, sizeof(next_key), "profile_%d", i + 1);
 
-      required_size = sizeof(config_profile_t);
+      required_size      = sizeof(config_profile_t);
       esp_err_t read_err = nvs_get_blob(nvs_handle, next_key, shift_profile, &required_size);
 
       if (read_err == ESP_OK) {
@@ -518,7 +518,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
       ESP_LOGI(TAG_CONFIG, "ID du profil actif mis à jour: %d", active_profile_id);
     } else if (active_profile_id == profile_id) {
       // Le profil actif a été supprimé, chercher le premier profil disponible
-      active_profile_id = -1;
+      active_profile_id     = -1;
       active_profile_loaded = false;
 
       // Scanner dynamiquement tous les profils
@@ -526,7 +526,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
         snprintf(key, sizeof(key), "profile_%d", i);
         required_size = sizeof(config_profile_t);
         if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
-          active_profile_id = i;
+          active_profile_id     = i;
           active_profile_loaded = true;
           nvs_set_i32(nvs_handle, "active_id", i);
           ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, activation du profil %d", i);
@@ -544,14 +544,14 @@ bool config_manager_delete_profile(uint16_t profile_id) {
     // Pas de compression nécessaire
     if (active_profile_id == profile_id) {
       // Chercher le premier profil disponible
-      active_profile_id = -1;
+      active_profile_id     = -1;
       active_profile_loaded = false;
 
       for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
         snprintf(key, sizeof(key), "profile_%d", i);
         required_size = sizeof(config_profile_t);
         if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
-          active_profile_id = i;
+          active_profile_id     = i;
           active_profile_loaded = true;
           nvs_set_i32(nvs_handle, "active_id", i);
           ESP_LOGI(TAG_CONFIG, "Activation automatique du profil %d", i);
@@ -622,7 +622,7 @@ bool config_manager_activate_profile(uint16_t profile_id) {
   }
 
   // Mettre à jour l'ID actif
-  active_profile_id = profile_id;
+  active_profile_id     = profile_id;
   active_profile_loaded = true;
 
   // Sauvegarder l'ID actif dans NVS
@@ -751,7 +751,7 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
 
     // D'abord vérifier si la clé existe
     size_t required_size = 0;
-    err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+    err                  = nvs_get_blob(nvs_handle, key, NULL, &required_size);
 
     // Si la clé existe et a la bonne taille, la charger
     if (err == ESP_OK && required_size == sizeof(config_profile_t)) {
@@ -771,10 +771,10 @@ extern const uint8_t default_json_start[] asm("_binary_default_json_start");
 extern const uint8_t default_json_end[] asm("_binary_default_json_end");
 
 void config_manager_create_default_profile(config_profile_t *profile, const char *name) {
-  bool success = false;
+  bool success        = false;
 
   // 1. Charger le fichier JSON embarqué (default.json)
-  size_t json_size = default_json_end - default_json_start;
+  size_t json_size    = default_json_end - default_json_start;
 
   // Allouer un buffer pour le JSON (avec null terminator)
   char *embedded_json = (char *)malloc(json_size + 1);
@@ -794,13 +794,13 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
     ESP_LOGE(TAG_CONFIG, "Failed to import embedded preset, using minimal fallback");
     memset(profile, 0, sizeof(config_profile_t));
     strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
-    profile->default_effect.effect = EFFECT_SOLID;
+    profile->default_effect.effect     = EFFECT_SOLID;
     profile->default_effect.brightness = 20;
-    profile->default_effect.speed = 1;
-    profile->default_effect.color1 = 0xFFFFFF;
-    profile->active = false;
-    profile->created_timestamp = (uint32_t)time(NULL);
-    profile->modified_timestamp = profile->created_timestamp;
+    profile->default_effect.speed      = 1;
+    profile->default_effect.color1     = 0xFFFFFF;
+    profile->active                    = false;
+    profile->created_timestamp         = (uint32_t)time(NULL);
+    profile->modified_timestamp        = profile->created_timestamp;
     return;
   }
 
@@ -822,10 +822,10 @@ void config_manager_create_off_profile(config_profile_t *profile, const char *na
   memset(profile, 0, sizeof(config_profile_t));
   strncpy(profile->name, name ? name : "Eteint", PROFILE_NAME_MAX_LEN - 1);
 
-  profile->default_effect.effect     = EFFECT_OFF;
-  profile->default_effect.brightness = 0;
-  profile->default_effect.speed      = 1;
-  profile->default_effect.color1     = 0;
+  profile->default_effect.effect         = EFFECT_OFF;
+  profile->default_effect.brightness     = 0;
+  profile->default_effect.speed          = 1;
+  profile->default_effect.color1         = 0;
   profile->default_effect.segment_start  = 0;
   profile->default_effect.segment_length = 0;
   profile->default_effect.audio_reactive = false;
@@ -833,12 +833,12 @@ void config_manager_create_off_profile(config_profile_t *profile, const char *na
   profile->default_effect.sync_mode      = SYNC_OFF;
 
   for (int i = 0; i < CAN_EVENT_MAX; i++) {
-    profile->event_effects[i].event      = (can_event_type_t)i;
-    profile->event_effects[i].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[i].enabled    = false;
-    profile->event_effects[i].priority   = 0;
-    profile->event_effects[i].duration_ms = 0;
-    profile->event_effects[i].profile_id = -1;
+    profile->event_effects[i].event                        = (can_event_type_t)i;
+    profile->event_effects[i].action_type                  = EVENT_ACTION_APPLY_EFFECT;
+    profile->event_effects[i].enabled                      = false;
+    profile->event_effects[i].priority                     = 0;
+    profile->event_effects[i].duration_ms                  = 0;
+    profile->event_effects[i].profile_id                   = -1;
     profile->event_effects[i].effect_config.effect         = EFFECT_OFF;
     profile->event_effects[i].effect_config.brightness     = 0;
     profile->event_effects[i].effect_config.speed          = 1;
@@ -892,7 +892,7 @@ bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event
   temp_profile->event_effects[event].priority    = priority;
   temp_profile->event_effects[event].enabled     = true;
 
-  bool success = config_manager_save_profile(profile_id, temp_profile);
+  bool success                                   = config_manager_save_profile(profile_id, temp_profile);
   free(temp_profile);
 
   return success;
@@ -923,7 +923,7 @@ bool config_manager_set_event_enabled(uint16_t profile_id, can_event_type_t even
 
   temp_profile->event_effects[event].enabled = enabled;
 
-  bool success = config_manager_save_profile(profile_id, temp_profile);
+  bool success                               = config_manager_save_profile(profile_id, temp_profile);
   free(temp_profile);
 
   return success;
@@ -1144,10 +1144,10 @@ void config_manager_update(void) {
 
   // Deuxième passe : rendre l'effet par défaut uniquement sur les zones non réservées
   if (active_profile_loaded) {
-    effect_config_t base = active_profile.default_effect;
+    effect_config_t base    = active_profile.default_effect;
 
     // Utiliser le segment configuré dans le profil (ou toute la strip si non configuré)
-    uint16_t default_start = base.segment_start;
+    uint16_t default_start  = base.segment_start;
     uint16_t default_length = base.segment_length;
 
     // Normaliser le segment (0 = full strip)
@@ -1261,10 +1261,10 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
     return EVENT_ID_BRAKE_ON;
   case CAN_EVENT_BLINDSPOT_LEFT:
     return EVENT_ID_BLINDSPOT_LEFT;
-    case CAN_EVENT_BLINDSPOT_RIGHT:
+  case CAN_EVENT_BLINDSPOT_RIGHT:
     return EVENT_ID_BLINDSPOT_RIGHT;
-    case CAN_EVENT_SIDE_COLLISION_LEFT:
-      return EVENT_ID_SIDE_COLLISION_LEFT;
+  case CAN_EVENT_SIDE_COLLISION_LEFT:
+    return EVENT_ID_SIDE_COLLISION_LEFT;
   case CAN_EVENT_SIDE_COLLISION_RIGHT:
     return EVENT_ID_SIDE_COLLISION_RIGHT;
   case CAN_EVENT_FORWARD_COLLISION:
@@ -1341,10 +1341,10 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_BRAKE_ON;
   if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT) == 0)
     return CAN_EVENT_BLINDSPOT_LEFT;
-    if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)
+  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)
     return CAN_EVENT_BLINDSPOT_RIGHT;
-    if (strcmp(id, EVENT_ID_SIDE_COLLISION_LEFT) == 0)
-      return CAN_EVENT_SIDE_COLLISION_LEFT;
+  if (strcmp(id, EVENT_ID_SIDE_COLLISION_LEFT) == 0)
+    return CAN_EVENT_SIDE_COLLISION_LEFT;
   if (strcmp(id, EVENT_ID_SIDE_COLLISION_RIGHT) == 0)
     return CAN_EVENT_SIDE_COLLISION_RIGHT;
   if (strcmp(id, EVENT_ID_FORWARD_COLLISION) == 0)
@@ -1446,7 +1446,7 @@ bool config_manager_factory_reset(void) {
   wheel_control_speed_limit = 5;
 
   // Effacer les réglages globaux (wheel control, etc.)
-  err = nvs_open("settings", NVS_READWRITE, &nvs_handle);
+  err                       = nvs_open("settings", NVS_READWRITE, &nvs_handle);
   if (err == ESP_OK) {
     nvs_erase_all(nvs_handle);
     nvs_commit(nvs_handle);
@@ -1455,8 +1455,8 @@ bool config_manager_factory_reset(void) {
 
   // Réinitialiser le profil actif en RAM
   memset(&active_profile, 0, sizeof(active_profile));
-  active_profile_id = -1;
-  active_profile_loaded = false;
+  active_profile_id                 = -1;
+  active_profile_loaded             = false;
 
   // Créer les profils de base sans utiliser la stack (éviter overflow httpd)
   config_profile_t *default_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
@@ -1495,8 +1495,10 @@ static uint8_t value_to_percent(uint8_t value) {
 
 // Conversion pourcentage 1-100 vers 0-255
 static uint8_t percent_to_value(uint8_t percent) {
-  if (percent < 1) percent = 1;
-  if (percent > 100) percent = 100;
+  if (percent < 1)
+    percent = 1;
+  if (percent > 100)
+    percent = 100;
   return (percent * 255 + 50) / 100; // Arrondi au plus proche
 }
 
@@ -1506,7 +1508,7 @@ bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_
   }
 
   // Charger le profil (ou utiliser le profil actif si c'est celui-là)
-  config_profile_t *profile = NULL;
+  config_profile_t *profile      = NULL;
   config_profile_t *temp_profile = NULL;
 
   if (profile_id == active_profile_id && active_profile_loaded) {
@@ -1585,7 +1587,7 @@ bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_
 
   // Convertir en chaîne JSON
   char *json_str = cJSON_PrintUnformatted(root);
-  bool success = false;
+  bool success   = false;
 
   if (json_str) {
     size_t len = strlen(json_str);
@@ -1648,7 +1650,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   if (profile->modified_timestamp == 0) {
     profile->modified_timestamp = profile->created_timestamp;
   }
-  profile->active = false;
+  profile->active             = false;
 
   // Effet par défaut
   const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
@@ -1732,7 +1734,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
 
       profile->event_effects[evt].event = evt;
 
-      const cJSON *effect_config                 = cJSON_GetObjectItem(event, "effect_config");
+      const cJSON *effect_config        = cJSON_GetObjectItem(event, "effect_config");
       if (effect_config && cJSON_IsObject(effect_config)) {
         cJSON *item;
         if ((item = cJSON_GetObjectItem(effect_config, "effect_id")) && cJSON_IsString(item)) {
@@ -1765,16 +1767,14 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   for (int evt = CAN_EVENT_NONE; evt < CAN_EVENT_MAX; evt++) {
     // Si l'événement n'a pas été initialisé (effect_config.effect == 0 et enabled == false)
     // ET que ce n'est pas NONE, on le complète avec des valeurs par défaut
-    if (evt != CAN_EVENT_NONE &&
-        profile->event_effects[evt].event == 0 &&
-        !profile->event_effects[evt].enabled) {
-      profile->event_effects[evt].event = evt;
-      profile->event_effects[evt].enabled = false;
+    if (evt != CAN_EVENT_NONE && profile->event_effects[evt].event == 0 && !profile->event_effects[evt].enabled) {
+      profile->event_effects[evt].event                = evt;
+      profile->event_effects[evt].enabled              = false;
       profile->event_effects[evt].effect_config.effect = EFFECT_OFF;
-      profile->event_effects[evt].priority = 1;
-      profile->event_effects[evt].duration_ms = 0;
-      profile->event_effects[evt].action_type = EVENT_ACTION_APPLY_EFFECT;
-      profile->event_effects[evt].profile_id = -1;
+      profile->event_effects[evt].priority             = 1;
+      profile->event_effects[evt].duration_ms          = 0;
+      profile->event_effects[evt].action_type          = EVENT_ACTION_APPLY_EFFECT;
+      profile->event_effects[evt].profile_id           = -1;
     }
   }
 
@@ -1904,9 +1904,9 @@ bool config_manager_can_create_profile(void) {
   // NVS entry = 32 bytes, donc un profil ≈ 2KB/32 ≈ 64 entries
   // On garde une marge de sécurité : on vérifie qu'il reste au moins 100 entries libres
   const size_t ENTRIES_PER_PROFILE = 100;
-  const size_t MIN_FREE_ENTRIES = ENTRIES_PER_PROFILE;
+  const size_t MIN_FREE_ENTRIES    = ENTRIES_PER_PROFILE;
 
-  bool can_create = nvs_stats.free_entries >= MIN_FREE_ENTRIES;
+  bool can_create                  = nvs_stats.free_entries >= MIN_FREE_ENTRIES;
 
   ESP_LOGI(TAG_CONFIG,
            "NVS check: free=%zu, needed=%zu, can_create=%d (usage=%zu%%)",

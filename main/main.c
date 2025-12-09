@@ -86,7 +86,7 @@ static void handle_wheel_profile_control(const vehicle_state_t *current, const v
     return;
   }
 
-  bool up_trigger   = current->right_btn_scroll_up; //&& !previous->right_btn_scroll_up;
+  bool up_trigger   = current->right_btn_scroll_up;   //&& !previous->right_btn_scroll_up;
   bool down_trigger = current->right_btn_scroll_down; //&& !previous->right_btn_scroll_down;
 
   if (up_trigger) {

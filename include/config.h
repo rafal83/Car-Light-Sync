@@ -1,8 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <stdint.h>
 #include "sdkconfig.h"
+
+#include <stdint.h>
 
 // Configuration GPIO
 #define NUM_LEDS 122

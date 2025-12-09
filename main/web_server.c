@@ -34,35 +34,35 @@
 #endif
 
 // Constantes pour les tailles de buffers
-#define BUFFER_SIZE_SMALL       128
-#define BUFFER_SIZE_MEDIUM      256
-#define BUFFER_SIZE_LARGE       512
-#define BUFFER_SIZE_JSON        1024
-#define BUFFER_SIZE_PROFILE     16384
-#define BUFFER_SIZE_EVENT_MAX   16384
+#define BUFFER_SIZE_SMALL 128
+#define BUFFER_SIZE_MEDIUM 256
+#define BUFFER_SIZE_LARGE 512
+#define BUFFER_SIZE_JSON 1024
+#define BUFFER_SIZE_PROFILE 16384
+#define BUFFER_SIZE_EVENT_MAX 16384
 
 // Constantes pour les limites du système
-#define LED_COUNT_MIN           1
-#define LED_COUNT_MAX           200
-#define MAX_CONTENT_LENGTH      4096
+#define LED_COUNT_MIN 1
+#define LED_COUNT_MAX 200
+#define MAX_CONTENT_LENGTH 4096
 
 // Constantes de timing
-#define VEHICLE_STATE_TIMEOUT_MS  5000
-#define TASK_DELAY_MS             1000
-#define RETRY_DELAY_BASE_MS       20
-#define RETRY_DELAY_MAX_MS        500
+#define VEHICLE_STATE_TIMEOUT_MS 5000
+#define TASK_DELAY_MS 1000
+#define RETRY_DELAY_BASE_MS 20
+#define RETRY_DELAY_MAX_MS 500
 
 // Constantes de configuration serveur
-#define HTTP_MAX_URI_HANDLERS   60
-#define HTTP_MAX_OPEN_SOCKETS   13
+#define HTTP_MAX_URI_HANDLERS 60
+#define HTTP_MAX_OPEN_SOCKETS 13
 
 // Constantes de configuration par défaut
-#define DEFAULT_BRIGHTNESS      128
-#define DEFAULT_SPEED           50
-#define DEFAULT_PRIORITY        100
+#define DEFAULT_BRIGHTNESS 128
+#define DEFAULT_SPEED 50
+#define DEFAULT_PRIORITY 100
 
 // Cache control HTTP
-#define CACHE_ONE_YEAR          "public, max-age=31536000"
+#define CACHE_ONE_YEAR "public, max-age=31536000"
 
 /**
  * Clés JSON abrégées utilisées dans l'API REST (pour réduire la taille des paquets)
@@ -198,7 +198,7 @@ static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffe
 
   buffer[offset] = '\0';
 
-  *out_json   = cJSON_Parse(buffer);
+  *out_json      = cJSON_Parse(buffer);
   if (*out_json == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
     return ESP_FAIL;
@@ -456,7 +456,6 @@ static esp_err_t config_handler(httpd_req_t *req) {
   // Ajouter la configuration matérielle LED
   cJSON_AddNumberToObject(root, "lc", config_manager_get_led_count());
 
-
   // Réglages globaux (wheel control)
   cJSON_AddBoolToObject(root, "wheel_ctl", config_manager_get_wheel_control_enabled());
   cJSON_AddNumberToObject(root, "wheel_spd", config_manager_get_wheel_control_speed_limit());
@@ -480,9 +479,9 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  const cJSON *led_count_json     = cJSON_GetObjectItem(root, "lc");
-  const cJSON *wheel_ctl_json     = cJSON_GetObjectItem(root, "wheel_ctl");
-  const cJSON *wheel_spd_json     = cJSON_GetObjectItem(root, "wheel_spd");
+  const cJSON *led_count_json = cJSON_GetObjectItem(root, "lc");
+  const cJSON *wheel_ctl_json = cJSON_GetObjectItem(root, "wheel_ctl");
+  const cJSON *wheel_spd_json = cJSON_GetObjectItem(root, "wheel_spd");
 
   if (led_count_json == NULL) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing led_count");
@@ -600,11 +599,11 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     nvs_stats_t nvs_stats;
     err = nvs_get_stats(NULL, &nvs_stats);
     if (err == ESP_OK) {
-      size_t used_entries = nvs_stats.used_entries;
-      size_t free_entries = nvs_stats.free_entries;
+      size_t used_entries  = nvs_stats.used_entries;
+      size_t free_entries  = nvs_stats.free_entries;
       size_t total_entries = nvs_stats.total_entries;
 
-      cJSON *storage = cJSON_CreateObject();
+      cJSON *storage       = cJSON_CreateObject();
       cJSON_AddNumberToObject(storage, "used", used_entries);
       cJSON_AddNumberToObject(storage, "free", free_entries);
       cJSON_AddNumberToObject(storage, "total", total_entries);
@@ -735,7 +734,7 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
     if (!success) {
       cJSON_AddStringToObject(response, "msg", "Profile in use by an event or deletion failed");
     } else {
-      config_manager_activate_profile(profile_id->valueint-1);
+      config_manager_activate_profile(profile_id->valueint - 1);
     }
     const char *json_string = cJSON_PrintUnformatted(response);
     httpd_resp_set_type(req, "application/json");
@@ -820,7 +819,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  uint16_t profile_id = (uint16_t)profile_id_json->valueint;
+  uint16_t profile_id       = (uint16_t)profile_id_json->valueint;
 
   // Allouer dynamiquement pour éviter stack overflow
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
@@ -839,19 +838,19 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
 
   // Mettre à jour l'effet par défaut si fourni
-  bool default_effect_updated      = false;
-  const cJSON *effect_json         = cJSON_GetObjectItem(root, "fx");
-  const cJSON *brightness_json     = cJSON_GetObjectItem(root, "br");
-  const cJSON *speed_json          = cJSON_GetObjectItem(root, "sp");
-  const cJSON *color_json          = cJSON_GetObjectItem(root, "c1");
-  const cJSON *audio_reactive_json = cJSON_GetObjectItem(root, "ar");
-  const cJSON *reverse_json        = cJSON_GetObjectItem(root, "rv");
-  const cJSON *segment_start_json  = cJSON_GetObjectItem(root, "st");
-  const cJSON *segment_length_json = cJSON_GetObjectItem(root, "ln");
+  bool default_effect_updated           = false;
+  const cJSON *effect_json              = cJSON_GetObjectItem(root, "fx");
+  const cJSON *brightness_json          = cJSON_GetObjectItem(root, "br");
+  const cJSON *speed_json               = cJSON_GetObjectItem(root, "sp");
+  const cJSON *color_json               = cJSON_GetObjectItem(root, "c1");
+  const cJSON *audio_reactive_json      = cJSON_GetObjectItem(root, "ar");
+  const cJSON *reverse_json             = cJSON_GetObjectItem(root, "rv");
+  const cJSON *segment_start_json       = cJSON_GetObjectItem(root, "st");
+  const cJSON *segment_length_json      = cJSON_GetObjectItem(root, "ln");
   const cJSON *accel_pedal_enabled_json = cJSON_GetObjectItem(root, "ape");
-  const cJSON *accel_pedal_offset_json = cJSON_GetObjectItem(root, "apo");
-  const cJSON *dyn_bright_enabled_json = cJSON_GetObjectItem(root, "dbe");
-  const cJSON *dyn_bright_rate_json = cJSON_GetObjectItem(root, "dbr");
+  const cJSON *accel_pedal_offset_json  = cJSON_GetObjectItem(root, "apo");
+  const cJSON *dyn_bright_enabled_json  = cJSON_GetObjectItem(root, "dbe");
+  const cJSON *dyn_bright_rate_json     = cJSON_GetObjectItem(root, "dbr");
 
   if (effect_json) {
     profile->default_effect.effect = (led_effect_t)effect_json->valueint;
@@ -898,11 +897,11 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   bool dynamic_brightness_updated = false;
   if (dyn_bright_enabled_json && cJSON_IsBool(dyn_bright_enabled_json)) {
     profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled_json);
-    dynamic_brightness_updated = true;
+    dynamic_brightness_updated          = true;
   }
   if (dyn_bright_rate_json && cJSON_IsNumber(dyn_bright_rate_json)) {
     profile->dynamic_brightness_rate = (uint8_t)dyn_bright_rate_json->valueint;
-    dynamic_brightness_updated = true;
+    dynamic_brightness_updated       = true;
   }
 
   // Sauvegarder le profil
@@ -944,7 +943,7 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
   uint16_t profile_id = atoi(param_value);
 
   // Allouer un buffer pour le JSON (16KB devrait suffire pour un profil complet)
-  char *json_buffer  = malloc(BUFFER_SIZE_PROFILE);
+  char *json_buffer   = malloc(BUFFER_SIZE_PROFILE);
   if (!json_buffer) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;

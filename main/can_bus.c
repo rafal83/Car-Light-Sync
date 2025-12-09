@@ -109,8 +109,8 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   ctx->tx_gpio  = tx_gpio;
   ctx->rx_gpio  = rx_gpio;
   ctx->rx_count = ctx->tx_count = ctx->errors = 0;
-  ctx->last_rx_tick            = 0;
-  ctx->rx_active               = false;
+  ctx->last_rx_tick                           = 0;
+  ctx->rx_active                              = false;
   ctx->running                                = false;
   ctx->rx_task_handle                         = NULL;
 
@@ -121,14 +121,14 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   twai_timing_config_t t_config               = TWAI_TIMING_CONFIG_500KBITS();
 
   // Filtre : accepte toutes les trames par défaut
-  twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+  twai_filter_config_t f_config               = TWAI_FILTER_CONFIG_ACCEPT_ALL();
   // Tenter un filtrage matériel sur les IDs connus
   uint32_t filter_code = 0, filter_mask = 0;
   if (vehicle_can_get_twai_filter(bus_type, &filter_code, &filter_mask)) {
     // Format standard ID: bits 21-31 contiennent l'ID. Les bits mask=1 sont comparés.
-    f_config.single_filter    = true;
-    f_config.acceptance_code  = filter_code << 21;
-    f_config.acceptance_mask  = filter_mask << 21;
+    f_config.single_filter   = true;
+    f_config.acceptance_code = filter_code << 21;
+    f_config.acceptance_mask = filter_mask << 21;
   }
 
   esp_err_t ret;

@@ -123,16 +123,16 @@ typedef enum {
  */
 typedef struct {
   led_effect_t effect;
-  uint8_t brightness;      // 0-255
-  uint8_t speed;           // 0-100 (vitesse d'animation)
-  uint32_t color1;         // RGB au format 0xRRGGBB
+  uint8_t brightness; // 0-255
+  uint8_t speed;      // 0-100 (vitesse d'animation)
+  uint32_t color1;    // RGB au format 0xRRGGBB
   uint32_t color2;
   uint32_t color3;
   sync_mode_t sync_mode;
-  bool reverse;            // Direction de l'animation : false = gauche->droite, true = droite->gauche
-  bool audio_reactive;     // L'effet réagit au micro si activé
-  uint16_t segment_start;  // Index de départ (toujours depuis la gauche, 0-based)
-  uint16_t segment_length; // Longueur du segment (0 = auto/full strip)
+  bool reverse;                 // Direction de l'animation : false = gauche->droite, true = droite->gauche
+  bool audio_reactive;          // L'effet réagit au micro si activé
+  uint16_t segment_start;       // Index de départ (toujours depuis la gauche, 0-based)
+  uint16_t segment_length;      // Longueur du segment (0 = auto/full strip)
   bool accel_pedal_pos_enabled; // Active la modulation de segment_length par accel_pedal_pos
   uint8_t accel_pedal_offset;   // Offset minimum pour segment_length (0-100%)
 } effect_config_t;
@@ -188,7 +188,6 @@ const char *led_effects_get_name(led_effect_t effect);
  * @brief Réinitialise la configuration par défaut
  */
 void led_effects_reset_config(void);
-
 
 /**
  * @brief Obtient l'état du mode nuit

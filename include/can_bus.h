@@ -42,8 +42,8 @@ typedef struct {
   uint32_t rx_count;
   uint32_t tx_count;
   uint32_t errors;
-  bool running;    // driver démarré (pas forcément de frames reçues)
-  bool receiving;  // des frames reçues récemment (fenêtre courte)
+  bool running;        // driver démarré (pas forcément de frames reçues)
+  bool receiving;      // des frames reçues récemment (fenêtre courte)
   uint32_t last_rx_ms; // horodatage (ms) de la dernière frame reçue, 0 si jamais
 } can_bus_status_t;
 

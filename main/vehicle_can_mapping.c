@@ -21,17 +21,15 @@ static inline int is_latch_open(float raw) {
 }
 
 // Historique de portes pour calculer doors_open_count
-static uint8_t s_door_front_left_open  = 0;
-static uint8_t s_door_rear_left_open   = 0;
-static uint8_t s_door_front_right_open = 0;
-static uint8_t s_door_rear_right_open  = 0;
+static uint8_t s_door_front_left_open   = 0;
+static uint8_t s_door_rear_left_open    = 0;
+static uint8_t s_door_front_right_open  = 0;
+static uint8_t s_door_rear_right_open   = 0;
 
 // Listes d'IDs CAN utilisés par le mapping (standard 11 bits)
 // Commun à tous les bus pour l'instant; les tableaux BODY/CHASSIS sont prêts pour
 // des spécialisations futures.
-static const uint32_t CAN_IDS_COMMON[] = {
-    0x102, 0x103, 0x118, 0x132, 0x204, 0x212, 0x257, 0x25D, 0x261, 0x273, 0x284, 0x292, 0x2E1,
-    0x334, 0x399, 0x3C2, 0x3F3, 0x3F5};
+static const uint32_t CAN_IDS_COMMON[]  = {0x102, 0x103, 0x118, 0x132, 0x204, 0x212, 0x257, 0x25D, 0x261, 0x273, 0x284, 0x292, 0x2E1, 0x334, 0x399, 0x3C2, 0x3F3, 0x3F5};
 static const uint32_t CAN_IDS_BODY[]    = {0}; // à remplir si nécessaire
 static const uint32_t CAN_IDS_CHASSIS[] = {0}; // à remplir si nécessaire
 
@@ -49,8 +47,8 @@ bool vehicle_can_get_twai_filter(can_bus_type_t bus, uint32_t *code_out, uint32_
     }
   }
   // Ajouter les IDs spécifiques bus (si présents)
-  const uint32_t *bus_list   = NULL;
-  size_t bus_list_len        = 0;
+  const uint32_t *bus_list = NULL;
+  size_t bus_list_len      = 0;
   if (bus == CAN_BUS_BODY) {
     bus_list     = CAN_IDS_BODY;
     bus_list_len = sizeof(CAN_IDS_BODY) / sizeof(CAN_IDS_BODY[0]);
@@ -325,12 +323,12 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
-      int v                  = (int)(value + 0.5f);
+      int v                 = (int)(value + 0.5f);
       state->blindspot_left = (v >= 1) ? 1 : 0;
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
-      int v                   = (int)(value + 0.5f);
+      int v                  = (int)(value + 0.5f);
       state->blindspot_right = (v >= 1) ? 1 : 0;
       return;
     }

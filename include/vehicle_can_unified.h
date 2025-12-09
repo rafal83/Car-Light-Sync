@@ -23,7 +23,7 @@ typedef struct {
   // Dynamique de base
   float speed_kph;
   float speed_threshold;
-  int8_t gear;           // P=0, D=1, R=2... (à mapper selon Tesla)
+  int8_t gear; // P=0, D=1, R=2... (à mapper selon Tesla)
   uint8_t accel_pedal_pos;
   uint8_t brake_pressed; // 0/1
 

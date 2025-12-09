@@ -33,13 +33,13 @@
 
 // Structure pour les données audio analysées (simple)
 typedef struct {
-  float amplitude;       // Amplitude normalisée (0.0 - 1.0)
-  float bass;            // Niveau des basses (0.0 - 1.0)
-  float mid;             // Niveau des médiums (0.0 - 1.0)
-  float treble;          // Niveau des aigus (0.0 - 1.0)
-  float bpm;             // BPM détecté
-  bool beat_detected;    // Battement détecté
-  uint32_t last_beat_ms; // Timestamp du dernier battement
+  float amplitude;            // Amplitude normalisée (0.0 - 1.0)
+  float bass;                 // Niveau des basses (0.0 - 1.0)
+  float mid;                  // Niveau des médiums (0.0 - 1.0)
+  float treble;               // Niveau des aigus (0.0 - 1.0)
+  float bpm;                  // BPM détecté
+  bool beat_detected;         // Battement détecté
+  uint32_t last_beat_ms;      // Timestamp du dernier battement
   float raw_amplitude;        // Amplitude avant calibration/gate
   float calibrated_amplitude; // Amplitude après calibration/gate
   float auto_gain;            // Multiplicateur auto-gain appliqué
@@ -72,9 +72,9 @@ typedef struct {
 
 // Données de calibration micro (bruit de fond / pic mesuré)
 typedef struct {
-  bool calibrated;    // true si une calibration est disponible
-  float noise_floor;  // Niveau RMS observé en silence
-  float peak_level;   // Pic observé pendant la calibration
+  bool calibrated;   // true si une calibration est disponible
+  float noise_floor; // Niveau RMS observé en silence
+  float peak_level;  // Pic observé pendant la calibration
 } audio_calibration_t;
 
 /**

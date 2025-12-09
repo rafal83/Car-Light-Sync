@@ -120,13 +120,12 @@ static void calculate_frequency_bands(int32_t *buffer, size_t size, float *bass,
 
 // Réinitialise l'état de calibration et démarre une nouvelle fenêtre
 static void calibration_reset_state(uint32_t duration_ms) {
-  calibration_running = true;
-  calibration_ready   = false;
-  calibration_min     = FLT_MAX;
-  calibration_max     = 0.0f;
-  calib_result        = (audio_calibration_t){0};
-  calibration_end_tick =
-      xTaskGetTickCount() + pdMS_TO_TICKS(duration_ms > 0 ? duration_ms : 3000);
+  calibration_running  = true;
+  calibration_ready    = false;
+  calibration_min      = FLT_MAX;
+  calibration_max      = 0.0f;
+  calib_result         = (audio_calibration_t){0};
+  calibration_end_tick = xTaskGetTickCount() + pdMS_TO_TICKS(duration_ms > 0 ? duration_ms : 3000);
 }
 
 // Capture min/max amplitude pendant la calibration et finalise quand la fenêtre est écoulée
@@ -143,11 +142,11 @@ static void calibration_process_sample(float amplitude) {
   }
 
   if (xTaskGetTickCount() >= calibration_end_tick) {
-    calibration_running       = false;
-    calibration_ready         = true;
-    calib_result.calibrated   = true;
-    calib_result.noise_floor  = (calibration_min == FLT_MAX) ? 0.0f : calibration_min;
-    calib_result.peak_level   = calibration_max;
+    calibration_running      = false;
+    calibration_ready        = true;
+    calib_result.calibrated  = true;
+    calib_result.noise_floor = (calibration_min == FLT_MAX) ? 0.0f : calibration_min;
+    calib_result.peak_level  = calibration_max;
 
     // Garantir une plage minimale pour la normalisation
     if (calib_result.peak_level < calib_result.noise_floor + CALIB_MIN_RANGE) {
@@ -162,14 +161,14 @@ static float apply_calibration(float amplitude) {
     return amplitude;
   }
 
-  float range     = calibration.peak_level - calibration.noise_floor;
+  float range = calibration.peak_level - calibration.noise_floor;
   if (range < CALIB_MIN_RANGE) {
     range = CALIB_MIN_RANGE;
   }
 
   // Appliquer un gate doux pour filtrer les micro-variations autour du bruit de fond
-  float gate      = calibration.noise_floor + NOISE_GATE_MARGIN;
-  float adjusted  = amplitude - gate;
+  float gate     = calibration.noise_floor + NOISE_GATE_MARGIN;
+  float adjusted = amplitude - gate;
   if (adjusted < 0.0f) {
     adjusted = 0.0f;
   }
@@ -313,19 +312,19 @@ static void audio_task(void *pvParameters) {
     }
 
     // Mettre à jour les données
-    current_audio_data.amplitude             = amplitude;
-    current_audio_data.raw_amplitude         = amplitude_raw;
-    current_audio_data.calibrated_amplitude  = amplitude_calibrated;
-    current_audio_data.auto_gain             = auto_gain_multiplier;
-    current_audio_data.noise_floor           = calibration.calibrated ? calibration.noise_floor : 0.0f;
-    current_audio_data.peak_level            = calibration.calibrated ? calibration.peak_level : 0.0f;
-    current_audio_data.bass                  = bass * amplitude;
-    current_audio_data.mid                   = mid * amplitude;
-    current_audio_data.treble                = treble * amplitude;
-    current_audio_data.bpm                   = bpm;
-    current_audio_data.beat_detected         = beat;
+    current_audio_data.amplitude            = amplitude;
+    current_audio_data.raw_amplitude        = amplitude_raw;
+    current_audio_data.calibrated_amplitude = amplitude_calibrated;
+    current_audio_data.auto_gain            = auto_gain_multiplier;
+    current_audio_data.noise_floor          = calibration.calibrated ? calibration.noise_floor : 0.0f;
+    current_audio_data.peak_level           = calibration.calibrated ? calibration.peak_level : 0.0f;
+    current_audio_data.bass                 = bass * amplitude;
+    current_audio_data.mid                  = mid * amplitude;
+    current_audio_data.treble               = treble * amplitude;
+    current_audio_data.bpm                  = bpm;
+    current_audio_data.beat_detected        = beat;
 
-    audio_data_ready                 = true;
+    audio_data_ready                        = true;
 
     // Si FFT activée, calculer le spectre FFT
     if (current_config.fft_enabled) {
@@ -599,9 +598,9 @@ void audio_input_reset_config(void) {
   current_config.gain        = 128;
   current_config.auto_gain   = true;
 
-  calibration.calibrated = false;
-  calibration.noise_floor = 0.0f;
-  calibration.peak_level  = 1.0f;
+  calibration.calibrated     = false;
+  calibration.noise_floor    = 0.0f;
+  calibration.peak_level     = 1.0f;
 
   ESP_LOGI(TAG_AUDIO, "Configuration réinitialisée");
 }
