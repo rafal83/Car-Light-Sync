@@ -2194,6 +2194,7 @@ async function updateStatus() {
             $('v-speed').textContent = v.s.toFixed(1) + ' km/h';
             $('v-gear').textContent = ['--', 'P', 'R', 'N', 'D'][v.g] || '--';
             $('v-brake').textContent = v.bp ? t('status.active') : t('status.inactive');
+            $('v-accel-pedal').textContent = (v.ap !== undefined ? v.ap : 0) + '%';
             $('v-locked').textContent = v.lk ? t('vehicle.locked') : t('vehicle.unlocked');
             // Portes
             if (v.doors) {

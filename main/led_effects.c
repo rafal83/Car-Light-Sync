@@ -1762,6 +1762,24 @@ void led_effects_update(void) {
       segment_length = led_count - segment_start;
     }
 
+    // Calculer la longueur dynamique basée sur accel_pedal_pos si activé
+    if (current_config.accel_pedal_pos_enabled) {
+      // accel_pedal_pos est en pourcentage (0-100)
+      uint8_t accel_percent = last_vehicle_state.accel_pedal_pos;
+      if (accel_percent > 100) accel_percent = 100;
+
+      // Appliquer l'offset (minimum de LEDs allumées)
+      uint8_t offset_percent = current_config.accel_pedal_offset;
+      if (offset_percent > 100) offset_percent = 100;
+
+      // Calculer le pourcentage effectif: offset + (accel × (100 - offset) / 100)
+      uint8_t effective_percent = offset_percent + ((accel_percent * (100 - offset_percent)) / 100);
+
+      // Appliquer ce pourcentage à segment_length
+      segment_length = (segment_length * effective_percent) / 100;
+      if (segment_length < 1) segment_length = 1; // Au moins 1 LED
+    }
+
     // Si segment = toute la strip, rendu direct
     if (segment_start == 0 && segment_length == led_count) {
       ESP_LOGI(TAG_LED, "Rendu full strip (start=%d, len=%d)", segment_start, segment_length);

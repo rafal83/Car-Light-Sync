@@ -353,6 +353,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(vehicle, "g", current_vehicle_state.gear);
   cJSON_AddNumberToObject(vehicle, "s", current_vehicle_state.speed_kph);
   cJSON_AddNumberToObject(vehicle, "bp", current_vehicle_state.brake_pressed);
+  cJSON_AddNumberToObject(vehicle, "ap", current_vehicle_state.accel_pedal_pos);
 
   // Portes
   cJSON *doors = cJSON_CreateObject();
