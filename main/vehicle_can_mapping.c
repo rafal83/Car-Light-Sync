@@ -26,26 +26,6 @@ static uint8_t s_door_rear_left_open    = 0;
 static uint8_t s_door_front_right_open  = 0;
 static uint8_t s_door_rear_right_open   = 0;
 
-// Listes d'IDs CAN utilisés par le mapping (standard 11 bits)
-// Commun à tous les bus pour l'instant; les tableaux BODY/CHASSIS sont prêts pour
-// des spécialisations futures.
-static const uint32_t CAN_IDS_COMMON[]  = {0x102, 0x103, 0x118, 0x132, 0x204, 0x212, 0x257, 0x25D, 0x261, 0x273, 0x284, 0x292, 0x2E1, 0x334, 0x399, 0x3C2, 0x3F3, 0x3F5};
-static const uint32_t CAN_IDS_BODY[]    = {0}; // à remplir si nécessaire
-static const uint32_t CAN_IDS_CHASSIS[] = {0}; // à remplir si nécessaire
-
-// Calcule un mask/code pour filtrage TWAI standard
-// Désactivé: on lit presque tous les messages du bus donc pas d'intérêt à filtrer en matériel
-// Le filtrage se fait en software via find_message_def() qui ne traite que les IDs connus
-bool vehicle_can_get_twai_filter(can_bus_type_t bus, uint32_t *code_out, uint32_t *mask_out) {
-  (void)bus;
-  (void)code_out;
-  (void)mask_out;
-
-  // Retourner false pour utiliser ACCEPT_ALL
-  // Plus simple et pas de risque de bloquer des messages
-  return false;
-}
-
 static void recompute_doors_open(vehicle_state_t *state) {
   if (!state)
     return;
@@ -264,6 +244,12 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       state->fog_lights = (int)(value + 0.5f);
       return;
     }
+
+    if (strcmp(name, "VCFRONT_switchLightingBrightness") == 0) {
+      state->brightness = (uint8_t)(value / 1.27f); // 0-127
+      return;
+    }
+
     return;
   }
 
@@ -374,10 +360,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   if (id == 0x273) {
     if (strcmp(name, "UI_ambientLightingEnabled") == 0) {
       state->night_mode = (value > 0.5f) ? 1 : 0;
-      return;
-    }
-    if (strcmp(name, "UI_displayBrightnessLevel") == 0) {
-      state->brightness = (uint8_t)(value / 1.27f); // 0-127
       return;
     }
     if (strcmp(name, "UI_alarmEnabled") == 0) {
