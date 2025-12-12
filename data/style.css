@@ -1217,7 +1217,7 @@ button {
     font-weight: 500;
 }
 
-/* CAN Servers Grid Layout (2 columns on desktop) */
+/* CAN Servers Grid Layout (responsive: 1 col mobile, 3 cols desktop) */
 .can-servers-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -1226,6 +1226,6 @@ button {
 
 @media (min-width: 768px) {
     .can-servers-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
     }
 }

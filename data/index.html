@@ -778,6 +778,33 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Section: SLCAN TCP Server -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="server.slcanTitle">Serveur SLCAN</h3>
+                    <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;" data-i18n="server.slcanDescription">
+                        Protocole SLCAN/LAWICEL sur TCP port 3333 pour Wireshark/python-can via WiFi (pas de redémarrage requis).
+                    </p>
+                </div>
+                <div class="profile-section-content">
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="server.slcanStatus">État :</label>
+                        <div id="slcan-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="server.slcanClients">Clients connectés :</label>
+                        <div id="slcan-clients" style="font-weight: 600;">0</div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="server.slcanPort">Port TCP :</label>
+                        <div style="font-weight: 600; font-family: monospace;">3333</div>
+                    </div>
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button class="btn-primary" onclick="toggleSlcanTcp()" id="slcan-toggle-btn" data-i18n="server.slcanStart">Activer SLCAN</button>
+                    </div>
+                </div>
+            </div>
             </div>
 
         </div>

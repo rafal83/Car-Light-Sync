@@ -22,6 +22,7 @@
 #include "led_effects.h"
 #include "gvret_tcp_server.h"  // Pour le serveur GVRET TCP
 #include "panda_tcp_server.h"  // Pour le serveur Panda TCP
+#include "slcan_tcp_server.h"  // Pour le serveur SLCAN TCP
 #include "log_stream.h"         // Pour le streaming de logs en temps réel
 #include "nvs_flash.h"
 #include "ota_update.h"
@@ -1280,6 +1281,55 @@ static esp_err_t panda_status_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+// ============================================================================
+// SLCAN TCP Server Handlers
+// ============================================================================
+
+// Handler pour démarrer le serveur SLCAN TCP
+static esp_err_t slcan_start_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  esp_err_t ret = slcan_tcp_server_start();
+  if (ret == ESP_OK) {
+    ESP_LOGI(TAG_WEBSERVER, "Serveur SLCAN TCP démarré via API");
+    httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":true}");
+  } else {
+    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur SLCAN: %s", esp_err_to_name(ret));
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start SLCAN server\"}");
+  }
+
+  return ESP_OK;
+}
+
+// Handler pour arrêter le serveur SLCAN TCP
+static esp_err_t slcan_stop_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  slcan_tcp_server_stop();
+  ESP_LOGI(TAG_WEBSERVER, "Serveur SLCAN TCP arrêté via API");
+
+  httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":false}");
+  return ESP_OK;
+}
+
+// Handler pour obtenir le statut du serveur SLCAN TCP
+static esp_err_t slcan_status_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  cJSON *root = cJSON_CreateObject();
+  cJSON_AddBoolToObject(root, "running", slcan_tcp_server_is_running());
+  cJSON_AddNumberToObject(root, "clients", slcan_tcp_server_get_client_count());
+  cJSON_AddNumberToObject(root, "port", 3333);
+
+  const char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(root);
+
+  return ESP_OK;
+}
+
 // Dummy recv override - returns -1/EAGAIN to prevent httpd from reading
 // This tells httpd: "no data available, keep the socket open and don't close it"
 static int sse_recv_override(httpd_handle_t hd, int sockfd, char *buf, size_t buf_len, int flags) {
@@ -1970,6 +2020,16 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t panda_status_uri = {.uri = "/api/panda/status", .method = HTTP_GET, .handler = panda_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &panda_status_uri);
+
+    // Routes SLCAN TCP Server
+    httpd_uri_t slcan_start_uri = {.uri = "/api/slcan/start", .method = HTTP_POST, .handler = slcan_start_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &slcan_start_uri);
+
+    httpd_uri_t slcan_stop_uri = {.uri = "/api/slcan/stop", .method = HTTP_POST, .handler = slcan_stop_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &slcan_stop_uri);
+
+    httpd_uri_t slcan_status_uri = {.uri = "/api/slcan/status", .method = HTTP_GET, .handler = slcan_status_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &slcan_status_uri);
 
     // Route Log Streaming (Server-Sent Events)
     httpd_uri_t log_stream_uri = {

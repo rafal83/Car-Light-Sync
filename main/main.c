@@ -22,6 +22,7 @@
 #include "freertos/task.h"
 #include "gvret_tcp_server.h" // Serveur TCP GVRET optionnel
 #include "panda_tcp_server.h" // Serveur TCP Panda optionnel
+#include "slcan_tcp_server.h" // Serveur TCP SLCAN optionnel
 #include "led_effects.h"
 #include "log_stream.h"
 #include "led_strip_encoder.h"
@@ -670,6 +671,10 @@ void app_main(void) {
   // Serveur Panda TCP (initialisé mais pas démarré - contrôlé via interface web)
   ESP_ERROR_CHECK(panda_tcp_server_init());
   ESP_LOGI(TAG_MAIN, "✓ Serveur Panda TCP initialise (port 1338, activable via interface web)");
+
+  // Serveur SLCAN TCP (initialisé mais pas démarré - contrôlé via interface web)
+  ESP_ERROR_CHECK(slcan_tcp_server_init());
+  ESP_LOGI(TAG_MAIN, "✓ Serveur SLCAN TCP initialise (port 3333, activable via interface web)");
 
   // Afficher les informations de connexion
   wifi_status_t wifi_status;

@@ -7,6 +7,7 @@
 #include "vehicle_can_mapping.h"
 #include "gvret_tcp_server.h"
 #include "panda_tcp_server.h"
+#include "slcan_tcp_server.h"
 
 // Driver CAN ESP-IDF : selon version, c'est "twai" ou alias "can"
 #include "driver/twai.h"
@@ -72,6 +73,9 @@ static void can_rx_task(void *pvParameters) {
 
       // Broadcast vers clients Panda TCP (si serveur actif)
       panda_tcp_broadcast_can_frame((int)bus_type, &msg);
+
+      // Broadcast vers clients SLCAN TCP (si serveur actif)
+      slcan_tcp_broadcast_can_frame((int)bus_type, &msg);
 
       if (s_callback) {
         can_frame_t frame = {0};
