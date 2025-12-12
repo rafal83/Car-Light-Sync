@@ -93,28 +93,6 @@ static void load_wheel_control_settings(void) {
 }
 
 /**
- * @brief Crée une paire d'événements symétriques (LEFT/RIGHT) basés sur un événement de référence
- *
- * @param profile Profil cible
- * @param left_event Type d'événement gauche
- * @param right_event Type d'événement droite
- */
-static void create_symmetric_event_pair(config_profile_t *profile, can_event_type_t left_event, can_event_type_t right_event) {
-  if (!profile) {
-    return;
-  }
-
-  // Copier la configuration LEFT vers RIGHT
-  memcpy(&profile->event_effects[right_event], &profile->event_effects[left_event], sizeof(can_event_effect_t));
-
-  // Restaurer les propriétés spécifiques à RIGHT
-  profile->event_effects[right_event].event                        = right_event;
-  profile->event_effects[right_event].effect_config.reverse        = false; // RIGHT = animation vers la droite
-  profile->event_effects[right_event].effect_config.segment_start  = config_manager_get_led_count() / 2;
-  profile->event_effects[right_event].effect_config.segment_length = config_manager_get_led_count() / 2;
-}
-
-/**
  * @brief Valide et ajuste les paramètres de segment LED
  *
  * Normalise les valeurs de segment_start et segment_length pour garantir
