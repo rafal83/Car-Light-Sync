@@ -54,32 +54,6 @@ static led_rgb_t composed_buffer[MAX_LED_COUNT];
 static led_rgb_t temp_buffer[MAX_LED_COUNT];
 static uint8_t priority_buffer[MAX_LED_COUNT];
 
-static inline bool event_is_left(can_event_type_t event) {
-  switch (event) {
-  case CAN_EVENT_TURN_LEFT:
-  case CAN_EVENT_BLINDSPOT_LEFT:
-  case CAN_EVENT_SIDE_COLLISION_LEFT:
-  case CAN_EVENT_LANE_DEPARTURE_LEFT_LV1:
-  case CAN_EVENT_LANE_DEPARTURE_LEFT_LV2:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static inline bool event_is_right(can_event_type_t event) {
-  switch (event) {
-  case CAN_EVENT_TURN_RIGHT:
-  case CAN_EVENT_BLINDSPOT_RIGHT:
-  case CAN_EVENT_SIDE_COLLISION_RIGHT:
-  case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1:
-  case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2:
-    return true;
-  default:
-    return false;
-  }
-}
-
 static void load_wheel_control_settings(void) {
   uint8_t enabled_u8 = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_ctl", 0);
   uint8_t speed_kph  = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
@@ -90,61 +64,6 @@ static void load_wheel_control_settings(void) {
   if (wheel_control_speed_limit > 100) {
     wheel_control_speed_limit = 100;
   }
-}
-
-/**
- * @brief Valide et ajuste les paramètres de segment LED
- *
- * Normalise les valeurs de segment_start et segment_length pour garantir
- * qu'elles sont valides et ne dépassent pas la bande LED.
- *
- * Règles de normalisation:
- * - segment_length == 0 → utiliser toute la bande (led_total)
- * - segment_length > led_total → limiter à led_total
- * - segment_start >= led_total → réinitialiser à 0
- * - start + length > led_total → réduire length pour ne pas déborder
- *
- * @param event Type d'événement CAN (pour info/debug)
- * @param cfg Configuration de l'effet à valider (modifiée en place)
- * @param led_total Nombre total de LEDs (0 = utiliser NUM_LEDS par défaut)
- *
- * @note Les segments sont toujours indexés depuis la gauche (0-based)
- * @note La direction (gauche/droite) est gérée par le champ 'reverse'
- */
-static void apply_segment_defaults(can_event_type_t event, effect_config_t *cfg, uint16_t led_total) {
-  if (cfg == NULL) {
-    return;
-  }
-
-  if (led_total == 0) {
-    led_total = NUM_LEDS;
-  }
-
-  // Valider et ajuster la longueur du segment
-  uint16_t length = cfg->segment_length;
-  if (length == 0 || length > led_total) {
-    length = led_total;
-  }
-
-  // Valider la position de départ (toujours depuis la gauche)
-  uint16_t start = cfg->segment_start;
-  if (start >= led_total) {
-    start = 0;
-  }
-
-  // Ajuster si le segment déborde
-  if ((uint32_t)start + length > led_total) {
-    if (length > led_total) {
-      length = led_total;
-    }
-    // Réduire la longueur pour ne pas déborder
-    if (start + length > led_total) {
-      length = led_total - start;
-    }
-  }
-
-  cfg->segment_start  = start;
-  cfg->segment_length = length;
 }
 
 bool config_manager_init(void) {
@@ -203,49 +122,6 @@ bool config_manager_init(void) {
 }
 
 // Cette fonction n'est plus nécessaire - on charge uniquement le profil actif à la demande
-
-/**
- * @brief Compte le nombre de profils existants dans NVS
- * @return Nombre de profils trouvés
- */
-static int config_manager_count_profiles(void) {
-  int count = 0;
-  char key[16];
-
-  // Scanner tous les IDs possibles
-  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
-    snprintf(key, sizeof(key), "profile_%d", i);
-    size_t required_size = 0;
-    esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
-    if (err == ESP_OK) {
-      count++;
-    }
-  }
-
-  return count;
-}
-
-/**
- * @brief Trouve le prochain ID de profil disponible
- * @return ID disponible (>= 0) ou -1 si erreur
- */
-static int config_manager_find_next_profile_id(void) {
-  char key[16];
-  int next_id = -1;
-
-  // Chercher le premier ID libre
-  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
-    snprintf(key, sizeof(key), "profile_%d", i);
-    size_t required_size = 0;
-    esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
-    if (err == ESP_ERR_NVS_NOT_FOUND) {
-      next_id = i;
-      break;
-    }
-  }
-
-  return next_id;
-}
 
 bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile) {
   if (profile == NULL) {
