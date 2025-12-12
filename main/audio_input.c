@@ -1,12 +1,12 @@
 #include "audio_input.h"
 
 #include "config.h"
-#include "nvs_manager.h"
 #include "driver/i2s_std.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
+#include "nvs_manager.h"
 
 #include <float.h>
 #include <math.h>
@@ -504,8 +504,7 @@ void audio_input_set_auto_gain(bool enable) {
 }
 
 bool audio_input_save_config(void) {
-  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "config",
-                                        &current_config, sizeof(audio_config_t));
+  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "config", &current_config, sizeof(audio_config_t));
 
   if (ret == ESP_OK) {
     ESP_LOGI(TAG_AUDIO, "Configuration sauvegardée");
@@ -516,12 +515,10 @@ bool audio_input_save_config(void) {
 }
 
 static bool audio_input_save_calibration(void) {
-  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "calib",
-                                        &calibration, sizeof(audio_calibration_t));
+  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "calib", &calibration, sizeof(audio_calibration_t));
 
   if (ret == ESP_OK) {
-    ESP_LOGI(TAG_AUDIO, "Calibration sauvegardée (noise=%.3f, peak=%.3f)",
-             calibration.noise_floor, calibration.peak_level);
+    ESP_LOGI(TAG_AUDIO, "Calibration sauvegardée (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
     return true;
   }
 
@@ -530,8 +527,7 @@ static bool audio_input_save_calibration(void) {
 
 bool audio_input_load_config(void) {
   size_t required_size = sizeof(audio_config_t);
-  esp_err_t ret = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "config",
-                                        &current_config, &required_size);
+  esp_err_t ret        = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "config", &current_config, &required_size);
 
   if (ret == ESP_OK) {
     ESP_LOGI(TAG_AUDIO, "Configuration chargée");
@@ -546,8 +542,7 @@ bool audio_input_load_config(void) {
 
 static bool audio_input_load_calibration(void) {
   size_t required_size = sizeof(audio_calibration_t);
-  esp_err_t ret = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "calib",
-                                        &calibration, &required_size);
+  esp_err_t ret        = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "calib", &calibration, &required_size);
 
   if (ret != ESP_OK) {
     if (ret == ESP_ERR_NVS_NOT_FOUND) {

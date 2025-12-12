@@ -15,13 +15,13 @@
 #include "audio_input.h"
 #include "cJSON.h"
 #include "config.h"
-#include "nvs_manager.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "led_effects.h"
 #include "nvs.h"
 #include "nvs_flash.h"
+#include "nvs_manager.h"
 
 #include <string.h>
 #include <time.h>
@@ -55,8 +55,8 @@ static led_rgb_t temp_buffer[MAX_LED_COUNT];
 static uint8_t priority_buffer[MAX_LED_COUNT];
 
 static void load_wheel_control_settings(void) {
-  uint8_t enabled_u8 = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_ctl", 0);
-  uint8_t speed_kph  = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
+  uint8_t enabled_u8        = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_ctl", 0);
+  uint8_t speed_kph         = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
 
   wheel_control_enabled     = enabled_u8 != 0;
   wheel_control_speed_limit = speed_kph;
@@ -173,7 +173,7 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
 
   // Vérifier d'abord la taille du blob
   size_t required_size = 0;
-  esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
+  esp_err_t err        = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
   if (err != ESP_OK) {
     return false;
   }
@@ -190,7 +190,7 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
 
   // Charger le profil
   required_size = sizeof(config_profile_t);
-  err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, profile, &required_size);
+  err           = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, profile, &required_size);
 
   return (err == ESP_OK);
 }
@@ -452,7 +452,7 @@ bool config_manager_get_wheel_control_enabled(void) {
 
 bool config_manager_set_wheel_control_enabled(bool enabled) {
   wheel_control_enabled = enabled;
-  esp_err_t err = nvs_manager_set_bool(NVS_NAMESPACE_SETTINGS, "wheel_ctl", enabled);
+  esp_err_t err         = nvs_manager_set_bool(NVS_NAMESPACE_SETTINGS, "wheel_ctl", enabled);
   return err == ESP_OK;
 }
 
@@ -468,7 +468,7 @@ bool config_manager_set_wheel_control_speed_limit(int speed_kph) {
     speed_kph = 100;
   }
   wheel_control_speed_limit = (uint8_t)speed_kph;
-  esp_err_t err = nvs_manager_set_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
+  esp_err_t err             = nvs_manager_set_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
   return err == ESP_OK;
 }
 
@@ -485,7 +485,7 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
     snprintf(key, sizeof(key), "profile_%d", i);
 
     size_t required_size = sizeof(config_profile_t);
-    esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &profile_list[count], &required_size);
+    esp_err_t err        = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &profile_list[count], &required_size);
     if (err == ESP_OK && required_size == sizeof(config_profile_t)) {
       count++;
     }

@@ -13,24 +13,24 @@
 #include "audio_input.h"
 #include "ble_api_service.h"
 #include "can_bus.h"
+#include "canserver_udp_server.h" // Serveur UDP CANServer optionnel
 #include "captive_portal.h"
 #include "config.h"
 #include "config_manager.h"
-#include "espnow_link.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "espnow_link.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "gvret_tcp_server.h" // Serveur TCP GVRET optionnel
-#include "canserver_udp_server.h" // Serveur UDP CANServer optionnel
-#include "slcan_tcp_server.h" // Serveur TCP SLCAN optionnel
 #include "led_effects.h"
-#include "log_stream.h"
 #include "led_strip_encoder.h"
+#include "log_stream.h"
 #include "nvs_flash.h"
 #include "ota_update.h"
 #include "reset_button.h"
 #include "sdkconfig.h"
+#include "slcan_tcp_server.h" // Serveur TCP SLCAN optionnel
 #include "status_led.h"
 #include "status_manager.h"
 #include "task_core_utils.h"
@@ -54,10 +54,10 @@
 
 #define TAG_MAIN "Main"
 
-  // ESP-NOW init (rôle et type d'esclave via Kconfig ou build flags PlatformIO)
-  // Configurable via Kconfig ou build flags PlatformIO :
-  //   -DESP_NOW_ROLE_STR=\"master\"|\"slave\"
-  //   -DESP_NOW_SLAVE_TYPE_STR=\"blindspot_left\"|\"blindspot_right\"|\"speedometer\"
+// ESP-NOW init (rôle et type d'esclave via Kconfig ou build flags PlatformIO)
+// Configurable via Kconfig ou build flags PlatformIO :
+//   -DESP_NOW_ROLE_STR=\"master\"|\"slave\"
+//   -DESP_NOW_SLAVE_TYPE_STR=\"blindspot_left\"|\"blindspot_right\"|\"speedometer\"
 #ifndef ESP_NOW_ROLE_STR
 #ifdef CONFIG_ESP_NOW_ROLE
 #define ESP_NOW_ROLE_STR CONFIG_ESP_NOW_ROLE
@@ -74,7 +74,7 @@
 #endif
 #endif
 
-  // Si les macros sont passées sans guillemets (-DESP_NOW_ROLE_STR=slave), les convertir en chaînes
+// Si les macros sont passées sans guillemets (-DESP_NOW_ROLE_STR=slave), les convertir en chaînes
 #ifndef ESPNOW_STR
 #define ESPNOW_STR_HELPER(x) #x
 #define ESPNOW_STR(x) ESPNOW_STR_HELPER(x)
@@ -130,8 +130,8 @@ static void espnow_can_rx_handler(const espnow_can_frame_t *frame) {
     return;
   }
   can_frame_t can = {0};
-  can.id           = frame->can_id;
-  can.dlc          = (frame->dlc > 8) ? 8 : frame->dlc;
+  can.id          = frame->can_id;
+  can.dlc         = (frame->dlc > 8) ? 8 : frame->dlc;
   if (can.dlc) {
     memcpy(can.data, frame->data, can.dlc);
   }
@@ -549,7 +549,7 @@ void app_main(void) {
   cJSON_InitHooks(&hooks);
 #endif
 
-  espnow_role_t espnow_role = (strcmp(ESP_NOW_ROLE_STR, "slave") == 0) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
+  espnow_role_t espnow_role       = (strcmp(ESP_NOW_ROLE_STR, "slave") == 0) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
   espnow_slave_type_t espnow_type = ESP_NOW_SLAVE_NONE;
   if (strcmp(ESP_NOW_SLAVE_TYPE_STR, "blindspot_left") == 0) {
     espnow_type = ESP_NOW_SLAVE_BLINDSPOT_LEFT;

@@ -15,18 +15,18 @@
 #include "audio_input.h"
 #include "cJSON.h"
 #include "can_bus.h"
+#include "canserver_udp_server.h" // Pour le serveur CANServer UDP
 #include "config.h"
 #include "config_manager.h"
-#include "nvs_manager.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "gvret_tcp_server.h" // Pour le serveur GVRET TCP
 #include "led_effects.h"
-#include "gvret_tcp_server.h"  // Pour le serveur GVRET TCP
-#include "canserver_udp_server.h"  // Pour le serveur CANServer UDP
-#include "slcan_tcp_server.h"  // Pour le serveur SLCAN TCP
-#include "log_stream.h"         // Pour le streaming de logs en temps réel
+#include "log_stream.h" // Pour le streaming de logs en temps réel
 #include "nvs_flash.h"
+#include "nvs_manager.h"
 #include "ota_update.h"
+#include "slcan_tcp_server.h" // Pour le serveur SLCAN TCP
 #include "vehicle_can_unified.h"
 #include "wifi_manager.h"
 
@@ -1219,11 +1219,7 @@ static esp_err_t handle_server_stop(httpd_req_t *req, server_stop_fn_t stop_fn, 
 }
 
 // Helper générique pour status
-static esp_err_t handle_server_status(httpd_req_t *req,
-                                       server_is_running_fn_t is_running_fn,
-                                       server_get_client_count_fn_t get_clients_fn,
-                                       server_get_autostart_fn_t get_autostart_fn,
-                                       int port) {
+static esp_err_t handle_server_status(httpd_req_t *req, server_is_running_fn_t is_running_fn, server_get_client_count_fn_t get_clients_fn, server_get_autostart_fn_t get_autostart_fn, int port) {
   httpd_resp_set_type(req, "application/json");
 
   cJSON *root = cJSON_CreateObject();
@@ -1253,7 +1249,7 @@ static esp_err_t handle_server_autostart(httpd_req_t *req, server_set_autostart_
   }
   content[ret] = '\0';
 
-  cJSON *json = cJSON_Parse(content);
+  cJSON *json  = cJSON_Parse(content);
   if (!json) {
     httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
     return ESP_OK;
@@ -1267,7 +1263,7 @@ static esp_err_t handle_server_autostart(httpd_req_t *req, server_set_autostart_
   }
 
   bool autostart = cJSON_IsTrue(autostart_item);
-  esp_err_t err = set_fn(autostart);
+  esp_err_t err  = set_fn(autostart);
 
   cJSON_Delete(json);
 
@@ -1296,9 +1292,7 @@ static esp_err_t gvret_stop_handler(httpd_req_t *req) {
 
 // Handler pour obtenir le statut du serveur GVRET TCP
 static esp_err_t gvret_status_handler(httpd_req_t *req) {
-  return handle_server_status(req, gvret_tcp_server_is_running,
-                               gvret_tcp_server_get_client_count,
-                               gvret_tcp_server_get_autostart, 23);
+  return handle_server_status(req, gvret_tcp_server_is_running, gvret_tcp_server_get_client_count, gvret_tcp_server_get_autostart, 23);
 }
 
 // Handler pour définir l'autostart du serveur GVRET TCP
@@ -1322,9 +1316,7 @@ static esp_err_t canserver_stop_handler(httpd_req_t *req) {
 
 // Handler pour obtenir le statut du serveur CANServer UDP
 static esp_err_t canserver_status_handler(httpd_req_t *req) {
-  return handle_server_status(req, canserver_udp_server_is_running,
-                               canserver_udp_server_get_client_count,
-                               canserver_udp_server_get_autostart, 1338);
+  return handle_server_status(req, canserver_udp_server_is_running, canserver_udp_server_get_client_count, canserver_udp_server_get_autostart, 1338);
 }
 
 // Handler pour définir l'autostart du serveur CANServer UDP
@@ -1348,9 +1340,7 @@ static esp_err_t slcan_stop_handler(httpd_req_t *req) {
 
 // Handler pour obtenir le statut du serveur SLCAN TCP
 static esp_err_t slcan_status_handler(httpd_req_t *req) {
-  return handle_server_status(req, slcan_tcp_server_is_running,
-                               slcan_tcp_server_get_client_count,
-                               slcan_tcp_server_get_autostart, 3333);
+  return handle_server_status(req, slcan_tcp_server_is_running, slcan_tcp_server_get_client_count, slcan_tcp_server_get_autostart, 3333);
 }
 
 // Handler pour définir l'autostart du serveur SLCAN TCP
@@ -1361,9 +1351,13 @@ static esp_err_t slcan_autostart_handler(httpd_req_t *req) {
 // Dummy recv override - returns -1/EAGAIN to prevent httpd from reading
 // This tells httpd: "no data available, keep the socket open and don't close it"
 static int sse_recv_override(httpd_handle_t hd, int sockfd, char *buf, size_t buf_len, int flags) {
-  (void)hd; (void)sockfd; (void)buf; (void)buf_len; (void)flags;
+  (void)hd;
+  (void)sockfd;
+  (void)buf;
+  (void)buf_len;
+  (void)flags;
   errno = EAGAIN;
-  return -1;  // Tell httpd "no data to read, try again later"
+  return -1; // Tell httpd "no data to read, try again later"
 }
 
 // Handler pour le streaming de logs via Server-Sent Events (SSE)
@@ -2069,12 +2063,7 @@ esp_err_t web_server_start(void) {
     httpd_register_uri_handler(server, &slcan_autostart_uri);
 
     // Route Log Streaming (Server-Sent Events)
-    httpd_uri_t log_stream_uri = {
-        .uri = "/api/logs/stream",
-        .method = HTTP_GET,
-        .handler = log_stream_handler,
-        .user_ctx = NULL
-    };
+    httpd_uri_t log_stream_uri = {.uri = "/api/logs/stream", .method = HTTP_GET, .handler = log_stream_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &log_stream_uri);
 
     // Enregistrer le handler d'erreur 404 pour le portail captif

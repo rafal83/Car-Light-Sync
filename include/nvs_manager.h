@@ -2,9 +2,10 @@
 #define NVS_MANAGER_H
 
 #include "esp_err.h"
+
 #include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -160,9 +161,7 @@ esp_err_t nvs_manager_set_str(const char *namespace, const char *key, const char
  * @param default_value Default string if key not found (can be NULL)
  * @return ESP_OK on success
  */
-esp_err_t nvs_manager_get_str(const char *namespace, const char *key,
-                               char *out_buffer, size_t buffer_size,
-                               const char *default_value);
+esp_err_t nvs_manager_get_str(const char *namespace, const char *key, char *out_buffer, size_t buffer_size, const char *default_value);
 
 /**
  * @brief Set a blob (binary data) value in NVS
@@ -173,8 +172,7 @@ esp_err_t nvs_manager_get_str(const char *namespace, const char *key,
  * @param length Length of binary data
  * @return ESP_OK on success
  */
-esp_err_t nvs_manager_set_blob(const char *namespace, const char *key,
-                                const void *value, size_t length);
+esp_err_t nvs_manager_set_blob(const char *namespace, const char *key, const void *value, size_t length);
 
 /**
  * @brief Get a blob (binary data) value from NVS
@@ -185,8 +183,7 @@ esp_err_t nvs_manager_set_blob(const char *namespace, const char *key,
  * @param buffer_size Size of the output buffer (in/out parameter)
  * @return ESP_OK on success
  */
-esp_err_t nvs_manager_get_blob(const char *namespace, const char *key,
-                                void *out_buffer, size_t *buffer_size);
+esp_err_t nvs_manager_get_blob(const char *namespace, const char *key, void *out_buffer, size_t *buffer_size);
 
 /**
  * @brief Erase a key from NVS

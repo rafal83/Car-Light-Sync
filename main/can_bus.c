@@ -1,14 +1,14 @@
 // can_bus.c
 #include "can_bus.h"
 
+#include "canserver_udp_server.h"
 #include "esp_log.h"
+#include "espnow_link.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "vehicle_can_mapping.h"
 #include "gvret_tcp_server.h"
-#include "canserver_udp_server.h"
 #include "slcan_tcp_server.h"
-#include "espnow_link.h"
+#include "vehicle_can_mapping.h"
 
 // Driver CAN ESP-IDF : selon version, c'est "twai" ou alias "can"
 #include "driver/twai.h"
@@ -142,7 +142,7 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
 
   // Filtre : accepte toutes les trames par défaut
   twai_filter_config_t f_config               = TWAI_FILTER_CONFIG_ACCEPT_ALL();
- 
+
   esp_err_t ret;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0) && SOC_TWAI_CONTROLLER_NUM >= 2

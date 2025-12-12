@@ -1,9 +1,10 @@
 #ifndef LOG_STREAM_H
 #define LOG_STREAM_H
 
+#include "esp_err.h"
+
 #include <stddef.h>
 #include <stdint.h>
-#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {

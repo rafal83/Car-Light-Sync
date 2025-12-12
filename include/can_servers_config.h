@@ -2,6 +2,7 @@
 #define CAN_SERVERS_CONFIG_H
 
 #include "esp_err.h"
+
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -12,10 +13,10 @@ extern "C" {
  * @brief CAN server types
  */
 typedef enum {
-    CAN_SERVER_GVRET,
-    CAN_SERVER_CANSERVER,
-    CAN_SERVER_SLCAN,
-    CAN_SERVER_COUNT
+  CAN_SERVER_GVRET,
+  CAN_SERVER_CANSERVER,
+  CAN_SERVER_SLCAN,
+  CAN_SERVER_COUNT
 } can_server_type_t;
 
 /**

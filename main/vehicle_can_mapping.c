@@ -21,10 +21,10 @@ static inline int is_latch_open(float raw) {
 }
 
 // Historique de portes pour calculer doors_open_count
-static uint8_t s_door_front_left_open   = 0;
-static uint8_t s_door_rear_left_open    = 0;
-static uint8_t s_door_front_right_open  = 0;
-static uint8_t s_door_rear_right_open   = 0;
+static uint8_t s_door_front_left_open  = 0;
+static uint8_t s_door_rear_left_open   = 0;
+static uint8_t s_door_front_right_open = 0;
+static uint8_t s_door_rear_right_open  = 0;
 
 static void recompute_doors_open(vehicle_state_t *state) {
   if (!state)

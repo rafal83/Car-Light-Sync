@@ -1,10 +1,11 @@
 #ifndef ESPNOW_LINK_H
 #define ESPNOW_LINK_H
 
-#include "esp_err.h"
 #include "driver/twai.h"
-#include <stdint.h>
+#include "esp_err.h"
+
 #include <stdbool.h>
+#include <stdint.h>
 
 // Active les hooks ESP-NOW dans les modules qui l'incluent
 #ifndef ESPNOW_LINK_ENABLED
@@ -13,30 +14,30 @@
 
 // Rôles
 typedef enum {
-    ESP_NOW_ROLE_MASTER = 0,
-    ESP_NOW_ROLE_SLAVE  = 1
+  ESP_NOW_ROLE_MASTER = 0,
+  ESP_NOW_ROLE_SLAVE  = 1
 } espnow_role_t;
 
 // Types d'esclaves supportés
 typedef enum {
-    ESP_NOW_SLAVE_NONE = 0,
-    ESP_NOW_SLAVE_BLINDSPOT_LEFT,
-    ESP_NOW_SLAVE_BLINDSPOT_RIGHT,
-    ESP_NOW_SLAVE_SPEEDOMETER,
-    ESP_NOW_SLAVE_MAX
+  ESP_NOW_SLAVE_NONE = 0,
+  ESP_NOW_SLAVE_BLINDSPOT_LEFT,
+  ESP_NOW_SLAVE_BLINDSPOT_RIGHT,
+  ESP_NOW_SLAVE_SPEEDOMETER,
+  ESP_NOW_SLAVE_MAX
 } espnow_slave_type_t;
 
 typedef struct {
-    uint32_t ids[16];
-    uint8_t count;
+  uint32_t ids[16];
+  uint8_t count;
 } espnow_request_list_t;
 
 typedef struct {
-    uint32_t can_id;
-    uint8_t bus;
-    uint8_t dlc;
-    uint8_t data[8];
-    uint16_t ts_ms;
+  uint32_t can_id;
+  uint8_t bus;
+  uint8_t dlc;
+  uint8_t data[8];
+  uint16_t ts_ms;
 } espnow_can_frame_t;
 
 typedef void (*espnow_can_rx_cb_t)(const espnow_can_frame_t *frame);
