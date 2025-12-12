@@ -273,35 +273,38 @@ int log_stream_get_client_count(void)
     return count;
 }
 
-// Escape a string for JSON (handle \n, \r, \t, ", \, and control chars)
+// Escape a string for JSON (RFC 8259 compliant)
 static void json_escape(const char *src, char *dst, size_t dst_size)
 {
-    size_t j = 0;
-    for (size_t i = 0; src[i] && j < dst_size - 6; i++) {  // -6 for worst case "\uXXXX\0"
-        unsigned char c = src[i];
+    if (!src || !dst || dst_size < 2) {
+        if (dst && dst_size > 0) dst[0] = '\0';
+        return;
+    }
 
-        // Handle common escape sequences
-        if (c == '"') {
-            dst[j++] = '\\';
-            dst[j++] = '"';
-        } else if (c == '\\') {
-            dst[j++] = '\\';
-            dst[j++] = '\\';
-        } else if (c == '\n') {
-            dst[j++] = '\\';
-            dst[j++] = 'n';
-        } else if (c == '\r') {
-            dst[j++] = '\\';
-            dst[j++] = 'r';
-        } else if (c == '\t') {
-            dst[j++] = '\\';
-            dst[j++] = 't';
-        } else if (c < 0x20) {
-            // Control characters: use \uXXXX format
-            j += snprintf(&dst[j], dst_size - j, "\\u%04x", c);
-        } else {
-            // Normal character
-            dst[j++] = c;
+    size_t j = 0;
+    const size_t max_j = dst_size - 7;  // Reserve space for worst case: "\uXXXX" + '\0'
+
+    for (size_t i = 0; src[i] && j < max_j; i++) {
+        unsigned char c = (unsigned char)src[i];
+
+        switch (c) {
+            case '"':   dst[j++] = '\\'; dst[j++] = '"';  break;
+            case '\\':  dst[j++] = '\\'; dst[j++] = '\\'; break;
+            case '\b':  dst[j++] = '\\'; dst[j++] = 'b';  break;
+            case '\f':  dst[j++] = '\\'; dst[j++] = 'f';  break;
+            case '\n':  dst[j++] = '\\'; dst[j++] = 'n';  break;
+            case '\r':  dst[j++] = '\\'; dst[j++] = 'r';  break;
+            case '\t':  dst[j++] = '\\'; dst[j++] = 't';  break;
+
+            default:
+                if (c < 0x20) {
+                    // Control characters: use \uXXXX format
+                    j += snprintf(&dst[j], dst_size - j, "\\u%04x", c);
+                } else {
+                    // Normal printable character
+                    dst[j++] = c;
+                }
+                break;
         }
     }
     dst[j] = '\0';
