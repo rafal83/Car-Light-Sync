@@ -273,24 +273,6 @@ int log_stream_get_client_count(void)
     return count;
 }
 
-// Strip ANSI escape codes (color codes like \033[0;32m)
-static void strip_ansi_codes(const char *src, char *dst, size_t dst_size)
-{
-    size_t j = 0;
-    for (size_t i = 0; src[i] && j < dst_size - 1; i++) {
-        if (src[i] == '\033' || src[i] == 0x1B) {  // ESC character
-            // Skip until 'm' (end of ANSI sequence)
-            while (src[i] && src[i] != 'm') {
-                i++;
-            }
-            // Skip the 'm' too
-            if (src[i] == 'm') continue;
-        }
-        dst[j++] = src[i];
-    }
-    dst[j] = '\0';
-}
-
 // Escape a string for JSON (handle \n, \r, \t, ", \, and control chars)
 static void json_escape(const char *src, char *dst, size_t dst_size)
 {
