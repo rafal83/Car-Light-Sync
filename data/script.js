@@ -507,6 +507,8 @@ bleTransportInstance = bleTransport;
 if (!wifiOnline) {
     maybeAutoConnectBle();
 }
+// Mettre à jour la visibilité de l'onglet Logs après init BLE
+updateLogsTabVisibility();
 const nativeFetch = window.fetch.bind(window);
 function shouldUseBleForRequest(url, isApiCallOverride) {
     if (!bleTransport.shouldUseBle()) {
@@ -761,6 +763,17 @@ function updateOtaBleNote() {
         uploadBtn.disabled = useBle;
     }
 }
+function updateLogsTabVisibility() {
+    const logsTabButton = $('logs-tab-button');
+    if (!logsTabButton) {
+        return;
+    }
+    const useBle = bleTransport && typeof bleTransport.shouldUseBle === 'function'
+        ? bleTransport.shouldUseBle()
+        : false;
+    // Afficher l'onglet Logs uniquement si on n'utilise PAS BLE (donc WiFi)
+    logsTabButton.style.display = useBle ? 'none' : 'block';
+}
 async function toggleBleConnection() {
     if (!bleTransport.isSupported()) {
         showNotification('ble-notification', t('ble.notSupported'), 'error');
@@ -962,6 +975,9 @@ function switchTab(tabName, evt) {
         loadProfiles();
     } else if (tabName === 'diagnostic') {
         updateGvretTcpStatus();
+        updatePandaTcpStatus();
+    } else if (tabName === 'logs') {
+        // Onglet Logs: rien à charger au démarrage
     }
 }
 function restoreSimulationToggles() {
@@ -3454,14 +3470,14 @@ async function updateGvretTcpStatus() {
         const toggleBtn = $('gvret-toggle-btn');
 
         if (data.running) {
-            statusDiv.textContent = t('ota.gvretRunning') || `Actif (Port ${data.port})`;
+            statusDiv.textContent = t('server.gvretRunning') || `Actif (Port ${data.port})`;
             statusDiv.style.color = '#10b981';
-            toggleBtn.textContent = t('ota.gvretStop') || 'Arrêter GVRET TCP';
+            toggleBtn.textContent = t('server.gvretStop') || 'Arrêter GVRET';
             toggleBtn.className = 'btn-secondary';
         } else {
-            statusDiv.textContent = t('ota.gvretStopped') || 'Arrêté';
+            statusDiv.textContent = t('server.gvretStopped') || 'Arrêté';
             statusDiv.style.color = 'var(--color-muted)';
-            toggleBtn.textContent = t('ota.gvretStart') || 'Activer GVRET TCP';
+            toggleBtn.textContent = t('server.gvretStart') || 'Activer GVRET';
             toggleBtn.className = 'btn-primary';
         }
 
@@ -3480,20 +3496,74 @@ async function toggleGvretTcp() {
         const endpoint = isRunning ? '/api/gvret/stop' : '/api/gvret/start';
         const action = isRunning ? 'arrêt' : 'démarrage';
 
-        showNotification('ota', t(`ota.gvret${isRunning ? 'Stopping' : 'Starting'}`) || `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur GVRET TCP...`, 'info');
+        showNotification('diagnostic', t(`server.gvret${isRunning ? 'Stopping' : 'Starting'}`) || `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur GVRET...`, 'info');
 
         const response = await fetch(endpoint, { method: 'POST' });
         const data = await response.json();
 
         if (data.status === 'ok') {
-            showNotification('ota', t(`ota.gvret${isRunning ? 'Stopped' : 'Started'}`) || `Serveur GVRET TCP ${isRunning ? 'arrêté' : 'démarré'} avec succès`, 'success');
+            showNotification('diagnostic', t(`server.gvret${isRunning ? 'Stopped' : 'Started'}`) || `Serveur GVRET ${isRunning ? 'arrêté' : 'démarré'} avec succès`, 'success');
             await updateGvretTcpStatus();
         } else {
-            showNotification('ota', t('ota.gvretError') || `Erreur lors du ${action} du serveur GVRET`, 'error');
+            showNotification('diagnostic', t('server.gvretError') || `Erreur lors du ${action} du serveur GVRET`, 'error');
         }
     } catch (error) {
         console.error('Failed to toggle GVRET TCP:', error);
-        showNotification('diagnostic', t('diagnostic.gvretError') || 'Erreur lors de la communication avec le serveur GVRET', 'error');
+        showNotification('diagnostic', t('server.gvretError') || 'Erreur lors de la communication avec le serveur GVRET', 'error');
+    }
+}
+
+// Panda TCP Server Control
+async function updatePandaTcpStatus() {
+    try {
+        const response = await fetch('/api/panda/status');
+        const data = await response.json();
+
+        const statusDiv = $('panda-status');
+        const clientsDiv = $('panda-clients');
+        const toggleBtn = $('panda-toggle-btn');
+
+        if (data.running) {
+            statusDiv.textContent = t('server.pandaRunning') || `Actif (Port ${data.port})`;
+            statusDiv.style.color = '#10b981';
+            toggleBtn.textContent = t('server.pandaStop') || 'Arrêter PANDA';
+            toggleBtn.className = 'btn-secondary';
+        } else {
+            statusDiv.textContent = t('server.pandaStopped') || 'Arrêté';
+            statusDiv.style.color = 'var(--color-muted)';
+            toggleBtn.textContent = t('server.pandaStart') || 'Activer PANDA';
+            toggleBtn.className = 'btn-primary';
+        }
+
+        clientsDiv.textContent = data.clients || 0;
+    } catch (error) {
+        console.error('Failed to get Panda status:', error);
+    }
+}
+
+async function togglePandaTcp() {
+    try {
+        const statusResponse = await fetch('/api/panda/status');
+        const statusData = await statusResponse.json();
+        const isRunning = statusData.running;
+
+        const endpoint = isRunning ? '/api/panda/stop' : '/api/panda/start';
+        const action = isRunning ? 'arrêt' : 'démarrage';
+
+        showNotification('diagnostic', t(`server.panda${isRunning ? 'Stopping' : 'Starting'}`) || `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur Panda...`, 'info');
+
+        const response = await fetch(endpoint, { method: 'POST' });
+        const data = await response.json();
+
+        if (data.status === 'ok') {
+            showNotification('diagnostic', t(`server.panda${isRunning ? 'Stopped' : 'Started'}`) || `Serveur Panda ${isRunning ? 'arrêté' : 'démarré'} avec succès`, 'success');
+            await updatePandaTcpStatus();
+        } else {
+            showNotification('diagnostic', t('server.pandaError') || `Erreur lors du ${action} du serveur Panda`, 'error');
+        }
+    } catch (error) {
+        console.error('Failed to toggle Panda TCP:', error);
+        showNotification('diagnostic', t('server.pandaError') || 'Erreur lors de la communication avec le serveur Panda', 'error');
     }
 }
 
@@ -3517,9 +3587,9 @@ function startLiveLogs() {
     const toggleBtn = $('logs-toggle-btn');
     const container = $('logs-container');
 
-    statusDiv.textContent = t('diagnostic.logsConnecting') || 'Connexion...';
+    statusDiv.textContent = t('logs.connecting') || 'Connexion...';
     statusDiv.style.color = '#fbbf24';
-    toggleBtn.textContent = t('diagnostic.logsStop') || 'Arrêter les logs';
+    toggleBtn.textContent = t('logs.stop') || 'Arrêter les logs';
     toggleBtn.className = 'btn-secondary';
 
     // Clear existing logs
@@ -3530,7 +3600,7 @@ function startLiveLogs() {
     logsEventSource = new EventSource(API_BASE + '/api/logs/stream');
 
     logsEventSource.onopen = function() {
-        statusDiv.textContent = t('diagnostic.logsConnected') || 'Connecté';
+        statusDiv.textContent = t('logs.connected') || 'Connecté';
         statusDiv.style.color = '#10b981';
         container.innerHTML = '';
         appendLog('info', 'LOGS', 'Flux de logs connecté');
@@ -3547,7 +3617,7 @@ function startLiveLogs() {
 
     logsEventSource.onerror = function(error) {
         console.error('SSE connection error:', error);
-        statusDiv.textContent = t('diagnostic.logsError') || 'Erreur de connexion';
+        statusDiv.textContent = t('logs.error') || 'Erreur de connexion';
         statusDiv.style.color = '#ef4444';
 
         if (logsEnabled) {
@@ -3568,9 +3638,9 @@ function stopLiveLogs() {
     const statusDiv = $('logs-status');
     const toggleBtn = $('logs-toggle-btn');
 
-    statusDiv.textContent = t('diagnostic.logsDisconnected') || 'Déconnecté';
+    statusDiv.textContent = t('logs.disconnected') || 'Déconnecté';
     statusDiv.style.color = 'var(--color-muted)';
-    toggleBtn.textContent = t('diagnostic.logsStart') || 'Activer les logs';
+    toggleBtn.textContent = t('logs.start') || 'Activer les logs';
     toggleBtn.className = 'btn-primary';
 
     if (logsEventSource) {
@@ -3584,7 +3654,7 @@ function appendLog(level, tag, message) {
     if (!container) return;
 
     // Remove placeholder if present
-    if (container.querySelector('[data-i18n="diagnostic.logsEmpty"]')) {
+    if (container.querySelector('[data-i18n="server.logsEmpty"]')) {
         container.innerHTML = '';
     }
 
@@ -3627,7 +3697,7 @@ function escapeHtml(text) {
 function clearLogs() {
     const container = $('logs-container');
     if (container) {
-        container.innerHTML = '<div data-i18n="diagnostic.logsEmpty">Aucun log pour le moment...</div>';
+        container.innerHTML = '<div data-i18n="server.logsEmpty">Aucun log pour le moment...</div>';
         logLineCount = 0;
     }
 }

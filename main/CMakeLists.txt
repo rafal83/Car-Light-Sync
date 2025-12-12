@@ -36,6 +36,7 @@ idf_component_register(
         "captive_portal.c"
         "can_bus.c"
         "gvret_tcp_server.c"
+        "panda_tcp_server.c"
         "log_stream.c"
         "vehicle_can_unified.c"
         "vehicle_can_unified_config.generated.c"

@@ -21,6 +21,7 @@
 #include "esp_log.h"
 #include "led_effects.h"
 #include "gvret_tcp_server.h"  // Pour le serveur GVRET TCP
+#include "panda_tcp_server.h"  // Pour le serveur Panda TCP
 #include "log_stream.h"         // Pour le streaming de logs en temps réel
 #include "nvs_flash.h"
 #include "ota_update.h"
@@ -1230,6 +1231,55 @@ static esp_err_t gvret_status_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+// ============================================================================
+// Panda TCP Server API Handlers
+// ============================================================================
+
+// Handler pour démarrer le serveur Panda TCP
+static esp_err_t panda_start_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  esp_err_t ret = panda_tcp_server_start();
+  if (ret == ESP_OK) {
+    ESP_LOGI(TAG_WEBSERVER, "Serveur Panda TCP démarré via API");
+    httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":true}");
+  } else {
+    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur Panda: %s", esp_err_to_name(ret));
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start Panda server\"}");
+  }
+
+  return ESP_OK;
+}
+
+// Handler pour arrêter le serveur Panda TCP
+static esp_err_t panda_stop_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  panda_tcp_server_stop();
+  ESP_LOGI(TAG_WEBSERVER, "Serveur Panda TCP arrêté via API");
+
+  httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":false}");
+  return ESP_OK;
+}
+
+// Handler pour obtenir le statut du serveur Panda TCP
+static esp_err_t panda_status_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  cJSON *root = cJSON_CreateObject();
+  cJSON_AddBoolToObject(root, "running", panda_tcp_server_is_running());
+  cJSON_AddNumberToObject(root, "clients", panda_tcp_server_get_client_count());
+  cJSON_AddNumberToObject(root, "port", 1338);
+
+  const char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(root);
+
+  return ESP_OK;
+}
+
 // Dummy recv override - returns -1/EAGAIN to prevent httpd from reading
 // This tells httpd: "no data available, keep the socket open and don't close it"
 static int sse_recv_override(httpd_handle_t hd, int sockfd, char *buf, size_t buf_len, int flags) {
@@ -1910,6 +1960,16 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t gvret_status_uri = {.uri = "/api/gvret/status", .method = HTTP_GET, .handler = gvret_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &gvret_status_uri);
+
+    // Routes Panda TCP Server
+    httpd_uri_t panda_start_uri = {.uri = "/api/panda/start", .method = HTTP_POST, .handler = panda_start_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &panda_start_uri);
+
+    httpd_uri_t panda_stop_uri = {.uri = "/api/panda/stop", .method = HTTP_POST, .handler = panda_stop_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &panda_stop_uri);
+
+    httpd_uri_t panda_status_uri = {.uri = "/api/panda/status", .method = HTTP_GET, .handler = panda_status_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &panda_status_uri);
 
     // Route Log Streaming (Server-Sent Events)
     httpd_uri_t log_stream_uri = {

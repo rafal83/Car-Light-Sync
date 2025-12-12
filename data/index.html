@@ -93,6 +93,7 @@
           <button class="tab" data-tab="vehicle" onclick="switchTab('vehicle', event)" data-i18n="tabs.vehicle">Véhicule</button>
           <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.hardware">Matérielle</button>
           <button class="tab" data-tab="diagnostic" onclick="switchTab('diagnostic', event)" data-i18n="tabs.diagnostic">Diagnostic CAN</button>
+          <button class="tab" id="logs-tab-button" data-tab="logs" onclick="switchTab('logs', event)" data-i18n="tabs.logs" style="display: none;">Logs</button>
           <button class="tab" data-tab="ota" onclick="switchTab('ota', event)" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
         <!-- Tab: Profils -->
@@ -720,70 +721,90 @@
 
         <!-- Tab: Diagnostic CAN -->
         <div id="diagnostic-tab" class="tab-content">
-            <div class="section-title" data-i18n="diagnostic.title">Diagnostic Bus CAN</div>
+            <div class="section-title" data-i18n="server.title">Serveurs CAN</div>
             <div id="diagnostic-notification" class="notification"></div>
 
-            <!-- Section: GVRET TCP Server -->
-            <div class="profile-section">
+            <div class="can-servers-grid">
+                <!-- Section: GVRET TCP Server -->
+                <div class="profile-section">
                 <div class="profile-section-header">
-                    <h3 data-i18n="diagnostic.gvretTitle">Serveur GVRET</h3>
-                    <p style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; font-size: 13px; margin-top: 10px;" data-i18n="diagnostic.gvretDescription">
+                    <h3 data-i18n="server.gvretTitle">Serveur GVRET</h3>
+                    <p style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; font-size: 13px; margin-top: 10px;" data-i18n="server.gvretDescription">
                         Protocole GVRET sur TCP port 8080 pour SavvyCAN via WiFi (pas de redémarrage requis).
                     </p>
                 </div>
                 <div class="profile-section-content">
                     <div class="control-group">
-                        <label class="control-label" data-i18n="diagnostic.gvretStatus">État :</label>
+                        <label class="control-label" data-i18n="server.gvretStatus">État :</label>
                         <div id="gvret-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
                     </div>
                     <div class="control-group">
-                        <label class="control-label" data-i18n="diagnostic.gvretClients">Clients connectés :</label>
+                        <label class="control-label" data-i18n="server.gvretClients">Clients connectés :</label>
                         <div id="gvret-clients" style="font-weight: 600;">0</div>
                     </div>
                     <div class="control-group">
-                        <label class="control-label" data-i18n="diagnostic.gvretPort">Port TCP :</label>
+                        <label class="control-label" data-i18n="server.gvretPort">Port TCP :</label>
                         <div style="font-weight: 600; font-family: monospace;">23</div>
                     </div>
                     <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-primary" onclick="toggleGvretTcp()" id="gvret-toggle-btn" data-i18n="diagnostic.gvretStart">Activer GVRET</button>
+                        <button class="btn-primary" onclick="toggleGvretTcp()" id="gvret-toggle-btn" data-i18n="server.gvretStart">Activer GVRET</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Section: PANDA Protocol (Future) -->
-            <div class="profile-section" style="opacity: 0.6;">
-                <div class="profile-section-header">
-                    <h3 data-i18n="diagnostic.pandaTitle">Serveur PANDA</h3>
-                    <p style="padding: 10px; background: rgba(156, 163, 175, 0.1); border-left: 3px solid #9CA3AF; font-size: 13px; margin-top: 10px;" data-i18n="diagnostic.pandaDescription">
-                        Protocole comma.ai PANDA (À venir prochainement)
-                    </p>
-                </div>
-                <div class="profile-section-content">
-                    <div class="control-group">
-                        <button class="btn-secondary" disabled data-i18n="diagnostic.pandaComingSoon">Bientôt disponible</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section: Live Logs -->
+            <!-- Section: Panda TCP Server -->
             <div class="profile-section">
                 <div class="profile-section-header">
-                    <h3 data-i18n="diagnostic.logsTitle">Logs en temps réel</h3>
-                    <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;" data-i18n="diagnostic.logsDescription">
-                        Affichage des logs système via Server-Sent Events (WiFi uniquement)
+                    <h3 data-i18n="server.pandaTitle">Serveur PANDA</h3>
+                    <p style="padding: 10px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #F59E0B; font-size: 13px; margin-top: 10px;" data-i18n="server.pandaDescription">
+                        Protocole comma.ai Panda sur TCP port 1338 pour cabana via WiFi (pas de redémarrage requis).
                     </p>
                 </div>
                 <div class="profile-section-content">
                     <div class="control-group">
-                        <label class="control-label" data-i18n="diagnostic.logsStatus">État :</label>
+                        <label class="control-label" data-i18n="server.pandaStatus">État :</label>
+                        <div id="panda-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="server.pandaClients">Clients connectés :</label>
+                        <div id="panda-clients" style="font-weight: 600;">0</div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="server.pandaPort">Port TCP :</label>
+                        <div style="font-weight: 600; font-family: monospace;">1338</div>
+                    </div>
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button class="btn-primary" onclick="togglePandaTcp()" id="panda-toggle-btn" data-i18n="server.pandaStart">Activer PANDA</button>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+        </div>
+
+        <!-- Tab: Logs (WiFi uniquement) -->
+        <div id="logs-tab" class="tab-content">
+            <div class="section-title" data-i18n="logs.title">Logs en Temps Réel</div>
+            <div id="logs-notification" class="notification"></div>
+
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="logs.streamTitle">Flux de Logs Système</h3>
+                    <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;" data-i18n="logs.description">
+                        Affichage des logs système en temps réel via Server-Sent Events (WiFi uniquement)
+                    </p>
+                </div>
+                <div class="profile-section-content">
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="logs.status">État :</label>
                         <div id="logs-status" style="font-weight: 600; color: var(--color-muted);">Déconnecté</div>
                     </div>
                     <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-primary" onclick="toggleLiveLogs()" id="logs-toggle-btn" data-i18n="diagnostic.logsStart">Activer les logs</button>
-                        <button class="btn-secondary" onclick="clearLogs()" data-i18n="diagnostic.logsClear">Effacer</button>
+                        <button class="btn-primary" onclick="toggleLiveLogs()" id="logs-toggle-btn" data-i18n="logs.start">Activer les logs</button>
+                        <button class="btn-secondary" onclick="clearLogs()" data-i18n="logs.clear">Effacer</button>
                     </div>
-                    <div style="margin-top: 15px; background: #1f2937; border-radius: 4px; padding: 10px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #10b981;" id="logs-container">
-                        <div data-i18n="diagnostic.logsEmpty">Aucun log pour le moment...</div>
+                    <div style="margin-top: 15px; background: #1f2937; border-radius: 4px; padding: 10px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #10b981;" id="logs-container">
+                        <div data-i18n="logs.empty">Aucun log pour le moment...</div>
                     </div>
                 </div>
             </div>

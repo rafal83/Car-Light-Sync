@@ -1216,3 +1216,16 @@ button {
 .segment-range-values span {
     font-weight: 500;
 }
+
+/* CAN Servers Grid Layout (2 columns on desktop) */
+.can-servers-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+@media (min-width: 768px) {
+    .can-servers-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
