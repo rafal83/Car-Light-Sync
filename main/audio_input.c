@@ -1,11 +1,11 @@
 #include "audio_input.h"
 
 #include "config.h"
+#include "nvs_manager.h"
 #include "driver/i2s_std.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "nvs.h"
 #include "nvs_flash.h"
 
 #include <float.h>
@@ -504,87 +504,57 @@ void audio_input_set_auto_gain(bool enable) {
 }
 
 bool audio_input_save_config(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t ret = nvs_open("audio_config", NVS_READWRITE, &nvs_handle);
+  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "config",
+                                        &current_config, sizeof(audio_config_t));
 
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_AUDIO, "Erreur ouverture NVS: %s", esp_err_to_name(ret));
-    return false;
+  if (ret == ESP_OK) {
+    ESP_LOGI(TAG_AUDIO, "Configuration sauvegardée");
+    return true;
   }
 
-  ret = nvs_set_blob(nvs_handle, "config", &current_config, sizeof(audio_config_t));
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_AUDIO, "Erreur sauvegarde config: %s", esp_err_to_name(ret));
-    nvs_close(nvs_handle);
-    return false;
-  }
-
-  nvs_commit(nvs_handle);
-  nvs_close(nvs_handle);
-
-  ESP_LOGI(TAG_AUDIO, "Configuration sauvegardée");
-  return true;
+  return false;
 }
 
 static bool audio_input_save_calibration(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t ret = nvs_open("audio_config", NVS_READWRITE, &nvs_handle);
+  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "calib",
+                                        &calibration, sizeof(audio_calibration_t));
 
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_AUDIO, "Erreur ouverture NVS (calibration): %s", esp_err_to_name(ret));
-    return false;
+  if (ret == ESP_OK) {
+    ESP_LOGI(TAG_AUDIO, "Calibration sauvegardée (noise=%.3f, peak=%.3f)",
+             calibration.noise_floor, calibration.peak_level);
+    return true;
   }
 
-  ret = nvs_set_blob(nvs_handle, "calib", &calibration, sizeof(audio_calibration_t));
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_AUDIO, "Erreur sauvegarde calibration: %s", esp_err_to_name(ret));
-    nvs_close(nvs_handle);
-    return false;
-  }
-
-  nvs_commit(nvs_handle);
-  nvs_close(nvs_handle);
-  ESP_LOGI(TAG_AUDIO, "Calibration sauvegardée (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
-  return true;
+  return false;
 }
 
 bool audio_input_load_config(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t ret = nvs_open("audio_config", NVS_READONLY, &nvs_handle);
-
-  if (ret != ESP_OK) {
-    ESP_LOGW(TAG_AUDIO, "Pas de config audio sauvegardée");
-    return false;
-  }
-
   size_t required_size = sizeof(audio_config_t);
-  ret                  = nvs_get_blob(nvs_handle, "config", &current_config, &required_size);
-  nvs_close(nvs_handle);
+  esp_err_t ret = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "config",
+                                        &current_config, &required_size);
 
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG_AUDIO, "Erreur lecture config: %s", esp_err_to_name(ret));
-    return false;
+  if (ret == ESP_OK) {
+    ESP_LOGI(TAG_AUDIO, "Configuration chargée");
+    return true;
   }
 
-  ESP_LOGI(TAG_AUDIO, "Configuration chargée");
-  return true;
+  if (ret == ESP_ERR_NVS_NOT_FOUND) {
+    ESP_LOGW(TAG_AUDIO, "Pas de config audio sauvegardée");
+  }
+  return false;
 }
 
 static bool audio_input_load_calibration(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t ret = nvs_open("audio_config", NVS_READONLY, &nvs_handle);
-
-  if (ret != ESP_OK) {
-    ESP_LOGW(TAG_AUDIO, "Pas de calibration sauvegardée");
-    return false;
-  }
-
   size_t required_size = sizeof(audio_calibration_t);
-  ret                  = nvs_get_blob(nvs_handle, "calib", &calibration, &required_size);
-  nvs_close(nvs_handle);
+  esp_err_t ret = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "calib",
+                                        &calibration, &required_size);
 
   if (ret != ESP_OK) {
-    ESP_LOGW(TAG_AUDIO, "Calibration absente ou invalide (%s)", esp_err_to_name(ret));
+    if (ret == ESP_ERR_NVS_NOT_FOUND) {
+      ESP_LOGW(TAG_AUDIO, "Pas de calibration sauvegardée");
+    } else {
+      ESP_LOGW(TAG_AUDIO, "Calibration absente ou invalide (%s)", esp_err_to_name(ret));
+    }
     return false;
   }
 

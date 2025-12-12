@@ -17,11 +17,12 @@
 #include "can_bus.h"
 #include "config.h"
 #include "config_manager.h"
+#include "nvs_manager.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "led_effects.h"
 #include "gvret_tcp_server.h"  // Pour le serveur GVRET TCP
-#include "panda_tcp_server.h"  // Pour le serveur Panda TCP
+#include "canserver_udp_server.h"  // Pour le serveur CANServer UDP
 #include "slcan_tcp_server.h"  // Pour le serveur SLCAN TCP
 #include "log_stream.h"         // Pour le streaming de logs en temps réel
 #include "nvs_flash.h"
@@ -599,7 +600,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 
   // Ajouter les statistiques NVS
   nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READONLY, &nvs_handle);
   if (err == ESP_OK) {
     nvs_stats_t nvs_stats;
     err = nvs_get_stats(NULL, &nvs_stats);
@@ -1314,29 +1315,29 @@ static esp_err_t gvret_autostart_handler(httpd_req_t *req) {
 }
 
 // ============================================================================
-// Panda TCP Server API Handlers
+// CANServer UDP Server API Handlers
 // ============================================================================
 
-// Handler pour démarrer le serveur Panda TCP
-static esp_err_t panda_start_handler(httpd_req_t *req) {
-  return handle_server_start(req, panda_tcp_server_start, "Panda");
+// Handler pour démarrer le serveur CANServer UDP
+static esp_err_t canserver_start_handler(httpd_req_t *req) {
+  return handle_server_start(req, canserver_udp_server_start, "CANServer");
 }
 
-// Handler pour arrêter le serveur Panda TCP
-static esp_err_t panda_stop_handler(httpd_req_t *req) {
-  return handle_server_stop(req, panda_tcp_server_stop, "Panda");
+// Handler pour arrêter le serveur CANServer UDP
+static esp_err_t canserver_stop_handler(httpd_req_t *req) {
+  return handle_server_stop(req, canserver_udp_server_stop, "CANServer");
 }
 
-// Handler pour obtenir le statut du serveur Panda TCP
-static esp_err_t panda_status_handler(httpd_req_t *req) {
-  return handle_server_status(req, panda_tcp_server_is_running,
-                               panda_tcp_server_get_client_count,
-                               panda_tcp_server_get_autostart, 1338);
+// Handler pour obtenir le statut du serveur CANServer UDP
+static esp_err_t canserver_status_handler(httpd_req_t *req) {
+  return handle_server_status(req, canserver_udp_server_is_running,
+                               canserver_udp_server_get_client_count,
+                               canserver_udp_server_get_autostart, 1338);
 }
 
-// Handler pour définir l'autostart du serveur Panda TCP
-static esp_err_t panda_autostart_handler(httpd_req_t *req) {
-  return handle_server_autostart(req, panda_tcp_server_set_autostart);
+// Handler pour définir l'autostart du serveur CANServer UDP
+static esp_err_t canserver_autostart_handler(httpd_req_t *req) {
+  return handle_server_autostart(req, canserver_udp_server_set_autostart);
 }
 
 // ============================================================================
@@ -2049,18 +2050,18 @@ esp_err_t web_server_start(void) {
     httpd_uri_t gvret_autostart_uri = {.uri = "/api/gvret/autostart", .method = HTTP_POST, .handler = gvret_autostart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &gvret_autostart_uri);
 
-    // Routes Panda TCP Server
-    httpd_uri_t panda_start_uri = {.uri = "/api/panda/start", .method = HTTP_POST, .handler = panda_start_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &panda_start_uri);
+    // Routes CANServer TCP Server
+    httpd_uri_t canserver_start_uri = {.uri = "/api/canserver/start", .method = HTTP_POST, .handler = canserver_start_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &canserver_start_uri);
 
-    httpd_uri_t panda_stop_uri = {.uri = "/api/panda/stop", .method = HTTP_POST, .handler = panda_stop_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &panda_stop_uri);
+    httpd_uri_t canserver_stop_uri = {.uri = "/api/canserver/stop", .method = HTTP_POST, .handler = canserver_stop_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &canserver_stop_uri);
 
-    httpd_uri_t panda_status_uri = {.uri = "/api/panda/status", .method = HTTP_GET, .handler = panda_status_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &panda_status_uri);
+    httpd_uri_t canserver_status_uri = {.uri = "/api/canserver/status", .method = HTTP_GET, .handler = canserver_status_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &canserver_status_uri);
 
-    httpd_uri_t panda_autostart_uri = {.uri = "/api/panda/autostart", .method = HTTP_POST, .handler = panda_autostart_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &panda_autostart_uri);
+    httpd_uri_t canserver_autostart_uri = {.uri = "/api/canserver/autostart", .method = HTTP_POST, .handler = canserver_autostart_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &canserver_autostart_uri);
 
     // Routes SLCAN TCP Server
     httpd_uri_t slcan_start_uri = {.uri = "/api/slcan/start", .method = HTTP_POST, .handler = slcan_start_handler, .user_ctx = NULL};

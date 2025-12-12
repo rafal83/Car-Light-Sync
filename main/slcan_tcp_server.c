@@ -1,8 +1,7 @@
 #include "slcan_tcp_server.h"
+#include "can_servers_config.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "nvs_flash.h"
-#include "nvs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -15,8 +14,6 @@
 #include <stdio.h>
 
 static const char *TAG = "SLCAN_TCP";
-#define NVS_NAMESPACE "can_servers"
-#define NVS_KEY_SLCAN_AUTOSTART "slcan_auto"
 
 // Configuration
 #define SLCAN_TCP_PORT 3333  // Port standard pour SLCAN over TCP
@@ -468,52 +465,15 @@ void slcan_tcp_broadcast_can_frame(int bus, const twai_message_t *msg)
 }
 
 // ============================================================================
-// Autostart Management (NVS)
+// Autostart Management (delegated to can_servers_config)
 // ============================================================================
 
 esp_err_t slcan_tcp_server_set_autostart(bool autostart)
 {
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open NVS for autostart: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    uint8_t value = autostart ? 1 : 0;
-    err = nvs_set_u8(nvs_handle, NVS_KEY_SLCAN_AUTOSTART, value);
-    if (err == ESP_OK) {
-        err = nvs_commit(nvs_handle);
-    }
-
-    nvs_close(nvs_handle);
-
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Autostart %s", autostart ? "enabled" : "disabled");
-    } else {
-        ESP_LOGE(TAG, "Failed to save autostart: %s", esp_err_to_name(err));
-    }
-
-    return err;
+    return can_servers_config_set_autostart(CAN_SERVER_SLCAN, autostart);
 }
 
 bool slcan_tcp_server_get_autostart(void)
 {
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
-    if (err != ESP_OK) {
-        // Default to false if NVS not accessible
-        return false;
-    }
-
-    uint8_t value = 0;
-    err = nvs_get_u8(nvs_handle, NVS_KEY_SLCAN_AUTOSTART, &value);
-    nvs_close(nvs_handle);
-
-    if (err == ESP_OK) {
-        return value != 0;
-    }
-
-    // Default to false if key not found
-    return false;
+    return can_servers_config_get_autostart(CAN_SERVER_SLCAN);
 }

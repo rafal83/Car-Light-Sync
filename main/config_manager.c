@@ -15,6 +15,7 @@
 #include "audio_input.h"
 #include "cJSON.h"
 #include "config.h"
+#include "nvs_manager.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -81,7 +82,7 @@ static inline bool event_is_right(can_event_type_t event) {
 
 static void load_wheel_control_settings(void) {
   nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("settings", NVS_READONLY, &nvs_handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE_SETTINGS, NVS_READONLY, &nvs_handle);
   if (err == ESP_OK) {
     uint8_t enabled_u8 = 0;
     uint8_t speed_kph  = wheel_control_speed_limit;
@@ -190,16 +191,9 @@ bool config_manager_init(void) {
   load_wheel_control_settings();
 
   // Charger l'ID du profil actif depuis NVS
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
-
-  if (err == ESP_OK) {
-    int32_t saved_active_id = -1;
-    err                     = nvs_get_i32(nvs_handle, "active_id", &saved_active_id);
-    if (err == ESP_OK && saved_active_id >= 0) {
-      active_profile_id = saved_active_id;
-    }
-    nvs_close(nvs_handle);
+  int32_t saved_active_id = nvs_manager_get_i32(NVS_NAMESPACE_PROFILES, "active_id", -1);
+  if (saved_active_id >= 0) {
+    active_profile_id = saved_active_id;
   }
 
   // Essayer de charger le profil actif
@@ -227,12 +221,7 @@ bool config_manager_init(void) {
     config_manager_save_profile(0, &off_profile);
 
     // Sauvegarder l'ID actif
-    err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
-    if (err == ESP_OK) {
-      nvs_set_i32(nvs_handle, "active_id", active_profile_id);
-      nvs_commit(nvs_handle);
-      nvs_close(nvs_handle);
-    }
+    nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", active_profile_id);
 
     led_effects_set_config(&active_profile.default_effect);
     effect_override_active = false;
@@ -255,27 +244,19 @@ bool config_manager_init(void) {
  * @return Nombre de profils trouvés
  */
 static int config_manager_count_profiles(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    return 0;
-  }
-
   int count = 0;
   char key[16];
 
   // Scanner tous les IDs possibles
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     snprintf(key, sizeof(key), "profile_%d", i);
-    size_t required_size;
-    err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+    size_t required_size = 0;
+    esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
     if (err == ESP_OK) {
       count++;
     }
   }
 
-  nvs_close(nvs_handle);
   return count;
 }
 
@@ -284,41 +265,25 @@ static int config_manager_count_profiles(void) {
  * @return ID disponible (>= 0) ou -1 si erreur
  */
 static int config_manager_find_next_profile_id(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    return -1;
-  }
-
   char key[16];
   int next_id = -1;
 
   // Chercher le premier ID libre
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     snprintf(key, sizeof(key), "profile_%d", i);
-    size_t required_size;
-    err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+    size_t required_size = 0;
+    esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
     if (err == ESP_ERR_NVS_NOT_FOUND) {
       next_id = i;
       break;
     }
   }
 
-  nvs_close(nvs_handle);
   return next_id;
 }
 
 bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile) {
   if (profile == NULL) {
-    return false;
-  }
-
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
-
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
     return false;
   }
 
@@ -329,7 +294,6 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
   config_profile_t *profile_copy = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile_copy == NULL) {
     ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
-    nvs_close(nvs_handle);
     return false;
   }
 
@@ -339,16 +303,12 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
 
   ESP_LOGI(TAG_CONFIG, "Saving profile %d: size=%d bytes (NVS limit=1984)", profile_id, sizeof(config_profile_t));
 
-  err = nvs_set_blob(nvs_handle, key, profile_copy, sizeof(config_profile_t));
+  esp_err_t err = nvs_manager_set_blob(NVS_NAMESPACE_PROFILES, key, profile_copy, sizeof(config_profile_t));
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde profil: %s (size=%d bytes)", esp_err_to_name(err), sizeof(config_profile_t));
     free(profile_copy);
-    nvs_close(nvs_handle);
     return false;
   }
-
-  nvs_commit(nvs_handle);
-  nvs_close(nvs_handle);
 
   // Mettre à jour le profil actif en RAM si c'est celui qu'on vient de sauvegarder
   if (profile_id == active_profile_id) {
@@ -367,28 +327,19 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
     return false;
   }
 
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    return false;
-  }
-
   char key[16];
   snprintf(key, sizeof(key), "profile_%d", profile_id);
 
   // Vérifier d'abord la taille du blob
   size_t required_size = 0;
-  err                  = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+  esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
   if (err != ESP_OK) {
-    nvs_close(nvs_handle);
     return false;
   }
 
   // Vérifier que la taille correspond à la structure actuelle
   if (required_size != sizeof(config_profile_t)) {
     ESP_LOGW(TAG_CONFIG, "Profile %d a une taille incompatible (%d vs %d) - ignoré", profile_id, required_size, sizeof(config_profile_t));
-    nvs_close(nvs_handle);
     return false;
   }
 
@@ -398,15 +349,15 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
 
   // Charger le profil
   required_size = sizeof(config_profile_t);
-  err           = nvs_get_blob(nvs_handle, key, profile, &required_size);
-  nvs_close(nvs_handle);
+  err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, profile, &required_size);
 
   return (err == ESP_OK);
 }
 
 bool config_manager_delete_profile(uint16_t profile_id) {
+  // Note: This function still needs full refactoring to use nvs_manager exclusively
   nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READWRITE, &nvs_handle);
 
   if (err != ESP_OK) {
     return false;
@@ -416,7 +367,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   char key[16];
   snprintf(key, sizeof(key), "profile_%d", profile_id);
   size_t required_size = 0;
-  err                  = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+  err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
   if (err != ESP_OK) {
     nvs_close(nvs_handle);
     ESP_LOGW(TAG_CONFIG, "Profil %d n'existe pas", profile_id);
@@ -627,7 +578,7 @@ bool config_manager_activate_profile(uint16_t profile_id) {
 
   // Sauvegarder l'ID actif dans NVS
   nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READWRITE, &nvs_handle);
   if (err == ESP_OK) {
     nvs_set_i32(nvs_handle, "active_id", profile_id);
     nvs_commit(nvs_handle);
@@ -683,20 +634,7 @@ bool config_manager_get_wheel_control_enabled(void) {
 
 bool config_manager_set_wheel_control_enabled(bool enabled) {
   wheel_control_enabled = enabled;
-
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("settings", NVS_READWRITE, &nvs_handle);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Failed to open NVS settings for wheel_ctl: %s", esp_err_to_name(err));
-    return false;
-  }
-  err = nvs_set_u8(nvs_handle, "wheel_ctl", enabled ? 1 : 0);
-  if (err == ESP_OK) {
-    nvs_commit(nvs_handle);
-  } else {
-    ESP_LOGE(TAG_CONFIG, "Failed to save wheel_ctl: %s", esp_err_to_name(err));
-  }
-  nvs_close(nvs_handle);
+  esp_err_t err = nvs_manager_set_bool(NVS_NAMESPACE_SETTINGS, "wheel_ctl", enabled);
   return err == ESP_OK;
 }
 
@@ -712,20 +650,7 @@ bool config_manager_set_wheel_control_speed_limit(int speed_kph) {
     speed_kph = 100;
   }
   wheel_control_speed_limit = (uint8_t)speed_kph;
-
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("settings", NVS_READWRITE, &nvs_handle);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Failed to open NVS settings for wheel_spd: %s", esp_err_to_name(err));
-    return false;
-  }
-  err = nvs_set_u8(nvs_handle, "wheel_spd", wheel_control_speed_limit);
-  if (err == ESP_OK) {
-    nvs_commit(nvs_handle);
-  } else {
-    ESP_LOGE(TAG_CONFIG, "Failed to save wheel_spd: %s", esp_err_to_name(err));
-  }
-  nvs_close(nvs_handle);
+  esp_err_t err = nvs_manager_set_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
   return err == ESP_OK;
 }
 
@@ -735,7 +660,7 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
   }
 
   nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READONLY, &nvs_handle);
 
   if (err != ESP_OK) {
     ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS profiles");
@@ -1415,7 +1340,7 @@ bool config_manager_factory_reset(void) {
   ESP_LOGI(TAG_CONFIG, "Factory reset: Erasing all profiles and settings...");
 
   nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READWRITE, &nvs_handle);
 
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Failed to open NVS for factory reset");
@@ -1439,7 +1364,7 @@ bool config_manager_factory_reset(void) {
   }
 
   // Effacer la configuration matérielle LED
-  err = nvs_open("led_config", NVS_READWRITE, &nvs_handle);
+  err = nvs_open(NVS_NAMESPACE_LED_CONFIG, NVS_READWRITE, &nvs_handle);
   if (err == ESP_OK) {
     nvs_erase_all(nvs_handle);
     nvs_commit(nvs_handle);
@@ -1449,7 +1374,7 @@ bool config_manager_factory_reset(void) {
   wheel_control_speed_limit = 5;
 
   // Effacer les réglages globaux (wheel control, etc.)
-  err                       = nvs_open("settings", NVS_READWRITE, &nvs_handle);
+  err                       = nvs_open(NVS_NAMESPACE_SETTINGS, NVS_READWRITE, &nvs_handle);
   if (err == ESP_OK) {
     nvs_erase_all(nvs_handle);
     nvs_commit(nvs_handle);
@@ -1829,22 +1754,7 @@ bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effec
 }
 
 uint16_t config_manager_get_led_count(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("led_hw", NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    return NUM_LEDS; // Valeur par défaut
-  }
-
-  uint16_t led_count;
-  err = nvs_get_u16(nvs_handle, "led_count", &led_count);
-  nvs_close(nvs_handle);
-
-  if (err != ESP_OK) {
-    return NUM_LEDS; // Valeur par défaut
-  }
-
-  return led_count;
+  return nvs_manager_get_u16(NVS_NAMESPACE_LED_HW, "led_count", NUM_LEDS);
 }
 
 bool config_manager_set_led_count(uint16_t led_count) {
@@ -1854,26 +1764,12 @@ bool config_manager_set_led_count(uint16_t led_count) {
     return false;
   }
 
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("led_hw", NVS_READWRITE, &nvs_handle);
-
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
-    return false;
+  esp_err_t err = nvs_manager_set_u16(NVS_NAMESPACE_LED_HW, "led_count", led_count);
+  if (err == ESP_OK) {
+    ESP_LOGI(TAG_CONFIG, "Configuration LED sauvegardée: %d LEDs", led_count);
+    return true;
   }
-
-  err = nvs_set_u16(nvs_handle, "led_count", led_count);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde led_count: %s", esp_err_to_name(err));
-    nvs_close(nvs_handle);
-    return false;
-  }
-
-  nvs_commit(nvs_handle);
-  nvs_close(nvs_handle);
-
-  ESP_LOGI(TAG_CONFIG, "Configuration LED sauvegardée: %d LEDs", led_count);
-  return true;
+  return false;
 }
 
 void config_manager_reapply_default_effect(void) {
@@ -1889,7 +1785,7 @@ void config_manager_reapply_default_effect(void) {
 
 bool config_manager_can_create_profile(void) {
   nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READONLY, &nvs_handle);
 
   if (err != ESP_OK) {
     ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS pour vérifier l'espace");

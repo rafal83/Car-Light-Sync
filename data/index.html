@@ -730,7 +730,7 @@
                 <div class="profile-section-header">
                     <h3 data-i18n="server.gvretTitle">Serveur GVRET</h3>
                     <p style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; font-size: 13px; margin-top: 10px;" data-i18n="server.gvretDescription">
-                        Protocole GVRET sur TCP port 8080 pour SavvyCAN via WiFi (pas de redémarrage requis).
+                        Protocole GVRET sur TCP port 8080 pour SavvyCAN via WiFi.
                     </p>
                 </div>
                 <div class="profile-section-content">
@@ -759,36 +759,36 @@
                 </div>
             </div>
 
-            <!-- Section: Panda TCP Server -->
+            <!-- Section: CANServer UDP Server -->
             <div class="profile-section">
                 <div class="profile-section-header">
-                    <h3 data-i18n="server.pandaTitle">Serveur PANDA</h3>
-                    <p style="padding: 10px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #F59E0B; font-size: 13px; margin-top: 10px;" data-i18n="server.pandaDescription">
-                        Protocole comma.ai Panda sur TCP port 1338 pour cabana via WiFi (pas de redémarrage requis).
+                    <h3 data-i18n="server.canserverTitle">Serveur CANServer</h3>
+                    <p style="padding: 10px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #F59E0B; font-size: 13px; margin-top: 10px;" data-i18n="server.canserverDescription">
+                        Protocole CANServer sur UDP port 1338 pour cabana via WiFi.
                     </p>
                 </div>
                 <div class="profile-section-content">
                     <div class="control-group">
-                        <label class="control-label" data-i18n="server.pandaStatus">État :</label>
-                        <div id="panda-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
+                        <label class="control-label" data-i18n="server.canserverStatus">État :</label>
+                        <div id="canserver-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
                     </div>
                     <div class="control-group">
-                        <label class="control-label" data-i18n="server.pandaClients">Clients connectés :</label>
-                        <div id="panda-clients" style="font-weight: 600;">0</div>
+                        <label class="control-label" data-i18n="server.canserverClients">Clients connectés :</label>
+                        <div id="canserver-clients" style="font-weight: 600;">0</div>
                     </div>
                     <div class="control-group">
-                        <label class="control-label" data-i18n="server.pandaPort">Port TCP :</label>
+                        <label class="control-label" data-i18n="server.canserverPort">Port UDP :</label>
                         <div style="font-weight: 600; font-family: monospace;">1338</div>
                     </div>
-                    <label class="toggle-container" for="panda-autostart">
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="panda-autostart" onchange="toggleServerAutostart('panda', this.checked)">
+                        <label class="toggle-container" for="canserver-autostart">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="canserver-autostart" onchange="toggleServerAutostart('canserver', this.checked)">
                             <span class="toggle-slider"></span>
                         </div>
                         <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
                     </label>
                     <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-primary" onclick="togglePandaTcp()" id="panda-toggle-btn" data-i18n="server.pandaStart">Activer PANDA</button>
+                        <button class="btn-primary" onclick="toggleCanserver()" id="canserver-toggle-btn" data-i18n="server.canserverStart">Activer CANServer</button>
                     </div>
                 </div>
             </div>
@@ -798,7 +798,7 @@
                 <div class="profile-section-header">
                     <h3 data-i18n="server.slcanTitle">Serveur SLCAN</h3>
                     <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;" data-i18n="server.slcanDescription">
-                        Protocole SLCAN/LAWICEL sur TCP port 3333 pour Wireshark/python-can via WiFi (pas de redémarrage requis).
+                        Protocole SLCAN/LAWICEL sur TCP port 3333 pour Wireshark/python-can via WiFi.
                     </p>
                 </div>
                 <div class="profile-section-content">

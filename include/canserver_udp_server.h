@@ -1,5 +1,5 @@
-#ifndef PANDA_TCP_SERVER_H
-#define PANDA_TCP_SERVER_H
+#ifndef CANSERVER_UDP_SERVER_H
+#define CANSERVER_UDP_SERVER_H
 
 #include "esp_err.h"
 #include "driver/twai.h"
@@ -10,48 +10,48 @@ extern "C" {
 #endif
 
 /**
- * @brief Initialize Panda TCP server
+ * @brief Initialize CANServer UDP server (protocol Panda)
  *
  * Must be called once at startup before start/stop operations
  *
  * @return ESP_OK on success
  */
-esp_err_t panda_tcp_server_init(void);
+esp_err_t canserver_udp_server_init(void);
 
 /**
- * @brief Start Panda TCP server on port 1338
+ * @brief Start CANServer UDP server on port 1338
  *
- * Starts listening for comma.ai Panda/cabana connections.
+ * Starts listening for CANServer/ScanMyTesla (Panda protocol) connections.
  * Can be called multiple times (idempotent).
  *
  * @return ESP_OK on success, ESP_ERR_INVALID_STATE if already running
  */
-esp_err_t panda_tcp_server_start(void);
+esp_err_t canserver_udp_server_start(void);
 
 /**
- * @brief Stop Panda TCP server
+ * @brief Stop CANServer UDP server
  *
  * Closes all client connections and stops listening.
  * Can be called multiple times (idempotent).
  */
-void panda_tcp_server_stop(void);
+void canserver_udp_server_stop(void);
 
 /**
- * @brief Check if Panda TCP server is running
+ * @brief Check if CANServer UDP server is running
  *
  * @return true if server is actively listening on port 1338
  */
-bool panda_tcp_server_is_running(void);
+bool canserver_udp_server_is_running(void);
 
 /**
- * @brief Get count of connected Panda clients
+ * @brief Get count of connected CANServer clients
  *
- * @return Number of active TCP connections (0-4)
+ * @return Number of active UDP clients (0-4)
  */
-int panda_tcp_server_get_client_count(void);
+int canserver_udp_server_get_client_count(void);
 
 /**
- * @brief Broadcast CAN frame to all connected Panda clients
+ * @brief Broadcast CAN frame to all connected CANServer clients
  *
  * Called from CAN RX task when a frame is received.
  * Encodes the frame in Panda binary format and sends to all active clients.
@@ -59,7 +59,7 @@ int panda_tcp_server_get_client_count(void);
  * @param bus Bus number (0 = BODY, 1 = CHASSIS)
  * @param msg Pointer to TWAI message structure
  */
-void panda_tcp_broadcast_can_frame(int bus, const twai_message_t *msg);
+void canserver_udp_broadcast_can_frame(int bus, const twai_message_t *msg);
 
 /**
  * @brief Set autostart preference (saved to NVS)
@@ -67,17 +67,17 @@ void panda_tcp_broadcast_can_frame(int bus, const twai_message_t *msg);
  * @param autostart true to start server automatically on boot
  * @return ESP_OK on success
  */
-esp_err_t panda_tcp_server_set_autostart(bool autostart);
+esp_err_t canserver_udp_server_set_autostart(bool autostart);
 
 /**
  * @brief Get autostart preference (from NVS)
  *
  * @return true if server should start automatically on boot
  */
-bool panda_tcp_server_get_autostart(void);
+bool canserver_udp_server_get_autostart(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // PANDA_TCP_SERVER_H
+#endif // CANSERVER_UDP_SERVER_H

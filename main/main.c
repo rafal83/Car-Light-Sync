@@ -21,7 +21,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "gvret_tcp_server.h" // Serveur TCP GVRET optionnel
-#include "panda_tcp_server.h" // Serveur TCP Panda optionnel
+#include "canserver_udp_server.h" // Serveur UDP CANServer optionnel
 #include "slcan_tcp_server.h" // Serveur TCP SLCAN optionnel
 #include "led_effects.h"
 #include "log_stream.h"
@@ -672,12 +672,12 @@ void app_main(void) {
     ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (GVRET)");
   }
 
-  // Serveur Panda TCP (initialisé mais pas démarré - contrôlé via interface web)
-  ESP_ERROR_CHECK(panda_tcp_server_init());
-  ESP_LOGI(TAG_MAIN, "✓ Serveur Panda TCP initialise (port 1338, activable via interface web)");
-  if (panda_tcp_server_get_autostart()) {
-    ESP_ERROR_CHECK(panda_tcp_server_start());
-    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (Panda)");
+  // Serveur CANServer UDP (initialisé mais pas démarré - contrôlé via interface web)
+  ESP_ERROR_CHECK(canserver_udp_server_init());
+  ESP_LOGI(TAG_MAIN, "✓ Serveur CANServer UDP initialise (port 1338, activable via interface web)");
+  if (canserver_udp_server_get_autostart()) {
+    ESP_ERROR_CHECK(canserver_udp_server_start());
+    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (CANServer)");
   }
 
   // Serveur SLCAN TCP (initialisé mais pas démarré - contrôlé via interface web)

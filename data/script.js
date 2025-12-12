@@ -975,7 +975,7 @@ function switchTab(tabName, evt) {
         loadProfiles();
     } else if (tabName === 'diagnostic') {
         updateGvretTcpStatus();
-        updatePandaTcpStatus();
+        updateCanserverStatus();
         updateSlcanTcpStatus();
     } else if (tabName === 'logs') {
         // Onglet Logs: rien à charger au démarrage
@@ -3539,13 +3539,13 @@ async function toggleGvretTcp() {
     return toggleServer('gvret', 'GVRET');
 }
 
-// Panda TCP Server Control
-async function updatePandaTcpStatus() {
-    return updateServerStatus('panda', 'PANDA');
+// CANServer UDP Server Control
+async function updateCanserverStatus() {
+    return updateServerStatus('canserver', 'CANSERVER');
 }
 
-async function togglePandaTcp() {
-    return toggleServer('panda', 'Panda');
+async function toggleCanserver() {
+    return toggleServer('canserver', 'CANServer');
 }
 
 // SLCAN TCP Server Control
