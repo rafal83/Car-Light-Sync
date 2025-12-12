@@ -16,6 +16,7 @@
 #include "captive_portal.h"
 #include "config.h"
 #include "config_manager.h"
+#include "espnow_link.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
@@ -53,26 +54,43 @@
 
 #define TAG_MAIN "Main"
 
+  // ESP-NOW init (rôle et type d'esclave via Kconfig ou build flags PlatformIO)
+  // Configurable via Kconfig ou build flags PlatformIO :
+  //   -DESP_NOW_ROLE_STR=\"master\"|\"slave\"
+  //   -DESP_NOW_SLAVE_TYPE_STR=\"blindspot_left\"|\"blindspot_right\"|\"speedometer\"
+#ifndef ESP_NOW_ROLE_STR
+#ifdef CONFIG_ESP_NOW_ROLE
+#define ESP_NOW_ROLE_STR CONFIG_ESP_NOW_ROLE
+#else
+#define ESP_NOW_ROLE_STR "master"
+#endif
+#endif
+
+#ifndef ESP_NOW_SLAVE_TYPE_STR
+#ifdef CONFIG_ESP_NOW_SLAVE_TYPE
+#define ESP_NOW_SLAVE_TYPE_STR CONFIG_ESP_NOW_SLAVE_TYPE
+#else
+#define ESP_NOW_SLAVE_TYPE_STR "none"
+#endif
+#endif
+
+  // Si les macros sont passées sans guillemets (-DESP_NOW_ROLE_STR=slave), les convertir en chaînes
+#ifndef ESPNOW_STR
+#define ESPNOW_STR_HELPER(x) #x
+#define ESPNOW_STR(x) ESPNOW_STR_HELPER(x)
+#endif
+#if !defined(ESP_NOW_ROLE_STR_LIT) && !defined(__cplusplus)
+#define ESP_NOW_ROLE_STR_LIT ESPNOW_STR(ESP_NOW_ROLE_STR)
+#undef ESP_NOW_ROLE_STR
+#define ESP_NOW_ROLE_STR ESP_NOW_ROLE_STR_LIT
+#endif
+#if !defined(ESP_NOW_SLAVE_TYPE_STR_LIT) && !defined(__cplusplus)
+#define ESP_NOW_SLAVE_TYPE_STR_LIT ESPNOW_STR(ESP_NOW_SLAVE_TYPE_STR)
+#undef ESP_NOW_SLAVE_TYPE_STR
+#define ESP_NOW_SLAVE_TYPE_STR ESP_NOW_SLAVE_TYPE_STR_LIT
+#endif
+
 static vehicle_state_t last_vehicle_state = {0};
-
-static void reset_vehicle_state_and_effects(const char *reason, bool connected) {
-  memset(&last_vehicle_state, 0, sizeof(last_vehicle_state));
-  led_effects_update_vehicle_state(&last_vehicle_state);
-  web_server_update_vehicle_state(&last_vehicle_state);
-  config_manager_stop_all_events();
-  config_manager_reapply_default_effect();
-  ESP_LOGI(TAG_MAIN, "Vehicle state reset after %s %s", reason ? reason : "connection", connected ? "connected" : "disconnected");
-}
-
-static void handle_connection_change(const char *label, bool connected, bool *previous_state) {
-  if (!previous_state) {
-    return;
-  }
-  if (connected != *previous_state) {
-    *previous_state = connected;
-    reset_vehicle_state_and_effects(label, connected);
-  }
-}
 
 // Callback pour les événements de scroll wheel (appelé depuis vehicle_state_apply_signal)
 static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
@@ -104,6 +122,24 @@ static void vehicle_can_callback(const can_frame_t *frame, can_bus_type_t bus_ty
   vehicle_can_process_frame_static(frame, &last_vehicle_state);
   led_effects_update_vehicle_state(&last_vehicle_state);
   web_server_update_vehicle_state(&last_vehicle_state);
+}
+
+// Callback pour les frames ESP-NOW reçues côté esclave : on réutilise le pipeline CAN existant
+static void espnow_can_rx_handler(const espnow_can_frame_t *frame) {
+  if (!frame) {
+    return;
+  }
+  can_frame_t can = {0};
+  can.id           = frame->can_id;
+  can.dlc          = (frame->dlc > 8) ? 8 : frame->dlc;
+  if (can.dlc) {
+    memcpy(can.data, frame->data, can.dlc);
+  }
+  can_bus_type_t bus = CAN_BUS_BODY;
+  if (frame->bus == CAN_BUS_CHASSIS) {
+    bus = CAN_BUS_CHASSIS;
+  }
+  vehicle_can_callback(&can, bus, NULL);
 }
 
 // Tâche de mise à jour des LEDs
@@ -513,6 +549,16 @@ void app_main(void) {
   cJSON_InitHooks(&hooks);
 #endif
 
+  espnow_role_t espnow_role = (strcmp(ESP_NOW_ROLE_STR, "slave") == 0) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
+  espnow_slave_type_t espnow_type = ESP_NOW_SLAVE_NONE;
+  if (strcmp(ESP_NOW_SLAVE_TYPE_STR, "blindspot_left") == 0) {
+    espnow_type = ESP_NOW_SLAVE_BLINDSPOT_LEFT;
+  } else if (strcmp(ESP_NOW_SLAVE_TYPE_STR, "blindspot_right") == 0) {
+    espnow_type = ESP_NOW_SLAVE_BLINDSPOT_RIGHT;
+  } else if (strcmp(ESP_NOW_SLAVE_TYPE_STR, "speedometer") == 0) {
+    espnow_type = ESP_NOW_SLAVE_SPEEDOMETER;
+  }
+
   // Réduire le niveau de log de tous les composants ESP-IDF
   esp_log_level_set("*", ESP_LOG_WARN);     // Par défaut : warnings seulement
   esp_log_level_set("wifi", ESP_LOG_ERROR); // WiFi : erreurs seulement
@@ -576,24 +622,34 @@ void app_main(void) {
     ESP_LOGW(TAG_MAIN, "Erreur init bouton reset");
   }
 
-  // CAN bus - Body
-  ESP_ERROR_CHECK(can_bus_init(CAN_BUS_BODY, CAN_TX_BODY_PIN, CAN_RX_BODY_PIN));
-  ESP_LOGI(TAG_MAIN, "✓ CAN bus BODY initialisé (GPIO TX=%d, RX=%d)", CAN_TX_BODY_PIN, CAN_RX_BODY_PIN);
+  ESP_ERROR_CHECK(espnow_link_init(espnow_role, espnow_type));
+  ESP_LOGI(TAG_MAIN, "✓ ESPNow initialisé");
 
-  // CAN bus - Chassis
-  ESP_ERROR_CHECK(can_bus_init(CAN_BUS_CHASSIS, CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN));
-  ESP_LOGI(TAG_MAIN, "✓ CAN bus CHASSIS initialisé (GPIO TX=%d, RX=%d)", CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN);
+  // CAN : uniquement pour le maître (les esclaves ESP-NOW n'ont pas de contrôleur CAN)
+  if (espnow_role == ESP_NOW_ROLE_MASTER) {
+    // CAN bus - Body
+    ESP_ERROR_CHECK(can_bus_init(CAN_BUS_BODY, CAN_TX_BODY_PIN, CAN_RX_BODY_PIN));
+    ESP_LOGI(TAG_MAIN, "✓ CAN bus BODY initialisé (GPIO TX=%d, RX=%d)", CAN_TX_BODY_PIN, CAN_RX_BODY_PIN);
 
-  // Enregistrer le callback partagé pour les deux bus
-  ESP_ERROR_CHECK(can_bus_register_callback(vehicle_can_callback, NULL));
+    // CAN bus - Chassis
+    ESP_ERROR_CHECK(can_bus_init(CAN_BUS_CHASSIS, CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN));
+    ESP_LOGI(TAG_MAIN, "✓ CAN bus CHASSIS initialisé (GPIO TX=%d, RX=%d)", CAN_TX_CHASSIS_PIN, CAN_RX_CHASSIS_PIN);
 
-  // Enregistrer le callback pour les événements de scroll wheel
-  vehicle_can_set_wheel_scroll_callback(on_wheel_scroll_event);
+    // Enregistrer le callback partagé pour les deux bus
+    ESP_ERROR_CHECK(can_bus_register_callback(vehicle_can_callback, NULL));
 
-  // Démarrer les deux bus CAN
-  ESP_ERROR_CHECK(can_bus_start(CAN_BUS_CHASSIS));
-  ESP_ERROR_CHECK(can_bus_start(CAN_BUS_BODY));
-  ESP_LOGI(TAG_MAIN, "✓ Les deux bus CAN sont démarrés");
+    // Enregistrer le callback pour les événements de scroll wheel
+    vehicle_can_set_wheel_scroll_callback(on_wheel_scroll_event);
+
+    // Démarrer les deux bus CAN
+    ESP_ERROR_CHECK(can_bus_start(CAN_BUS_CHASSIS));
+    ESP_ERROR_CHECK(can_bus_start(CAN_BUS_BODY));
+    ESP_LOGI(TAG_MAIN, "✓ Les deux bus CAN sont démarrés");
+  } else {
+    ESP_LOGI(TAG_MAIN, "Mode esclave ESP-NOW : CAN désactivé");
+    // Les frames CAN reçues via ESP-NOW sont injectées dans le pipeline de décodage
+    espnow_link_register_rx_callback(espnow_can_rx_handler);
+  }
 
   // LEDs
   if (!led_effects_init()) {
@@ -609,14 +665,16 @@ void app_main(void) {
   }
   ESP_LOGI(TAG_MAIN, "✓ Gestionnaire de configuration initialisé");
 
-  // Module audio (micro INMP441)
-  if (!audio_input_init()) {
-    ESP_LOGW(TAG_MAIN, "Module audio non disponible (optionnel)");
-  } else {
-    ESP_LOGI(TAG_MAIN, "✓ Module audio initialisé");
-    // Réappliquer l'effet par défaut pour activer l'audio si nécessaire
-    // (car l'effet a été appliqué avant l'init audio)
-    config_manager_reapply_default_effect();
+  if (espnow_role == ESP_NOW_ROLE_MASTER) {
+    // Module audio (micro INMP441)
+    if (!audio_input_init()) {
+      ESP_LOGW(TAG_MAIN, "Module audio non disponible (optionnel)");
+    } else {
+      ESP_LOGI(TAG_MAIN, "✓ Module audio initialisé");
+      // Réappliquer l'effet par défaut pour activer l'audio si nécessaire
+      // (car l'effet a été appliqué avant l'init audio)
+      config_manager_reapply_default_effect();
+    }
   }
 
 #if CONFIG_BT_ENABLED
@@ -664,28 +722,30 @@ void app_main(void) {
   ESP_ERROR_CHECK(log_stream_init());
   ESP_LOGI(TAG_MAIN, "✓ Log streaming initialisé");
 
-  // Serveur GVRET TCP (initialisé mais pas démarré - contrôlé via interface web)
-  ESP_ERROR_CHECK(gvret_tcp_server_init());
-  ESP_LOGI(TAG_MAIN, "✓ Serveur GVRET TCP initialise (port 23, activable via interface web)");
-  if (gvret_tcp_server_get_autostart()) {
-    ESP_ERROR_CHECK(gvret_tcp_server_start());
-    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (GVRET)");
-  }
+  if (espnow_role == ESP_NOW_ROLE_MASTER) {
+    // Serveur GVRET TCP (initialisé mais pas démarré - contrôlé via interface web)
+    ESP_ERROR_CHECK(gvret_tcp_server_init());
+    ESP_LOGI(TAG_MAIN, "✓ Serveur GVRET TCP initialise (port 23, activable via interface web)");
+    if (gvret_tcp_server_get_autostart()) {
+      ESP_ERROR_CHECK(gvret_tcp_server_start());
+      ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (GVRET)");
+    }
 
-  // Serveur CANServer UDP (initialisé mais pas démarré - contrôlé via interface web)
-  ESP_ERROR_CHECK(canserver_udp_server_init());
-  ESP_LOGI(TAG_MAIN, "✓ Serveur CANServer UDP initialise (port 1338, activable via interface web)");
-  if (canserver_udp_server_get_autostart()) {
-    ESP_ERROR_CHECK(canserver_udp_server_start());
-    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (CANServer)");
-  }
+    // Serveur CANServer UDP (initialisé mais pas démarré - contrôlé via interface web)
+    ESP_ERROR_CHECK(canserver_udp_server_init());
+    ESP_LOGI(TAG_MAIN, "✓ Serveur CANServer UDP initialise (port 1338, activable via interface web)");
+    if (canserver_udp_server_get_autostart()) {
+      ESP_ERROR_CHECK(canserver_udp_server_start());
+      ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (CANServer)");
+    }
 
-  // Serveur SLCAN TCP (initialisé mais pas démarré - contrôlé via interface web)
-  ESP_ERROR_CHECK(slcan_tcp_server_init());
-  ESP_LOGI(TAG_MAIN, "✓ Serveur SLCAN TCP initialise (port 3333, activable via interface web)");
-  if (slcan_tcp_server_get_autostart()) {
-    ESP_ERROR_CHECK(slcan_tcp_server_start());
-    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (SLCAN)");
+    // Serveur SLCAN TCP (initialisé mais pas démarré - contrôlé via interface web)
+    ESP_ERROR_CHECK(slcan_tcp_server_init());
+    ESP_LOGI(TAG_MAIN, "✓ Serveur SLCAN TCP initialise (port 3333, activable via interface web)");
+    if (slcan_tcp_server_get_autostart()) {
+      ESP_ERROR_CHECK(slcan_tcp_server_start());
+      ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (SLCAN)");
+    }
   }
 
   // Afficher les informations de connexion

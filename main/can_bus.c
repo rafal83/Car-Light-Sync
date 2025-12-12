@@ -8,6 +8,7 @@
 #include "gvret_tcp_server.h"
 #include "canserver_udp_server.h"
 #include "slcan_tcp_server.h"
+#include "espnow_link.h"
 
 // Driver CAN ESP-IDF : selon version, c'est "twai" ou alias "can"
 #include "driver/twai.h"
@@ -76,6 +77,11 @@ static void can_rx_task(void *pvParameters) {
 
       // Broadcast vers clients SLCAN TCP (si serveur actif)
       slcan_tcp_broadcast_can_frame((int)bus_type, &msg);
+
+      // Broadcast ESP-NOW (maître uniquement)
+#ifdef ESPNOW_LINK_ENABLED
+      espnow_link_on_can_frame(&msg, (int)bus_type);
+#endif
 
       if (s_callback) {
         can_frame_t frame = {0};

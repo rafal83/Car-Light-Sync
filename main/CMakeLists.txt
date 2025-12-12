@@ -48,6 +48,7 @@ idf_component_register(
         "led_strip_encoder.c"
         "web_server.c"
         "config_manager.c"
+        "espnow_link.c"
         "ota_update.c"
         "ble_api_service.c"
         "audio_input.c"

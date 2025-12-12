@@ -150,11 +150,8 @@ typedef struct {
 void web_server_update_vehicle_state(const vehicle_state_t *state) {
   if (!state)
     return;
-  // Option simple
-  memcpy(&current_vehicle_state, state, sizeof(vehicle_state_t));
 
-  // Si tu veux être un peu parano sur la concurrence :
-  // taskENTER_CRITICAL / taskEXIT_CRITICAL autour du memcpy.
+  memcpy(&current_vehicle_state, state, sizeof(vehicle_state_t));
 }
 
 /**
