@@ -61,6 +61,21 @@ int panda_tcp_server_get_client_count(void);
  */
 void panda_tcp_broadcast_can_frame(int bus, const twai_message_t *msg);
 
+/**
+ * @brief Set autostart preference (saved to NVS)
+ *
+ * @param autostart true to start server automatically on boot
+ * @return ESP_OK on success
+ */
+esp_err_t panda_tcp_server_set_autostart(bool autostart);
+
+/**
+ * @brief Get autostart preference (from NVS)
+ *
+ * @return true if server should start automatically on boot
+ */
+bool panda_tcp_server_get_autostart(void);
+
 #ifdef __cplusplus
 }
 #endif

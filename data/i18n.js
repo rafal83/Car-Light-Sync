@@ -426,6 +426,9 @@ const translations = {
       slcanStopping: "Arrêt du serveur SLCAN...",
       slcanStarted: "Serveur SLCAN démarré avec succès",
       slcanError: "Erreur lors de la communication avec le serveur SLCAN",
+      autostart: "Démarrage automatique",
+      autostartUpdated: "Démarrage automatique mis à jour",
+      autostartError: "Erreur lors de la mise à jour du démarrage automatique",
     },
     logs: {
       title: "Logs en Temps Réel",
@@ -897,6 +900,9 @@ const translations = {
       slcanStopping: "Stopping SLCAN server...",
       slcanStarted: "SLCAN server started successfully",
       slcanError: "Error communicating with SLCAN server",
+      autostart: "Autostart",
+      autostartUpdated: "Autostart setting updated",
+      autostartError: "Error updating autostart setting",
     },
     logs: {
       title: "Live Logs",

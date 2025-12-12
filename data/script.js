@@ -3460,165 +3460,136 @@ async function factoryReset() {
     }
 }
 
-// GVRET TCP Server Control
-async function updateGvretTcpStatus() {
+// Generic CAN Server Control Functions
+async function updateServerStatus(serverName, serverDisplayName) {
     try {
-        const response = await fetch('/api/gvret/status');
+        const response = await fetch(`/api/${serverName}/status`);
         const data = await response.json();
 
-        const statusDiv = $('gvret-status');
-        const clientsDiv = $('gvret-clients');
-        const toggleBtn = $('gvret-toggle-btn');
+        const statusDiv = $(`${serverName}-status`);
+        const clientsDiv = $(`${serverName}-clients`);
+        const toggleBtn = $(`${serverName}-toggle-btn`);
+        const autostartCheckbox = $(`${serverName}-autostart`);
 
         if (data.running) {
-            statusDiv.textContent = t('server.gvretRunning') || `Actif (Port ${data.port})`;
+            statusDiv.textContent = t(`server.${serverName}Running`) || `Actif (Port ${data.port})`;
             statusDiv.style.color = '#10b981';
-            toggleBtn.textContent = t('server.gvretStop') || 'Arrêter GVRET';
+            toggleBtn.textContent = t(`server.${serverName}Stop`) || `Arrêter ${serverDisplayName}`;
             toggleBtn.className = 'btn-secondary';
         } else {
-            statusDiv.textContent = t('server.gvretStopped') || 'Arrêté';
+            statusDiv.textContent = t(`server.${serverName}Stopped`) || 'Arrêté';
             statusDiv.style.color = 'var(--color-muted)';
-            toggleBtn.textContent = t('server.gvretStart') || 'Activer GVRET';
+            toggleBtn.textContent = t(`server.${serverName}Start`) || `Activer ${serverDisplayName}`;
             toggleBtn.className = 'btn-primary';
         }
 
         clientsDiv.textContent = data.clients || 0;
+        if (autostartCheckbox) {
+            autostartCheckbox.checked = data.autostart || false;
+        }
     } catch (error) {
-        console.error('Failed to get GVRET status:', error);
+        console.error(`Failed to get ${serverDisplayName} status:`, error);
     }
 }
 
-async function toggleGvretTcp() {
+async function toggleServer(serverName, serverDisplayName) {
     try {
-        const statusResponse = await fetch('/api/gvret/status');
+        const statusResponse = await fetch(`/api/${serverName}/status`);
         const statusData = await statusResponse.json();
         const isRunning = statusData.running;
 
-        const endpoint = isRunning ? '/api/gvret/stop' : '/api/gvret/start';
+        const endpoint = isRunning ? `/api/${serverName}/stop` : `/api/${serverName}/start`;
         const action = isRunning ? 'arrêt' : 'démarrage';
 
-        showNotification('diagnostic', t(`server.gvret${isRunning ? 'Stopping' : 'Starting'}`) || `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur GVRET...`, 'info');
+        showNotification('diagnostic',
+            t(`server.${serverName}${isRunning ? 'Stopping' : 'Starting'}`) ||
+            `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur ${serverDisplayName}...`,
+            'info');
 
         const response = await fetch(endpoint, { method: 'POST' });
         const data = await response.json();
 
         if (data.status === 'ok') {
-            showNotification('diagnostic', t(`server.gvret${isRunning ? 'Stopped' : 'Started'}`) || `Serveur GVRET ${isRunning ? 'arrêté' : 'démarré'} avec succès`, 'success');
-            await updateGvretTcpStatus();
+            showNotification('diagnostic',
+                t(`server.${serverName}${isRunning ? 'Stopped' : 'Started'}`) ||
+                `Serveur ${serverDisplayName} ${isRunning ? 'arrêté' : 'démarré'} avec succès`,
+                'success');
+            await updateServerStatus(serverName, serverDisplayName);
         } else {
-            showNotification('diagnostic', t('server.gvretError') || `Erreur lors du ${action} du serveur GVRET`, 'error');
+            showNotification('diagnostic',
+                t(`server.${serverName}Error`) ||
+                `Erreur lors du ${action} du serveur ${serverDisplayName}`,
+                'error');
         }
     } catch (error) {
-        console.error('Failed to toggle GVRET TCP:', error);
-        showNotification('diagnostic', t('server.gvretError') || 'Erreur lors de la communication avec le serveur GVRET', 'error');
+        console.error(`Failed to toggle ${serverDisplayName}:`, error);
+        showNotification('diagnostic',
+            t(`server.${serverName}Error`) ||
+            `Erreur lors de la communication avec le serveur ${serverDisplayName}`,
+            'error');
     }
+}
+
+// GVRET TCP Server Control
+async function updateGvretTcpStatus() {
+    return updateServerStatus('gvret', 'GVRET');
+}
+
+async function toggleGvretTcp() {
+    return toggleServer('gvret', 'GVRET');
 }
 
 // Panda TCP Server Control
 async function updatePandaTcpStatus() {
-    try {
-        const response = await fetch('/api/panda/status');
-        const data = await response.json();
-
-        const statusDiv = $('panda-status');
-        const clientsDiv = $('panda-clients');
-        const toggleBtn = $('panda-toggle-btn');
-
-        if (data.running) {
-            statusDiv.textContent = t('server.pandaRunning') || `Actif (Port ${data.port})`;
-            statusDiv.style.color = '#10b981';
-            toggleBtn.textContent = t('server.pandaStop') || 'Arrêter PANDA';
-            toggleBtn.className = 'btn-secondary';
-        } else {
-            statusDiv.textContent = t('server.pandaStopped') || 'Arrêté';
-            statusDiv.style.color = 'var(--color-muted)';
-            toggleBtn.textContent = t('server.pandaStart') || 'Activer PANDA';
-            toggleBtn.className = 'btn-primary';
-        }
-
-        clientsDiv.textContent = data.clients || 0;
-    } catch (error) {
-        console.error('Failed to get Panda status:', error);
-    }
+    return updateServerStatus('panda', 'PANDA');
 }
 
 async function togglePandaTcp() {
-    try {
-        const statusResponse = await fetch('/api/panda/status');
-        const statusData = await statusResponse.json();
-        const isRunning = statusData.running;
-
-        const endpoint = isRunning ? '/api/panda/stop' : '/api/panda/start';
-        const action = isRunning ? 'arrêt' : 'démarrage';
-
-        showNotification('diagnostic', t(`server.panda${isRunning ? 'Stopping' : 'Starting'}`) || `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur Panda...`, 'info');
-
-        const response = await fetch(endpoint, { method: 'POST' });
-        const data = await response.json();
-
-        if (data.status === 'ok') {
-            showNotification('diagnostic', t(`server.panda${isRunning ? 'Stopped' : 'Started'}`) || `Serveur Panda ${isRunning ? 'arrêté' : 'démarré'} avec succès`, 'success');
-            await updatePandaTcpStatus();
-        } else {
-            showNotification('diagnostic', t('server.pandaError') || `Erreur lors du ${action} du serveur Panda`, 'error');
-        }
-    } catch (error) {
-        console.error('Failed to toggle Panda TCP:', error);
-        showNotification('diagnostic', t('server.pandaError') || 'Erreur lors de la communication avec le serveur Panda', 'error');
-    }
+    return toggleServer('panda', 'Panda');
 }
 
 // SLCAN TCP Server Control
 async function updateSlcanTcpStatus() {
-    try {
-        const response = await fetch('/api/slcan/status');
-        const data = await response.json();
-
-        const statusDiv = $('slcan-status');
-        const clientsDiv = $('slcan-clients');
-        const toggleBtn = $('slcan-toggle-btn');
-
-        if (data.running) {
-            statusDiv.textContent = t('server.slcanRunning') || `Actif (Port ${data.port})`;
-            statusDiv.style.color = '#10b981';
-            toggleBtn.textContent = t('server.slcanStop') || 'Arrêter SLCAN';
-            toggleBtn.className = 'btn-secondary';
-        } else {
-            statusDiv.textContent = t('server.slcanStopped') || 'Arrêté';
-            statusDiv.style.color = 'var(--color-muted)';
-            toggleBtn.textContent = t('server.slcanStart') || 'Activer SLCAN';
-            toggleBtn.className = 'btn-primary';
-        }
-
-        clientsDiv.textContent = data.clients || 0;
-    } catch (error) {
-        console.error('Failed to get SLCAN status:', error);
-    }
+    return updateServerStatus('slcan', 'SLCAN');
 }
 
 async function toggleSlcanTcp() {
+    return toggleServer('slcan', 'SLCAN');
+}
+
+// Generic Server Autostart Control
+async function toggleServerAutostart(serverName, enabled) {
     try {
-        const statusResponse = await fetch('/api/slcan/status');
-        const statusData = await statusResponse.json();
-        const isRunning = statusData.running;
+        const response = await fetch(`/api/${serverName}/autostart`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ autostart: enabled })
+        });
 
-        const endpoint = isRunning ? '/api/slcan/stop' : '/api/slcan/start';
-        const action = isRunning ? 'arrêt' : 'démarrage';
-
-        showNotification('diagnostic', t(`server.slcan${isRunning ? 'Stopping' : 'Starting'}`) || `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur SLCAN...`, 'info');
-
-        const response = await fetch(endpoint, { method: 'POST' });
         const data = await response.json();
 
         if (data.status === 'ok') {
-            showNotification('diagnostic', t(`server.slcan${isRunning ? 'Stopped' : 'Started'}`) || `Serveur SLCAN ${isRunning ? 'arrêté' : 'démarré'} avec succès`, 'success');
-            await updateSlcanTcpStatus();
+            showNotification('diagnostic',
+                t('server.autostartUpdated') || `Démarrage automatique ${enabled ? 'activé' : 'désactivé'} pour ${serverName.toUpperCase()}`,
+                'success');
         } else {
-            showNotification('diagnostic', t('server.slcanError') || `Erreur lors du ${action} du serveur SLCAN`, 'error');
+            showNotification('diagnostic',
+                t('server.autostartError') || `Erreur lors de la mise à jour du démarrage automatique`,
+                'error');
+            // Revert checkbox on error
+            const checkbox = $(`${serverName}-autostart`);
+            if (checkbox) checkbox.checked = !enabled;
         }
     } catch (error) {
-        console.error('Failed to toggle SLCAN TCP:', error);
-        showNotification('diagnostic', t('server.slcanError') || 'Erreur lors de la communication avec le serveur SLCAN', 'error');
+        console.error(`Failed to toggle ${serverName} autostart:`, error);
+        showNotification('diagnostic',
+            t('server.autostartError') || 'Erreur lors de la communication avec le serveur',
+            'error');
+        // Revert checkbox on error
+        const checkbox = $(`${serverName}-autostart`);
+        if (checkbox) checkbox.checked = !enabled;
     }
 }
 

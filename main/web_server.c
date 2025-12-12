@@ -1187,41 +1187,57 @@ static esp_err_t ota_restart_handler(httpd_req_t *req) {
 // GVRET TCP Server API Handlers
 // ============================================================================
 
-// Handler pour démarrer le serveur GVRET TCP
-static esp_err_t gvret_start_handler(httpd_req_t *req) {
+// ============================================================================
+// Helpers génériques pour les serveurs CAN (factorisation)
+// ============================================================================
+
+typedef esp_err_t (*server_start_fn_t)(void);
+typedef void (*server_stop_fn_t)(void);
+typedef bool (*server_is_running_fn_t)(void);
+typedef int (*server_get_client_count_fn_t)(void);
+typedef bool (*server_get_autostart_fn_t)(void);
+typedef esp_err_t (*server_set_autostart_fn_t)(bool);
+
+// Helper générique pour start
+static esp_err_t handle_server_start(httpd_req_t *req, server_start_fn_t start_fn, const char *name) {
   httpd_resp_set_type(req, "application/json");
 
-  esp_err_t ret = gvret_tcp_server_start();
+  esp_err_t ret = start_fn();
   if (ret == ESP_OK) {
-    ESP_LOGI(TAG_WEBSERVER, "Serveur GVRET TCP démarré via API");
+    ESP_LOGI(TAG_WEBSERVER, "Serveur %s TCP démarré via API", name);
     httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":true}");
   } else {
-    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur GVRET: %s", esp_err_to_name(ret));
-    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start GVRET server\"}");
+    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur %s: %s", name, esp_err_to_name(ret));
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start server\"}");
   }
 
   return ESP_OK;
 }
 
-// Handler pour arrêter le serveur GVRET TCP
-static esp_err_t gvret_stop_handler(httpd_req_t *req) {
+// Helper générique pour stop
+static esp_err_t handle_server_stop(httpd_req_t *req, server_stop_fn_t stop_fn, const char *name) {
   httpd_resp_set_type(req, "application/json");
 
-  gvret_tcp_server_stop();
-  ESP_LOGI(TAG_WEBSERVER, "Serveur GVRET TCP arrêté via API");
+  stop_fn();
+  ESP_LOGI(TAG_WEBSERVER, "Serveur %s TCP arrêté via API", name);
 
   httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":false}");
   return ESP_OK;
 }
 
-// Handler pour obtenir le statut du serveur GVRET TCP
-static esp_err_t gvret_status_handler(httpd_req_t *req) {
+// Helper générique pour status
+static esp_err_t handle_server_status(httpd_req_t *req,
+                                       server_is_running_fn_t is_running_fn,
+                                       server_get_client_count_fn_t get_clients_fn,
+                                       server_get_autostart_fn_t get_autostart_fn,
+                                       int port) {
   httpd_resp_set_type(req, "application/json");
 
   cJSON *root = cJSON_CreateObject();
-  cJSON_AddBoolToObject(root, "running", gvret_tcp_server_is_running());
-  cJSON_AddNumberToObject(root, "clients", gvret_tcp_server_get_client_count());
-  cJSON_AddNumberToObject(root, "port", 23);
+  cJSON_AddBoolToObject(root, "running", is_running_fn());
+  cJSON_AddNumberToObject(root, "clients", get_clients_fn());
+  cJSON_AddNumberToObject(root, "port", port);
+  cJSON_AddBoolToObject(root, "autostart", get_autostart_fn());
 
   const char *json_str = cJSON_PrintUnformatted(root);
   httpd_resp_sendstr(req, json_str);
@@ -1230,6 +1246,71 @@ static esp_err_t gvret_status_handler(httpd_req_t *req) {
   cJSON_Delete(root);
 
   return ESP_OK;
+}
+
+// Helper générique pour autostart
+static esp_err_t handle_server_autostart(httpd_req_t *req, server_set_autostart_fn_t set_fn) {
+  httpd_resp_set_type(req, "application/json");
+
+  char content[100];
+  int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+  if (ret <= 0) {
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Invalid request\"}");
+    return ESP_OK;
+  }
+  content[ret] = '\0';
+
+  cJSON *json = cJSON_Parse(content);
+  if (!json) {
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Invalid JSON\"}");
+    return ESP_OK;
+  }
+
+  cJSON *autostart_item = cJSON_GetObjectItem(json, "autostart");
+  if (!autostart_item || !cJSON_IsBool(autostart_item)) {
+    cJSON_Delete(json);
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Missing autostart field\"}");
+    return ESP_OK;
+  }
+
+  bool autostart = cJSON_IsTrue(autostart_item);
+  esp_err_t err = set_fn(autostart);
+
+  cJSON_Delete(json);
+
+  if (err == ESP_OK) {
+    httpd_resp_sendstr(req, "{\"status\":\"ok\"}");
+  } else {
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to save autostart\"}");
+  }
+
+  return ESP_OK;
+}
+
+// ============================================================================
+// GVRET TCP Server API Handlers
+// ============================================================================
+
+// Handler pour démarrer le serveur GVRET TCP
+static esp_err_t gvret_start_handler(httpd_req_t *req) {
+  return handle_server_start(req, gvret_tcp_server_start, "GVRET");
+}
+
+// Handler pour arrêter le serveur GVRET TCP
+static esp_err_t gvret_stop_handler(httpd_req_t *req) {
+  return handle_server_stop(req, gvret_tcp_server_stop, "GVRET");
+}
+
+// Handler pour obtenir le statut du serveur GVRET TCP
+static esp_err_t gvret_status_handler(httpd_req_t *req) {
+  return handle_server_status(req, gvret_tcp_server_is_running,
+                               gvret_tcp_server_get_client_count,
+                               gvret_tcp_server_get_autostart, 23);
+}
+
+// Handler pour définir l'autostart du serveur GVRET TCP
+static esp_err_t gvret_autostart_handler(httpd_req_t *req) {
+  return handle_server_autostart(req, gvret_tcp_server_set_autostart);
 }
 
 // ============================================================================
@@ -1238,47 +1319,24 @@ static esp_err_t gvret_status_handler(httpd_req_t *req) {
 
 // Handler pour démarrer le serveur Panda TCP
 static esp_err_t panda_start_handler(httpd_req_t *req) {
-  httpd_resp_set_type(req, "application/json");
-
-  esp_err_t ret = panda_tcp_server_start();
-  if (ret == ESP_OK) {
-    ESP_LOGI(TAG_WEBSERVER, "Serveur Panda TCP démarré via API");
-    httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":true}");
-  } else {
-    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur Panda: %s", esp_err_to_name(ret));
-    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start Panda server\"}");
-  }
-
-  return ESP_OK;
+  return handle_server_start(req, panda_tcp_server_start, "Panda");
 }
 
 // Handler pour arrêter le serveur Panda TCP
 static esp_err_t panda_stop_handler(httpd_req_t *req) {
-  httpd_resp_set_type(req, "application/json");
-
-  panda_tcp_server_stop();
-  ESP_LOGI(TAG_WEBSERVER, "Serveur Panda TCP arrêté via API");
-
-  httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":false}");
-  return ESP_OK;
+  return handle_server_stop(req, panda_tcp_server_stop, "Panda");
 }
 
 // Handler pour obtenir le statut du serveur Panda TCP
 static esp_err_t panda_status_handler(httpd_req_t *req) {
-  httpd_resp_set_type(req, "application/json");
+  return handle_server_status(req, panda_tcp_server_is_running,
+                               panda_tcp_server_get_client_count,
+                               panda_tcp_server_get_autostart, 1338);
+}
 
-  cJSON *root = cJSON_CreateObject();
-  cJSON_AddBoolToObject(root, "running", panda_tcp_server_is_running());
-  cJSON_AddNumberToObject(root, "clients", panda_tcp_server_get_client_count());
-  cJSON_AddNumberToObject(root, "port", 1338);
-
-  const char *json_str = cJSON_PrintUnformatted(root);
-  httpd_resp_sendstr(req, json_str);
-
-  cJSON_free((void *)json_str);
-  cJSON_Delete(root);
-
-  return ESP_OK;
+// Handler pour définir l'autostart du serveur Panda TCP
+static esp_err_t panda_autostart_handler(httpd_req_t *req) {
+  return handle_server_autostart(req, panda_tcp_server_set_autostart);
 }
 
 // ============================================================================
@@ -1287,47 +1345,24 @@ static esp_err_t panda_status_handler(httpd_req_t *req) {
 
 // Handler pour démarrer le serveur SLCAN TCP
 static esp_err_t slcan_start_handler(httpd_req_t *req) {
-  httpd_resp_set_type(req, "application/json");
-
-  esp_err_t ret = slcan_tcp_server_start();
-  if (ret == ESP_OK) {
-    ESP_LOGI(TAG_WEBSERVER, "Serveur SLCAN TCP démarré via API");
-    httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":true}");
-  } else {
-    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur SLCAN: %s", esp_err_to_name(ret));
-    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start SLCAN server\"}");
-  }
-
-  return ESP_OK;
+  return handle_server_start(req, slcan_tcp_server_start, "SLCAN");
 }
 
 // Handler pour arrêter le serveur SLCAN TCP
 static esp_err_t slcan_stop_handler(httpd_req_t *req) {
-  httpd_resp_set_type(req, "application/json");
-
-  slcan_tcp_server_stop();
-  ESP_LOGI(TAG_WEBSERVER, "Serveur SLCAN TCP arrêté via API");
-
-  httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":false}");
-  return ESP_OK;
+  return handle_server_stop(req, slcan_tcp_server_stop, "SLCAN");
 }
 
 // Handler pour obtenir le statut du serveur SLCAN TCP
 static esp_err_t slcan_status_handler(httpd_req_t *req) {
-  httpd_resp_set_type(req, "application/json");
+  return handle_server_status(req, slcan_tcp_server_is_running,
+                               slcan_tcp_server_get_client_count,
+                               slcan_tcp_server_get_autostart, 3333);
+}
 
-  cJSON *root = cJSON_CreateObject();
-  cJSON_AddBoolToObject(root, "running", slcan_tcp_server_is_running());
-  cJSON_AddNumberToObject(root, "clients", slcan_tcp_server_get_client_count());
-  cJSON_AddNumberToObject(root, "port", 3333);
-
-  const char *json_str = cJSON_PrintUnformatted(root);
-  httpd_resp_sendstr(req, json_str);
-
-  cJSON_free((void *)json_str);
-  cJSON_Delete(root);
-
-  return ESP_OK;
+// Handler pour définir l'autostart du serveur SLCAN TCP
+static esp_err_t slcan_autostart_handler(httpd_req_t *req) {
+  return handle_server_autostart(req, slcan_tcp_server_set_autostart);
 }
 
 // Dummy recv override - returns -1/EAGAIN to prevent httpd from reading
@@ -2011,6 +2046,9 @@ esp_err_t web_server_start(void) {
     httpd_uri_t gvret_status_uri = {.uri = "/api/gvret/status", .method = HTTP_GET, .handler = gvret_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &gvret_status_uri);
 
+    httpd_uri_t gvret_autostart_uri = {.uri = "/api/gvret/autostart", .method = HTTP_POST, .handler = gvret_autostart_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &gvret_autostart_uri);
+
     // Routes Panda TCP Server
     httpd_uri_t panda_start_uri = {.uri = "/api/panda/start", .method = HTTP_POST, .handler = panda_start_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &panda_start_uri);
@@ -2021,6 +2059,9 @@ esp_err_t web_server_start(void) {
     httpd_uri_t panda_status_uri = {.uri = "/api/panda/status", .method = HTTP_GET, .handler = panda_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &panda_status_uri);
 
+    httpd_uri_t panda_autostart_uri = {.uri = "/api/panda/autostart", .method = HTTP_POST, .handler = panda_autostart_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &panda_autostart_uri);
+
     // Routes SLCAN TCP Server
     httpd_uri_t slcan_start_uri = {.uri = "/api/slcan/start", .method = HTTP_POST, .handler = slcan_start_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &slcan_start_uri);
@@ -2030,6 +2071,9 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t slcan_status_uri = {.uri = "/api/slcan/status", .method = HTTP_GET, .handler = slcan_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &slcan_status_uri);
+
+    httpd_uri_t slcan_autostart_uri = {.uri = "/api/slcan/autostart", .method = HTTP_POST, .handler = slcan_autostart_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &slcan_autostart_uri);
 
     // Route Log Streaming (Server-Sent Events)
     httpd_uri_t log_stream_uri = {

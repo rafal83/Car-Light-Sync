@@ -746,6 +746,13 @@
                         <label class="control-label" data-i18n="server.gvretPort">Port TCP :</label>
                         <div style="font-weight: 600; font-family: monospace;">23</div>
                     </div>
+                    <label class="toggle-container" for="gvret-autostart">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="gvret-autostart" onchange="toggleServerAutostart('gvret', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
+                    </label>
                     <div class="button-group" style="margin-top: 15px;">
                         <button class="btn-primary" onclick="toggleGvretTcp()" id="gvret-toggle-btn" data-i18n="server.gvretStart">Activer GVRET</button>
                     </div>
@@ -773,6 +780,13 @@
                         <label class="control-label" data-i18n="server.pandaPort">Port TCP :</label>
                         <div style="font-weight: 600; font-family: monospace;">1338</div>
                     </div>
+                    <label class="toggle-container" for="panda-autostart">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="panda-autostart" onchange="toggleServerAutostart('panda', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
+                    </label>
                     <div class="button-group" style="margin-top: 15px;">
                         <button class="btn-primary" onclick="togglePandaTcp()" id="panda-toggle-btn" data-i18n="server.pandaStart">Activer PANDA</button>
                     </div>
@@ -800,6 +814,13 @@
                         <label class="control-label" data-i18n="server.slcanPort">Port TCP :</label>
                         <div style="font-weight: 600; font-family: monospace;">3333</div>
                     </div>
+                    <label class="toggle-container" for="slcan-autostart">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="slcan-autostart" onchange="toggleServerAutostart('slcan', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
+                    </label>
                     <div class="button-group" style="margin-top: 15px;">
                         <button class="btn-primary" onclick="toggleSlcanTcp()" id="slcan-toggle-btn" data-i18n="server.slcanStart">Activer SLCAN</button>
                     </div>

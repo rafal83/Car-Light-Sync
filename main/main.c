@@ -667,14 +667,26 @@ void app_main(void) {
   // Serveur GVRET TCP (initialisé mais pas démarré - contrôlé via interface web)
   ESP_ERROR_CHECK(gvret_tcp_server_init());
   ESP_LOGI(TAG_MAIN, "✓ Serveur GVRET TCP initialise (port 23, activable via interface web)");
+  if (gvret_tcp_server_get_autostart()) {
+    ESP_ERROR_CHECK(gvret_tcp_server_start());
+    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (GVRET)");
+  }
 
   // Serveur Panda TCP (initialisé mais pas démarré - contrôlé via interface web)
   ESP_ERROR_CHECK(panda_tcp_server_init());
   ESP_LOGI(TAG_MAIN, "✓ Serveur Panda TCP initialise (port 1338, activable via interface web)");
+  if (panda_tcp_server_get_autostart()) {
+    ESP_ERROR_CHECK(panda_tcp_server_start());
+    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (Panda)");
+  }
 
   // Serveur SLCAN TCP (initialisé mais pas démarré - contrôlé via interface web)
   ESP_ERROR_CHECK(slcan_tcp_server_init());
   ESP_LOGI(TAG_MAIN, "✓ Serveur SLCAN TCP initialise (port 3333, activable via interface web)");
+  if (slcan_tcp_server_get_autostart()) {
+    ESP_ERROR_CHECK(slcan_tcp_server_start());
+    ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (SLCAN)");
+  }
 
   // Afficher les informations de connexion
   wifi_status_t wifi_status;
