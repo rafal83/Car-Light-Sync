@@ -272,6 +272,7 @@ body {
     font-weight: 500;
 }
 .status-online { color: #10b981; }
+.status-warning { color: #f59e0b; }
 .status-offline { color: var(--color-primary); }
 /* Tabs */
 .tabs {

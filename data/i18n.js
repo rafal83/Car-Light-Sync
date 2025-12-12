@@ -41,6 +41,7 @@ const translations = {
     },
     status: {
       wifi: "WiFi",
+      cpu: "CPU",
       canBus: "CAN Bus",
       canChassis: "CAN Chassis",
       canBody: "CAN Body",
@@ -516,6 +517,7 @@ const translations = {
     },
     status: {
       wifi: "WiFi",
+      cpu: "CPU",
       canBus: "CAN Bus",
       canChassis: "CAN Chassis",
       canBody: "CAN Body",

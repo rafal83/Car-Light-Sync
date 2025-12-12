@@ -2204,6 +2204,16 @@ async function updateStatus() {
         $('wifi-status').textContent = data.wc ? t('status.connected') : t('status.ap');
         $('wifi-status').className = 'status-value status-online';
 
+        // CPU usage
+        if (data.cpu !== undefined) {
+            $('cpu-status').textContent = data.cpu + '%';
+            // Couleur selon la charge: vert <50%, orange 50-80%, rouge >80%
+            const cpuClass = data.cpu < 50 ? 'status-online' : (data.cpu < 80 ? 'status-warning' : 'status-offline');
+            $('cpu-status').className = 'status-value ' + cpuClass;
+        } else {
+            $('cpu-status').textContent = '...';
+            $('cpu-status').className = 'status-value';
+        }
 
         // CAN Body status
         if (data.cbb) {
