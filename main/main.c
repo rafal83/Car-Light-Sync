@@ -20,7 +20,9 @@
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "gvret_tcp_server.h" // Serveur TCP GVRET optionnel
 #include "led_effects.h"
+#include "log_stream.h"
 #include "led_strip_encoder.h"
 #include "nvs_flash.h"
 #include "ota_update.h"
@@ -655,6 +657,14 @@ void app_main(void) {
   ESP_ERROR_CHECK(web_server_init());
   ESP_ERROR_CHECK(web_server_start());
   ESP_LOGI(TAG_MAIN, "✓ Serveur web démarré");
+
+  // Log streaming (Server-Sent Events pour logs temps réel)
+  ESP_ERROR_CHECK(log_stream_init());
+  ESP_LOGI(TAG_MAIN, "✓ Log streaming initialisé");
+
+  // Serveur GVRET TCP (initialisé mais pas démarré - contrôlé via interface web)
+  ESP_ERROR_CHECK(gvret_tcp_server_init());
+  ESP_LOGI(TAG_MAIN, "✓ Serveur GVRET TCP initialise (port 23, activable via interface web)");
 
   // Afficher les informations de connexion
   wifi_status_t wifi_status;

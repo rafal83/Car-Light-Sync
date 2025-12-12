@@ -960,6 +960,8 @@ function switchTab(tabName, evt) {
         restoreSimulationToggles();
     } else if (tabName === 'profiles') {
         loadProfiles();
+    } else if (tabName === 'diagnostic') {
+        updateGvretTcpStatus();
     }
 }
 function restoreSimulationToggles() {
@@ -1176,6 +1178,10 @@ function setDefaultSegmentRange(start, length) {
 // Notification helper
 function showNotification(elementId, message, type, timeout = 2000) {
     const notification = $(elementId);
+    if (!notification) {
+        console.warn('showNotification: element not found:', elementId);
+        return;
+    }
     notification.textContent = message;
     notification.className = 'notification ' + type + ' show';
     setTimeout(() => {
@@ -3434,6 +3440,195 @@ async function factoryReset() {
         }, 8000);
     } catch (error) {
         console.error('Failed to factory reset:', error);
+    }
+}
+
+// GVRET TCP Server Control
+async function updateGvretTcpStatus() {
+    try {
+        const response = await fetch('/api/gvret/status');
+        const data = await response.json();
+
+        const statusDiv = $('gvret-status');
+        const clientsDiv = $('gvret-clients');
+        const toggleBtn = $('gvret-toggle-btn');
+
+        if (data.running) {
+            statusDiv.textContent = t('ota.gvretRunning') || `Actif (Port ${data.port})`;
+            statusDiv.style.color = '#10b981';
+            toggleBtn.textContent = t('ota.gvretStop') || 'Arrêter GVRET TCP';
+            toggleBtn.className = 'btn-secondary';
+        } else {
+            statusDiv.textContent = t('ota.gvretStopped') || 'Arrêté';
+            statusDiv.style.color = 'var(--color-muted)';
+            toggleBtn.textContent = t('ota.gvretStart') || 'Activer GVRET TCP';
+            toggleBtn.className = 'btn-primary';
+        }
+
+        clientsDiv.textContent = data.clients || 0;
+    } catch (error) {
+        console.error('Failed to get GVRET status:', error);
+    }
+}
+
+async function toggleGvretTcp() {
+    try {
+        const statusResponse = await fetch('/api/gvret/status');
+        const statusData = await statusResponse.json();
+        const isRunning = statusData.running;
+
+        const endpoint = isRunning ? '/api/gvret/stop' : '/api/gvret/start';
+        const action = isRunning ? 'arrêt' : 'démarrage';
+
+        showNotification('ota', t(`ota.gvret${isRunning ? 'Stopping' : 'Starting'}`) || `${action.charAt(0).toUpperCase() + action.slice(1)} du serveur GVRET TCP...`, 'info');
+
+        const response = await fetch(endpoint, { method: 'POST' });
+        const data = await response.json();
+
+        if (data.status === 'ok') {
+            showNotification('ota', t(`ota.gvret${isRunning ? 'Stopped' : 'Started'}`) || `Serveur GVRET TCP ${isRunning ? 'arrêté' : 'démarré'} avec succès`, 'success');
+            await updateGvretTcpStatus();
+        } else {
+            showNotification('ota', t('ota.gvretError') || `Erreur lors du ${action} du serveur GVRET`, 'error');
+        }
+    } catch (error) {
+        console.error('Failed to toggle GVRET TCP:', error);
+        showNotification('diagnostic', t('diagnostic.gvretError') || 'Erreur lors de la communication avec le serveur GVRET', 'error');
+    }
+}
+
+// Live Logs Functions (Server-Sent Events)
+let logsEnabled = false;
+let logsEventSource = null;
+const MAX_LOG_LINES = 500;
+let logLineCount = 0;
+
+async function toggleLiveLogs() {
+    if (logsEnabled) {
+        stopLiveLogs();
+    } else {
+        startLiveLogs();
+    }
+}
+
+function startLiveLogs() {
+    logsEnabled = true;
+    const statusDiv = $('logs-status');
+    const toggleBtn = $('logs-toggle-btn');
+    const container = $('logs-container');
+
+    statusDiv.textContent = t('diagnostic.logsConnecting') || 'Connexion...';
+    statusDiv.style.color = '#fbbf24';
+    toggleBtn.textContent = t('diagnostic.logsStop') || 'Arrêter les logs';
+    toggleBtn.className = 'btn-secondary';
+
+    // Clear existing logs
+    container.innerHTML = '<div style="color: #10b981;">Connexion au flux de logs...</div>';
+    logLineCount = 0;
+
+    // Create EventSource connection
+    logsEventSource = new EventSource(API_BASE + '/api/logs/stream');
+
+    logsEventSource.onopen = function() {
+        statusDiv.textContent = t('diagnostic.logsConnected') || 'Connecté';
+        statusDiv.style.color = '#10b981';
+        container.innerHTML = '';
+        appendLog('info', 'LOGS', 'Flux de logs connecté');
+    };
+
+    logsEventSource.onmessage = function(event) {
+        try {
+            const logData = JSON.parse(event.data);
+            appendLog(logData.level, logData.tag, logData.message);
+        } catch (e) {
+            console.error('Failed to parse log data:', e);
+        }
+    };
+
+    logsEventSource.onerror = function(error) {
+        console.error('SSE connection error:', error);
+        statusDiv.textContent = t('diagnostic.logsError') || 'Erreur de connexion';
+        statusDiv.style.color = '#ef4444';
+
+        if (logsEnabled) {
+            appendLog('error', 'LOGS', 'Connexion perdue, reconnexion...');
+            // Auto-reconnect after 3 seconds
+            setTimeout(() => {
+                if (logsEnabled) {
+                    stopLiveLogs();
+                    startLiveLogs();
+                }
+            }, 3000);
+        }
+    };
+}
+
+function stopLiveLogs() {
+    logsEnabled = false;
+    const statusDiv = $('logs-status');
+    const toggleBtn = $('logs-toggle-btn');
+
+    statusDiv.textContent = t('diagnostic.logsDisconnected') || 'Déconnecté';
+    statusDiv.style.color = 'var(--color-muted)';
+    toggleBtn.textContent = t('diagnostic.logsStart') || 'Activer les logs';
+    toggleBtn.className = 'btn-primary';
+
+    if (logsEventSource) {
+        logsEventSource.close();
+        logsEventSource = null;
+    }
+}
+
+function appendLog(level, tag, message) {
+    const container = $('logs-container');
+    if (!container) return;
+
+    // Remove placeholder if present
+    if (container.querySelector('[data-i18n="diagnostic.logsEmpty"]')) {
+        container.innerHTML = '';
+    }
+
+    // Limit number of log lines
+    if (logLineCount >= MAX_LOG_LINES) {
+        const firstLine = container.firstChild;
+        if (firstLine) {
+            container.removeChild(firstLine);
+        }
+    } else {
+        logLineCount++;
+    }
+
+    // Create log line
+    const logLine = document.createElement('div');
+    logLine.style.marginBottom = '2px';
+    logLine.style.wordWrap = 'break-word';
+
+    // Color based on level
+    let color = '#10b981'; // info/default
+    if (level === 'E' || level === 'error') color = '#ef4444'; // error
+    else if (level === 'W' || level === 'warn') color = '#fbbf24'; // warning
+    else if (level === 'D' || level === 'debug') color = '#9ca3af'; // debug
+    else if (level === 'V' || level === 'verbose') color = '#6b7280'; // verbose
+
+    // Format: [TAG] message
+    const timestamp = new Date().toLocaleTimeString('fr-FR', { hour12: false });
+    logLine.innerHTML = `<span style="color: #6b7280;">${timestamp}</span> <span style="color: ${color};">[${tag}]</span> ${escapeHtml(message)}`;
+
+    container.appendChild(logLine);
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function clearLogs() {
+    const container = $('logs-container');
+    if (container) {
+        container.innerHTML = '<div data-i18n="diagnostic.logsEmpty">Aucun log pour le moment...</div>';
+        logLineCount = 0;
     }
 }
 

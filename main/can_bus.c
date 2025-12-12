@@ -5,6 +5,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "vehicle_can_mapping.h"
+#include "gvret_tcp_server.h"
 
 // Driver CAN ESP-IDF : selon version, c'est "twai" ou alias "can"
 #include "driver/twai.h"
@@ -64,6 +65,10 @@ static void can_rx_task(void *pvParameters) {
       ctx->rx_count++;
       ctx->last_rx_tick = xTaskGetTickCount();
       ctx->rx_active    = true;
+
+      // Broadcast vers clients GVRET TCP (si serveur actif)
+      gvret_tcp_broadcast_can_frame((int)bus_type, &msg);
+
       if (s_callback) {
         can_frame_t frame = {0};
         frame.id          = msg.identifier;
@@ -115,8 +120,8 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   ctx->running                                = false;
   ctx->rx_task_handle                         = NULL;
 
-  // Config générale : mode normal, pins
-  twai_general_config_t g_config              = TWAI_GENERAL_CONFIG_DEFAULT(tx_gpio, rx_gpio, TWAI_MODE_LISTEN_ONLY);
+  // Config générale : mode NORMAL (permet TX/RX pour GVRET, Car Light Sync utilise seulement RX)
+  twai_general_config_t g_config              = TWAI_GENERAL_CONFIG_DEFAULT(tx_gpio, rx_gpio, TWAI_MODE_NORMAL);
 
   // Vitesse 500 kbit/s (Tesla)
   twai_timing_config_t t_config               = TWAI_TIMING_CONFIG_500KBITS();

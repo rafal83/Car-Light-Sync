@@ -35,6 +35,8 @@ idf_component_register(
         "wifi_manager.c"
         "captive_portal.c"
         "can_bus.c"
+        "gvret_tcp_server.c"
+        "log_stream.c"
         "vehicle_can_unified.c"
         "vehicle_can_unified_config.generated.c"
         "vehicle_can_mapping.c"

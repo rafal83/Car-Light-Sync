@@ -20,6 +20,8 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "led_effects.h"
+#include "gvret_tcp_server.h"  // Pour le serveur GVRET TCP
+#include "log_stream.h"         // Pour le streaming de logs en temps réel
 #include "nvs_flash.h"
 #include "ota_update.h"
 #include "vehicle_can_unified.h"
@@ -28,6 +30,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -1178,6 +1181,96 @@ static esp_err_t ota_restart_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+// ============================================================================
+// GVRET TCP Server API Handlers
+// ============================================================================
+
+// Handler pour démarrer le serveur GVRET TCP
+static esp_err_t gvret_start_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  esp_err_t ret = gvret_tcp_server_start();
+  if (ret == ESP_OK) {
+    ESP_LOGI(TAG_WEBSERVER, "Serveur GVRET TCP démarré via API");
+    httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":true}");
+  } else {
+    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur GVRET: %s", esp_err_to_name(ret));
+    httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start GVRET server\"}");
+  }
+
+  return ESP_OK;
+}
+
+// Handler pour arrêter le serveur GVRET TCP
+static esp_err_t gvret_stop_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  gvret_tcp_server_stop();
+  ESP_LOGI(TAG_WEBSERVER, "Serveur GVRET TCP arrêté via API");
+
+  httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":false}");
+  return ESP_OK;
+}
+
+// Handler pour obtenir le statut du serveur GVRET TCP
+static esp_err_t gvret_status_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/json");
+
+  cJSON *root = cJSON_CreateObject();
+  cJSON_AddBoolToObject(root, "running", gvret_tcp_server_is_running());
+  cJSON_AddNumberToObject(root, "clients", gvret_tcp_server_get_client_count());
+  cJSON_AddNumberToObject(root, "port", 23);
+
+  const char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(root);
+
+  return ESP_OK;
+}
+
+// Dummy recv override - returns -1/EAGAIN to prevent httpd from reading
+// This tells httpd: "no data available, keep the socket open and don't close it"
+static int sse_recv_override(httpd_handle_t hd, int sockfd, char *buf, size_t buf_len, int flags) {
+  (void)hd; (void)sockfd; (void)buf; (void)buf_len; (void)flags;
+  errno = EAGAIN;
+  return -1;  // Tell httpd "no data to read, try again later"
+}
+
+// Handler pour le streaming de logs via Server-Sent Events (SSE)
+static esp_err_t log_stream_handler(httpd_req_t *req) {
+  int fd = httpd_req_to_sockfd(req);
+  ESP_LOGI(TAG_WEBSERVER, "SSE client connecting (fd=%d)", fd);
+
+  // Send HTTP headers and initial messages using raw socket
+  esp_err_t ret = log_stream_send_headers(fd);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG_WEBSERVER, "Failed to send SSE headers to fd=%d", fd);
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to initialize SSE stream");
+    return ESP_FAIL;
+  }
+
+  // Register this client for log streaming (watchdog will manage it)
+  ret = log_stream_register_client(fd);
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG_WEBSERVER, "Failed to register SSE client fd=%d (max clients reached)", fd);
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Max SSE clients reached");
+    return ESP_FAIL;
+  }
+
+  ESP_LOGI(TAG_WEBSERVER, "SSE client registered (fd=%d), overriding recv", fd);
+
+  // CRITICAL: Override recv to prevent httpd from closing this socket
+  // This tells httpd "I'm handling this socket myself, don't touch it"
+  // Source: https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/protocols/esp_http_server.html
+  httpd_sess_set_recv_override(req->handle, fd, sse_recv_override);
+
+  // Return immediately - httpd won't close the socket thanks to recv override
+  // The watchdog task will monitor and manage this connection
+  return ESP_OK;
+}
+
 // Handler pour arrêter un événement CAN
 static esp_err_t stop_event_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL];
@@ -1807,6 +1900,25 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t system_factory_reset_uri = {.uri = "/api/system/factory-reset", .method = HTTP_POST, .handler = factory_reset_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &system_factory_reset_uri);
+
+    // Routes GVRET TCP Server
+    httpd_uri_t gvret_start_uri = {.uri = "/api/gvret/start", .method = HTTP_POST, .handler = gvret_start_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &gvret_start_uri);
+
+    httpd_uri_t gvret_stop_uri = {.uri = "/api/gvret/stop", .method = HTTP_POST, .handler = gvret_stop_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &gvret_stop_uri);
+
+    httpd_uri_t gvret_status_uri = {.uri = "/api/gvret/status", .method = HTTP_GET, .handler = gvret_status_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &gvret_status_uri);
+
+    // Route Log Streaming (Server-Sent Events)
+    httpd_uri_t log_stream_uri = {
+        .uri = "/api/logs/stream",
+        .method = HTTP_GET,
+        .handler = log_stream_handler,
+        .user_ctx = NULL
+    };
+    httpd_register_uri_handler(server, &log_stream_uri);
 
     // Enregistrer le handler d'erreur 404 pour le portail captif
     // Toutes les URLs non trouvées seront redirigées vers la page principale

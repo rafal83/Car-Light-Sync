@@ -92,6 +92,7 @@
           <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)" data-i18n="tabs.eventsConfig">Événements</button>
           <button class="tab" data-tab="vehicle" onclick="switchTab('vehicle', event)" data-i18n="tabs.vehicle">Véhicule</button>
           <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.hardware">Matérielle</button>
+          <button class="tab" data-tab="diagnostic" onclick="switchTab('diagnostic', event)" data-i18n="tabs.diagnostic">Diagnostic CAN</button>
           <button class="tab" data-tab="ota" onclick="switchTab('ota', event)" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
         <!-- Tab: Profils -->
@@ -716,6 +717,78 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab: Diagnostic CAN -->
+        <div id="diagnostic-tab" class="tab-content">
+            <div class="section-title" data-i18n="diagnostic.title">Diagnostic Bus CAN</div>
+            <div id="diagnostic-notification" class="notification"></div>
+
+            <!-- Section: GVRET TCP Server -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="diagnostic.gvretTitle">Serveur GVRET</h3>
+                    <p style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; font-size: 13px; margin-top: 10px;" data-i18n="diagnostic.gvretDescription">
+                        Protocole GVRET sur TCP port 8080 pour SavvyCAN via WiFi (pas de redémarrage requis).
+                    </p>
+                </div>
+                <div class="profile-section-content">
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="diagnostic.gvretStatus">État :</label>
+                        <div id="gvret-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="diagnostic.gvretClients">Clients connectés :</label>
+                        <div id="gvret-clients" style="font-weight: 600;">0</div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="diagnostic.gvretPort">Port TCP :</label>
+                        <div style="font-weight: 600; font-family: monospace;">23</div>
+                    </div>
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button class="btn-primary" onclick="toggleGvretTcp()" id="gvret-toggle-btn" data-i18n="diagnostic.gvretStart">Activer GVRET</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: PANDA Protocol (Future) -->
+            <div class="profile-section" style="opacity: 0.6;">
+                <div class="profile-section-header">
+                    <h3 data-i18n="diagnostic.pandaTitle">Serveur PANDA</h3>
+                    <p style="padding: 10px; background: rgba(156, 163, 175, 0.1); border-left: 3px solid #9CA3AF; font-size: 13px; margin-top: 10px;" data-i18n="diagnostic.pandaDescription">
+                        Protocole comma.ai PANDA (À venir prochainement)
+                    </p>
+                </div>
+                <div class="profile-section-content">
+                    <div class="control-group">
+                        <button class="btn-secondary" disabled data-i18n="diagnostic.pandaComingSoon">Bientôt disponible</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Live Logs -->
+            <div class="profile-section">
+                <div class="profile-section-header">
+                    <h3 data-i18n="diagnostic.logsTitle">Logs en temps réel</h3>
+                    <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;" data-i18n="diagnostic.logsDescription">
+                        Affichage des logs système via Server-Sent Events (WiFi uniquement)
+                    </p>
+                </div>
+                <div class="profile-section-content">
+                    <div class="control-group">
+                        <label class="control-label" data-i18n="diagnostic.logsStatus">État :</label>
+                        <div id="logs-status" style="font-weight: 600; color: var(--color-muted);">Déconnecté</div>
+                    </div>
+                    <div class="button-group" style="margin-top: 15px;">
+                        <button class="btn-primary" onclick="toggleLiveLogs()" id="logs-toggle-btn" data-i18n="diagnostic.logsStart">Activer les logs</button>
+                        <button class="btn-secondary" onclick="clearLogs()" data-i18n="diagnostic.logsClear">Effacer</button>
+                    </div>
+                    <div style="margin-top: 15px; background: #1f2937; border-radius: 4px; padding: 10px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #10b981;" id="logs-container">
+                        <div data-i18n="diagnostic.logsEmpty">Aucun log pour le moment...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: OTA -->
         <div id="ota-tab" class="tab-content">
             <div class="section-title" data-i18n="ota.title">Mise à Jour OTA</div>
