@@ -976,7 +976,6 @@ function switchTab(tabName, evt) {
     } else if (tabName === 'diagnostic') {
         updateGvretTcpStatus();
         updateCanserverStatus();
-        updateSlcanTcpStatus();
     } else if (tabName === 'logs') {
         // Onglet Logs: rien à charger au démarrage
     }
@@ -3556,15 +3555,6 @@ async function updateCanserverStatus() {
 
 async function toggleCanserver() {
     return toggleServer('canserver', 'CANServer');
-}
-
-// SLCAN TCP Server Control
-async function updateSlcanTcpStatus() {
-    return updateServerStatus('slcan', 'SLCAN');
-}
-
-async function toggleSlcanTcp() {
-    return toggleServer('slcan', 'SLCAN');
 }
 
 // Generic Server Autostart Control

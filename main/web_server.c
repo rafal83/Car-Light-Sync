@@ -26,7 +26,6 @@
 #include "nvs_flash.h"
 #include "nvs_manager.h"
 #include "ota_update.h"
-#include "slcan_tcp_server.h" // Pour le serveur SLCAN TCP
 #include "vehicle_can_unified.h"
 #include "wifi_manager.h"
 
@@ -1386,28 +1385,8 @@ static esp_err_t canserver_autostart_handler(httpd_req_t *req) {
 }
 
 // ============================================================================
-// SLCAN TCP Server Handlers
+// Server-Sent Events (SSE) for Live Logs
 // ============================================================================
-
-// Handler pour démarrer le serveur SLCAN TCP
-static esp_err_t slcan_start_handler(httpd_req_t *req) {
-  return handle_server_start(req, slcan_tcp_server_start, "SLCAN");
-}
-
-// Handler pour arrêter le serveur SLCAN TCP
-static esp_err_t slcan_stop_handler(httpd_req_t *req) {
-  return handle_server_stop(req, slcan_tcp_server_stop, "SLCAN");
-}
-
-// Handler pour obtenir le statut du serveur SLCAN TCP
-static esp_err_t slcan_status_handler(httpd_req_t *req) {
-  return handle_server_status(req, slcan_tcp_server_is_running, slcan_tcp_server_get_client_count, slcan_tcp_server_get_autostart, 3333);
-}
-
-// Handler pour définir l'autostart du serveur SLCAN TCP
-static esp_err_t slcan_autostart_handler(httpd_req_t *req) {
-  return handle_server_autostart(req, slcan_tcp_server_set_autostart);
-}
 
 // Dummy recv override - returns -1/EAGAIN to prevent httpd from reading
 // This tells httpd: "no data available, keep the socket open and don't close it"
@@ -2109,19 +2088,6 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t canserver_autostart_uri = {.uri = "/api/canserver/autostart", .method = HTTP_POST, .handler = canserver_autostart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &canserver_autostart_uri);
-
-    // Routes SLCAN TCP Server
-    httpd_uri_t slcan_start_uri = {.uri = "/api/slcan/start", .method = HTTP_POST, .handler = slcan_start_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &slcan_start_uri);
-
-    httpd_uri_t slcan_stop_uri = {.uri = "/api/slcan/stop", .method = HTTP_POST, .handler = slcan_stop_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &slcan_stop_uri);
-
-    httpd_uri_t slcan_status_uri = {.uri = "/api/slcan/status", .method = HTTP_GET, .handler = slcan_status_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &slcan_status_uri);
-
-    httpd_uri_t slcan_autostart_uri = {.uri = "/api/slcan/autostart", .method = HTTP_POST, .handler = slcan_autostart_handler, .user_ctx = NULL};
-    httpd_register_uri_handler(server, &slcan_autostart_uri);
 
     // Route Log Streaming (Server-Sent Events)
     httpd_uri_t log_stream_uri = {.uri = "/api/logs/stream", .method = HTTP_GET, .handler = log_stream_handler, .user_ctx = NULL};

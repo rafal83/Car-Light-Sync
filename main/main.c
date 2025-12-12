@@ -30,7 +30,6 @@
 #include "ota_update.h"
 #include "reset_button.h"
 #include "sdkconfig.h"
-#include "slcan_tcp_server.h" // Serveur TCP SLCAN optionnel
 #include "status_led.h"
 #include "status_manager.h"
 #include "task_core_utils.h"
@@ -739,13 +738,6 @@ void app_main(void) {
       ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (CANServer)");
     }
 
-    // Serveur SLCAN TCP (initialisé mais pas démarré - contrôlé via interface web)
-    ESP_ERROR_CHECK(slcan_tcp_server_init());
-    ESP_LOGI(TAG_MAIN, "✓ Serveur SLCAN TCP initialise (port 3333, activable via interface web)");
-    if (slcan_tcp_server_get_autostart()) {
-      ESP_ERROR_CHECK(slcan_tcp_server_start());
-      ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (SLCAN)");
-    }
   }
 
   // Afficher les informations de connexion

@@ -6,10 +6,10 @@
 static const char *TAG                            = "CAN_SERVERS_CFG";
 
 // NVS keys for each server type
-static const char *NVS_KEYS[CAN_SERVER_COUNT]     = {[CAN_SERVER_GVRET] = "gvret_auto", [CAN_SERVER_CANSERVER] = "canserver_auto", [CAN_SERVER_SLCAN] = "slcan_auto"};
+static const char *NVS_KEYS[CAN_SERVER_COUNT]     = {[CAN_SERVER_GVRET] = "gvret_auto", [CAN_SERVER_CANSERVER] = "canserver_auto"};
 
 // Server names for logging
-static const char *SERVER_NAMES[CAN_SERVER_COUNT] = {[CAN_SERVER_GVRET] = "GVRET", [CAN_SERVER_CANSERVER] = "CANServer", [CAN_SERVER_SLCAN] = "SLCAN"};
+static const char *SERVER_NAMES[CAN_SERVER_COUNT] = {[CAN_SERVER_GVRET] = "GVRET", [CAN_SERVER_CANSERVER] = "CANServer"};
 
 esp_err_t can_servers_config_set_autostart(can_server_type_t server_type, bool autostart) {
   if (server_type >= CAN_SERVER_COUNT) {

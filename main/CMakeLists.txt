@@ -39,7 +39,6 @@ idf_component_register(
         "can_servers_config.c"
         "gvret_tcp_server.c"
         "canserver_udp_server.c"
-        "slcan_tcp_server.c"
         "log_stream.c"
         "vehicle_can_unified.c"
         "vehicle_can_unified_config.generated.c"

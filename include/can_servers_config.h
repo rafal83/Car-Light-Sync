@@ -15,7 +15,6 @@ extern "C" {
 typedef enum {
   CAN_SERVER_GVRET,
   CAN_SERVER_CANSERVER,
-  CAN_SERVER_SLCAN,
   CAN_SERVER_COUNT
 } can_server_type_t;
 
