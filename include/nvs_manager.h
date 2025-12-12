@@ -26,9 +26,6 @@ extern "C" {
 /** @brief NVS namespace for LED hardware configuration */
 #define NVS_NAMESPACE_LED_HW "led_hw"
 
-/** @brief NVS namespace for LED effect configuration */
-#define NVS_NAMESPACE_LED_CONFIG "led_config"
-
 /** @brief NVS namespace for CAN server configuration */
 #define NVS_NAMESPACE_CAN_SERVERS "can_servers"
 

@@ -81,24 +81,11 @@ static inline bool event_is_right(can_event_type_t event) {
 }
 
 static void load_wheel_control_settings(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open(NVS_NAMESPACE_SETTINGS, NVS_READONLY, &nvs_handle);
-  if (err == ESP_OK) {
-    uint8_t enabled_u8 = 0;
-    uint8_t speed_kph  = wheel_control_speed_limit;
-    nvs_get_u8(nvs_handle, "wheel_ctl", &enabled_u8);
-    esp_err_t err_spd = nvs_get_u8(nvs_handle, "wheel_spd", &speed_kph);
-    if (err_spd != ESP_OK) {
-      // Compat ancien stockage en décikm/h (u16)
-      uint16_t legacy = 0;
-      if (nvs_get_u16(nvs_handle, "wheel_spd", &legacy) == ESP_OK) {
-        speed_kph = (uint8_t)(legacy / 10);
-      }
-    }
-    wheel_control_enabled     = enabled_u8 != 0;
-    wheel_control_speed_limit = speed_kph;
-    nvs_close(nvs_handle);
-  }
+  uint8_t enabled_u8 = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_ctl", 0);
+  uint8_t speed_kph  = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
+
+  wheel_control_enabled     = enabled_u8 != 0;
+  wheel_control_speed_limit = speed_kph;
   // Clamp
   if (wheel_control_speed_limit > 100) {
     wheel_control_speed_limit = 100;
@@ -355,21 +342,12 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
 }
 
 bool config_manager_delete_profile(uint16_t profile_id) {
-  // Note: This function still needs full refactoring to use nvs_manager exclusively
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READWRITE, &nvs_handle);
-
-  if (err != ESP_OK) {
-    return false;
-  }
-
   // Vérifier que le profil existe
   char key[16];
   snprintf(key, sizeof(key), "profile_%d", profile_id);
   size_t required_size = 0;
-  err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
+  esp_err_t err        = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
   if (err != ESP_OK) {
-    nvs_close(nvs_handle);
     ESP_LOGW(TAG_CONFIG, "Profil %d n'existe pas", profile_id);
     return false;
   }
@@ -378,7 +356,6 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   // Scanner dynamiquement tous les profils existants
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
-    nvs_close(nvs_handle);
     ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
     return false;
   }
@@ -390,7 +367,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
 
     snprintf(key, sizeof(key), "profile_%d", p);
     required_size = sizeof(config_profile_t);
-    err           = nvs_get_blob(nvs_handle, key, temp_profile, &required_size);
+    err           = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, temp_profile, &required_size);
 
     if (err == ESP_OK) {
       // Vérifier si ce profil référence le profil à supprimer
@@ -398,7 +375,6 @@ bool config_manager_delete_profile(uint16_t profile_id) {
         if (temp_profile->event_effects[e].action_type == EVENT_ACTION_SWITCH_PROFILE && temp_profile->event_effects[e].profile_id == profile_id) {
           ESP_LOGW(TAG_CONFIG, "Cannot delete profile %d: used by event %d in profile %d", profile_id, e, p);
           free(temp_profile);
-          nvs_close(nvs_handle);
           return false;
         }
       }
@@ -408,18 +384,15 @@ bool config_manager_delete_profile(uint16_t profile_id) {
 
   // Supprimer le profil de la NVS
   snprintf(key, sizeof(key), "profile_%d", profile_id);
-  err = nvs_erase_key(nvs_handle, key);
+  err = nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, key);
 
   if (err != ESP_OK) {
-    nvs_close(nvs_handle);
     return false;
   }
 
   // Compresser les IDs : décaler tous les profils suivants
   config_profile_t *shift_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (shift_profile == NULL) {
-    nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
     ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour compression");
     return false;
   }
@@ -429,7 +402,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   for (int i = profile_id + 1; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     snprintf(key, sizeof(key), "profile_%d", i);
     required_size = sizeof(config_profile_t);
-    if (nvs_get_blob(nvs_handle, key, NULL, &required_size) == ESP_OK) {
+    if (nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size) == ESP_OK) {
       needs_compression = true;
       break;
     }
@@ -444,16 +417,16 @@ bool config_manager_delete_profile(uint16_t profile_id) {
       snprintf(next_key, sizeof(next_key), "profile_%d", i + 1);
 
       required_size      = sizeof(config_profile_t);
-      esp_err_t read_err = nvs_get_blob(nvs_handle, next_key, shift_profile, &required_size);
+      esp_err_t read_err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, next_key, shift_profile, &required_size);
 
       if (read_err == ESP_OK) {
         // Sauvegarder au nouvel emplacement
         char current_key[16];
         snprintf(current_key, sizeof(current_key), "profile_%d", i);
-        nvs_set_blob(nvs_handle, current_key, shift_profile, sizeof(config_profile_t));
+        nvs_manager_set_blob(NVS_NAMESPACE_PROFILES, current_key, shift_profile, sizeof(config_profile_t));
 
         // Effacer l'ancien emplacement
-        nvs_erase_key(nvs_handle, next_key);
+        nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, next_key);
 
         ESP_LOGI(TAG_CONFIG, "Profil %d déplacé vers ID %d", i + 1, i);
       } else {
@@ -465,7 +438,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
     if (active_profile_id > profile_id) {
       active_profile_id--;
       memcpy(&active_profile, shift_profile, sizeof(config_profile_t));
-      nvs_set_i32(nvs_handle, "active_id", active_profile_id);
+      nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", active_profile_id);
       ESP_LOGI(TAG_CONFIG, "ID du profil actif mis à jour: %d", active_profile_id);
     } else if (active_profile_id == profile_id) {
       // Le profil actif a été supprimé, chercher le premier profil disponible
@@ -476,17 +449,17 @@ bool config_manager_delete_profile(uint16_t profile_id) {
       for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
         snprintf(key, sizeof(key), "profile_%d", i);
         required_size = sizeof(config_profile_t);
-        if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
+        if (nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &active_profile, &required_size) == ESP_OK) {
           active_profile_id     = i;
           active_profile_loaded = true;
-          nvs_set_i32(nvs_handle, "active_id", i);
+          nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", i);
           ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, activation du profil %d", i);
           break;
         }
       }
 
       if (active_profile_id == -1) {
-        nvs_erase_key(nvs_handle, "active_id");
+        nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, "active_id");
         memset(&active_profile, 0, sizeof(active_profile));
         ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
       }
@@ -501,17 +474,17 @@ bool config_manager_delete_profile(uint16_t profile_id) {
       for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
         snprintf(key, sizeof(key), "profile_%d", i);
         required_size = sizeof(config_profile_t);
-        if (nvs_get_blob(nvs_handle, key, &active_profile, &required_size) == ESP_OK) {
+        if (nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &active_profile, &required_size) == ESP_OK) {
           active_profile_id     = i;
           active_profile_loaded = true;
-          nvs_set_i32(nvs_handle, "active_id", i);
+          nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", i);
           ESP_LOGI(TAG_CONFIG, "Activation automatique du profil %d", i);
           break;
         }
       }
 
       if (active_profile_id == -1) {
-        nvs_erase_key(nvs_handle, "active_id");
+        nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, "active_id");
         memset(&active_profile, 0, sizeof(active_profile));
         ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
       }
@@ -519,9 +492,6 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   }
 
   free(shift_profile);
-  nvs_commit(nvs_handle);
-  nvs_close(nvs_handle);
-
   ESP_LOGI(TAG_CONFIG, "Profil %d supprimé avec succès", profile_id);
   return true;
 }
@@ -577,13 +547,7 @@ bool config_manager_activate_profile(uint16_t profile_id) {
   active_profile_loaded = true;
 
   // Sauvegarder l'ID actif dans NVS
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READWRITE, &nvs_handle);
-  if (err == ESP_OK) {
-    nvs_set_i32(nvs_handle, "active_id", profile_id);
-    nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
-  }
+  nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", profile_id);
 
   // Arrêter tous les événements actifs avant d'appliquer le nouvel effet
   config_manager_stop_all_events();
@@ -659,14 +623,6 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
     return 0;
   }
 
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS profiles");
-    return 0;
-  }
-
   int count = 0;
   char key[16];
 
@@ -674,20 +630,12 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT && count < max_profiles; i++) {
     snprintf(key, sizeof(key), "profile_%d", i);
 
-    // D'abord vérifier si la clé existe
-    size_t required_size = 0;
-    err                  = nvs_get_blob(nvs_handle, key, NULL, &required_size);
-
-    // Si la clé existe et a la bonne taille, la charger
+    size_t required_size = sizeof(config_profile_t);
+    esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &profile_list[count], &required_size);
     if (err == ESP_OK && required_size == sizeof(config_profile_t)) {
-      err = nvs_get_blob(nvs_handle, key, &profile_list[count], &required_size);
-      if (err == ESP_OK) {
-        count++;
-      }
+      count++;
     }
   }
-
-  nvs_close(nvs_handle);
   return count;
 }
 
@@ -1339,47 +1287,22 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
 bool config_manager_factory_reset(void) {
   ESP_LOGI(TAG_CONFIG, "Factory reset: Erasing all profiles and settings...");
 
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READWRITE, &nvs_handle);
-
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Failed to open NVS for factory reset");
-    return false;
-  }
-
-  // Effacer tout le namespace "profiles"
-  err = nvs_erase_all(nvs_handle);
+  esp_err_t err = nvs_manager_erase_namespace(NVS_NAMESPACE_PROFILES);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Failed to erase profiles namespace");
-    nvs_close(nvs_handle);
-    return false;
-  }
-
-  err = nvs_commit(nvs_handle);
-  nvs_close(nvs_handle);
-
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Failed to commit profile erasure");
     return false;
   }
 
   // Effacer la configuration matérielle LED
-  err = nvs_open(NVS_NAMESPACE_LED_CONFIG, NVS_READWRITE, &nvs_handle);
-  if (err == ESP_OK) {
-    nvs_erase_all(nvs_handle);
-    nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
-  }
+  nvs_manager_erase_namespace(NVS_NAMESPACE_LED_HW);
   wheel_control_enabled     = false;
   wheel_control_speed_limit = 5;
 
   // Effacer les réglages globaux (wheel control, etc.)
-  err                       = nvs_open(NVS_NAMESPACE_SETTINGS, NVS_READWRITE, &nvs_handle);
-  if (err == ESP_OK) {
-    nvs_erase_all(nvs_handle);
-    nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
-  }
+  nvs_manager_erase_namespace(NVS_NAMESPACE_SETTINGS);
+
+  nvs_manager_erase_namespace(NVS_NAMESPACE_AUDIO);
+  nvs_manager_erase_namespace(NVS_NAMESPACE_CAN_SERVERS);
 
   // Réinitialiser le profil actif en RAM
   memset(&active_profile, 0, sizeof(active_profile));
@@ -1784,17 +1707,8 @@ void config_manager_reapply_default_effect(void) {
 }
 
 bool config_manager_can_create_profile(void) {
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READONLY, &nvs_handle);
-
-  if (err != ESP_OK) {
-    ESP_LOGW(TAG_CONFIG, "Impossible d'ouvrir NVS pour vérifier l'espace");
-    return false;
-  }
-
   nvs_stats_t nvs_stats;
-  err = nvs_get_stats(NULL, &nvs_stats);
-  nvs_close(nvs_handle);
+  esp_err_t err = nvs_get_stats(NULL, &nvs_stats);
 
   if (err != ESP_OK) {
     ESP_LOGW(TAG_CONFIG, "Impossible de récupérer les stats NVS");

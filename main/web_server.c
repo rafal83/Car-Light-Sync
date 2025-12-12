@@ -599,24 +599,19 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
   }
 
   // Ajouter les statistiques NVS
-  nvs_handle_t nvs_handle;
-  esp_err_t err = nvs_open(NVS_NAMESPACE_PROFILES, NVS_READONLY, &nvs_handle);
+  nvs_stats_t nvs_stats;
+  esp_err_t err = nvs_get_stats(NULL, &nvs_stats);
   if (err == ESP_OK) {
-    nvs_stats_t nvs_stats;
-    err = nvs_get_stats(NULL, &nvs_stats);
-    if (err == ESP_OK) {
-      size_t used_entries  = nvs_stats.used_entries;
-      size_t free_entries  = nvs_stats.free_entries;
-      size_t total_entries = nvs_stats.total_entries;
+    size_t used_entries  = nvs_stats.used_entries;
+    size_t free_entries  = nvs_stats.free_entries;
+    size_t total_entries = nvs_stats.total_entries;
 
-      cJSON *storage       = cJSON_CreateObject();
-      cJSON_AddNumberToObject(storage, "used", used_entries);
-      cJSON_AddNumberToObject(storage, "free", free_entries);
-      cJSON_AddNumberToObject(storage, "total", total_entries);
-      cJSON_AddNumberToObject(storage, "usage_pct", (total_entries > 0) ? (used_entries * 100 / total_entries) : 0);
-      cJSON_AddItemToObject(root, "storage", storage);
-    }
-    nvs_close(nvs_handle);
+    cJSON *storage       = cJSON_CreateObject();
+    cJSON_AddNumberToObject(storage, "used", used_entries);
+    cJSON_AddNumberToObject(storage, "free", free_entries);
+    cJSON_AddNumberToObject(storage, "total", total_entries);
+    cJSON_AddNumberToObject(storage, "usage_pct", (total_entries > 0) ? (used_entries * 100 / total_entries) : 0);
+    cJSON_AddItemToObject(root, "storage", storage);
   }
 
   const char *json_string = cJSON_PrintUnformatted(root);
