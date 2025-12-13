@@ -206,101 +206,100 @@
               <h3 data-i18n="profiles.defaultEffect">Effet par Défaut</h3>
               <p data-i18n="profiles.defaultEffectDesc">Effet affiché quand aucun événement CAN n'est actif</p>
             </div>
-            <div class="profile-section-content">
-              <!-- Effet et paramètres de base -->
-              <div class="control-group">
-                <label class="control-label" data-i18n="effects.effect">Effet</label>
-                <select id="default-effect-select" data-effect-options="true">
-                  <!-- Will be populated dynamically -->
-                </select>
-              </div>
-
-              <div class="control-row">
+            <div class="profile-section-content default-effect-grid">
+              <div class="default-effect-card">
                 <div class="control-group">
-                  <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
-                  <div class="slider-container">
-                    <input type="range" id="default-brightness-slider" min="1" max="100" value="50">
-                    <span class="slider-value" id="default-brightness-value">50%</span>
+                  <label class="control-label" data-i18n="effects.effect">Effet</label>
+                  <select id="default-effect-select" data-effect-options="true">
+                    <!-- Will be populated dynamically -->
+                  </select>
+                </div>
+                <div class="default-effect-inline">
+                  <div class="control-group">
+                    <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
+                    <div class="slider-container">
+                      <input type="range" id="default-brightness-slider" min="1" max="100" value="50">
+                      <span class="slider-value" id="default-brightness-value">50%</span>
+                    </div>
+                  </div>
+                  <div class="control-group">
+                    <label class="control-label" data-i18n="effects.speed">Vitesse</label>
+                    <div class="slider-container">
+                      <input type="range" id="default-speed-slider" min="1" max="100" value="50">
+                      <span class="slider-value" id="default-speed-value">50%</span>
+                    </div>
+                  </div>
+                  <div class="control-group">
+                    <label class="control-label" data-i18n="effects.color">Couleur</label>
+                    <div class="color-picker">
+                      <input type="color" id="default-color1" value="#ff0000">
+                    </div>
                   </div>
                 </div>
-                <div class="control-group">
-                  <label class="control-label" data-i18n="effects.speed">Vitesse</label>
-                  <div class="slider-container">
-                    <input type="range" id="default-speed-slider" min="1" max="100" value="50">
-                    <span class="slider-value" id="default-speed-value">50%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="control-group">
-                <label class="control-label" data-i18n="effects.color">Couleur</label>
-                <input type="color" id="default-color1" value="#ff0000">
-              </div>
-
-              <!-- Options avancées -->
-              <div class="control-row">
-                <label class="toggle-container" for="default-reverse">
-                  <div class="toggle-switch">
-                    <input type="checkbox" id="default-reverse">
-                    <span class="toggle-slider"></span>
-                  </div>
-                  <span class="toggle-label" data-i18n="eventsConfig.reverse">Inverser le sens</span>
-                </label>
-                <label class="toggle-container" for="default-audio-reactive">
-                  <div class="toggle-switch">
-                    <input type="checkbox" id="default-audio-reactive">
-                    <span class="toggle-slider"></span>
-                  </div>
-                  <span class="toggle-label" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</span>
-                </label>
-              </div>
-
-              <!-- Plage de segment -->
-              <div class="control-group" style="margin-top: 20px;">
-                <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
-                <div class="segment-range-container">
-                  <div class="segment-range-slider" id="default-segment-range">
-                    <div class="segment-range-track"></div>
-                    <div class="segment-range-selected" id="default-segment-range-selected"></div>
-                    <input type="range" min="0" max="300" step="1" value="0" class="segment-range-min"
-                      id="default-segment-range-min" oninput="updateDefaultSegmentRange()">
-                    <input type="range" min="0" max="300" step="1" value="300" class="segment-range-max"
-                      id="default-segment-range-max" oninput="updateDefaultSegmentRange()">
-                  </div>
-                  <div class="segment-range-values">
-                    <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span> |
-                    <span data-i18n="eventsConfig.length">Longueur</span>: <span
-                      id="default-segment-value-length">300</span>
+                <div class="control-group" style="margin: 0;">
+                  <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
+                  <div class="segment-range-container">
+                    <div class="segment-range-slider" id="default-segment-range">
+                      <div class="segment-range-track"></div>
+                      <div class="segment-range-selected" id="default-segment-range-selected"></div>
+                      <input type="range" min="0" max="300" step="1" value="0" class="segment-range-min"
+                        id="default-segment-range-min" oninput="updateDefaultSegmentRange()">
+                      <input type="range" min="0" max="300" step="1" value="300" class="segment-range-max"
+                        id="default-segment-range-max" oninput="updateDefaultSegmentRange()">
+                    </div>
+                    <div class="segment-range-values">
+                      <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span>
+                      |
+                      <span data-i18n="eventsConfig.length">Longueur</span>: <span
+                        id="default-segment-value-length">300</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Modulation par pédale d'accélération -->
-              <div class="control-group" style="margin-top: 20px;">
-                <label class="toggle-container" for="default-accel-pedal-enabled">
-                  <div class="toggle-switch">
-                    <input type="checkbox" id="default-accel-pedal-enabled">
-                    <span class="toggle-slider"></span>
-                  </div>
-                  <span class="toggle-label" data-i18n="effects.accelPedalEnabled">Moduler par pédale
-                    d'accélération</span>
-                </label>
-                <p style="font-size: 12px; color: var(--color-muted); margin-top: 5px;"
-                  data-i18n="effects.accelPedalEnabledDesc">
-                  Active la modulation dynamique de la longueur du segment selon la position de la pédale
-                </p>
-              </div>
-
-              <div class="control-group">
-                <label class="control-label" data-i18n="effects.accelPedalOffset">Offset minimum (%)</label>
-                <div class="slider-container">
-                  <input type="range" id="default-accel-pedal-offset-slider" min="0" max="100" value="0">
-                  <span class="slider-value" id="default-accel-pedal-offset-value">0%</span>
+              <div class="default-effect-card">
+                <div class="default-effect-stack">
+                  <label class="toggle-container" for="default-reverse">
+                    <div class="toggle-switch">
+                      <input type="checkbox" id="default-reverse">
+                      <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label" data-i18n="eventsConfig.reverse">Inverser le sens</span>
+                  </label>
+                  <label class="toggle-container" for="default-audio-reactive">
+                    <div class="toggle-switch">
+                      <input type="checkbox" id="default-audio-reactive">
+                      <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</span>
+                  </label>
                 </div>
-                <p style="font-size: 12px; color: var(--color-muted); margin-top: 5px;"
-                  data-i18n="effects.accelPedalOffsetDesc">
-                  Pourcentage minimum de LEDs allumées même sans appuyer sur la pédale
-                </p>
+                <hr>
+                <div class="default-effect-stack">                  
+                  <div class="control-group" style="margin: 0;">
+                    <label class="toggle-container" for="default-accel-pedal-enabled">
+                      <div class="toggle-switch">
+                        <input type="checkbox" id="default-accel-pedal-enabled">
+                        <span class="toggle-slider"></span>
+                      </div>
+                      <span class="toggle-label" data-i18n="effects.accelPedalEnabled">Moduler par pédale
+                        d'accélération</span>
+                    </label>
+                    <p class="default-effect-subtitle" data-i18n="effects.accelPedalEnabledDesc">
+                      Active la modulation dynamique de la longueur du segment selon la position de la pédale
+                    </p>
+                  </div>
+                  <div class="control-group" style="margin: 0;">
+                    <label class="control-label" data-i18n="effects.accelPedalOffset">Offset minimum (%)</label>
+                    <div class="slider-container">
+                      <input type="range" id="default-accel-pedal-offset-slider" min="0" max="100" value="0">
+                      <span class="slider-value" id="default-accel-pedal-offset-value">0%</span>
+                    </div>
+                    <p class="default-effect-subtitle" data-i18n="effects.accelPedalOffsetDesc">
+                      Pourcentage minimum de LEDs allumées même sans appuyer sur la pédale
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
