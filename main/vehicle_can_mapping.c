@@ -246,7 +246,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
 
     if (strcmp(name, "VCFRONT_switchLightingBrightness") == 0) {
-      state->brightness = (uint8_t)(value / 1.27f); // 0-127
+      state->brightness = (uint8_t)(value); // 0-127
       return;
     }
 
@@ -308,7 +308,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x292) {
     if (strcmp(name, "SOCUI292") == 0) {
-      state->soc_percent = value / 1.023;
+      state->soc_percent = value;
       return;
     }
     return;

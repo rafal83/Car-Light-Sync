@@ -396,7 +396,7 @@ config_profile_t profile;
 ```bash
 # 100 requêtes GET /api/profiles
 for i in {1..100}; do
-    curl -s http://192.168.10.1/api/profiles > /dev/null
+    curl -s http://192.168.4.1/api/profiles > /dev/null
     echo "Request $i OK"
 done
 ```
@@ -406,9 +406,9 @@ done
 ```bash
 # Créer 10 profils, les activer, les supprimer
 for i in {0..9}; do
-    curl -X POST http://192.168.10.1/api/profile/create \
+    curl -X POST http://192.168.4.1/api/profile/create \
          -d "{\"name\":\"Test$i\"}"
-    curl -X POST http://192.168.10.1/api/profile/activate \
+    curl -X POST http://192.168.4.1/api/profile/activate \
          -d "{\"profile_id\":$i}"
 done
 ```
@@ -417,7 +417,7 @@ done
 **Test 3 : Événements multiples**
 ```bash
 # Configuration de 22 événements simultanément
-curl -X POST http://192.168.10.1/api/events -d @events.json
+curl -X POST http://192.168.4.1/api/events -d @events.json
 ```
 **Résultat :** ✅ Traitement en <200ms
 

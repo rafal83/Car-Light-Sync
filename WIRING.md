@@ -305,7 +305,7 @@ dans la plupart des véhicules. Ajouter seulement si nécessaire.
 **2.3 Test Interface Web**
 ```
 [ ] Se connecter au WiFi "CarLightSync"
-[ ] Ouvrir http://192.168.10.1
+[ ] Ouvrir http://192.168.4.1
 [ ] Vérifier affichage état véhicule en temps réel
 [ ] Tester changement d'effet
 [ ] Tester création/activation de profil

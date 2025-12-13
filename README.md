@@ -252,7 +252,7 @@ Le système détecte 34 événements CAN du véhicule Tesla :
 ### Accès à l'Interface
 
 1. Se connecter au WiFi **CarLightSync** (sans mot de passe)
-2. Ouvrir un navigateur à l'adresse : `http://192.168.10.1`
+2. Ouvrir un navigateur à l'adresse : `http://192.168.4.1`
 
 ### Fonctionnalités de l'Interface
 
@@ -583,7 +583,7 @@ L'API utilise des **clés JSON courtes** pour réduire la taille des réponses e
 
 ### Problème : Interface web inaccessible
 - Vérifier connexion au WiFi `CarLightSync`
-- Essayer `http://192.168.10.1` (PAS https)
+- Essayer `http://192.168.4.1` (PAS https)
 - Vider le cache du navigateur (Ctrl+F5)
 - Vérifier logs série : "Page HTML envoyée avec succès"
 - Si erreur persistante, redémarrer l'ESP32

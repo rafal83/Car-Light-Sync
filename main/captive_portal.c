@@ -150,16 +150,16 @@ static void dns_server_task(void *pvParameters) {
     tx_buffer[response_len++] = 0x00;
     tx_buffer[response_len++] = 0x04;
 
-    // Adresse IP de l'AP (192.168.10.1 par défaut)
+    // Adresse IP de l'AP (192.168.4.1 par défaut)
     tx_buffer[response_len++] = 192;
     tx_buffer[response_len++] = 168;
-    tx_buffer[response_len++] = 10;
+    tx_buffer[response_len++] = 4;
     tx_buffer[response_len++] = 1;
 
     // Envoyer la réponse
     sendto(dns_socket, tx_buffer, response_len, 0, (struct sockaddr *)&client_addr, client_addr_len);
 
-    ESP_LOGD(TAG_CAPTIVE_PORTAL, "Réponse DNS envoyée: %s -> 192.168.10.1", domain_name);
+    ESP_LOGD(TAG_CAPTIVE_PORTAL, "Réponse DNS envoyée: %s -> 192.168.4.1", domain_name);
   }
 
   if (dns_socket >= 0) {

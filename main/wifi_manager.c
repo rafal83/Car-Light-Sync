@@ -112,8 +112,8 @@ esp_err_t wifi_manager_init(void) {
   ESP_LOGI(TAG_WIFI, "Hostname configuré: %s", g_wifi_ssid_with_suffix);
 
   esp_netif_ip_info_t ip_info;
-  IP4_ADDR(&ip_info.ip, 192, 168, 10, 1);
-  IP4_ADDR(&ip_info.gw, 192, 168, 10, 1);
+  IP4_ADDR(&ip_info.ip, 192, 168, 4, 1);
+  IP4_ADDR(&ip_info.gw, 192, 168, 4, 1);
   IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
 
   ESP_ERROR_CHECK(esp_netif_dhcps_stop(ap_netif));

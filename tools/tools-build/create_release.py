@@ -138,7 +138,7 @@ Ce dossier contient le fichier firmware pour une mise à jour sans fil.
 
 ### Via l'interface Web:
 1. Connectez-vous au WiFi de l'ESP32 (SSID: CarLightSync)
-2. Ouvrez un navigateur et allez à: http://192.168.10.1
+2. Ouvrez un navigateur et allez à: http://192.168.4.1
 3. Allez dans la section "🔄 Mise à Jour OTA"
 4. Sélectionnez le fichier `{PROJECT_NAME}-ota.bin`
 5. Cliquez sur "Téléverser"
@@ -147,8 +147,8 @@ Ce dossier contient le fichier firmware pour une mise à jour sans fil.
 
 ### Via cURL (ligne de commande):
 ```bash
-curl -F "firmware=@{PROJECT_NAME}-ota.bin" http://192.168.10.1/api/ota/upload
-curl -X POST http://192.168.10.1/api/ota/restart
+curl -F "firmware=@{PROJECT_NAME}-ota.bin" http://192.168.4.1/api/ota/upload
+curl -X POST http://192.168.4.1/api/ota/restart
 ```
 
 ## Notes:
@@ -159,7 +159,7 @@ curl -X POST http://192.168.10.1/api/ota/restart
 
 ## Vérification de la version:
 ```bash
-curl http://192.168.10.1/api/ota/info
+curl http://192.168.4.1/api/ota/info
 ```
 
 ---
@@ -273,7 +273,7 @@ Configuration:
 --------------
 - WiFi AP SSID    : CarLightSync
 - WiFi AP Password: 
-- Interface Web   : http://192.168.10.1
+- Interface Web   : http://192.168.4.1
 - Nombre de LEDs  : Configurable dans config.h
 
 Fonctionnalités:
