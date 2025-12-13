@@ -398,7 +398,7 @@ input[type="range"]::-webkit-slider-thumb {
     min-width: 50px;
     text-align: right;
     font-weight: 500;
-    color: var(--color-tertiary);
+    color: var(--color-text);
 }
 select, input:not([type]), input[type="text"], input[type="password"], input[type="number"], input[type="file"] {
     width: 100%;
