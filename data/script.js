@@ -648,7 +648,9 @@ const simulationSections = [
         events: [
             { id: 'AUTOPILOT_ENGAGED', labelKey: 'simulation.autopilotEngaged' },
             { id: 'AUTOPILOT_DISENGAGED', labelKey: 'simulation.autopilotDisengaged' },
-            { id: 'AUTOPILOT_ABORTING', labelKey: 'simulation.autopilotAborting' }
+            { id: 'AUTOPILOT_ALERT_LV1', labelKey: 'simulation.autopilotAlertLv1' },
+            { id: 'AUTOPILOT_ALERT_LV2', labelKey: 'simulation.autopilotAlertLv2' },
+            { id: 'AUTOPILOT_ALERT_LV3', labelKey: 'simulation.autopilotAlertLv3' }
         ]
     },
     {
@@ -663,7 +665,9 @@ const simulationSections = [
         titleKey: 'simulation.blindspot',
         events: [
             { id: 'BLINDSPOT_LEFT', labelKey: 'simulation.blindspotLeft' },
-            { id: 'BLINDSPOT_RIGHT', labelKey: 'simulation.blindspotRight' }
+            { id: 'BLINDSPOT_RIGHT', labelKey: 'simulation.blindspotRight' },
+            { id: 'BLINDSPOT_LEFT_ALERT', labelKey: 'simulation.blindspotLeftAlert' },
+            { id: 'BLINDSPOT_RIGHT_ALERT', labelKey: 'simulation.blindspotRightAlert' }
         ]
     },
     {
@@ -2221,9 +2225,9 @@ async function updateStatus() {
         // Memory used
         if (data.mem !== undefined) {
             $('memory-status').textContent = data.mem + '%';
-            // Couleur selon la mémoire consommée: vert <50%, orange 50-80%, rouge >80%
-            const memClass = data.mem < 50 ? 'status-online' : (data.mem < 80 ? 'status-warning' : 'status-offline');
-            const memBarClass = data.mem < 50 ? 'bar-online' : (data.mem < 80 ? 'bar-warning' : 'bar-offline');
+            // Couleur selon la mémoire consommée: vert <70%, orange 70-90%, rouge >90%
+            const memClass = data.mem < 70 ? 'status-online' : (data.mem < 90 ? 'status-warning' : 'status-offline');
+            const memBarClass = data.mem < 70 ? 'bar-online' : (data.mem < 90 ? 'bar-warning' : 'bar-offline');
             $('memory-status').className = 'status-percentage status-value ' + memClass;
             $('memory-bar').className = 'status-progress-fill ' + memBarClass;
             $('memory-bar').style.width = data.mem + '%';
@@ -2300,6 +2304,8 @@ async function updateStatus() {
                 $('v-brightness').textContent = v.safety.bri + '%';
                 $('v-blindspot-left').textContent = v.safety.bsl ? t('status.active') : t('status.inactive');
                 $('v-blindspot-right').textContent = v.safety.bsr ? t('status.active') : t('status.inactive');
+                $('v-blindspot-left-alert').textContent = v.safety.bsla ? t('status.active') : t('status.inactive');
+                $('v-blindspot-right-alert').textContent = v.safety.bsra? t('status.active') : t('status.inactive');
                 $('v-side-collision-left').textContent = v.safety.scl ? t('status.active') : t('status.inactive');
                 $('v-side-collision-right').textContent = v.safety.scr ? t('status.active') : t('status.inactive');
 
@@ -2334,6 +2340,12 @@ async function updateStatus() {
                     autopilotEl.textContent = autopilotState ? (requestMap[autopilotState] || autopilotState) : t('vehicle.none');
                 }
 
+                const autopilotAlert = $('v-autopilot-alert');
+                if(autopilotAlert) {
+                  autopilotAlert.textContent = v.safety.apa1 ? t('vehicle.autopilotAlertLv1') : 
+                                               (v.safety.apa2 ? t('vehicle.autopilotAlertLv2') : 
+                                                v.safety.apa3 ? t('vehicle.autopilotAlertLv3') : t('vehicle.none'));
+                }
                 const sentryAlertEl = $('v-sentry-alert');
                 if (sentryAlertEl) {
                     if (typeof v.safety.sa === 'boolean') {
@@ -2352,10 +2364,11 @@ async function updateStatus() {
                 'v-headlights', 'v-high-beams', 'v-fog-lights', 'v-turn-signal',
                 'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness',
                 'v-blindspot-left', 'v-blindspot-right',
+                'v-blindspot-left-alert', 'v-blindspot-right-alert',
                 'v-side-collision-left', 'v-side-collision-right',
                 'v-lane-departure-left-lv1', 'v-lane-departure-right-lv1',
                 'v-lane-departure-left-lv2', 'v-lane-departure-right-lv2',
-                'v-sentry-mode', 'v-autopilot', 'v-sentry-alert'
+                'v-sentry-mode', 'v-autopilot', 'v-autopilot-alert', 'v-sentry-alert'
             ];
             fields.forEach(id => {
                 const element = $(id);
@@ -3193,6 +3206,8 @@ const EVENT_TO_COMMON = {
     'BRAKE_ON': 'brakeOn',
     'BLINDSPOT_LEFT': 'blindspotLeft',
     'BLINDSPOT_RIGHT': 'blindspotRight',
+    'BLINDSPOT_LEFT_ALERT': 'blindspotLeftAlert',
+    'BLINDSPOT_RIGHT_ALERT': 'blindspotRightAlert',
     'SIDE_COLLISION_LEFT': 'sideCollisionLeft',
     'SIDE_COLLISION_RIGHT': 'sideCollisionRight',
     'LANE_DEPARTURE_LEFT_LV1': 'laneDepartureLeftLv1', 

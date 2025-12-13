@@ -79,6 +79,8 @@ typedef struct {
   float odometer_km;
   uint8_t blindspot_left;
   uint8_t blindspot_right;
+  uint8_t blindspot_left_alert;
+  uint8_t blindspot_right_alert;
   uint8_t side_collision_left;
   uint8_t side_collision_right;
 
@@ -91,6 +93,9 @@ typedef struct {
   uint8_t night_mode;
   float brightness;
   uint8_t autopilot;
+  uint8_t autopilot_alert_lv1;
+  uint8_t autopilot_alert_lv2;
+  uint8_t autopilot_alert_lv3;
 
   // Meta
   uint32_t last_update_ms;

@@ -338,15 +338,31 @@ static void can_event_task(void *pvParameters) {
       if (current_state.autopilot >= 3 && current_state.autopilot <= 5) {
         config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ENGAGED);
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
-        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ABORTING);
       } else if (current_state.autopilot == 9) {
         config_manager_process_can_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_ENGAGED);
-        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ABORTING);
-      } else if (current_state.autopilot == 8) {
-        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ABORTING);
-        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ENGAGED);
-        config_manager_stop_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
+      }
+    }
+    
+    if (current_state.autopilot_alert_lv1 != previous_state.autopilot_alert_lv1) {
+      if (current_state.autopilot_alert_lv1) {
+        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ALERT_LV1);
+      } else {
+        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ALERT_LV1);
+      }
+    }
+    if (current_state.autopilot_alert_lv2 != previous_state.autopilot_alert_lv2) {
+      if (current_state.autopilot_alert_lv2) {
+        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ALERT_LV2);
+      } else {
+        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ALERT_LV2);
+      }
+    }
+    if (current_state.autopilot_alert_lv3 != previous_state.autopilot_alert_lv3) {
+      if (current_state.autopilot_alert_lv3) {
+        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ALERT_LV3);
+      } else {
+        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ALERT_LV3);
       }
     }
 

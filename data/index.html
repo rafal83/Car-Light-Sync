@@ -1,925 +1,1006 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Car Light Sync</title>
-    <link rel="icon" type="image/png" href="carlightsync64.png">
-    <link href="style.css" rel="stylesheet" />
-</head>
-<body>
-    <!-- Loading overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-content">
-            <img src="carlightsync64.png" alt="Logo" class="loading-logo">
-            <h2 data-i18n="loading.title">Chargement...</h2>
-            <div class="loading-progress">
-                <div id="loading-progress-bar" class="loading-progress-bar"></div>
-            </div>
-            <p id="loading-status" data-i18n="loading.connecting">Connexion...</p>
-            <div id="loading-ble-button" class="loading-ble-actions" style="display: none;">
-                <button onclick="manualBleConnect()" class="btn-primary" data-i18n="loading.connectBle">Se connecter en BLE</button>
-            </div>
-            <div id="loading-error" class="loading-error" style="display: none;">
-                <p id="loading-error-message"></p>
-                <div class="loading-error-actions">
-                    <button onclick="restart()" class="btn-secondary" data-i18n="loading.restart">Redémarrer</button>
-                    <button onclick="factoryReset()" class="btn-danger" data-i18n="loading.factoryReset">Reset usine</button>
-                    <button onclick="retryLoading()" class="btn-primary" data-i18n="loading.retry">Réessayer</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="container">
-        <div class="header">
-            <div class="header-logo">
-                <img src="carlightsync64.png" alt="Car Light Sync Logo">
-            </div>
-            <div class="header-content">
-                <h1 data-i18n="app.title">Car Light Sync</h1>
-                <p data-i18n="app.subtitle">Contrôle RGB synchronisé avec votre voiture</p>
-            </div>
-            <div class="header-controls">
-                <button id="language-toggle" class="icon-toggle-btn" onclick="toggleLanguage()" title="Language / Langue">
-                    <span id="language-icon">FR</span>
-                </button>
-                <button id="theme-toggle" class="icon-toggle-btn" onclick="toggleTheme()" title="Theme">
-                    <span id="theme-icon">☀️</span>
-                </button>
-            </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Light Sync</title>
+  <link rel="icon" type="image/png" href="carlightsync64.png">
+  <link href="style.css" rel="stylesheet" />
+</head>
+
+<body>
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-content">
+      <img src="carlightsync64.png" alt="Logo" class="loading-logo">
+      <h2 data-i18n="loading.title">Chargement...</h2>
+      <div class="loading-progress">
+        <div id="loading-progress-bar" class="loading-progress-bar"></div>
+      </div>
+      <p id="loading-status" data-i18n="loading.connecting">Connexion...</p>
+      <div id="loading-ble-button" class="loading-ble-actions" style="display: none;">
+        <button onclick="manualBleConnect()" class="btn-primary" data-i18n="loading.connectBle">Se connecter en
+          BLE</button>
+      </div>
+      <div id="loading-error" class="loading-error" style="display: none;">
+        <p id="loading-error-message"></p>
+        <div class="loading-error-actions">
+          <button onclick="restart()" class="btn-secondary" data-i18n="loading.restart">Redémarrer</button>
+          <button onclick="factoryReset()" class="btn-danger" data-i18n="loading.factoryReset">Reset usine</button>
+          <button onclick="retryLoading()" class="btn-primary" data-i18n="loading.retry">Réessayer</button>
         </div>
-        <div id="ble-notification" class="notification"></div>
-        <div class="status-bar">
-            <div id="ble-status-item" class="status-item status-item-ble" hidden>
-              <button id="ble-connect-button" class="btn-secondary ble-icon-button" onclick="toggleBleConnection()" title="BLE"></button>
-              <div class="status-item">
-                  <div class="status-label" data-i18n="ble.title">Connexion BLE</div>
-                  <div class="status-value" id="ble-status-text" data-i18n="ble.disconnected">Déconnecté</div>
-                </div>
-            </div>
-            <div id="wifi-status-item"  class="status-item">
-                <div class="status-label" data-i18n="status.wifi">WiFi</div>
-                <div class="status-value" id="wifi-status">...</div>
-            </div>
-            <div class="status-item status-item-can">
-                <div class="status-label" data-i18n="status.system">Système</div>
-                <div class="status-can-group">
-                    <div class="status-can-item">
-                        <span class="status-can-label">CPU:</span>
-                        <div class="status-progress-container">
-                            <div class="status-progress-bar">
-                                <div class="status-progress-fill" id="cpu-bar"></div>
-                            </div>
-                            <span class="status-percentage status-value" id="cpu-status">...</span>
-                        </div>
-                    </div>
-                    <div class="status-can-item">
-                        <span class="status-can-label" data-i18n="status.memoryLabel">Mém:</span>
-                        <div class="status-progress-container">
-                            <div class="status-progress-bar">
-                                <div class="status-progress-fill" id="memory-bar"></div>
-                            </div>
-                            <span class="status-percentage status-value" id="memory-status">...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="status-item">
-                <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
-                <div class="status-value" id="vehicle-status">...</div>
-            </div>
-            <div class="status-item status-item-can">
-                <div class="status-label" data-i18n="status.canBus">CAN Bus</div>
-                <div class="status-can-group">
-                    <div class="status-can-item">
-                        <span class="status-can-label">Chassis:</span>
-                        <span class="status-value" id="can-chassis-status">...</span>
-                    </div>
-                    <div class="status-can-item">
-                        <span class="status-can-label">Body:</span>
-                        <span class="status-value" id="can-body-status">...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="status-item">
-                <div class="status-label" data-i18n="status.profile">Profil</div>
-                <div class="status-value" id="profile-status">...</div>
-            </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div class="header-logo">
+        <img src="carlightsync64.png" alt="Car Light Sync Logo">
+      </div>
+      <div class="header-content">
+        <h1 data-i18n="app.title">Car Light Sync</h1>
+        <p data-i18n="app.subtitle">Contrôle RGB synchronisé avec votre voiture</p>
+      </div>
+      <div class="header-controls">
+        <button id="language-toggle" class="icon-toggle-btn" onclick="toggleLanguage()" title="Language / Langue">
+          <span id="language-icon">FR</span>
+        </button>
+        <button id="theme-toggle" class="icon-toggle-btn" onclick="toggleTheme()" title="Theme">
+          <span id="theme-icon">☀️</span>
+        </button>
+      </div>
+    </div>
+    <div id="ble-notification" class="notification"></div>
+    <div class="status-bar">
+      <div id="ble-status-item" class="status-item status-item-ble" hidden>
+        <button id="ble-connect-button" class="btn-secondary ble-icon-button" onclick="toggleBleConnection()"
+          title="BLE"></button>
+        <div class="status-item">
+          <div class="status-label" data-i18n="ble.title">Connexion BLE</div>
+          <div class="status-value" id="ble-status-text" data-i18n="ble.disconnected">Déconnecté</div>
         </div>
-        <div id="app-wrapper" class="app-wrapper">
-            <div id="app-content" class="app-content">
+      </div>
+      <div id="wifi-status-item" class="status-item">
+        <div class="status-label" data-i18n="status.wifi">WiFi</div>
+        <div class="status-value" id="wifi-status">...</div>
+      </div>
+      <div class="status-item status-item-can">
+        <div class="status-label" data-i18n="status.system">Système</div>
+        <div class="status-can-group">
+          <div class="status-can-item">
+            <span class="status-can-label">CPU:</span>
+            <div class="status-progress-container">
+              <div class="status-progress-bar">
+                <div class="status-progress-fill" id="cpu-bar"></div>
+              </div>
+              <span class="status-percentage status-value" id="cpu-status">...</span>
+            </div>
+          </div>
+          <div class="status-can-item">
+            <span class="status-can-label" data-i18n="status.memoryLabel">Mém:</span>
+            <div class="status-progress-container">
+              <div class="status-progress-bar">
+                <div class="status-progress-fill" id="memory-bar"></div>
+              </div>
+              <span class="status-percentage status-value" id="memory-status">...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="status-item">
+        <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
+        <div class="status-value" id="vehicle-status">...</div>
+      </div>
+      <div class="status-item status-item-can">
+        <div class="status-label" data-i18n="status.canBus">CAN Bus</div>
+        <div class="status-can-group">
+          <div class="status-can-item">
+            <span class="status-can-label">Chassis:</span>
+            <span class="status-value" id="can-chassis-status">...</span>
+          </div>
+          <div class="status-can-item">
+            <span class="status-can-label">Body:</span>
+            <span class="status-value" id="can-body-status">...</span>
+          </div>
+        </div>
+      </div>
+      <div class="status-item">
+        <div class="status-label" data-i18n="status.profile">Profil</div>
+        <div class="status-value" id="profile-status">...</div>
+      </div>
+    </div>
+    <div id="app-wrapper" class="app-wrapper">
+      <div id="app-content" class="app-content">
         <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" data-tab="profiles" onclick="switchTab('profiles', event)" data-i18n="tabs.profiles">Profils</button>
-          <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)" data-i18n="tabs.eventsConfig">Événements</button>
-          <button class="tab" data-tab="vehicle" onclick="switchTab('vehicle', event)" data-i18n="tabs.vehicle">Véhicule</button>
-          <button class="tab" data-tab="config" onclick="switchTab('config', event)" data-i18n="tabs.hardware">Matérielle</button>
-          <button class="tab" data-tab="diagnostic" onclick="switchTab('diagnostic', event)" data-i18n="tabs.diagnostic">Diagnostic CAN</button>
-          <button class="tab" id="logs-tab-button" data-tab="logs" onclick="switchTab('logs', event)" data-i18n="tabs.logs" style="display: none;">Logs</button>
+          <button class="tab active" data-tab="profiles" onclick="switchTab('profiles', event)"
+            data-i18n="tabs.profiles">Profils</button>
+          <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)"
+            data-i18n="tabs.eventsConfig">Événements</button>
+          <button class="tab" data-tab="vehicle" onclick="switchTab('vehicle', event)"
+            data-i18n="tabs.vehicle">Véhicule</button>
+          <button class="tab" data-tab="config" onclick="switchTab('config', event)"
+            data-i18n="tabs.hardware">Matérielle</button>
+          <button class="tab" data-tab="diagnostic" onclick="switchTab('diagnostic', event)"
+            data-i18n="tabs.diagnostic">Diagnostic CAN</button>
+          <button class="tab" id="logs-tab-button" data-tab="logs" onclick="switchTab('logs', event)"
+            data-i18n="tabs.logs" style="display: none;">Logs</button>
           <button class="tab" data-tab="ota" onclick="switchTab('ota', event)" data-i18n="tabs.ota">Mise à Jour</button>
         </div>
         <!-- Tab: Profils -->
         <div id="profiles-tab" class="tab-content active">
-            <div class="section-title" data-i18n="profiles.title">Gestion des Profils</div>
-            <div id="profiles-notification" class="notification"></div>
+          <div class="section-title" data-i18n="profiles.title">Gestion des Profils</div>
+          <div id="profiles-notification" class="notification"></div>
 
-            <!-- Section: Sélection du profil -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="profiles.profileSelection">Sélection du Profil</h3>
-                </div>
-                <div class="profile-section-content">
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
-                        <select id="profile-select" onchange="activateProfile()">
-                            <option value="-1" data-i18n="profiles.loading">Chargement...</option>
-                        </select>
-                    </div>
-                    <div class="control-group" id="storage-info" style="margin-top: 10px; display: none;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <label class="control-label" data-i18n="profiles.storage">Stockage Profils</label>
-                            <span id="storage-text" style="font-size: 0.9em; color: #aaa;">-</span>
-                        </div>
-                        <div style="width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden;">
-                            <div id="storage-bar" style="height: 100%; background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336); width: 0%; transition: width 0.3s;"></div>
-                        </div>
-                    </div>
-                    <div class="button-group">
-                        <button id="profile-new-button" class="btn-secondary" onclick="showNewProfileDialog()" data-i18n="profiles.new">Nouveau</button>
-                        <button class="btn-secondary" onclick="showRenameProfileDialog()" data-i18n="profiles.rename">Renommer</button>
-                        <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
-                        <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
-                        <button id="profile-import-button" class="btn-secondary" onclick="showImportDialog()" data-i18n="profiles.import">Importer</button>
-                    </div>
-                </div>
+          <!-- Section: Sélection du profil -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="profiles.profileSelection">Sélection du Profil</h3>
             </div>
-
-            <!-- Section: Luminosité Dynamique -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="profiles.dynamicBrightness">Luminosité Dynamique</h3>
-                    <p data-i18n="profiles.dynamicBrightnessDesc">Ajuste automatiquement la luminosité en fonction de la luminosité de l'écran de la voiture</p>
+            <div class="profile-section-content">
+              <div class="control-group">
+                <label class="control-label" data-i18n="profiles.activeProfile">Profil Actif</label>
+                <select id="profile-select" onchange="activateProfile()">
+                  <option value="-1" data-i18n="profiles.loading">Chargement...</option>
+                </select>
+              </div>
+              <div class="control-group" id="storage-info" style="margin-top: 10px; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                  <label class="control-label" data-i18n="profiles.storage">Stockage Profils</label>
+                  <span id="storage-text" style="font-size: 0.9em; color: #aaa;">-</span>
                 </div>
-                <div class="profile-section-content">
-                    <label class="toggle-container" for="dynamic-brightness-enabled">
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="dynamic-brightness-enabled">
-                            <span class="toggle-slider"></span>
-                        </div>
-                        <span class="toggle-label" data-i18n="profiles.dynamicBrightnessEnable">Activer la luminosité dynamique</span>
-                    </label>
-                    <div class="control-group" style="margin-top: 15px;">
-                        <label class="control-label" data-i18n="profiles.dynamicBrightnessRate">Taux d'Application (%)</label>
-                        <div class="slider-container">
-                            <input type="range" id="dynamic-brightness-rate" min="1" max="100" value="50">
-                            <span class="slider-value" id="dynamic-brightness-rate-value">50%</span>
-                        </div>
-                        <p style="font-size: 12px; color: var(--color-muted); margin-top: 8px;" data-i18n="profiles.dynamicBrightnessHelp">
-                            Exemple: Si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16.8%
-                        </p>
-                    </div>
+                <div style="width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden;">
+                  <div id="storage-bar"
+                    style="height: 100%; background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336); width: 0%; transition: width 0.3s;">
+                  </div>
                 </div>
+              </div>
+              <div class="button-group">
+                <button id="profile-new-button" class="btn-secondary" onclick="showNewProfileDialog()"
+                  data-i18n="profiles.new">Nouveau</button>
+                <button class="btn-secondary" onclick="showRenameProfileDialog()"
+                  data-i18n="profiles.rename">Renommer</button>
+                <button class="btn-danger" onclick="deleteProfile()" data-i18n="profiles.delete">Supprimer</button>
+                <button class="btn-secondary" onclick="exportProfile()" data-i18n="profiles.export">Exporter</button>
+                <button id="profile-import-button" class="btn-secondary" onclick="showImportDialog()"
+                  data-i18n="profiles.import">Importer</button>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Effet par Défaut -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="profiles.defaultEffect">Effet par Défaut</h3>
-                    <p data-i18n="profiles.defaultEffectDesc">Effet affiché quand aucun événement CAN n'est actif</p>
-                </div>
-                <div class="profile-section-content">
-                    <!-- Effet et paramètres de base -->
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="effects.effect">Effet</label>
-                        <select id="default-effect-select" data-effect-options="true">
-                            <!-- Will be populated dynamically -->
-                        </select>
-                    </div>
-
-                    <div class="control-row">
-                        <div class="control-group">
-                            <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
-                            <div class="slider-container">
-                                <input type="range" id="default-brightness-slider" min="1" max="100" value="50">
-                                <span class="slider-value" id="default-brightness-value">50%</span>
-                            </div>
-                        </div>
-                        <div class="control-group">
-                            <label class="control-label" data-i18n="effects.speed">Vitesse</label>
-                            <div class="slider-container">
-                                <input type="range" id="default-speed-slider" min="1" max="100" value="50">
-                                <span class="slider-value" id="default-speed-value">50%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="effects.color">Couleur</label>
-                        <input type="color" id="default-color1" value="#ff0000">
-                    </div>
-
-                    <!-- Options avancées -->
-                    <div class="control-row">
-                        <label class="toggle-container" for="default-reverse">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="default-reverse">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="eventsConfig.reverse">Inverser le sens</span>
-                        </label>
-                        <label class="toggle-container" for="default-audio-reactive">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="default-audio-reactive">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</span>
-                        </label>
-                    </div>
-
-                    <!-- Plage de segment -->
-                    <div class="control-group" style="margin-top: 20px;">
-                        <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
-                        <div class="segment-range-container">
-                            <div class="segment-range-slider" id="default-segment-range">
-                                <div class="segment-range-track"></div>
-                                <div class="segment-range-selected" id="default-segment-range-selected"></div>
-                                <input type="range" min="0" max="300" step="1" value="0"
-                                    class="segment-range-min" id="default-segment-range-min"
-                                    oninput="updateDefaultSegmentRange()">
-                                <input type="range" min="0" max="300" step="1" value="300"
-                                    class="segment-range-max" id="default-segment-range-max"
-                                    oninput="updateDefaultSegmentRange()">
-                            </div>
-                            <div class="segment-range-values">
-                                <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span> |
-                                <span data-i18n="eventsConfig.length">Longueur</span>: <span id="default-segment-value-length">300</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modulation par pédale d'accélération -->
-                    <div class="control-group" style="margin-top: 20px;">
-                        <label class="toggle-container" for="default-accel-pedal-enabled">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="default-accel-pedal-enabled">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="effects.accelPedalEnabled">Moduler par pédale d'accélération</span>
-                        </label>
-                        <p style="font-size: 12px; color: var(--color-muted); margin-top: 5px;" data-i18n="effects.accelPedalEnabledDesc">
-                            Active la modulation dynamique de la longueur du segment selon la position de la pédale
-                        </p>
-                    </div>
-
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="effects.accelPedalOffset">Offset minimum (%)</label>
-                        <div class="slider-container">
-                            <input type="range" id="default-accel-pedal-offset-slider" min="0" max="100" value="0">
-                            <span class="slider-value" id="default-accel-pedal-offset-value">0%</span>
-                        </div>
-                        <p style="font-size: 12px; color: var(--color-muted); margin-top: 5px;" data-i18n="effects.accelPedalOffsetDesc">
-                            Pourcentage minimum de LEDs allumées même sans appuyer sur la pédale
-                        </p>
-                    </div>
-                </div>
+          <!-- Section: Luminosité Dynamique -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="profiles.dynamicBrightness">Luminosité Dynamique</h3>
+              <p data-i18n="profiles.dynamicBrightnessDesc">Ajuste automatiquement la luminosité en fonction de la
+                luminosité de l'écran de la voiture</p>
             </div>
+            <div class="profile-section-content">
+              <label class="toggle-container" for="dynamic-brightness-enabled">
+                <div class="toggle-switch">
+                  <input type="checkbox" id="dynamic-brightness-enabled">
+                  <span class="toggle-slider"></span>
+                </div>
+                <span class="toggle-label" data-i18n="profiles.dynamicBrightnessEnable">Activer la luminosité
+                  dynamique</span>
+              </label>
+              <div class="control-group" style="margin-top: 15px;">
+                <label class="control-label" data-i18n="profiles.dynamicBrightnessRate">Taux d'Application (%)</label>
+                <div class="slider-container">
+                  <input type="range" id="dynamic-brightness-rate" min="1" max="100" value="50">
+                  <span class="slider-value" id="dynamic-brightness-rate-value">50%</span>
+                </div>
+                <p style="font-size: 12px; color: var(--color-muted); margin-top: 8px;"
+                  data-i18n="profiles.dynamicBrightnessHelp">
+                  Exemple: Si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16.8%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Effet par Défaut -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="profiles.defaultEffect">Effet par Défaut</h3>
+              <p data-i18n="profiles.defaultEffectDesc">Effet affiché quand aucun événement CAN n'est actif</p>
+            </div>
+            <div class="profile-section-content">
+              <!-- Effet et paramètres de base -->
+              <div class="control-group">
+                <label class="control-label" data-i18n="effects.effect">Effet</label>
+                <select id="default-effect-select" data-effect-options="true">
+                  <!-- Will be populated dynamically -->
+                </select>
+              </div>
+
+              <div class="control-row">
+                <div class="control-group">
+                  <label class="control-label" data-i18n="effects.brightness">Luminosité</label>
+                  <div class="slider-container">
+                    <input type="range" id="default-brightness-slider" min="1" max="100" value="50">
+                    <span class="slider-value" id="default-brightness-value">50%</span>
+                  </div>
+                </div>
+                <div class="control-group">
+                  <label class="control-label" data-i18n="effects.speed">Vitesse</label>
+                  <div class="slider-container">
+                    <input type="range" id="default-speed-slider" min="1" max="100" value="50">
+                    <span class="slider-value" id="default-speed-value">50%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-group">
+                <label class="control-label" data-i18n="effects.color">Couleur</label>
+                <input type="color" id="default-color1" value="#ff0000">
+              </div>
+
+              <!-- Options avancées -->
+              <div class="control-row">
+                <label class="toggle-container" for="default-reverse">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="default-reverse">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="eventsConfig.reverse">Inverser le sens</span>
+                </label>
+                <label class="toggle-container" for="default-audio-reactive">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="default-audio-reactive">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="effects.audioReactiveMode">Mode Audio Réactif</span>
+                </label>
+              </div>
+
+              <!-- Plage de segment -->
+              <div class="control-group" style="margin-top: 20px;">
+                <label class="control-label" data-i18n="eventsConfig.segmentRange">Plage de Segment</label>
+                <div class="segment-range-container">
+                  <div class="segment-range-slider" id="default-segment-range">
+                    <div class="segment-range-track"></div>
+                    <div class="segment-range-selected" id="default-segment-range-selected"></div>
+                    <input type="range" min="0" max="300" step="1" value="0" class="segment-range-min"
+                      id="default-segment-range-min" oninput="updateDefaultSegmentRange()">
+                    <input type="range" min="0" max="300" step="1" value="300" class="segment-range-max"
+                      id="default-segment-range-max" oninput="updateDefaultSegmentRange()">
+                  </div>
+                  <div class="segment-range-values">
+                    <span data-i18n="eventsConfig.start">Début</span>: <span id="default-segment-value-start">0</span> |
+                    <span data-i18n="eventsConfig.length">Longueur</span>: <span
+                      id="default-segment-value-length">300</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modulation par pédale d'accélération -->
+              <div class="control-group" style="margin-top: 20px;">
+                <label class="toggle-container" for="default-accel-pedal-enabled">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="default-accel-pedal-enabled">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="effects.accelPedalEnabled">Moduler par pédale
+                    d'accélération</span>
+                </label>
+                <p style="font-size: 12px; color: var(--color-muted); margin-top: 5px;"
+                  data-i18n="effects.accelPedalEnabledDesc">
+                  Active la modulation dynamique de la longueur du segment selon la position de la pédale
+                </p>
+              </div>
+
+              <div class="control-group">
+                <label class="control-label" data-i18n="effects.accelPedalOffset">Offset minimum (%)</label>
+                <div class="slider-container">
+                  <input type="range" id="default-accel-pedal-offset-slider" min="0" max="100" value="0">
+                  <span class="slider-value" id="default-accel-pedal-offset-value">0%</span>
+                </div>
+                <p style="font-size: 12px; color: var(--color-muted); margin-top: 5px;"
+                  data-i18n="effects.accelPedalOffsetDesc">
+                  Pourcentage minimum de LEDs allumées même sans appuyer sur la pédale
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
         <!-- Tab: Events Configuration -->
         <div id="events-config-tab" class="tab-content">
-            <div class="section-title" data-i18n="eventsConfig.title">Configuration des Événements</div>
-            <div id="events-notification" class="notification"></div>
-            <div id="events-loading" class="loading" data-i18n="eventsConfig.loading">Chargement de la configuration...</div>
-            <div id="events-content" style="display: none;">
-                <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;" data-i18n="eventsConfig.description">
-                    Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
-                </p>
-                <div class="events-accordion-wrapper">
-                    <div id="events-accordion-container">
-                        <!-- Will be populated dynamically with accordion items -->
-                    </div>
-                </div>
-                <button class="btn-secondary" onclick="loadEventsConfig()" data-i18n="eventsConfig.reload">Recharger</button>
+          <div class="section-title" data-i18n="eventsConfig.title">Configuration des Événements</div>
+          <div id="events-notification" class="notification"></div>
+          <div id="events-loading" class="loading" data-i18n="eventsConfig.loading">Chargement de la configuration...
+          </div>
+          <div id="events-content" style="display: none;">
+            <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;"
+              data-i18n="eventsConfig.description">
+              Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
+            </p>
+            <div class="events-accordion-wrapper">
+              <div id="events-accordion-container">
+                <!-- Will be populated dynamically with accordion items -->
+              </div>
             </div>
+            <button class="btn-secondary" onclick="loadEventsConfig()"
+              data-i18n="eventsConfig.reload">Recharger</button>
+          </div>
         </div>
         <!-- Tab: Véhicule -->
         <div id="vehicle-tab" class="tab-content">
-            <div class="section-title" data-i18n="vehicle.title">Données Véhicule</div>
+          <div class="section-title" data-i18n="vehicle.title">Données Véhicule</div>
 
-            <!-- Section: État général -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.generalState">État Général</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.speed">Vitesse</div>
-                    <div class="vehicle-value" id="v-speed">-- km/h</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.gear">Position de transmission</div>
-                    <div class="vehicle-value" id="v-gear">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.brake">Frein</div>
-                    <div class="vehicle-value" id="v-brake">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.accelPedal">Pédale d'accélération</div>
-                    <div class="vehicle-value" id="v-accel-pedal">0%</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.locked">Verrouillé</div>
-                    <div class="vehicle-value" id="v-locked">--</div>
-                </div>
+          <!-- Section: État général -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.generalState">État Général</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.speed">Vitesse</div>
+                  <div class="vehicle-value" id="v-speed">-- km/h</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.gear">Position de transmission</div>
+                  <div class="vehicle-value" id="v-gear">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.brake">Frein</div>
+                  <div class="vehicle-value" id="v-brake">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.accelPedal">Pédale d'accélération</div>
+                  <div class="vehicle-value" id="v-accel-pedal">0%</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.locked">Verrouillé</div>
+                  <div class="vehicle-value" id="v-locked">--</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Portes -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.doorsTitle">Portes</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.doorFL">AV Gauche</div>
-                    <div class="vehicle-value" id="v-door-fl">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.doorFR">AV Droite</div>
-                    <div class="vehicle-value" id="v-door-fr">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.doorRL">AR Gauche</div>
-                    <div class="vehicle-value" id="v-door-rl">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.doorRR">AR Droite</div>
-                    <div class="vehicle-value" id="v-door-rr">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.trunk">Coffre</div>
-                    <div class="vehicle-value" id="v-trunk">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.frunk">Frunk</div>
-                    <div class="vehicle-value" id="v-frunk">--</div>
-                </div>
+          <!-- Section: Portes -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.doorsTitle">Portes</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.doorFL">AV Gauche</div>
+                  <div class="vehicle-value" id="v-door-fl">--</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.doorFR">AV Droite</div>
+                  <div class="vehicle-value" id="v-door-fr">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.doorRL">AR Gauche</div>
+                  <div class="vehicle-value" id="v-door-rl">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.doorRR">AR Droite</div>
+                  <div class="vehicle-value" id="v-door-rr">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.trunk">Coffre</div>
+                  <div class="vehicle-value" id="v-trunk">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.frunk">Frunk</div>
+                  <div class="vehicle-value" id="v-frunk">--</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Charge -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.chargeTitle">Charge</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.charging">En Charge</div>
-                    <div class="vehicle-value" id="v-charging">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.chargePercent">Niveau</div>
-                    <div class="vehicle-value" id="v-charge">--%</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.chargePower">Puissance</div>
-                    <div class="vehicle-value" id="v-charge-power">-- kW</div>
-                </div>
+          <!-- Section: Charge -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.chargeTitle">Charge</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.charging">En Charge</div>
+                  <div class="vehicle-value" id="v-charging">--</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.chargePercent">Niveau</div>
+                  <div class="vehicle-value" id="v-charge">--%</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.chargePower">Puissance</div>
+                  <div class="vehicle-value" id="v-charge-power">-- kW</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Lumières -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.lightsTitle">Lumières</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.headlights">Phares</div>
-                    <div class="vehicle-value" id="v-headlights">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.highBeams">Feux Route</div>
-                    <div class="vehicle-value" id="v-high-beams">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.fogLights">Anti-brouillard</div>
-                    <div class="vehicle-value" id="v-fog-lights">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.turnSignal">Clignotant</div>
-                    <div class="vehicle-value" id="v-turn-signal">--</div>
-                </div>
+          <!-- Section: Lumières -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.lightsTitle">Lumières</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.headlights">Phares</div>
+                  <div class="vehicle-value" id="v-headlights">--</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.highBeams">Feux Route</div>
+                  <div class="vehicle-value" id="v-high-beams">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.fogLights">Anti-brouillard</div>
+                  <div class="vehicle-value" id="v-fog-lights">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.turnSignal">Clignotant</div>
+                  <div class="vehicle-value" id="v-turn-signal">--</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Blindspot -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.blindspot">Angle mort</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotLeft">Gauche</div>
-                    <div class="vehicle-value" id="v-blindspot-left">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.blindspotRight">Droit</div>
-                    <div class="vehicle-value" id="v-blindspot-right">--</div>
-                </div>
+          <!-- Section: Blindspot -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.blindspot">Angle mort</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.blindspotLeft">Gauche</div>
+                  <div class="vehicle-value" id="v-blindspot-left">--</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.blindspotRight">Droit</div>
+                  <div class="vehicle-value" id="v-blindspot-right">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.blindspotLeftAlert">Alerte Gauche</div>
+                  <div class="vehicle-value" id="v-blindspot-left-alert">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.blindspotRightAlert">Alerte Droit</div>
+                  <div class="vehicle-value" id="v-blindspot-right-alert">--</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Side Collision -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.sideCollision">Collision Latérale</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.sideCollisionLeft">Gauche</div>
-                    <div class="vehicle-value" id="v-side-collision-left">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.sideCollisionRight">Droit</div>
-                    <div class="vehicle-value" id="v-side-collision-right">--</div>
-                </div>
+          <!-- Section: Side Collision -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.sideCollision">Collision Latérale</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.sideCollisionLeft">Gauche</div>
+                  <div class="vehicle-value" id="v-side-collision-left">--</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.sideCollisionRight">Droit</div>
+                  <div class="vehicle-value" id="v-side-collision-right">--</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Lane departure -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.laneDeparture">Dépassement de ligne</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.laneDepartureLeftLv1">Gauche Niv1</div>
-                    <div class="vehicle-value" id="v-lane-departure-left-lv1">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.laneDepartureLeftLv2">Gauche  Niv2</div>
-                    <div class="vehicle-value" id="v-lane-departure-left-lv2">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.laneDepartureRightLv1">Droit Niv1</div>
-                    <div class="vehicle-value" id="v-lane-departure-right-lv1">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.laneDepartureRightLv2">Droit Niv2</div>
-                    <div class="vehicle-value" id="v-lane-departure-right-lv2">--</div>
-                </div>
+          <!-- Section: Lane departure -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.laneDeparture">Dépassement de ligne</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.laneDepartureLeftLv1">Gauche Niv1</div>
+                  <div class="vehicle-value" id="v-lane-departure-left-lv1">--</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.laneDepartureLeftLv2">Gauche Niv2</div>
+                  <div class="vehicle-value" id="v-lane-departure-left-lv2">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.laneDepartureRightLv1">Droit Niv1</div>
+                  <div class="vehicle-value" id="v-lane-departure-right-lv1">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.laneDepartureRightLv2">Droit Niv2</div>
+                  <div class="vehicle-value" id="v-lane-departure-right-lv2">--</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Autres -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.othersTitle">Autres</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.batterylv">Batterie LV</div>
-                    <div class="vehicle-value" id="v-battery-lv">-- V</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.batteryhv">Batterie HV</div>
-                    <div class="vehicle-value" id="v-battery-hv">-- V</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.odometer">Odomètre</div>
-                    <div class="vehicle-value" id="v-odometer">-- km</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.nightMode">Mode Nuit</div>
-                    <div class="vehicle-value" id="v-night">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.brightness">Luminosité</div>
-                    <div class="vehicle-value" id="v-brightness">--</div>
-                </div>
+          <!-- Section: Autres -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.othersTitle">Autres</h3>
             </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.batterylv">Batterie LV</div>
+                  <div class="vehicle-value" id="v-battery-lv">-- V</div>
                 </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.batteryhv">Batterie HV</div>
+                  <div class="vehicle-value" id="v-battery-hv">-- V</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.odometer">Odomètre</div>
+                  <div class="vehicle-value" id="v-odometer">-- km</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.nightMode">Mode Nuit</div>
+                  <div class="vehicle-value" id="v-night">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.brightness">Luminosité</div>
+                  <div class="vehicle-value" id="v-brightness">--</div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="vehicle.sentryTitle">Mode Sentry</h3>
-                </div>
-                <div class="profile-section-content">
-            <div class="vehicle-grid">
-              <div class="vehicle-item">
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="vehicle.sentryTitle">Mode Sentry</h3>
+            </div>
+            <div class="profile-section-content">
+              <div class="vehicle-grid">
+                <div class="vehicle-item">
                   <div class="vehicle-label" data-i18n="vehicle.autopilot">Autopilot</div>
                   <div class="vehicle-value" id="v-autopilot">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.autopilotAlerte">Autopilot alerte</div>
+                  <div class="vehicle-value" id="v-autopilot-alert">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.sentryMode">Mode Sentry</div>
+                  <div class="vehicle-value" id="v-sentry-mode">--</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-label" data-i18n="vehicle.sentryAlert">Alerte</div>
+                  <div class="vehicle-value" id="v-sentry-alert">--</div>
+                </div>
               </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.sentryMode">Mode Sentry</div>
-                    <div class="vehicle-value" id="v-sentry-mode">--</div>
-                </div>
-                <div class="vehicle-item">
-                    <div class="vehicle-label" data-i18n="vehicle.sentryAlert">Alerte</div>
-                    <div class="vehicle-value" id="v-sentry-alert">--</div>
-                </div>
             </div>
-                </div>
-            </div>
+          </div>
         </div>
         <!-- Tab: Configuration -->
         <div id="config-tab" class="tab-content">
-            <div class="section-title" data-i18n="config.title">Configuration Matérielle</div>
-            <div id="config-notification" class="notification"></div>
+          <div class="section-title" data-i18n="config.title">Configuration Matérielle</div>
+          <div id="config-notification" class="notification"></div>
 
-            <!-- Section: Configuration LED -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="config.ledSettings">Paramètres LED</h3>
+          <!-- Section: Configuration LED -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="config.ledSettings">Paramètres LED</h3>
+            </div>
+            <div class="profile-section-content">
+              <div class="control-group">
+                <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
+                <input type="number" id="led-count" value="" min="1" max="200" onchange="saveHardwareConfig()">
+              </div>
+            </div>
+            <div class="profile-section-header">
+              <h3 data-i18n="config.wheelSettings">Paramètres Molette</h3>
+            </div>
+            <div class="profile-section-content">
+              <div class="control-row" style="margin-top: 12px;">
+                <label class="toggle-container" for="wheel-control-toggle">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="wheel-control-toggle" onchange="saveHardwareConfig()">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="config.wheelControl">Molette droite = changement de profil
+                    (opt-in)</span>
+                </label>
+              </div>
+              <div class="control-group">
+                <label class="control-label" data-i18n="config.wheelControlDesc">Actif uniquement si vitesse ≤ seuil et
+                  régulateur/AP désactivé.</label>
+                <div style="display: flex; gap: 10px; align-items: center; max-width: 320px;">
+                  <input type="number" id="wheel-speed-limit" min="0" max="100" step="5" value="5" style="width: 120px;"
+                    onchange="saveHardwareConfig()">
+                  <span data-i18n="config.wheelSpeedLimit">Vitesse max (km/h)</span>
                 </div>
-                <div class="profile-section-content">
-                  <div class="control-group">
-                    <label class="control-label" data-i18n="config.ledCount">Nombre de LEDs</label>
-                    <input type="number" id="led-count" value="" min="1" max="200" onchange="saveHardwareConfig()">
+              </div>
+              <div class="button-group" style="margin-top: 20px;">
+                <button class="btn-secondary" onclick="loadHardwareConfig()"
+                  data-i18n="config.reload">Recharger</button>
+                <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restart">Redémarrer</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Configuration Audio -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="audio.title">Configuration Audio</h3>
+              <p style="padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px; margin-top: 10px;"
+                data-i18n="audio.warning">
+                ⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif
+              </p>
+            </div>
+            <div class="profile-section-content">
+              <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <label class="toggle-container" for="audio-enable">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="audio-enable" onchange="toggleAudio(this.checked)">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="audio.enable">Activer le micro</span>
+                </label>
+                <span id="audio-status" style="font-weight: bold; color: var(--color-muted);"
+                  data-i18n="audio.disabled">Désactivé</span>
+              </div>
+
+              <div id="audio-settings" style="display: none;">
+                <div class="control-group">
+                  <label class="control-label" data-i18n="audio.sensitivity">Sensibilité</label>
+                  <div class="slider-container">
+                    <input type="range" id="audio-sensitivity" min="1" max="255" value="128"
+                      oninput="updateAudioValue('sensitivity', this.value)">
+                    <span class="slider-value" id="audio-sensitivity-value">128</span>
                   </div>
                 </div>
-                <div class="profile-section-header">
-                    <h3 data-i18n="config.wheelSettings">Paramètres Molette</h3>
-                </div>                
-                <div class="profile-section-content">
-                    <div class="control-row" style="margin-top: 12px;">
-                        <label class="toggle-container" for="wheel-control-toggle">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="wheel-control-toggle" onchange="saveHardwareConfig()">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="config.wheelControl">Molette droite = changement de profil (opt-in)</span>
-                        </label>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="config.wheelControlDesc">Actif uniquement si vitesse ≤ seuil et régulateur/AP désactivé.</label>
-                        <div style="display: flex; gap: 10px; align-items: center; max-width: 320px;">
-                            <input type="number" id="wheel-speed-limit" min="0" max="100" step="5" value="5" style="width: 120px;" onchange="saveHardwareConfig()">
-                            <span data-i18n="config.wheelSpeedLimit">Vitesse max (km/h)</span>
-                        </div>
-                    </div>
-                    <div class="button-group" style="margin-top: 20px;">
-                        <button class="btn-secondary" onclick="loadHardwareConfig()" data-i18n="config.reload">Recharger</button>
-                        <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restart">Redémarrer</button>
-                    </div>
+
+                <div class="control-group">
+                  <label class="control-label" data-i18n="audio.gain">Gain</label>
+                  <div class="slider-container">
+                    <input type="range" id="audio-gain" min="1" max="255" value="128"
+                      oninput="updateAudioValue('gain', this.value)">
+                    <span class="slider-value" id="audio-gain-value">128</span>
+                  </div>
                 </div>
+
+                <label class="toggle-container" for="audio-auto-gain">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="audio-auto-gain" onchange="saveAudioConfig()">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="audio.autoGain">Gain automatique</span>
+                </label>
+              </div>
+
+              <div id="audio-calibration-box" class="section"
+                style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <div>
+                    <div class="section-title" data-i18n="audio.calibrationTitle">Calibration micro</div>
+                    <div id="audio-calibration-status" style="font-weight: 600; color: var(--color-muted);"
+                      data-i18n="audio.notCalibrated">Non calibré</div>
+                    <div style="font-size: 13px; color: var(--color-muted); margin-top: 4px;">
+                      <span data-i18n="audio.calibrationNoise">Bruit de fond</span>: <strong
+                        id="audio-calibration-noise">-</strong>
+                      <span style="margin: 0 6px;">|</span>
+                      <span data-i18n="audio.calibrationPeak">Pic</span>: <strong id="audio-calibration-peak">-</strong>
+                    </div>
+                  </div>
+                  <button id="audio-calibrate-btn" class="btn-primary" onclick="startAudioCalibration()"
+                    data-i18n="audio.calibrate">Calibrer</button>
+                </div>
+                <p style="font-size: 12px; color: var(--color-muted); margin: 8px 0 0 0;"
+                  data-i18n="audio.calibrationHint">3s de silence puis 3s de musique normale près du micro (ou un clap).
+                </p>
+              </div>
+
+              <div id="audio-data" class="section"
+                style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
+                <h4 style="margin: 0 0 15px 0;" data-i18n="audio.liveData">Données en Direct</h4>
+                <div
+                  style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">
+                  <div>
+                    <span data-i18n="audio.amplitude">Amplitude</span>:
+                    <strong id="audio-amplitude-value">-</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="audio.rawAmplitude">Amplitude brute</span>:
+                    <strong id="audio-raw-value">-</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="audio.calibratedAmplitude">Amplitude calibrée</span>:
+                    <strong id="audio-calibrated-value">-</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="audio.bpm">BPM</span>:
+                    <strong id="audio-bpm-value">-</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="audio.bass">Basses</span>:
+                    <strong id="audio-bass-value">-</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="audio.mid">Médiums</span>:
+                    <strong id="audio-mid-value">-</strong>
+                  </div>
+                  <div>
+                    <span data-i18n="audio.treble">Aigus</span>:
+                    <strong id="audio-treble-value">-</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- FFT Advanced Mode -->
+              <div id="audio-fft-data" class="section" style="margin-top: 30px;">
+                <div class="section-title" data-i18n="fft.title">🎼 Analyse Spectrale FFT Avancée</div>
+
+                <div
+                  style="background: var(--color-info); padding: 10px 15px; border-radius: 6px; margin-bottom: 15px;">
+                  <small style="color: var(--color-text);" data-i18n="fft.autoInfo">
+                    ℹ️ Le FFT s'active automatiquement avec les effets audio-réactifs
+                  </small>
+                </div>
+
+                <div id="fftStatusBox" style="display: none; margin-top: 10px;">
+                  <div
+                    style="background: var(--color-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--color-border);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                      <div>
+                        <span data-i18n="fft.peakFreq">Fréquence dominante</span>:
+                        <strong id="fftPeakFreq" style="color: #4CAF50;">-</strong> Hz
+                      </div>
+                      <div>
+                        <span data-i18n="fft.centroid">Centroïde spectral</span>:
+                        <strong id="fftCentroid" style="color: #2196F3;">-</strong> Hz
+                      </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                      <div>
+                        <span data-i18n="fft.kick">Kick</span>:
+                        <strong id="fftKick">-</strong>
+                      </div>
+                      <div>
+                        <span data-i18n="fft.snare">Snare</span>:
+                        <strong id="fftSnare">-</strong>
+                      </div>
+                      <div>
+                        <span data-i18n="fft.vocal">Vocal</span>:
+                        <strong id="fftVocal">-</strong>
+                      </div>
+                    </div>
+
+                    <!-- Canvas pour visualisation spectre -->
+                    <div style="margin-top: 15px;">
+                      <div style="font-weight: 500; margin-bottom: 8px;" data-i18n="fft.spectrum">Spectre FFT (32
+                        bandes)</div>
+                      <canvas id="fftSpectrumCanvas" width="600" height="200"
+                        style="width: 100%; max-width: 600px; background: #000; border-radius: 4px; border: 1px solid var(--color-border);"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Section: Configuration Audio -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="audio.title">Configuration Audio</h3>
-                    <p style="padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px; margin-top: 10px;" data-i18n="audio.warning">
-                        ⚠️ Le micro ne peut être activé que sur l'effet par défaut du profil actif
-                    </p>
-                </div>
-                <div class="profile-section-content">
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                        <label class="toggle-container" for="audio-enable">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="audio-enable" onchange="toggleAudio(this.checked)">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="audio.enable">Activer le micro</span>
-                        </label>
-                        <span id="audio-status" style="font-weight: bold; color: var(--color-muted);" data-i18n="audio.disabled">Désactivé</span>
-                    </div>
-
-                    <div id="audio-settings" style="display: none;">
-                        <div class="control-group">
-                            <label class="control-label" data-i18n="audio.sensitivity">Sensibilité</label>
-                            <div class="slider-container">
-                                <input type="range" id="audio-sensitivity" min="1" max="255" value="128" oninput="updateAudioValue('sensitivity', this.value)">
-                                <span class="slider-value" id="audio-sensitivity-value">128</span>
-                            </div>
-                        </div>
-
-                        <div class="control-group">
-                            <label class="control-label" data-i18n="audio.gain">Gain</label>
-                            <div class="slider-container">
-                                <input type="range" id="audio-gain" min="1" max="255" value="128" oninput="updateAudioValue('gain', this.value)">
-                                <span class="slider-value" id="audio-gain-value">128</span>
-                            </div>
-                        </div>
-
-                        <label class="toggle-container" for="audio-auto-gain">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="audio-auto-gain" onchange="saveAudioConfig()">
-                                <span class="toggle-slider"></span>
-                            </div>
-                            <span class="toggle-label" data-i18n="audio.autoGain">Gain automatique</span>
-                        </label>
-                    </div>
-
-                    <div id="audio-calibration-box" class="section" style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                            <div>
-                                <div class="section-title" data-i18n="audio.calibrationTitle">Calibration micro</div>
-                                <div id="audio-calibration-status" style="font-weight: 600; color: var(--color-muted);" data-i18n="audio.notCalibrated">Non calibré</div>
-                                <div style="font-size: 13px; color: var(--color-muted); margin-top: 4px;">
-                                    <span data-i18n="audio.calibrationNoise">Bruit de fond</span>: <strong id="audio-calibration-noise">-</strong>
-                                    <span style="margin: 0 6px;">|</span>
-                                    <span data-i18n="audio.calibrationPeak">Pic</span>: <strong id="audio-calibration-peak">-</strong>
-                                </div>
-                            </div>
-                            <button id="audio-calibrate-btn" class="btn-primary" onclick="startAudioCalibration()" data-i18n="audio.calibrate">Calibrer</button>
-                        </div>
-                        <p style="font-size: 12px; color: var(--color-muted); margin: 8px 0 0 0;" data-i18n="audio.calibrationHint">3s de silence puis 3s de musique normale près du micro (ou un clap).</p>
-                    </div>
-
-                    <div id="audio-data" class="section" style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
-                        <h4 style="margin: 0 0 15px 0;" data-i18n="audio.liveData">Données en Direct</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">
-                            <div>
-                                <span data-i18n="audio.amplitude">Amplitude</span>:
-                                <strong id="audio-amplitude-value">-</strong>
-                            </div>
-                            <div>
-                                <span data-i18n="audio.rawAmplitude">Amplitude brute</span>:
-                                <strong id="audio-raw-value">-</strong>
-                            </div>
-                            <div>
-                                <span data-i18n="audio.calibratedAmplitude">Amplitude calibrée</span>:
-                                <strong id="audio-calibrated-value">-</strong>
-                            </div>
-                            <div>
-                                <span data-i18n="audio.bpm">BPM</span>:
-                                <strong id="audio-bpm-value">-</strong>
-                            </div>
-                            <div>
-                                <span data-i18n="audio.bass">Basses</span>:
-                                <strong id="audio-bass-value">-</strong>
-                            </div>
-                            <div>
-                                <span data-i18n="audio.mid">Médiums</span>:
-                                <strong id="audio-mid-value">-</strong>
-                            </div>
-                            <div>
-                                <span data-i18n="audio.treble">Aigus</span>:
-                                <strong id="audio-treble-value">-</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- FFT Advanced Mode -->
-                    <div id="audio-fft-data" class="section" style="margin-top: 30px;">
-                        <div class="section-title" data-i18n="fft.title">🎼 Analyse Spectrale FFT Avancée</div>
-
-                        <div style="background: var(--color-info); padding: 10px 15px; border-radius: 6px; margin-bottom: 15px;">
-                            <small style="color: var(--color-text);" data-i18n="fft.autoInfo">
-                                ℹ️ Le FFT s'active automatiquement avec les effets audio-réactifs
-                            </small>
-                        </div>
-
-                        <div id="fftStatusBox" style="display: none; margin-top: 10px;">
-                            <div style="background: var(--color-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--color-border);">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                                    <div>
-                                        <span data-i18n="fft.peakFreq">Fréquence dominante</span>:
-                                        <strong id="fftPeakFreq" style="color: #4CAF50;">-</strong> Hz
-                                    </div>
-                                    <div>
-                                        <span data-i18n="fft.centroid">Centroïde spectral</span>:
-                                        <strong id="fftCentroid" style="color: #2196F3;">-</strong> Hz
-                                    </div>
-                                </div>
-        
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                                    <div>
-                                        <span data-i18n="fft.kick">Kick</span>:
-                                        <strong id="fftKick">-</strong>
-                                    </div>
-                                    <div>
-                                        <span data-i18n="fft.snare">Snare</span>:
-                                        <strong id="fftSnare">-</strong>
-                                    </div>
-                                    <div>
-                                        <span data-i18n="fft.vocal">Vocal</span>:
-                                        <strong id="fftVocal">-</strong>
-                                    </div>
-                                </div>
-        
-                                <!-- Canvas pour visualisation spectre -->
-                                <div style="margin-top: 15px;">
-                                    <div style="font-weight: 500; margin-bottom: 8px;" data-i18n="fft.spectrum">Spectre FFT (32 bandes)</div>
-                                    <canvas id="fftSpectrumCanvas" width="600" height="200" style="width: 100%; max-width: 600px; background: #000; border-radius: 4px; border: 1px solid var(--color-border);"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+          <!-- Section: Zone Dangereuse -->
+          <div class="profile-section" style="border: 2px solid #E82127;">
+            <div class="profile-section-header">
+              <h3 style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</h3>
+              <p style="padding: 10px; background: rgba(232, 33, 39, 0.1); border-left: 3px solid #E82127; font-size: 13px; margin-top: 10px;"
+                data-i18n="config.factoryResetWarning">
+                La réinitialisation usine supprimera TOUS les profils et configurations. Cette action est irréversible !
+              </p>
             </div>
-
-            <!-- Section: Zone Dangereuse -->
-            <div class="profile-section" style="border: 2px solid #E82127;">
-                <div class="profile-section-header">
-                    <h3 style="color: #E82127;" data-i18n="config.dangerZone">Zone Dangereuse</h3>
-                    <p style="padding: 10px; background: rgba(232, 33, 39, 0.1); border-left: 3px solid #E82127; font-size: 13px; margin-top: 10px;" data-i18n="config.factoryResetWarning">
-                        La réinitialisation usine supprimera TOUS les profils et configurations. Cette action est irréversible !
-                    </p>
-                </div>
-                <div class="profile-section-content">
-                    <button class="btn-danger" onclick="confirmFactoryReset()" data-i18n="config.factoryReset">Réinitialisation Usine</button>
-                </div>
+            <div class="profile-section-content">
+              <button class="btn-danger" onclick="confirmFactoryReset()"
+                data-i18n="config.factoryReset">Réinitialisation Usine</button>
             </div>
+          </div>
         </div>
 
         <!-- Tab: Diagnostic CAN -->
         <div id="diagnostic-tab" class="tab-content">
-            <div class="section-title" data-i18n="server.title">Serveurs CAN</div>
-            <div id="diagnostic-notification" class="notification"></div>
+          <div class="section-title" data-i18n="server.title">Serveurs CAN</div>
+          <div id="diagnostic-notification" class="notification"></div>
 
-            <div class="can-servers-grid">
-                <!-- Section: GVRET TCP Server -->
-                <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="server.gvretTitle">Serveur GVRET</h3>
-                    <p style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; font-size: 13px; margin-top: 10px;" data-i18n="server.gvretDescription">
-                        Protocole GVRET sur TCP port 8080 pour SavvyCAN via WiFi.
-                    </p>
+          <div class="can-servers-grid">
+            <!-- Section: GVRET TCP Server -->
+            <div class="profile-section">
+              <div class="profile-section-header">
+                <h3 data-i18n="server.gvretTitle">Serveur GVRET</h3>
+                <p style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; font-size: 13px; margin-top: 10px;"
+                  data-i18n="server.gvretDescription">
+                  Protocole GVRET sur TCP port 8080 pour SavvyCAN via WiFi.
+                </p>
+              </div>
+              <div class="profile-section-content">
+                <div class="control-group">
+                  <label class="control-label" data-i18n="server.gvretStatus">État :</label>
+                  <div id="gvret-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
                 </div>
-                <div class="profile-section-content">
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="server.gvretStatus">État :</label>
-                        <div id="gvret-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="server.gvretClients">Clients connectés :</label>
-                        <div id="gvret-clients" style="font-weight: 600;">0</div>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="server.gvretPort">Port TCP :</label>
-                        <div style="font-weight: 600; font-family: monospace;">23</div>
-                    </div>
-                    <label class="toggle-container" for="gvret-autostart">
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="gvret-autostart" onchange="toggleServerAutostart('gvret', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </div>
-                        <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
-                    </label>
-                    <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-primary" onclick="toggleGvretTcp()" id="gvret-toggle-btn" data-i18n="server.gvretStart">Activer GVRET</button>
-                    </div>
+                <div class="control-group">
+                  <label class="control-label" data-i18n="server.gvretClients">Clients connectés :</label>
+                  <div id="gvret-clients" style="font-weight: 600;">0</div>
                 </div>
+                <div class="control-group">
+                  <label class="control-label" data-i18n="server.gvretPort">Port TCP :</label>
+                  <div style="font-weight: 600; font-family: monospace;">23</div>
+                </div>
+                <label class="toggle-container" for="gvret-autostart">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="gvret-autostart" onchange="toggleServerAutostart('gvret', this.checked)">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
+                </label>
+                <div class="button-group" style="margin-top: 15px;">
+                  <button class="btn-primary" onclick="toggleGvretTcp()" id="gvret-toggle-btn"
+                    data-i18n="server.gvretStart">Activer GVRET</button>
+                </div>
+              </div>
             </div>
 
             <!-- Section: CANServer UDP Server -->
             <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="server.canserverTitle">Serveur CANServer</h3>
-                    <p style="padding: 10px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #F59E0B; font-size: 13px; margin-top: 10px;" data-i18n="server.canserverDescription">
-                        Protocole CANServer sur UDP port 1338 pour cabana via WiFi.
-                    </p>
+              <div class="profile-section-header">
+                <h3 data-i18n="server.canserverTitle">Serveur CANServer</h3>
+                <p style="padding: 10px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #F59E0B; font-size: 13px; margin-top: 10px;"
+                  data-i18n="server.canserverDescription">
+                  Protocole CANServer sur UDP port 1338 pour cabana via WiFi.
+                </p>
+              </div>
+              <div class="profile-section-content">
+                <div class="control-group">
+                  <label class="control-label" data-i18n="server.canserverStatus">État :</label>
+                  <div id="canserver-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
                 </div>
-                <div class="profile-section-content">
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="server.canserverStatus">État :</label>
-                        <div id="canserver-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="server.canserverClients">Clients connectés :</label>
-                        <div id="canserver-clients" style="font-weight: 600;">0</div>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="server.canserverPort">Port UDP :</label>
-                        <div style="font-weight: 600; font-family: monospace;">1338</div>
-                    </div>
-                        <label class="toggle-container" for="canserver-autostart">
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="canserver-autostart" onchange="toggleServerAutostart('canserver', this.checked)">
-                            <span class="toggle-slider"></span>
-                        </div>
-                        <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
-                    </label>
-                    <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-primary" onclick="toggleCanserver()" id="canserver-toggle-btn" data-i18n="server.canserverStart">Activer CANServer</button>
-                    </div>
+                <div class="control-group">
+                  <label class="control-label" data-i18n="server.canserverClients">Clients connectés :</label>
+                  <div id="canserver-clients" style="font-weight: 600;">0</div>
                 </div>
+                <div class="control-group">
+                  <label class="control-label" data-i18n="server.canserverPort">Port UDP :</label>
+                  <div style="font-weight: 600; font-family: monospace;">1338</div>
+                </div>
+                <label class="toggle-container" for="canserver-autostart">
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="canserver-autostart"
+                      onchange="toggleServerAutostart('canserver', this.checked)">
+                    <span class="toggle-slider"></span>
+                  </div>
+                  <span class="toggle-label" data-i18n="server.autostart">Démarrage automatique</span>
+                </label>
+                <div class="button-group" style="margin-top: 15px;">
+                  <button class="btn-primary" onclick="toggleCanserver()" id="canserver-toggle-btn"
+                    data-i18n="server.canserverStart">Activer CANServer</button>
+                </div>
+              </div>
             </div>
-            </div>
+          </div>
 
         </div>
 
         <!-- Tab: Logs (WiFi uniquement) -->
         <div id="logs-tab" class="tab-content">
-            <div class="section-title" data-i18n="logs.title">Logs en Temps Réel</div>
-            <div id="logs-notification" class="notification"></div>
+          <div class="section-title" data-i18n="logs.title">Logs en Temps Réel</div>
+          <div id="logs-notification" class="notification"></div>
 
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="logs.streamTitle">Flux de Logs Système</h3>
-                    <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;" data-i18n="logs.description">
-                        Affichage des logs système en temps réel via Server-Sent Events (WiFi uniquement)
-                    </p>
-                </div>
-                <div class="profile-section-content">
-                    <div class="control-group">
-                        <label class="control-label" data-i18n="logs.status">État :</label>
-                        <div id="logs-status" style="font-weight: 600; color: var(--color-muted);">Déconnecté</div>
-                    </div>
-                    <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-primary" onclick="toggleLiveLogs()" id="logs-toggle-btn" data-i18n="logs.start">Activer les logs</button>
-                        <button class="btn-secondary" onclick="clearLogs()" data-i18n="logs.clear">Effacer</button>
-                    </div>
-                    <div style="margin-top: 15px; background: #1f2937; border-radius: 4px; padding: 10px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #10b981;" id="logs-container">
-                        <div data-i18n="logs.empty">Aucun log pour le moment...</div>
-                    </div>
-                </div>
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="logs.streamTitle">Flux de Logs Système</h3>
+              <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;"
+                data-i18n="logs.description">
+                Affichage des logs système en temps réel via Server-Sent Events (WiFi uniquement)
+              </p>
             </div>
+            <div class="profile-section-content">
+              <div class="control-group">
+                <label class="control-label" data-i18n="logs.status">État :</label>
+                <div id="logs-status" style="font-weight: 600; color: var(--color-muted);">Déconnecté</div>
+              </div>
+              <div class="button-group" style="margin-top: 15px;">
+                <button class="btn-primary" onclick="toggleLiveLogs()" id="logs-toggle-btn"
+                  data-i18n="logs.start">Activer les logs</button>
+                <button class="btn-secondary" onclick="clearLogs()" data-i18n="logs.clear">Effacer</button>
+              </div>
+              <div
+                style="margin-top: 15px; background: #1f2937; border-radius: 4px; padding: 10px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #10b981;"
+                id="logs-container">
+                <div data-i18n="logs.empty">Aucun log pour le moment...</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: OTA -->
         <div id="ota-tab" class="tab-content">
-            <div class="section-title" data-i18n="ota.title">Mise à Jour OTA</div>
-            <div id="ota-notification" class="notification"></div>
+          <div class="section-title" data-i18n="ota.title">Mise à Jour OTA</div>
+          <div id="ota-notification" class="notification"></div>
 
-            <!-- Section: Version Actuelle -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="ota.currentVersion">Version Actuelle</h3>
-                </div>
-                <div class="profile-section-content">
-                    <div style="padding: 12px; background: var(--color-panel); border-radius: 4px; font-weight: bold; border: 1px solid var(--color-input-border);" id="ota-version">
-                        <span data-i18n="ota.loading">Chargement...</span>
-                    </div>
-                </div>
+          <!-- Section: Version Actuelle -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="ota.currentVersion">Version Actuelle</h3>
             </div>
+            <div class="profile-section-content">
+              <div
+                style="padding: 12px; background: var(--color-panel); border-radius: 4px; font-weight: bold; border: 1px solid var(--color-input-border);"
+                id="ota-version">
+                <span data-i18n="ota.loading">Chargement...</span>
+              </div>
+            </div>
+          </div>
 
-            <!-- Section: Mise à Jour Firmware -->
-            <div class="profile-section">
-                <div class="profile-section-header">
-                    <h3 data-i18n="ota.updateFirmware">Mise à Jour du Firmware</h3>
-                    <div id="ota-ble-note" style="display: none; margin-top: 10px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px;" data-i18n="ota.bleNote">
-                        Connectez-vous au Wi-Fi de l'appareil (AP) pour effectuer la mise à jour
-                    </div>
-                </div>
-                <div class="profile-section-content">
-                    <div class="control-group" id="ota-progress-title">
-                        <label class="control-label" data-i18n="ota.firmwareFile">Fichier Firmware (.bin)</label>
-                        <input type="file" id="firmware-file" accept=".bin">
-                    </div>
-                    <div id="ota-progress-container" style="display: none; margin-top: 15px;">
-                        <div style="background: var(--color-panel); border-radius: 4px; padding: 15px; border: 1px solid var(--color-input-border);">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                <span data-i18n="ota.progress">Progression</span>
-                                <span id="ota-progress-percent" style="font-weight: bold;">0%</span>
-                            </div>
-                            <div style="background: var(--color-input-border); height: 8px; border-radius: 4px; overflow: hidden;">
-                                <div id="ota-progress-bar" style="background: #E82127; height: 100%; width: 0%; transition: width 0.3s;"></div>
-                            </div>
-                            <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: var(--color-muted);"></div>
-                            <div id="ota-reboot-countdown" style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
-                        </div>
-                    </div>
-                    <div class="button-group" style="margin-top: 15px;">
-                        <button class="btn-primary" onclick="uploadFirmware()" id="ota-upload-btn" data-i18n="ota.upload">Téléverser</button>
-                        <button class="btn-secondary" onclick="restartDevice()" id="ota-restart-btn" style="display: none;" data-i18n="ota.restart">Redémarrer</button>
-                    </div>
-                </div>
+          <!-- Section: Mise à Jour Firmware -->
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="ota.updateFirmware">Mise à Jour du Firmware</h3>
+              <div id="ota-ble-note"
+                style="display: none; margin-top: 10px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px;"
+                data-i18n="ota.bleNote">
+                Connectez-vous au Wi-Fi de l'appareil (AP) pour effectuer la mise à jour
+              </div>
             </div>
+            <div class="profile-section-content">
+              <div class="control-group" id="ota-progress-title">
+                <label class="control-label" data-i18n="ota.firmwareFile">Fichier Firmware (.bin)</label>
+                <input type="file" id="firmware-file" accept=".bin">
+              </div>
+              <div id="ota-progress-container" style="display: none; margin-top: 15px;">
+                <div
+                  style="background: var(--color-panel); border-radius: 4px; padding: 15px; border: 1px solid var(--color-input-border);">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span data-i18n="ota.progress">Progression</span>
+                    <span id="ota-progress-percent" style="font-weight: bold;">0%</span>
+                  </div>
+                  <div
+                    style="background: var(--color-input-border); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="ota-progress-bar"
+                      style="background: #E82127; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                  </div>
+                  <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: var(--color-muted);">
+                  </div>
+                  <div id="ota-reboot-countdown"
+                    style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
+                </div>
+              </div>
+              <div class="button-group" style="margin-top: 15px;">
+                <button class="btn-primary" onclick="uploadFirmware()" id="ota-upload-btn"
+                  data-i18n="ota.upload">Téléverser</button>
+                <button class="btn-secondary" onclick="restartDevice()" id="ota-restart-btn" style="display: none;"
+                  data-i18n="ota.restart">Redémarrer</button>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+      <!-- Modal pour nouveau profil -->
+      <div id="newProfileModal" class="modal">
+        <div class="modal-content">
+          <h3 style="margin-bottom: 20px;" data-i18n="profiles.newProfileTitle">Nouveau Profil</h3>
+          <input type="text" id="new-profile-name" data-i18n-placeholder="profiles.profileName"
+            placeholder="Nom du profil" style="margin-bottom: 20px;">
+          <button class="btn-primary" onclick="createProfile()" data-i18n="profiles.create">Créer</button>
+          <button class="btn-secondary" onclick="hideNewProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
+        </div>
+      </div>
+      <!-- Modal pour renommer un profil -->
+      <div id="renameProfileModal" class="modal">
+        <div class="modal-content">
+          <h3 style="margin-bottom: 20px;" data-i18n="profiles.renameProfileTitle">Renommer le profil</h3>
+          <input type="text" id="rename-profile-name" data-i18n-placeholder="profiles.profileName"
+            placeholder="Nom du profil" style="margin-bottom: 20px;">
+          <button class="btn-primary" onclick="renameProfile()" data-i18n="profiles.rename">Renommer</button>
+          <button class="btn-secondary" onclick="hideRenameProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
+        </div>
+      </div>
     </div>
-<!-- Modal pour nouveau profil -->
-<div id="newProfileModal" class="modal">
-    <div class="modal-content">
-        <h3 style="margin-bottom: 20px;" data-i18n="profiles.newProfileTitle">Nouveau Profil</h3>
-        <input type="text" id="new-profile-name" data-i18n-placeholder="profiles.profileName" placeholder="Nom du profil" style="margin-bottom: 20px;">
-        <button class="btn-primary" onclick="createProfile()" data-i18n="profiles.create">Créer</button>
-        <button class="btn-secondary" onclick="hideNewProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
-    </div>
-</div>
-<!-- Modal pour renommer un profil -->
-<div id="renameProfileModal" class="modal">
-    <div class="modal-content">
-        <h3 style="margin-bottom: 20px;" data-i18n="profiles.renameProfileTitle">Renommer le profil</h3>
-        <input type="text" id="rename-profile-name" data-i18n-placeholder="profiles.profileName" placeholder="Nom du profil" style="margin-bottom: 20px;">
-        <button class="btn-primary" onclick="renameProfile()" data-i18n="profiles.rename">Renommer</button>
-        <button class="btn-secondary" onclick="hideRenameProfileDialog()" data-i18n="profiles.cancel">Annuler</button>
-    </div>
-</div>
-</div>
-    </div>
-</div>
+  </div>
+  </div>
 </body>
 <script src="i18n.js"></script>
 <script src="script.js"></script>
+
 </html>

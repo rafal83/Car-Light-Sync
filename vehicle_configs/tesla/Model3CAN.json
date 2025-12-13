@@ -5482,7 +5482,13 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 1
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_ALERT"
+            }
+          ]
         },
         {
           "name": "UI_intrusionSensorOn",
@@ -9506,8 +9512,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 15,
           "mapping": {
             "9": "ABORTED",
             "8": "ABORTING",
@@ -9530,8 +9534,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 3,
           "mapping": {
             "0": "NO_WARNING",
             "3": "SNA",
@@ -9560,8 +9562,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 3,
           "mapping": {
             "0": "NO_WARNING",
             "3": "SNA",
@@ -9590,8 +9590,6 @@
           "factor": 5,
           "offset": 0,
           "unit": "kph/mph",
-          "min": 0,
-          "max": 150,
           "mapping": {
             "31": "NONE",
             "0": "UNKNOWN_SNA"
@@ -9606,8 +9604,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 1,
           "mapping": {
             "0": "Do_Not_Suppress",
             "1": "Suppress_Speed_Warning"
@@ -9621,9 +9617,7 @@
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
+          "unit": ""
         },
         {
           "name": "DAS_summonClearedGate",
@@ -9633,9 +9627,7 @@
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
+          "unit": ""
         },
         {
           "name": "DAS_visionOnlySpeedLimit",
@@ -9646,8 +9638,6 @@
           "factor": 5,
           "offset": 0,
           "unit": "kph/mph",
-          "min": 0,
-          "max": 150,
           "mapping": {
             "31": "NONE",
             "0": "UNKNOWN_SNA"
@@ -9662,8 +9652,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 1,
           "mapping": {
             "0": "HEATER_OFF_SNA",
             "1": "HEATER_ON"
@@ -9678,8 +9666,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 3,
           "mapping": {
             "1": "FORWARD_COLLISION_WARNING",
             "0": "NONE",
@@ -9695,8 +9681,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 1,
           "mapping": {
             "1": "AUTOPARK_READY",
             "0": "AUTOPARK_UNAVAILABLE"
@@ -9710,9 +9694,7 @@
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
+          "unit": ""
         },
         {
           "name": "DAS_autoparkWaitingForBrake",
@@ -9722,67 +9704,37 @@
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
+          "unit": ""
         },
         {
           "name": "DAS_summonFwdLeashReached",
-          "start_bit": 27,
-          "length": 1,
-          "byte_order": "little_endian",
-          "value_type": "boolean",
-          "factor": 1,
-          "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
-        },
-        {
-          "name": "DAS_summonRvsLeashReached",
           "start_bit": 28,
           "length": 1,
           "byte_order": "little_endian",
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
+          "unit": ""
         },
         {
-          "name": "DAS_lssState",
+          "name": "DAS_summonRvsLeashReached",
           "start_bit": 29,
-          "length": 3,
+          "length": 1,
           "byte_order": "little_endian",
-          "value_type": "unsigned",
+          "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 7,
-          "mapping": {
-            "6": "LSS_STATE_ABORT",
-            "5": "LSS_STATE_BLINDSPOT",
-            "3": "LSS_STATE_ELK",
-            "0": "LSS_STATE_FAULT",
-            "1": "LSS_STATE_LDW",
-            "2": "LSS_STATE_LKA",
-            "4": "LSS_STATE_MONITOR",
-            "7": "LSS_STATE_OFF"
-          }
+          "unit": ""
         },
         {
           "name": "DAS_sideCollisionAvoid",
-          "start_bit": 32,
+          "start_bit": 30,
           "length": 2,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 3,
           "mapping": {
             "1": "AVOID_LEFT",
             "2": "AVOID_RIGHT",
@@ -9792,15 +9744,13 @@
         },
         {
           "name": "DAS_sideCollisionWarning",
-          "start_bit": 34,
+          "start_bit": 32,
           "length": 2,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 3,
           "mapping": {
             "0": "NONE",
             "1": "WARN_LEFT",
@@ -9810,19 +9760,27 @@
         },
         {
           "name": "DAS_sideCollisionInhibit",
-          "start_bit": 36,
+          "start_bit": 34,
           "length": 1,
           "byte_order": "little_endian",
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 1,
           "mapping": {
             "1": "INHIBIT",
             "0": "NO_INHIBIT"
           }
+        },
+        {
+          "name": "DAS_csaState",
+          "start_bit": 35,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
         },
         {
           "name": "DAS_laneDepartureWarning",
@@ -9833,8 +9791,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 5,
           "mapping": {
             "1": "LEFT_WARNING",
             "3": "LEFT_WARNING_SEVERE",
@@ -9853,8 +9809,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 3,
           "mapping": {
             "2": "FLEETSPEED_ACTIVE",
             "1": "FLEETSPEED_AVAILABLE",
@@ -9871,8 +9825,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 15,
           "mapping": {
             "0": "LC_HANDS_ON_NOT_REQD",
             "4": "LC_HANDS_ON_REQD_CHIME_1",
@@ -9897,8 +9849,6 @@
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 31,
           "mapping": {
             "19": "ALC_ABORT_BLINKER_TURNED_OFF",
             "18": "ALC_ABORT_LC_HEALTH_BAD",
@@ -9942,9 +9892,7 @@
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
+          "unit": ""
         },
         {
           "name": "DAS_statusCounter",
@@ -9954,9 +9902,7 @@
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 15
+          "unit": ""
         },
         {
           "name": "DAS_statusChecksum",
@@ -9966,9 +9912,7 @@
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 255
+          "unit": ""
         }
       ]
     },
@@ -11349,6 +11293,11 @@
               "condition": "value_equals",
               "value": "1",
               "trigger": "TURN_HAZARD"
+            },
+            {
+              "condition": "value_equals",
+              "value": "6",
+              "trigger": "SENTRY_ALERT"
             }
           ]
         },
@@ -13752,21 +13701,119 @@
     },
     {
       "id": "0x313",
-      "name": "ID313UI_trackModeSettings",
+      "name": "ID313UI_powertrainControl",
       "bus": "body",
       "cycle_time_ms": 100,
       "signals": [
         {
-          "name": "UI_trackModeRequest",
+          "name": "UI_systemPowerLimit",
           "start_bit": 0,
+          "length": 5,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 20,
+          "offset": 20,
+          "unit": "kW"
+        },
+        {
+          "name": "UI_pedalMap",
+          "start_bit": 5,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "UI_systemTorqueLimit",
+          "start_bit": 8,
+          "length": 6,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 100,
+          "offset": 4000,
+          "unit": "Nm"
+        },
+        {
+          "name": "UI_speedLimit",
+          "start_bit": 16,
+          "length": 8,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 50,
+          "unit": "kph"
+        },
+        {
+          "name": "UI_regenTorqueMax",
+          "start_bit": 24,
+          "length": 8,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 0.5,
+          "offset": 0,
+          "unit": "%"
+        },
+        {
+          "name": "UI_limitMode",
+          "start_bit": 32,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "UI_creepTorque",
+          "start_bit": 34,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "UI_motorOnMode",
+          "start_bit": 35,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "UI_wasteMode",
+          "start_bit": 37,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "UI_wasteModeRegenLimit",
+          "start_bit": 40,
+          "length": 2,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "UI_trackModeRequest",
+          "start_bit": 42,
           "length": 2,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
           "unit": "",
-          "min": 0,
-          "max": 2,
           "mapping": {
             "0": "TRACK_MODE_REQUEST_IDLE",
             "2": "TRACK_MODE_REQUEST_OFF",
@@ -13774,84 +13821,24 @@
           }
         },
         {
-          "name": "UI_trackRotationTendency",
-          "start_bit": 8,
-          "length": 8,
-          "byte_order": "little_endian",
-          "value_type": "unsigned",
-          "factor": 0.5,
-          "offset": 0,
-          "unit": "%",
-          "min": 0,
-          "max": 100
-        },
-        {
-          "name": "UI_trackStabilityAssist",
-          "start_bit": 16,
-          "length": 8,
-          "byte_order": "little_endian",
-          "value_type": "unsigned",
-          "factor": 0.5,
-          "offset": 0,
-          "unit": "%",
-          "min": 0,
-          "max": 100
-        },
-        {
-          "name": "UI_trackPostCooling",
-          "start_bit": 24,
-          "length": 1,
-          "byte_order": "little_endian",
-          "value_type": "boolean",
-          "factor": 1,
-          "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1,
-          "mapping": {
-            "0": "TRACK_MODE_POST_COOLING_OFF",
-            "1": "TRACK_MODE_POST_COOLING_ON"
-          }
-        },
-        {
-          "name": "UI_trackCmpOverclock",
-          "start_bit": 25,
-          "length": 1,
-          "byte_order": "little_endian",
-          "value_type": "boolean",
-          "factor": 1,
-          "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1,
-          "mapping": {
-            "0": "TRACK_MODE_CMP_OVERCLOCK_OFF",
-            "1": "TRACK_MODE_CMP_OVERCLOCK_ON"
-          }
-        },
-        {
-          "name": "UI_trackModeSettingsCounter",
+          "name": "UI_powertrainControlCounter",
           "start_bit": 52,
           "length": 4,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 15
+          "unit": ""
         },
         {
-          "name": "UI_trackModeSettingsChecksum",
+          "name": "UI_powertrainControlChecksum",
           "start_bit": 56,
           "length": 8,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 255
+          "unit": ""
         }
       ]
     },
@@ -14392,7 +14379,13 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 1
+          "max": 1,
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_ALERT"
+            }
+          ]
         },
         {
           "name": "UI_VCSECFeature1",
@@ -14518,7 +14511,24 @@
             "0": "AUTOPILOT_NOMINAL",
             "1": "AUTOPILOT_SENTRY",
             "2": "AUTOPILOT_SUSPEND"
-          }
+          },
+          "events": [
+            {
+              "condition": "value_equals",
+              "value": "0",
+              "trigger": "SENTRY_MODE_OFF"
+            },
+            {
+              "condition": "value_equals",
+              "value": "1",
+              "trigger": "SENTRY_MODE_ON"
+            },
+            {
+              "condition": "value_equals",
+              "value": "2",
+              "trigger": "SENTRY_MODE_OFF"
+            }
+          ]
         },
         {
           "name": "UI_shorted12VCellTestMode",
@@ -18063,14 +18073,14 @@
       "cycle_time_ms": 100,
       "signals": [
         {
-          "name": "UI_Range",
+          "name": "UI_expectedRange",
           "start_bit": 0,
           "length": 10,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
-          "unit": "mi",
+          "unit": "km",
           "min": 0,
           "max": 1023
         },
@@ -18082,24 +18092,24 @@
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
-          "unit": "mi",
+          "unit": "km",
           "min": 0,
           "max": 1023
         },
         {
-          "name": "UI_ratedWHpM",
+          "name": "UI_ratedConsumption",
           "start_bit": 32,
           "length": 10,
           "byte_order": "little_endian",
           "value_type": "unsigned",
-          "factor": 1,
+          "factor": 0.625,
           "offset": 0,
-          "unit": "WHpM",
+          "unit": "Wh/km",
           "min": 0,
           "max": 1023
         },
         {
-          "name": "UI_SOC",
+          "name": "UI_actualSOC",
           "start_bit": 48,
           "length": 7,
           "byte_order": "little_endian",
@@ -18111,7 +18121,7 @@
           "max": 127
         },
         {
-          "name": "UI_uSOE",
+          "name": "UI_usableSOC",
           "start_bit": 56,
           "length": 7,
           "byte_order": "little_endian",
@@ -20300,10 +20310,6 @@
             {
               "condition": "rising_edge",
               "trigger": "BRAKE_ON"
-            },
-            {
-              "condition": "falling_edge",
-              "trigger": "BRAKE_OFF"
             }
           ]
         },
@@ -20322,10 +20328,6 @@
             {
               "condition": "rising_edge",
               "trigger": "BRAKE_ON"
-            },
-            {
-              "condition": "falling_edge",
-              "trigger": "BRAKE_OFF"
             }
           ]
         }
@@ -22023,10 +22025,6 @@
             {
               "condition": "rising_edge",
               "trigger": "BRAKE_ON"
-            },
-            {
-              "condition": "falling_edge",
-              "trigger": "BRAKE_OFF"
             }
           ]
         },
@@ -22045,10 +22043,6 @@
             {
               "condition": "rising_edge",
               "trigger": "BRAKE_ON"
-            },
-            {
-              "condition": "falling_edge",
-              "trigger": "BRAKE_OFF"
             }
           ]
         }
@@ -22237,7 +22231,17 @@
           "value_type": "boolean",
           "factor": 1,
           "offset": 0,
-          "unit": ""
+          "unit": "",
+          "events": [
+            {
+              "condition": "rising_edge",
+              "trigger": "SENTRY_MODE_ON"
+            },
+            {
+              "condition": "falling_edge",
+              "trigger": "SENTRY_MODE_OFF"
+            }
+          ]
         },
         {
           "name": "UIhomelinkV2Command0284",
@@ -29708,10 +29712,6 @@
             {
               "condition": "rising_edge",
               "trigger": "BRAKE_ON"
-            },
-            {
-              "condition": "falling_edge",
-              "trigger": "BRAKE_OFF"
             }
           ]
         },
@@ -30511,10 +30511,6 @@
             {
               "condition": "rising_edge",
               "trigger": "BRAKE_ON"
-            },
-            {
-              "condition": "falling_edge",
-              "trigger": "BRAKE_OFF"
             }
           ]
         },
@@ -34708,52 +34704,44 @@
       "cycle_time_ms": 100,
       "signals": [
         {
-          "name": "SOCmin292",
+          "name": "BMS_socMin",
           "start_bit": 0,
           "length": 10,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 0.1,
           "offset": 0,
-          "unit": "%",
-          "min": 0,
-          "max": 102.3
+          "unit": "%"
         },
         {
-          "name": "SOCUI292",
+          "name": "BMS_socUI",
           "start_bit": 10,
           "length": 10,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 0.1,
           "offset": 0,
-          "unit": "%",
-          "min": 0,
-          "max": 102.3
+          "unit": "%"
         },
         {
-          "name": "SOCmax292",
+          "name": "BMS_socMax",
           "start_bit": 20,
           "length": 10,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 0.1,
           "offset": 0,
-          "unit": "%",
-          "min": 0,
-          "max": 102.3
+          "unit": "%"
         },
         {
-          "name": "SOCave292",
+          "name": "BMS_socAvg",
           "start_bit": 30,
           "length": 10,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 0.1,
           "offset": 0,
-          "unit": "%",
-          "min": 0,
-          "max": 102.3
+          "unit": "%"
         },
         {
           "name": "BattBeginningOfLifeEnergy292",
@@ -34768,21 +34756,6 @@
           "max": 102.3,
           "mapping": {
             "1023": "SNA"
-          }
-        },
-        {
-          "name": "BMS_battTempPct",
-          "start_bit": 50,
-          "length": 8,
-          "byte_order": "little_endian",
-          "value_type": "unsigned",
-          "factor": 0.4,
-          "offset": 0,
-          "unit": "%",
-          "min": 0,
-          "max": 100,
-          "mapping": {
-            "255": "SNA"
           }
         }
       ]

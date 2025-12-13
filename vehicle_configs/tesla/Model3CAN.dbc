@@ -741,32 +741,32 @@ BO_ 905 ID389DAS_status2: 8 ChassisBus
  SG_ DAS_status2Counter : 52|4@1+ (1,0) [0|15] ""  Receiver
 
 BO_ 921 ID399DAS_status: 8 ChassisBus
- SG_ DAS_autoLaneChangeState : 46|5@1+ (1,0) [0|31] ""  Receiver
- SG_ DAS_autoParked : 25|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_autoparkReady : 24|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_autoparkWaitingForBrake : 26|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_autopilotHandsOnState : 42|4@1+ (1,0) [0|15] ""  Receiver
- SG_ DAS_autopilotState : 0|4@1+ (1,0) [0|15] ""  Receiver
- SG_ DAS_blindSpotRearLeft : 4|2@1+ (1,0) [0|3] ""  Receiver
- SG_ DAS_blindSpotRearRight : 6|2@1+ (1,0) [0|3] ""  Receiver
- SG_ DAS_fleetSpeedState : 40|2@1+ (1,0) [0|3] ""  Receiver
- SG_ DAS_forwardCollisionWarning : 22|2@1+ (1,0) [0|3] ""  Receiver
- SG_ DAS_fusedSpeedLimit : 8|5@1+ (5,0) [0|150] "kph/mph"  Receiver
- SG_ DAS_heaterState : 21|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_laneDepartureWarning : 37|3@1+ (1,0) [0|5] ""  Receiver
- SG_ DAS_lssState : 29|3@1+ (1,0) [0|7] ""  Receiver
- SG_ DAS_sideCollisionAvoid : 32|2@1+ (1,0) [0|3] ""  Receiver
- SG_ DAS_sideCollisionInhibit : 36|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_sideCollisionWarning : 34|2@1+ (1,0) [0|3] ""  Receiver
- SG_ DAS_statusChecksum : 56|8@1+ (1,0) [0|255] ""  Receiver
- SG_ DAS_statusCounter : 52|4@1+ (1,0) [0|15] ""  Receiver
- SG_ DAS_summonAvailable : 51|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_summonClearedGate : 15|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_summonFwdLeashReached : 27|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_summonObstacle : 14|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_summonRvsLeashReached : 28|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_suppressSpeedWarning : 13|1@1+ (1,0) [0|1] ""  Receiver
- SG_ DAS_visionOnlySpeedLimit : 16|5@1+ (5,0) [0|150] "kph/mph"  Receiver
+ SG_ DAS_autoLaneChangeState: 46|5@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_autoParked: 25|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_autoparkReady: 24|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_autoparkWaitingForBrake: 26|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_autopilotHandsOnState: 42|4@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_autopilotState: 0|4@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_blindSpotRearLeft: 4|2@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_blindSpotRearRight: 6|2@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_csaState: 35|2@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_fleetSpeedState: 40|2@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_forwardCollisionWarning: 22|2@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_fusedSpeedLimit: 8|5@1+ (5,0) [0|0] "kph/mph"  Receiver
+ SG_ DAS_heaterState: 21|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_laneDepartureWarning: 37|3@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_sideCollisionAvoid: 30|2@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_sideCollisionInhibit: 34|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_sideCollisionWarning: 32|2@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_statusChecksum: 56|8@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_statusCounter: 52|4@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_summonAvailable: 51|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_summonClearedGate: 15|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_summonFwdLeashReached: 28|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_summonObstacle: 14|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_summonRvsLeashReached: 29|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_suppressSpeedWarning: 13|1@1+ (1,0) [0|0] ""  Receiver
+ SG_ DAS_visionOnlySpeedLimit: 16|5@1+ (5,0) [0|0] "kph/mph"  Receiver
 
 BO_ 925 ID39DIBST_status: 5 ChassisBus
  SG_ IBST_driverBrakeApply : 16|2@1+ (1,0) [0|3] ""  Receiver
@@ -1026,14 +1026,20 @@ BO_ 755 ID2F3UI_hvacRequest: 5 VehicleBus
  SG_ UI_hvacReqUserPowerState : 26|3@1+ (1,0) [0|4] ""  Receiver
  SG_ UI_hvacUseModeledDuctTemp : 32|1@1+ (1,0) [0|1] ""  Receiver
 
-BO_ 787 ID313UI_trackModeSettings: 8 VehicleBus
- SG_ UI_trackCmpOverclock : 25|1@1+ (1,0) [0|1] ""  Receiver
- SG_ UI_trackModeRequest : 0|2@1+ (1,0) [0|2] ""  Receiver
- SG_ UI_trackModeSettingsChecksum : 56|8@1+ (1,0) [0|255] ""  Receiver
- SG_ UI_trackModeSettingsCounter : 52|4@1+ (1,0) [0|15] ""  Receiver
- SG_ UI_trackPostCooling : 24|1@1+ (1,0) [0|1] ""  Receiver
- SG_ UI_trackRotationTendency : 8|8@1+ (0.5,0) [0|100] "%"  Receiver
- SG_ UI_trackStabilityAssist : 16|8@1+ (0.5,0) [0|100] "%"  Receiver
+BO_ 787 ID313UI_powertrainControl: 8 VehicleBus
+ SG_ UI_creepTorque: 34|1@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_limitMode: 32|2@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_motorOnMode: 35|2@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_pedalMap: 5|1@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_powertrainControlChecksum: 56|8@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_powertrainControlCounter: 52|4@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_regenTorqueMax: 24|8@1+ (0.5,0) [0|0] "%" Receiver
+ SG_ UI_speedLimit: 16|8@1+ (1,50) [0|0] "kph" Receiver
+ SG_ UI_systemPowerLimit: 0|5@1+ (20,20) [0|0] "kW" Receiver
+ SG_ UI_systemTorqueLimit: 8|6@1+ (100,4000) [0|0] "Nm" Receiver
+ SG_ UI_trackModeRequest: 42|2@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_wasteMode: 37|2@1+ (1,0) [0|0] "" Receiver
+ SG_ UI_wasteModeRegenLimit: 40|2@1+ (1,0) [0|0] "" Receiver
 
 BO_ 821 ID335RearDIinfo: 8 VehicleBus
  SG_ DIR_infoIndex M : 0|8@1+ (1,0) [0|255] ""  Receiver
@@ -1352,11 +1358,11 @@ BO_ 820 ID334UI_powertrainControl: 8 VehicleBus
  SG_ UI_closureConfirmed : 14|2@1+ (1,0) [0|2] ""  Receiver
 
 BO_ 826 ID33AUI_rangeSOC: 8 VehicleBus
- SG_ UI_idealRange : 16|10@1+ (1,0) [0|1023] "mi"  Receiver
- SG_ UI_Range : 0|10@1+ (1,0) [0|1023] "mi"  Receiver
- SG_ UI_SOC : 48|7@1+ (1,0) [0|127] "%"  Receiver
- SG_ UI_uSOE : 56|7@1+ (1,0) [0|127] "%"  Receiver
- SG_ UI_ratedWHpM : 32|10@1+ (1,0) [0|1023] "WHpM"  Receiver
+ SG_ UI_idealRange : 16|10@1+ (1,0) [0|1023] "km"  Receiver
+ SG_ UI_expectedRange : 0|10@1+ (1,0) [0|1023] "km"  Receiver
+ SG_ UI_actualSOC : 48|7@1+ (1,0) [0|127] "%"  Receiver
+ SG_ UI_usableSOC : 56|7@1+ (1,0) [0|127] "%"  Receiver
+ SG_ UI_ratedConsumption : 32|10@1+ (0.625,0) [0|1023] "Wh/km"  Receiver
 
 BO_ 577 ID241VCFRONT_coolant: 7 VehicleBus
  SG_ VCFRONT_coolantAirPurgeBatState : 48|3@1+ (1,0) [0|4] ""  Receiver
@@ -2645,12 +2651,11 @@ BO_ 786 ID312BMSthermal: 8 VehicleBus
  SG_ BMSminPackTemperature : 44|9@1+ (0.25,-25) [-25|100] "C"  Receiver
 
 BO_ 658 ID292BMS_SOC: 8 VehicleBus
+ SG_ BMS_socMin : 0|10@1+ (0.1,0) [0|0] "%"  Receiver
+ SG_ BMS_socUI : 10|10@1+ (0.1,0) [0|0] "%"  Receiver
+ SG_ BMS_socMax : 20|10@1+ (0.1,0) [0|0] "%"  Receiver
+ SG_ BMS_socAvg : 30|10@1+ (0.1,0) [0|0] "%"  Receiver
  SG_ BattBeginningOfLifeEnergy292 : 40|10@1+ (0.1,0) [0|102.3] "kWh"  Receiver
- SG_ SOCmax292 : 20|10@1+ (0.1,0) [0|102.3] "%"  Receiver
- SG_ SOCave292 : 30|10@1+ (0.1,0) [0|102.3] "%"  Receiver
- SG_ SOCUI292 : 10|10@1+ (0.1,0) [0|102.3] "%"  Receiver
- SG_ SOCmin292 : 0|10@1+ (0.1,0) [0|102.3] "%"  Receiver
- SG_ BMS_battTempPct : 50|8@1+ (0.4,0) [0|100] "%"  Receiver
 
 BO_ 599 ID257DIspeed: 8 VehicleBus
  SG_ DI_speedChecksum : 0|8@1+ (1,0) [0|255] ""  Receiver

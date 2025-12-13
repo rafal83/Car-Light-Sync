@@ -398,13 +398,18 @@ static esp_err_t status_handler(httpd_req_t *req) {
   // Sécurité
   cJSON *safety = cJSON_CreateObject();
   cJSON_AddBoolToObject(safety, "bsl", current_vehicle_state.blindspot_left);
+  cJSON_AddBoolToObject(safety, "bsla", current_vehicle_state.blindspot_left_alert);
   cJSON_AddBoolToObject(safety, "bsr", current_vehicle_state.blindspot_right);
+  cJSON_AddBoolToObject(safety, "bsra", current_vehicle_state.blindspot_right_alert);
   cJSON_AddBoolToObject(safety, "scl", current_vehicle_state.side_collision_left);
   cJSON_AddBoolToObject(safety, "scr", current_vehicle_state.side_collision_right);
   cJSON_AddBoolToObject(safety, "nm", current_vehicle_state.night_mode);
   cJSON_AddNumberToObject(safety, "bri", current_vehicle_state.brightness);
   cJSON_AddBoolToObject(safety, "sm", current_vehicle_state.sentry_mode);
   cJSON_AddNumberToObject(safety, "ap", current_vehicle_state.autopilot);
+  cJSON_AddNumberToObject(safety, "apa1", current_vehicle_state.autopilot_alert_lv1);
+  cJSON_AddNumberToObject(safety, "apa2", current_vehicle_state.autopilot_alert_lv2);
+  cJSON_AddNumberToObject(safety, "apa3", current_vehicle_state.autopilot_alert_lv3);
   cJSON_AddBoolToObject(safety, "sa", current_vehicle_state.sentry_alert);
   cJSON_AddItemToObject(vehicle, "safety", safety);
 

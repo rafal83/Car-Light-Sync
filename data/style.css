@@ -558,19 +558,13 @@ button {
 }
 
 .vehicle-item {
-    padding: 12px;
+    padding: 5px;
     background: var(--color-panel);
     border-radius: 4px;
     border-left: 3px solid var(--color-info);
     display: flex;
     flex-direction: column;
     gap: 4px;
-}
-
-@media (max-width: 768px) {
-    .vehicle-item {
-        padding: 10px;
-    }
 }
 
 .vehicle-label {
@@ -1101,22 +1095,21 @@ button {
 .profile-section {
     background: rgba(120, 120, 120, 0.05);
     border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 10px;
+    margin-bottom: 10px;
     border: 1px solid rgba(120, 120, 120, 0.1);
 }
 
 @media (max-width: 768px) {
     .profile-section {
-        padding: 15px;
-        margin-bottom: 15px;
+        padding: 5px;
     }
 }
 
 .profile-section-header {
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     border-bottom: 2px solid var(--color-primary);
-    padding-bottom: 10px;
+    padding-bottom: 5px;
 }
 
 .profile-section-header h3 {
