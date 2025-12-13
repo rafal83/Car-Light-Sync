@@ -42,6 +42,8 @@ const translations = {
     status: {
       wifi: "WiFi",
       cpu: "CPU",
+      system: "Système",
+      memoryLabel: "Mém:",
       canBus: "CAN Bus",
       canChassis: "CAN Chassis",
       canBody: "CAN Body",
@@ -389,7 +391,7 @@ const translations = {
     server: {
       title: "Serveurs CAN",
       gvretTitle: "Serveur GVRET",
-      gvretDescription: "Protocole GVRET sur TCP port 23 pour SavvyCAN via WiFi",
+      gvretDescription: "Protocole GVRET sur TCP port 23. Compatible avec SavvyCAN (Windows/Linux/Mac) pour analyser et déboguer les trames CAN en temps réel.",
       gvretStatus: "État :",
       gvretClients: "Clients connectés :",
       gvretPort: "Port TCP :",
@@ -402,7 +404,7 @@ const translations = {
       gvretStarted: "Serveur GVRET démarré avec succès",
       gvretError: "Erreur lors de la communication avec le serveur GVRET",
       canserverTitle: "Serveur CANServer",
-      canserverDescription: "Protocole CANServer (Protocol Panda) sur UDP port 1338 pour cabana via WiFi",
+      canserverDescription: "Protocole Panda (comma.ai) sur UDP port 1338. Compatible avec Scan My Tesla, SavvyCAN et outils basés sur le protocole Panda.",
       canserverStatus: "État :",
       canserverClients: "Clients connectés :",
       canserverPort: "Port UDP :",
@@ -505,6 +507,8 @@ const translations = {
     status: {
       wifi: "WiFi",
       cpu: "CPU",
+      system: "System",
+      memoryLabel: "Mem:",
       canBus: "CAN Bus",
       canChassis: "CAN Chassis",
       canBody: "CAN Body",
@@ -851,7 +855,7 @@ const translations = {
     server: {
       title: "CAN Servers",
       gvretTitle: "GVRET Server",
-      gvretDescription: "GVRET protocol on TCP port 23 for SavvyCAN via WiFi",
+      gvretDescription: "GVRET protocol on TCP port 23. Compatible with SavvyCAN (Windows/Linux/Mac) for real-time CAN frame analysis and debugging.",
       gvretStatus: "Status:",
       gvretClients: "Connected clients:",
       gvretPort: "TCP Port:",
@@ -864,7 +868,7 @@ const translations = {
       gvretStarted: "GVRET server started successfully",
       gvretError: "Error communicating with GVRET server",
       canserverTitle: "CANServer server",
-      canserverDescription: "comma.ai CANServer (Panda protocol) on UDP port 1338 for cabana via WiFi",
+      canserverDescription: "Panda protocol (comma.ai) on UDP port 1338. Compatible with Scan My Tesla, SavvyCAN and tools based on the Panda protocol.",
       canserverStatus: "Status:",
       canserverClients: "Connected clients:",
       canserverPort: "UDP Port:",

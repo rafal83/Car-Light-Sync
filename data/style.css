@@ -271,6 +271,41 @@ body {
     font-size: 13px;
     font-weight: 500;
 }
+/* Barres de progression pour CPU et mémoire */
+.status-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+.status-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--color-input-bg);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+.status-progress-fill {
+    height: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 2px;
+}
+.status-progress-fill.bar-online {
+    background: #10b981;
+}
+.status-progress-fill.bar-warning {
+    background: #f59e0b;
+}
+.status-progress-fill.bar-offline {
+    background: var(--color-primary);
+}
+.status-percentage {
+    min-width: 35px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 500;
+}
 .status-online { color: #10b981; }
 .status-warning { color: #f59e0b; }
 .status-offline { color: var(--color-primary); }
@@ -1218,7 +1253,7 @@ button {
     font-weight: 500;
 }
 
-/* CAN Servers Grid Layout (responsive: 1 col mobile, 3 cols desktop) */
+/* CAN Servers Grid Layout (responsive: 1 col mobile, 2 cols desktop) */
 .can-servers-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -1227,6 +1262,6 @@ button {
 
 @media (min-width: 768px) {
     .can-servers-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
 }

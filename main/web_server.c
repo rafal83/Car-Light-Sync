@@ -18,8 +18,10 @@
 #include "canserver_udp_server.h" // Pour le serveur CANServer UDP
 #include "config.h"
 #include "config_manager.h"
+#include "esp_heap_caps.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "gvret_tcp_server.h" // Pour le serveur GVRET TCP
 #include "led_effects.h"
 #include "log_stream.h" // Pour le streaming de logs en temps réel
@@ -481,6 +483,12 @@ static esp_err_t status_handler(httpd_req_t *req) {
   }
 
   cJSON_AddNumberToObject(root, "cpu", cpu_usage_filtered);
+
+  // Mémoire consommée (heap)
+  size_t free_heap = esp_get_free_heap_size();
+  size_t total_heap = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
+  uint32_t mem_used_percent = (total_heap > 0) ? (((total_heap - free_heap) * 100) / total_heap) : 0;
+  cJSON_AddNumberToObject(root, "mem", mem_used_percent);
 
   const char *json_string = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");

@@ -62,14 +62,33 @@
                 <div class="status-label" data-i18n="status.wifi">WiFi</div>
                 <div class="status-value" id="wifi-status">...</div>
             </div>
-            <div class="status-item">
-                <div class="status-label" data-i18n="status.cpu">CPU</div>
-                <div class="status-value" id="cpu-status">...</div>
+            <div class="status-item status-item-can">
+                <div class="status-label" data-i18n="status.system">Système</div>
+                <div class="status-can-group">
+                    <div class="status-can-item">
+                        <span class="status-can-label">CPU:</span>
+                        <div class="status-progress-container">
+                            <div class="status-progress-bar">
+                                <div class="status-progress-fill" id="cpu-bar"></div>
+                            </div>
+                            <span class="status-percentage status-value" id="cpu-status">...</span>
+                        </div>
+                    </div>
+                    <div class="status-can-item">
+                        <span class="status-can-label" data-i18n="status.memoryLabel">Mém:</span>
+                        <div class="status-progress-container">
+                            <div class="status-progress-bar">
+                                <div class="status-progress-fill" id="memory-bar"></div>
+                            </div>
+                            <span class="status-percentage status-value" id="memory-status">...</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="status-item">
                 <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
                 <div class="status-value" id="vehicle-status">...</div>
-            </div>            
+            </div>
             <div class="status-item status-item-can">
                 <div class="status-label" data-i18n="status.canBus">CAN Bus</div>
                 <div class="status-can-group">

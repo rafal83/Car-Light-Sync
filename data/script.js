@@ -2208,10 +2208,29 @@ async function updateStatus() {
             $('cpu-status').textContent = data.cpu + '%';
             // Couleur selon la charge: vert <50%, orange 50-80%, rouge >80%
             const cpuClass = data.cpu < 50 ? 'status-online' : (data.cpu < 80 ? 'status-warning' : 'status-offline');
-            $('cpu-status').className = 'status-value ' + cpuClass;
+            const cpuBarClass = data.cpu < 50 ? 'bar-online' : (data.cpu < 80 ? 'bar-warning' : 'bar-offline');
+            $('cpu-status').className = 'status-percentage status-value ' + cpuClass;
+            $('cpu-bar').className = 'status-progress-fill ' + cpuBarClass;
+            $('cpu-bar').style.width = data.cpu + '%';
         } else {
             $('cpu-status').textContent = '...';
-            $('cpu-status').className = 'status-value';
+            $('cpu-status').className = 'status-percentage status-value';
+            $('cpu-bar').style.width = '0%';
+        }
+
+        // Memory used
+        if (data.mem !== undefined) {
+            $('memory-status').textContent = data.mem + '%';
+            // Couleur selon la mémoire consommée: vert <50%, orange 50-80%, rouge >80%
+            const memClass = data.mem < 50 ? 'status-online' : (data.mem < 80 ? 'status-warning' : 'status-offline');
+            const memBarClass = data.mem < 50 ? 'bar-online' : (data.mem < 80 ? 'bar-warning' : 'bar-offline');
+            $('memory-status').className = 'status-percentage status-value ' + memClass;
+            $('memory-bar').className = 'status-progress-fill ' + memBarClass;
+            $('memory-bar').style.width = data.mem + '%';
+        } else {
+            $('memory-status').textContent = '...';
+            $('memory-status').className = 'status-percentage status-value';
+            $('memory-bar').style.width = '0%';
         }
 
         // CAN Body status
