@@ -23,13 +23,13 @@ Merci ! Ton soutien garde le projet libre et accessible.
 2. Ouvrir le repo et installer **PlatformIO**.
 3. Flasher : `pio run -e esp32c6 -t upload` puis `pio device monitor`.
 4. Se connecter au WiFi `CarLightSync` et ouvrir `http://192.168.4.1`.
-→ Détails et variantes ESP32-S3 : voir `docs/logiciel.md`.
+→ Détails et variantes ESP32-S3 : voir [docs/logiciel.md](docs/logiciel.md).
 
 ## 📚 Documentation détaillée
-- Matériel : `docs/materiel.md`
-- Logiciel (build/flash, interface, OTA) : `docs/logiciel.md`
-- Firmware & code (architecture, effets, CAN, audio) : `docs/firmware.md`
-- Problèmes, dépannage & sécurité : `docs/problemes.md`
+- Matériel : [docs/materiel.md](docs/materiel.md)
+- Logiciel (build/flash, interface, OTA) : [docs/logiciel.md](docs/logiciel.md)
+- Firmware & code (architecture, effets, CAN, audio) : [docs/firmware.md](docs/firmware.md)
+- Problèmes, dépannage & sécurité : [docs/problemes.md](docs/problemes.md)
 
 ## Sources & références 🔗
 - 🚗 DBC Tesla Model 3 : https://github.com/joshwardell/model3dbc (base des signaux CAN)
@@ -45,7 +45,7 @@ Merci ! Ton soutien garde le projet libre et accessible.
 - PR. Zones utiles : configs CAN (autres véhicules), nouveaux effets LED, perfs, doc/traductions, tests.
 
 ## 📄 Licence
-- voir `LICENSE`
+- voir [LICENSE](LICENSE)
 
 ## 💬 Support & communauté
 - **Issues GitHub** : Pour signaler bugs et proposer fonctionnalités
