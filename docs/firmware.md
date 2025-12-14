@@ -15,6 +15,27 @@ Notes techniques sur l'architecture, les effets et la logique CAN du projet.
 - Les événements CAN sont ensuite associés à des effets LED via la configuration.
 - Pour bénéficier de **toutes** les fonctionnalités CAN (double bus), une carte **ESP32-C6** est requise **et ESP-IDF ≥ 5.2** (support multi-contrôleur TWAI). Sur ESP32-S3 ou sans multi-contrôleur, un seul bus est actif et le second est automatiquement désactivé côté firmware.
 
+## Passerelles & services CAN
+- **GVRET TCP (port 23)** : compatible SavvyCAN, expose les frames des deux bus.
+- **CANServer UDP** : format Panda/UDS, broadcast des frames sur UDP.
+- Autostart configurable pour chaque service (voir web API / interface).
+
+## Réseau & OTA
+- Web server avec API REST, interface web embarquée, OTA upload et reboot.
+- Support BLE pour API mobile (optionnel selon build).
+- Statut CPU/mémoire exposé via l'API web.
+
+## ESP-NOW (modules satellites)
+- Rôle configurable via build flags (`ESP_NOW_ROLE_STR`) ou profils PlatformIO :
+  - `esp32c6` : maître (par défaut), rebroadcast CAN vers satellites.
+  - `esp32c6_bll` / `esp32c6_blr` / `esp32c6_speedometer` : modes esclave (blindspot gauche/droite, speedometer).
+- Les frames reçues en ESP-NOW repassent par le pipeline CAN (mêmes effets/événements).
+
+## Contrôles avancés
+- **Molette/scroll wheel** : changement de profil (opt-in) avec seuil de vitesse pour sécurité.
+- **Luminosité dynamique** : peut suivre la luminosité du véhicule (flag `dynamic_brightness_enabled` dans les profils).
+- Priorités d'effets, effets temporaires et segments normalisés pour éviter les dépassements de strip.
+
 ## Effets LED disponibles
 | ID | Nom | Description courte |
 |----|-----|--------------------|

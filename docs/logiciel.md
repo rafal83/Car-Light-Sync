@@ -18,6 +18,7 @@ pio run -e esp32c6 -t upload
 pio device monitor
 ```
 > ESP32-S3 : possible avec `-e esp32s3` ou `-e esp32s3_n4r2`, mais limité à 1 bus CAN (pas toutes les fonctionnalités).
+> Profils ESP-NOW satellites : `-e esp32c6_bll`, `-e esp32c6_blr`, `-e esp32c6_speedometer` (côté esclave). Sans ces profils, le firmware reste maître ESP-NOW par défaut.
 
 ## Compilation & flash (ESP-IDF)
 ```bash
@@ -42,6 +43,8 @@ idf.py -p <port> flash monitor
 - Point d'accès par défaut : `CarLightSync` (sans mot de passe), URL `http://192.168.4.1`.
 - Pilotage en temps réel : effet, couleur, luminosité, vitesse, profils et événements CAN.
 - OTA intégrée : upload du firmware directement depuis l'interface.
+- Contrôle des services : démarrer/arrêter GVRET TCP, CANServer UDP, gérer l'autostart.
+- Télémetrie système : CPU, mémoire, statut CAN, stockage NVS.
 
 ## Application mobile
 - App iOS/Android (Capacitor) qui réutilise `data/index.html`, `data/script.js`, `data/style.css`.

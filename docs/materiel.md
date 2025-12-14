@@ -12,6 +12,7 @@ Document de référence pour tout ce qui touche au hardware : composants, câbla
 - **Connecteur CAN véhicule** : câble porte/pilier A (Tesla) ou OBD/20-pin selon modèle.
 - **Alimentation 5V** : 3–10A selon la longueur du ruban.
 - **Micro INMP441 (optionnel)** : pour le mode audio-réactif.
+- **ESP-NOW satellites (optionnel)** : modules ESP32-C6 configurés en esclave (profils PlatformIO `esp32c6_bll`, `esp32c6_blr`, `esp32c6_speedometer`) pour déporter des fonctions blindspot ou compteur de vitesse.
 
 ## Câblage LED
 - Par défaut `LED_PIN = 5` et `NUM_LEDS = 112` (à adapter dans `include/config.h`).

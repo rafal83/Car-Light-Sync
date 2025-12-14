@@ -15,6 +15,8 @@ Merci ! Ton soutien garde le projet libre et accessible.
 - Intégration CAN multi-véhicules (architecture unifiée, double TWAI requis → ESP32-C6 + ESP-IDF ≥ 5.2)
 - Interface web responsive + app mobile (BLE)
 - OTA intégrée et profilage d'effets événementiels
+- Passerelles CAN intégrées : GVRET TCP (SavvyCAN) + CANServer UDP
+- ESP-NOW : rôle maître par défaut, profils satellites disponibles (blindspot, speedometer)
 - Licence MIT, contributions ouvertes
 
 ## ⚡ Démarrer vite
