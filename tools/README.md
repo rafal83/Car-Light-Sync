@@ -101,20 +101,6 @@ python tools/build/create_release.py
 
 ---
 
-### `set_idf_env.py`
-
-**Usage:** Automatique (pre-build script pour esp32s3)
-
-Configure l'environnement ESP-IDF pour certaines configurations nécessitant une stabilité accrue.
-
-**Fonctionnalités:**
-- Désactive le gestionnaire de composants IDF pour l'environnement `esp32s3`
-- Améliore la stabilité du build
-
-**Appelé par:** PlatformIO `extra_scripts = pre:tools/build/set_idf_env.py`
-
----
-
 ## 🚗 CAN Tools (`tools/can/`)
 
 Outils pour configurer et gérer les messages CAN des différents véhicules.
