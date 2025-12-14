@@ -156,7 +156,6 @@ static void canserver_rx_task(void *arg) {
   uint8_t rx_buf[CANSERVER_RX_BUFFER_SIZE];
   struct sockaddr_in client_addr;
   socklen_t addr_len  = sizeof(client_addr);
-  uint32_t loop_count = 0;
 
   ESP_LOGI(TAG, "RX task started, listening on UDP port %d", CANSERVER_UDP_PORT);
 

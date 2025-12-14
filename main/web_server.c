@@ -966,14 +966,11 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
 
   // Mettre à jour les paramètres de luminosité dynamique
-  bool dynamic_brightness_updated = false;
   if (dyn_bright_enabled_json && cJSON_IsBool(dyn_bright_enabled_json)) {
     profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled_json);
-    dynamic_brightness_updated          = true;
   }
   if (dyn_bright_rate_json && cJSON_IsNumber(dyn_bright_rate_json)) {
     profile->dynamic_brightness_rate = (uint8_t)dyn_bright_rate_json->valueint;
-    dynamic_brightness_updated       = true;
   }
 
   // Sauvegarder le profil

@@ -8,7 +8,7 @@
 
 #include <string.h>
 
-static const char *TAG = "ESP_NOW_LINK";
+static const char *TAG_ESP_NOW = "ESP_NOW_LINK";
 
 // Protocole minimal
 // type 0x01 HELLO {mac[6], slave_type, req_count, req_ids[]}
@@ -100,8 +100,8 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
   }
 }
 
-static void espnow_send_cb(const uint8_t *mac, esp_now_send_status_t status) {
-  (void)mac;
+static void espnow_send_cb(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
+  (void)tx_info;
   (void)status;
 }
 
@@ -118,6 +118,8 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
   ESP_ERROR_CHECK(esp_now_init());
   esp_now_register_recv_cb(espnow_recv_cb);
   esp_now_register_send_cb(espnow_send_cb);
+
+  ESP_LOGI(TAG_ESP_NOW, "Initialisation du rôle: %s", s_role);
 
   if (s_role == ESP_NOW_ROLE_SLAVE) {
     load_default_requests(s_slave_type, &s_requests);

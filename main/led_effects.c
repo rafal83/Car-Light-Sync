@@ -105,8 +105,6 @@ typedef struct {
 
 static rgb_t leds[MAX_LED_COUNT];
 static uint8_t led_data[MAX_LED_COUNT * 3];
-static rgb_t left_led_buffer[MAX_LED_COUNT / 2];
-static rgb_t right_led_buffer[MAX_LED_COUNT / 2];
 static effect_config_t current_config;
 static bool enabled                                = true;
 static uint32_t effect_counter                     = 0;
@@ -539,7 +537,7 @@ static void effect_twinkle(void) {
 }
 
 // Effet: Feu
-static uint8_t heat_map[MAX_LED_COUNT]; // Carte de chaleur pour l'effet feu
+static uint16_t heat_map[MAX_LED_COUNT]; // Carte de chaleur pour l'effet feu
 
 static void effect_fire(void) {
   // Refroidissement de la carte de chaleur
@@ -1285,7 +1283,7 @@ static void effect_vehicle_sync(void) {
   }
   // En mouvement = bleu
   else if (last_vehicle_state.speed_kph > 5.0f) {
-    uint8_t intensity = (uint8_t)(last_vehicle_state.speed_kph * 2);
+    uint16_t intensity = (uint8_t)(last_vehicle_state.speed_kph * 2);
     if (intensity > 255)
       intensity = 255;
     base_color = (rgb_t){0, 0, intensity};
