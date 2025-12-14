@@ -58,38 +58,56 @@
 //   -DESP_NOW_ROLE_STR=\"master\"|\"slave\"
 //   -DESP_NOW_SLAVE_TYPE_STR=\"blindspot_left\"|\"blindspot_right\"|\"speedometer\"
 #ifndef ESP_NOW_ROLE_STR
-#ifdef CONFIG_ESP_NOW_ROLE
-#define ESP_NOW_ROLE_STR CONFIG_ESP_NOW_ROLE
-#else
-#define ESP_NOW_ROLE_STR "master"
-#endif
+  #ifdef CONFIG_ESP_NOW_ROLE
+    #define ESP_NOW_ROLE_STR CONFIG_ESP_NOW_ROLE
+  #else
+    #define ESP_NOW_ROLE_STR "master"
+  #endif
 #endif
 
 #ifndef ESP_NOW_SLAVE_TYPE_STR
-#ifdef CONFIG_ESP_NOW_SLAVE_TYPE
-#define ESP_NOW_SLAVE_TYPE_STR CONFIG_ESP_NOW_SLAVE_TYPE
-#else
-#define ESP_NOW_SLAVE_TYPE_STR "none"
-#endif
+  #ifdef CONFIG_ESP_NOW_SLAVE_TYPE
+    #define ESP_NOW_SLAVE_TYPE_STR CONFIG_ESP_NOW_SLAVE_TYPE
+  #else
+    #define ESP_NOW_SLAVE_TYPE_STR "none"
+  #endif
 #endif
 
 // Si les macros sont passées sans guillemets (-DESP_NOW_ROLE_STR=slave), les convertir en chaînes
 #ifndef ESPNOW_STR
-#define ESPNOW_STR_HELPER(x) #x
-#define ESPNOW_STR(x) ESPNOW_STR_HELPER(x)
+  #define ESPNOW_STR_HELPER(x) #x
+  #define ESPNOW_STR(x) ESPNOW_STR_HELPER(x)
 #endif
 #if !defined(ESP_NOW_ROLE_STR_LIT) && !defined(__cplusplus)
-#define ESP_NOW_ROLE_STR_LIT ESPNOW_STR(ESP_NOW_ROLE_STR)
-#undef ESP_NOW_ROLE_STR
-#define ESP_NOW_ROLE_STR ESP_NOW_ROLE_STR_LIT
+  #define ESP_NOW_ROLE_STR_LIT ESPNOW_STR(ESP_NOW_ROLE_STR)
+  #undef ESP_NOW_ROLE_STR
+  #define ESP_NOW_ROLE_STR ESP_NOW_ROLE_STR_LIT
 #endif
 #if !defined(ESP_NOW_SLAVE_TYPE_STR_LIT) && !defined(__cplusplus)
-#define ESP_NOW_SLAVE_TYPE_STR_LIT ESPNOW_STR(ESP_NOW_SLAVE_TYPE_STR)
-#undef ESP_NOW_SLAVE_TYPE_STR
-#define ESP_NOW_SLAVE_TYPE_STR ESP_NOW_SLAVE_TYPE_STR_LIT
+  #define ESP_NOW_SLAVE_TYPE_STR_LIT ESPNOW_STR(ESP_NOW_SLAVE_TYPE_STR)
+  #undef ESP_NOW_SLAVE_TYPE_STR
+  #define ESP_NOW_SLAVE_TYPE_STR ESP_NOW_SLAVE_TYPE_STR_LIT
 #endif
 
 static vehicle_state_t last_vehicle_state = {0};
+
+// Helpers d'affichage pour ESP-NOW
+static const char *espnow_role_to_str(espnow_role_t role) {
+  return (role == ESP_NOW_ROLE_MASTER) ? "master" : "slave";
+}
+
+static const char *espnow_slave_type_to_str(espnow_slave_type_t type) {
+  switch (type) {
+    case ESP_NOW_SLAVE_BLINDSPOT_LEFT:
+      return "blindspot_left";
+    case ESP_NOW_SLAVE_BLINDSPOT_RIGHT:
+      return "blindspot_right";
+    case ESP_NOW_SLAVE_SPEEDOMETER:
+      return "speedometer";
+    default:
+      return "none";
+  }
+}
 
 // Callback pour les événements de scroll wheel (appelé depuis vehicle_state_apply_signal)
 static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
@@ -481,6 +499,8 @@ static void monitor_task(void *pvParameters) {
       can_bus_status_t can_chassis_status, can_body_status;
       can_bus_get_status(CAN_BUS_CHASSIS, &can_chassis_status);
       can_bus_get_status(CAN_BUS_BODY, &can_body_status);
+      espnow_role_t role             = espnow_link_get_role();
+      espnow_slave_type_t slave_type = espnow_link_get_slave_type();
 
       ESP_LOGI(TAG_MAIN, "=== Statut ===");
       ESP_LOGI(TAG_MAIN, "WiFi AP: %s (IP: %s, Clients: %d)", wifi_status.ap_started ? "Actif" : "Inactif", wifi_status.ap_ip, wifi_status.connected_clients);
@@ -488,18 +508,22 @@ static void monitor_task(void *pvParameters) {
       if (wifi_status.sta_connected) {
         ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid, wifi_status.sta_ip);
       }
+      ESP_LOGI(TAG_MAIN, "ESPNow: rôle %s, type %s", espnow_role_to_str(role), espnow_slave_type_to_str(slave_type));
+      
+      if (role == ESP_NOW_ROLE_MASTER) {
+        if (can_body_status.running) {
+          ESP_LOGI(TAG_MAIN, "CAN BODY: RX=%lu, TX=%lu, Err=%lu", can_body_status.rx_count, can_body_status.tx_count, can_body_status.errors);
+        } else {
+          ESP_LOGI(TAG_MAIN, "CAN BODY: Déconnecté");
+        }
 
-      if (can_body_status.running) {
-        ESP_LOGI(TAG_MAIN, "CAN BODY: RX=%lu, TX=%lu, Err=%lu", can_body_status.rx_count, can_body_status.tx_count, can_body_status.errors);
-      } else {
-        ESP_LOGI(TAG_MAIN, "CAN BODY: Déconnecté");
+        if (can_chassis_status.running) {
+          ESP_LOGI(TAG_MAIN, "CAN CHASSIS: RX=%lu, TX=%lu, Err=%lu", can_chassis_status.rx_count, can_chassis_status.tx_count, can_chassis_status.errors);
+        } else {
+          ESP_LOGI(TAG_MAIN, "CAN CHASSIS: Déconnecté");
+        }
       }
 
-      if (can_chassis_status.running) {
-        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: RX=%lu, TX=%lu, Err=%lu", can_chassis_status.rx_count, can_chassis_status.tx_count, can_chassis_status.errors);
-      } else {
-        ESP_LOGI(TAG_MAIN, "CAN CHASSIS: Déconnecté");
-      }
       ESP_LOGI(TAG_MAIN, "Mémoire libre: %lu bytes", esp_get_free_heap_size());
 #ifdef CONFIG_HAS_PSRAM
       ESP_LOGI(TAG_MAIN, "PSRAM libre: %d bytes", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
