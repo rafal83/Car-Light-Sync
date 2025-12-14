@@ -58,3 +58,4 @@ jobs:
       uses: jidicula/clang-format-action@v4.11.0
       with:
         check-path: 'main'
+        style: 'file'  # utilise .clang-format à la racine
