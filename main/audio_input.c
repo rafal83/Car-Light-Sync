@@ -45,7 +45,6 @@ static bool fft_data_ready               = false;
 
 // Buffers
 static int32_t audio_buffer[AUDIO_BUFFER_SIZE];
-static float fft_input[AUDIO_FFT_SIZE];
 static float fft_output[AUDIO_FFT_SIZE]; // Pour stocker les magnitudes FFT
 
 // Variables pour la détection de BPM
@@ -625,14 +624,6 @@ void audio_input_get_calibration(audio_calibration_t *out_calibration) {
 // ============================================================================
 // FFT IMPLEMENTATION (Cooley-Tukey radix-2 DIT)
 // ============================================================================
-
-// Fenêtre de Hann pour réduire les fuites spectrales
-static void apply_hann_window(float *data, int size) {
-  for (int i = 0; i < size; i++) {
-    float multiplier = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (size - 1)));
-    data[i] *= multiplier;
-  }
-}
 
 // FFT radix-2 in-place (Cooley-Tukey algorithm)
 // data contient [real0, imag0, real1, imag1, ...]

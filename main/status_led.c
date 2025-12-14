@@ -55,49 +55,6 @@ static esp_err_t status_led_set_color(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 /**
- * @brief Convertit HSV en RGB
- */
-static rgb_t hsv_to_rgb(float h, float s, float v) {
-  rgb_t rgb;
-  float c = v * s;
-  float x = c * (1.0f - fabsf(fmodf(h / 60.0f, 2.0f) - 1.0f));
-  float m = v - c;
-  float r, g, b;
-
-  if (h < 60) {
-    r = c;
-    g = x;
-    b = 0;
-  } else if (h < 120) {
-    r = x;
-    g = c;
-    b = 0;
-  } else if (h < 180) {
-    r = 0;
-    g = c;
-    b = x;
-  } else if (h < 240) {
-    r = 0;
-    g = x;
-    b = c;
-  } else if (h < 300) {
-    r = x;
-    g = 0;
-    b = c;
-  } else {
-    r = c;
-    g = 0;
-    b = x;
-  }
-
-  rgb.r = (uint8_t)((r + m) * 255);
-  rgb.g = (uint8_t)((g + m) * 255);
-  rgb.b = (uint8_t)((b + m) * 255);
-
-  return rgb;
-}
-
-/**
  * @brief Tâche d'animation de la LED
  */
 static void status_led_task(void *arg) {
