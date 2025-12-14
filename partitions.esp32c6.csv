@@ -1,7 +1,6 @@
-# ESP32-C6 layout (4MB flash) - OTA, larger apps (no SPIFFS)
-# Name,   Type, SubType, Offset,  Size, Flags
-nvs,      data, nvs,     0x9000,  0x40000,
-otadata,  data, ota,     0x49000, 0x2000,
-app0,     app,  ota_0,   0x50000, 0x1C0000,
-app1,     app,  ota_1,   0x210000,0x1C0000,
-coredump, data, coredump,0x3D0000,0x20000,
+# ESP32-C6 layout (4MB flash) - OTA, 128KB NVS, no coredump
+# Name,   Type, SubType, Offset,  Size,    Flags
+nvs,      data, nvs,     0x9000,  0x20000,
+otadata,  data, ota,     0x29000, 0x2000,
+app0,     app,  ota_0,   0x2B000, 0x1EA000,
+app1,     app,  ota_1,   0x215000,0x1EB000,
