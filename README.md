@@ -6,7 +6,7 @@ Système de contrôle LED RGB WS2812 synchronisé au bus CAN, avec interface web
 Car Light Sync est maintenu sur mon temps libre. Tu peux aider en :
 - Mettre une étoile au dépôt et partager le projet
 - Contribuer au code, à la doc ou aux tests (issues/PR bienvenues)
-- Offrir un café pour financer matériel, hébergement et prototypes : [Buy Me a Coffee](https://buymeacoffee.com/raphael.d)
+- Offrir un café pour financer matériel, hébergement et prototypes : [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/raphael.d)
 
 Merci ! Ton soutien garde le projet libre et accessible.
 
@@ -32,8 +32,19 @@ Merci ! Ton soutien garde le projet libre et accessible.
 - Firmware & code (architecture, effets, CAN, audio) : `docs/firmware.md`
 - Problèmes, dépannage & sécurité : `docs/problemes.md`
 
+## Sources & références 🔗
+- 🚗 DBC Tesla Model 3 : https://github.com/joshwardell/model3dbc (base des signaux CAN)
+- 📕 Opendbc (DBC communautaires) : https://github.com/commaai/opendbc
+- 🚙 Onyx M2 DBC : https://github.com/onyx-m2/onyx-m2-dbc (DBC Onyx M2)
+- 🛰️ Protocole GVRET / SavvyCAN : https://github.com/collin80/SavvyCAN/blob/master/connections/gvretserial.cpp (passerelle TCP)
+- 📡 CANserver (UDP Panda) : https://github.com/commaai/canserver (format et passerelle UDP)
+- 📘 ESP-IDF SDK : https://docs.espressif.com/projects/esp-idf/en/stable/esp32/ (guide complet)
+- 🌐 Serveur HTTP ESP-IDF : https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/protocols/esp_http_server.html (implémentation web)
+
 ## 🤝 Contribution
-1) Fork, 2) branche `feature/...`, 3) PR. Zones utiles : configs CAN (autres véhicules), nouveaux effets LED, perfs, doc/traductions, tests.
+- Fork, 
+- branche `feature/...`, 
+- PR. Zones utiles : configs CAN (autres véhicules), nouveaux effets LED, perfs, doc/traductions, tests.
 
 ## 📄 Licence
 MIT (voir `LICENSE`).
