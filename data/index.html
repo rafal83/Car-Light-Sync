@@ -89,11 +89,11 @@
           </div>
         </div>
       </div>
-      <div class="status-item">
+      <div class="status-item" id="status-vehicle">
         <div class="status-label" data-i18n="status.vehicle">Véhicule</div>
         <div class="status-value" id="vehicle-status">...</div>
       </div>
-      <div class="status-item status-item-can">
+      <div class="status-item status-item-can" id="status-can">
         <div class="status-label" data-i18n="status.canBus">CAN Bus</div>
         <div class="status-can-group">
           <div class="status-can-item">
@@ -105,6 +105,10 @@
             <span class="status-value" id="can-body-status">...</span>
           </div>
         </div>
+      </div>
+      <div class="status-item" id="status-espnow" style="display: none;">
+        <div class="status-label">ESP-NOW</div>
+        <div class="status-value" id="espnow-status">slave</div>
       </div>
       <div class="status-item">
         <div class="status-label" data-i18n="status.profile">Profil</div>
@@ -119,11 +123,11 @@
             data-i18n="tabs.profiles">Profils</button>
           <button class="tab" data-tab="events-config" onclick="switchTab('events-config', event)"
             data-i18n="tabs.eventsConfig">Événements</button>
-          <button class="tab" data-tab="vehicle" onclick="switchTab('vehicle', event)"
+          <button class="tab" id="tab-vehicle" data-tab="vehicle" onclick="switchTab('vehicle', event)"
             data-i18n="tabs.vehicle">Véhicule</button>
           <button class="tab" data-tab="config" onclick="switchTab('config', event)"
             data-i18n="tabs.hardware">Matérielle</button>
-          <button class="tab" data-tab="diagnostic" onclick="switchTab('diagnostic', event)"
+          <button class="tab" id="tab-diagnostic" data-tab="diagnostic" onclick="switchTab('diagnostic', event)"
             data-i18n="tabs.diagnostic">Diagnostic CAN</button>
           <button class="tab" id="logs-tab-button" data-tab="logs" onclick="switchTab('logs', event)"
             data-i18n="tabs.logs" style="display: none;">Logs</button>
@@ -171,7 +175,7 @@
           </div>
 
           <!-- Section: Luminosité Dynamique -->
-          <div class="profile-section">
+          <div class="profile-section" id="dynamic-brightness-section">
             <div class="profile-section-header">
               <h3 data-i18n="profiles.dynamicBrightness">Luminosité Dynamique</h3>
               <p data-i18n="profiles.dynamicBrightnessDesc">Ajuste automatiquement la luminosité en fonction de la
@@ -201,7 +205,7 @@
           </div>
 
           <!-- Section: Effet par Défaut -->
-          <div class="profile-section">
+          <div class="profile-section" id="default-effect-section">
             <div class="profile-section-header">
               <h3 data-i18n="profiles.defaultEffect">Effet par Défaut</h3>
               <p data-i18n="profiles.defaultEffectDesc">Effet affiché quand aucun événement CAN n'est actif</p>
@@ -591,38 +595,61 @@
               </div>
             </div>
             <div class="profile-section-header">
-              <h3 data-i18n="config.wheelSettings">Paramètres Molette</h3>
+              <h3 data-i18n="config.espnowTitle">ESP-NOW</h3>
             </div>
             <div class="profile-section-content">
-              <div class="control-row" style="margin-top: 12px;">
-                <label class="toggle-container" for="wheel-control-toggle">
-                  <div class="toggle-switch">
-                    <input type="checkbox" id="wheel-control-toggle" onchange="saveHardwareConfig()">
-                    <span class="toggle-slider"></span>
-                  </div>
-                  <span class="toggle-label" data-i18n="config.wheelControl">Molette droite = changement de profil
-                    (opt-in)</span>
-                </label>
+              <div class="control-group">
+                <label class="control-label" data-i18n="config.espnowRole">Rôle</label>
+                <select id="espnow-role" onchange="saveEspnowConfig()">
+                  <option value="master" data-i18n="config.espnowRoleMaster">Master</option>
+                  <option value="slave" data-i18n="config.espnowRoleSlave">Slave</option>
+                </select>
               </div>
               <div class="control-group">
-                <label class="control-label" data-i18n="config.wheelControlDesc">Actif uniquement si vitesse ≤ seuil et
-                  régulateur/AP désactivé.</label>
-                <div style="display: flex; gap: 10px; align-items: center; max-width: 320px;">
-                  <input type="number" id="wheel-speed-limit" min="0" max="100" step="5" value="5" style="width: 120px;"
-                    onchange="saveHardwareConfig()">
-                  <span data-i18n="config.wheelSpeedLimit">Vitesse max (km/h)</span>
+                <label class="control-label" data-i18n="config.espnowType">Type d'esclave</label>
+                <select id="espnow-type" onchange="saveEspnowConfig()">
+                  <option value="none" data-i18n="config.espnowTypeNone">Aucun</option>
+                  <option value="blindspot_left" data-i18n="config.espnowTypeBsl">Blindspot gauche</option>
+                  <option value="blindspot_right" data-i18n="config.espnowTypeBsr">Blindspot droite</option>
+                  <option value="speedometer" data-i18n="config.espnowTypeSpeedo">Speedometer</option>
+                </select>
+              </div>
+            </div>
+            <div id="wheel-control-section">
+              <div class="profile-section-header">
+                <h3 data-i18n="config.wheelSettings">Paramètres Molette</h3>
+              </div>
+              <div class="profile-section-content">
+                <div class="control-row" style="margin-top: 12px;">
+                  <label class="toggle-container" for="wheel-control-toggle">
+                    <div class="toggle-switch">
+                      <input type="checkbox" id="wheel-control-toggle" onchange="saveHardwareConfig()">
+                      <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label" data-i18n="config.wheelControl">Molette droite = changement de profil
+                      (opt-in)</span>
+                  </label>
+                </div>
+                <div class="control-group">
+                  <label class="control-label" data-i18n="config.wheelControlDesc">Actif uniquement si vitesse ≤ seuil et
+                    régulateur/AP désactivé.</label>
+                  <div style="display: flex; gap: 10px; align-items: center; max-width: 320px;">
+                    <input type="number" id="wheel-speed-limit" min="0" max="100" step="5" value="5" style="width: 120px;"
+                      onchange="saveHardwareConfig()">
+                    <span data-i18n="config.wheelSpeedLimit">Vitesse max (km/h)</span>
+                  </div>
                 </div>
               </div>
-              <div class="button-group" style="margin-top: 20px;">
-                <button class="btn-secondary" onclick="loadHardwareConfig()"
-                  data-i18n="config.reload">Recharger</button>
-                <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restart">Redémarrer</button>
-              </div>
+            </div>
+            <div class="button-group" style="margin-top: 20px;">
+              <button class="btn-secondary" onclick="loadHardwareConfig()"
+                data-i18n="config.reload">Recharger</button>
+              <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restart">Redémarrer</button>
             </div>
           </div>
 
           <!-- Section: Configuration Audio -->
-          <div class="profile-section">
+          <div class="profile-section" id="audio-section">
             <div class="profile-section-header">
               <h3 data-i18n="audio.title">Configuration Audio</h3>
               <p style="padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px; margin-top: 10px;"

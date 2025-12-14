@@ -30,6 +30,9 @@ extern "C" {
 /** @brief NVS namespace for CAN server configuration */
 #define NVS_NAMESPACE_CAN_SERVERS "can_servers"
 
+/** @brief NVS namespace for ESP-NOW role/type configuration */
+#define NVS_NAMESPACE_ESPNOW "espnow_cfg"
+
 // ============================================================================
 // Generic NVS Get/Set Functions
 // ============================================================================

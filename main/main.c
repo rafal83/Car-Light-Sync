@@ -26,6 +26,7 @@
 #include "led_effects.h"
 #include "led_strip_encoder.h"
 #include "log_stream.h"
+#include "nvs_manager.h"
 #include "nvs_flash.h"
 #include "ota_update.h"
 #include "reset_button.h"
@@ -53,61 +54,8 @@
 
 #define TAG_MAIN "Main"
 
-// ESP-NOW init (rôle et type d'esclave via Kconfig ou build flags PlatformIO)
-// Configurable via Kconfig ou build flags PlatformIO :
-//   -DESP_NOW_ROLE_STR=\"master\"|\"slave\"
-//   -DESP_NOW_SLAVE_TYPE_STR=\"blindspot_left\"|\"blindspot_right\"|\"speedometer\"
-#ifndef ESP_NOW_ROLE_STR
-  #ifdef CONFIG_ESP_NOW_ROLE
-    #define ESP_NOW_ROLE_STR CONFIG_ESP_NOW_ROLE
-  #else
-    #define ESP_NOW_ROLE_STR "master"
-  #endif
-#endif
-
-#ifndef ESP_NOW_SLAVE_TYPE_STR
-  #ifdef CONFIG_ESP_NOW_SLAVE_TYPE
-    #define ESP_NOW_SLAVE_TYPE_STR CONFIG_ESP_NOW_SLAVE_TYPE
-  #else
-    #define ESP_NOW_SLAVE_TYPE_STR "none"
-  #endif
-#endif
-
-// Si les macros sont passées sans guillemets (-DESP_NOW_ROLE_STR=slave), les convertir en chaînes
-#ifndef ESPNOW_STR
-  #define ESPNOW_STR_HELPER(x) #x
-  #define ESPNOW_STR(x) ESPNOW_STR_HELPER(x)
-#endif
-#if !defined(ESP_NOW_ROLE_STR_LIT) && !defined(__cplusplus)
-  #define ESP_NOW_ROLE_STR_LIT ESPNOW_STR(ESP_NOW_ROLE_STR)
-  #undef ESP_NOW_ROLE_STR
-  #define ESP_NOW_ROLE_STR ESP_NOW_ROLE_STR_LIT
-#endif
-#if !defined(ESP_NOW_SLAVE_TYPE_STR_LIT) && !defined(__cplusplus)
-  #define ESP_NOW_SLAVE_TYPE_STR_LIT ESPNOW_STR(ESP_NOW_SLAVE_TYPE_STR)
-  #undef ESP_NOW_SLAVE_TYPE_STR
-  #define ESP_NOW_SLAVE_TYPE_STR ESP_NOW_SLAVE_TYPE_STR_LIT
-#endif
 
 static vehicle_state_t last_vehicle_state = {0};
-
-// Helpers d'affichage pour ESP-NOW
-static const char *espnow_role_to_str(espnow_role_t role) {
-  return (role == ESP_NOW_ROLE_MASTER) ? "master" : "slave";
-}
-
-static const char *espnow_slave_type_to_str(espnow_slave_type_t type) {
-  switch (type) {
-    case ESP_NOW_SLAVE_BLINDSPOT_LEFT:
-      return "blindspot_left";
-    case ESP_NOW_SLAVE_BLINDSPOT_RIGHT:
-      return "blindspot_right";
-    case ESP_NOW_SLAVE_SPEEDOMETER:
-      return "speedometer";
-    default:
-      return "none";
-  }
-}
 
 // Callback pour les événements de scroll wheel (appelé depuis vehicle_state_apply_signal)
 static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
@@ -508,7 +456,7 @@ static void monitor_task(void *pvParameters) {
       if (wifi_status.sta_connected) {
         ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid, wifi_status.sta_ip);
       }
-      ESP_LOGI(TAG_MAIN, "ESPNow: rôle %s, type %s", espnow_role_to_str(role), espnow_slave_type_to_str(slave_type));
+      ESP_LOGI(TAG_MAIN, "ESPNow: rôle %s, type %s", espnow_link_role_to_str(role), espnow_link_slave_type_to_str(slave_type));
       
       if (role == ESP_NOW_ROLE_MASTER) {
         if (can_body_status.running) {
@@ -588,15 +536,9 @@ void app_main(void) {
   cJSON_InitHooks(&hooks);
 #endif
 
-  espnow_role_t espnow_role       = (strcmp(ESP_NOW_ROLE_STR, "slave") == 0) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
-  espnow_slave_type_t espnow_type = ESP_NOW_SLAVE_NONE;
-  if (strcmp(ESP_NOW_SLAVE_TYPE_STR, "blindspot_left") == 0) {
-    espnow_type = ESP_NOW_SLAVE_BLINDSPOT_LEFT;
-  } else if (strcmp(ESP_NOW_SLAVE_TYPE_STR, "blindspot_right") == 0) {
-    espnow_type = ESP_NOW_SLAVE_BLINDSPOT_RIGHT;
-  } else if (strcmp(ESP_NOW_SLAVE_TYPE_STR, "speedometer") == 0) {
-    espnow_type = ESP_NOW_SLAVE_SPEEDOMETER;
-  }
+  // Par défaut : master/none. NVS peut surcharger via l'API /api/espnow/config
+  espnow_role_t default_role = ESP_NOW_ROLE_MASTER;
+  espnow_slave_type_t default_type = ESP_NOW_SLAVE_NONE;
 
   // Réduire le niveau de log de tous les composants ESP-IDF
   esp_log_level_set("*", ESP_LOG_WARN);     // Par défaut : warnings seulement
@@ -643,6 +585,16 @@ void app_main(void) {
 
   // Initialiser les modules
   ESP_LOGI(TAG_MAIN, "Initialisation des modules...");
+
+  uint8_t saved_role_u8 = nvs_manager_get_u8(NVS_NAMESPACE_ESPNOW, "role", (uint8_t)default_role);
+  uint8_t saved_type_u8 = nvs_manager_get_u8(NVS_NAMESPACE_ESPNOW, "type", (uint8_t)default_type);
+
+  espnow_role_t espnow_role = (saved_role_u8 <= ESP_NOW_ROLE_SLAVE) ? (espnow_role_t)saved_role_u8 : default_role;
+  espnow_slave_type_t espnow_type = (saved_type_u8 < ESP_NOW_SLAVE_MAX) ? (espnow_slave_type_t)saved_type_u8 : default_type;
+
+  ESP_LOGI(TAG_MAIN, "ESPNow config: nvs_role=%u nvs_type=%u",
+           espnow_link_role_to_str(espnow_role),
+           espnow_link_slave_type_to_str(espnow_type));
 
   // LED de statut (WS2812 intégrée)
   esp_err_t status_led_err = status_led_init();

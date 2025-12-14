@@ -50,4 +50,10 @@ espnow_role_t espnow_link_get_role(void);
 espnow_slave_type_t espnow_link_get_slave_type(void);
 void espnow_link_register_rx_callback(espnow_can_rx_cb_t cb);
 
+// Helpers conversion/affichage
+const char *espnow_link_role_to_str(espnow_role_t role);
+const char *espnow_link_slave_type_to_str(espnow_slave_type_t type);
+bool espnow_link_role_from_str(const char *s, espnow_role_t *out);
+bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out);
+
 #endif // ESPNOW_LINK_H

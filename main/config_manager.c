@@ -71,6 +71,13 @@ bool config_manager_init(void) {
   memset(&active_profile, 0, sizeof(active_profile));
   active_profile_loaded = false;
 
+  // Réduire la consommation de stack : utiliser un buffer dynamique pour les profils temporaires
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur alloc profil temp");
+    return false;
+  }
+
   // Charger les réglages de contrôle volant (opt-in)
   load_wheel_control_settings();
 
@@ -100,9 +107,8 @@ bool config_manager_init(void) {
     active_profile_id     = 1;
     active_profile_loaded = true;
 
-    config_profile_t off_profile;
-    config_manager_create_off_profile(&off_profile, "Eteint");
-    config_manager_save_profile(0, &off_profile);
+    config_manager_create_off_profile(temp_profile, "Eteint");
+    config_manager_save_profile(0, temp_profile);
 
     // Sauvegarder l'ID actif
     nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", active_profile_id);
@@ -112,11 +118,12 @@ bool config_manager_init(void) {
   }
 
   // S'assurer qu'un profil "Eteint" existe (ID 0 réservé)
-  config_profile_t off_profile;
-  if (!config_manager_load_profile(0, &off_profile)) {
-    config_manager_create_off_profile(&off_profile, "Eteint");
-    config_manager_save_profile(0, &off_profile);
+  if (!config_manager_load_profile(0, temp_profile)) {
+    config_manager_create_off_profile(temp_profile, "Eteint");
+    config_manager_save_profile(0, temp_profile);
   }
+
+  free(temp_profile);
 
   return true;
 }

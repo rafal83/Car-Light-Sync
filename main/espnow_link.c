@@ -50,6 +50,61 @@ static espnow_slave_type_t s_slave_type = ESP_NOW_SLAVE_NONE;
 static espnow_request_list_t s_requests = {0};
 static espnow_can_rx_cb_t s_rx_cb       = NULL;
 
+const char *espnow_link_role_to_str(espnow_role_t role) {
+  return (role == ESP_NOW_ROLE_SLAVE) ? "slave" : "master";
+}
+
+const char *espnow_link_slave_type_to_str(espnow_slave_type_t type) {
+  switch (type) {
+  case ESP_NOW_SLAVE_BLINDSPOT_LEFT:
+    return "blindspot_left";
+  case ESP_NOW_SLAVE_BLINDSPOT_RIGHT:
+    return "blindspot_right";
+  case ESP_NOW_SLAVE_SPEEDOMETER:
+    return "speedometer";
+  default:
+    return "none";
+  }
+}
+
+bool espnow_link_role_from_str(const char *s, espnow_role_t *out) {
+  if (!s || !out) {
+    return false;
+  }
+  if (strcmp(s, "master") == 0) {
+    *out = ESP_NOW_ROLE_MASTER;
+    return true;
+  }
+  if (strcmp(s, "slave") == 0) {
+    *out = ESP_NOW_ROLE_SLAVE;
+    return true;
+  }
+  return false;
+}
+
+bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out) {
+  if (!s || !out) {
+    return false;
+  }
+  if (strcmp(s, "blindspot_left") == 0) {
+    *out = ESP_NOW_SLAVE_BLINDSPOT_LEFT;
+    return true;
+  }
+  if (strcmp(s, "blindspot_right") == 0) {
+    *out = ESP_NOW_SLAVE_BLINDSPOT_RIGHT;
+    return true;
+  }
+  if (strcmp(s, "speedometer") == 0) {
+    *out = ESP_NOW_SLAVE_SPEEDOMETER;
+    return true;
+  }
+  if (strcmp(s, "none") == 0) {
+    *out = ESP_NOW_SLAVE_NONE;
+    return true;
+  }
+  return false;
+}
+
 // Table simplifiée des IDs par type d'esclave
 static void load_default_requests(espnow_slave_type_t type, espnow_request_list_t *out) {
   memset(out, 0, sizeof(*out));

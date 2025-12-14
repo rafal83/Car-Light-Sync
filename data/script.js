@@ -53,6 +53,7 @@ let activeTabName = 'vehicle';
 let statusIntervalHandle = null;
 let isApMode = false; // Mode AP de l'ESP32 (plus lent)
 let maxLeds = 300; // Par défaut, sera mis à jour depuis /api/config
+let isMasterRole = true;
 function isApiConnectionReady() {
     return wifiOnline || (bleTransportInstance && bleTransportInstance.isConnected());
 }
@@ -1788,6 +1789,9 @@ async function loadHardwareConfig() {
         if (config.wheel_spd !== undefined) {
             $('wheel-speed-limit').value = config.wheel_spd;
         }
+
+        // Charger la config ESP-NOW
+        await loadEspnowConfig();
     } catch (e) {
         console.error('Error:', e);
         showNotification('config-notification', t('config.loadError'), 'error');
@@ -1831,6 +1835,97 @@ async function saveHardwareConfigImmediate() {
     } catch (e) {
         console.error('Error:', e);
         showNotification('config-notification', t('config.saveError'), 'error');
+    }
+}
+
+// ESP-NOW config (role/type) -----------------------------------------------
+async function loadEspnowConfig() {
+    try {
+        const resp = await fetch(API_BASE + '/api/espnow/config');
+        if (!resp.ok) {
+            throw new Error('HTTP ' + resp.status);
+        }
+        const cfg = await resp.json();
+        if (cfg.role) $('espnow-role').value = cfg.role;
+        if (cfg.type) $('espnow-type').value = cfg.type;
+        isMasterRole = (cfg.role === 'master');
+        updateEspnowStatus(cfg);
+        applyEspnowVisibility();
+    } catch (e) {
+        console.warn('Cannot load ESP-NOW config', e);
+    }
+}
+
+let saveEspnowTimeout = null;
+function saveEspnowConfig() {
+    if (saveEspnowTimeout) {
+        clearTimeout(saveEspnowTimeout);
+    }
+    saveEspnowTimeout = setTimeout(saveEspnowConfigImmediate, HARDWARE_SAVE_DEBOUNCE_MS);
+}
+
+async function saveEspnowConfigImmediate() {
+    const payload = {
+        role: $('espnow-role').value,
+        type: $('espnow-type').value
+    };
+    try {
+        const resp = await fetch(API_BASE + '/api/espnow/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+            throw new Error('HTTP ' + resp.status);
+        }
+        const data = await resp.json();
+        isMasterRole = (data.role === 'master');
+        updateEspnowStatus(data);
+        applyEspnowVisibility();
+        showNotification('config-notification',
+            t('config.espnowSaved') || 'Config ESP-NOW sauvegardée. Redémarrage requis.',
+            'success');
+    } catch (e) {
+        console.error('Failed to save ESP-NOW config', e);
+        showNotification('config-notification',
+            t('config.espnowSaveError') || 'Erreur sauvegarde ESP-NOW',
+            'error');
+    }
+}
+
+function applyEspnowVisibility() {
+    const showMaster = !!isMasterRole;
+    const elements = [
+        $('tab-vehicle'),
+        $('vehicle-tab'),
+        $('tab-diagnostic'),
+        $('diagnostic-tab'),
+        $('status-vehicle'),
+        $('status-can'),
+        $('dynamic-brightness-section'),
+        $('default-effect-section'),
+        $('wheel-control-section'),
+        $('audio-section'),
+    ];
+    elements.forEach(el => {
+        if (!el) return;
+        el.style.display = showMaster ? '' : 'none';
+    });
+    if (!showMaster && (activeTabName === 'vehicle' || activeTabName === 'diagnostic')) {
+        switchTab('config');
+    }
+
+    const espnowStatus = $('status-espnow');
+    if (espnowStatus) {
+        espnowStatus.style.display = showMaster ? 'none' : '';
+    }
+}
+
+function updateEspnowStatus(cfg) {
+    const statusEl = $('espnow-status');
+    if (!statusEl || !cfg) return;
+    if (cfg.role === 'slave') {
+        statusEl.textContent = cfg.type || 'slave';
     }
 }
 // Factory Reset

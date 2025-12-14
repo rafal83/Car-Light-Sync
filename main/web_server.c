@@ -22,6 +22,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "espnow_link.h"
 #include "gvret_tcp_server.h" // Pour le serveur GVRET TCP
 #include "led_effects.h"
 #include "log_stream.h" // Pour le streaming de logs en temps réel
@@ -544,6 +545,79 @@ static esp_err_t config_handler(httpd_req_t *req) {
   free((void *)json_string);
   cJSON_Delete(root);
 
+  return ESP_OK;
+}
+
+// GET ESP-NOW config (role/type)
+static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
+  espnow_role_t role             = espnow_link_get_role();
+  espnow_slave_type_t slave_type = espnow_link_get_slave_type();
+
+  cJSON *root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "role", espnow_link_role_to_str(role));
+  cJSON_AddStringToObject(root, "type", espnow_link_slave_type_to_str(slave_type));
+
+  const char *json_string = cJSON_PrintUnformatted(root);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_string);
+  free((void *)json_string);
+  cJSON_Delete(root);
+  return ESP_OK;
+}
+
+// POST ESP-NOW config (role/type) -> sauvegarde NVS, reboot nécessaire pour appliquer
+static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
+  char content[BUFFER_SIZE_SMALL] = {0};
+  cJSON *root = NULL;
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
+    return ESP_FAIL;
+  }
+
+  const cJSON *role_json = cJSON_GetObjectItem(root, "role");
+  const cJSON *type_json = cJSON_GetObjectItem(root, "type");
+
+  espnow_role_t new_role             = espnow_link_get_role();
+  espnow_slave_type_t new_slave_type = espnow_link_get_slave_type();
+
+  bool ok = true;
+  if (role_json && cJSON_IsString(role_json)) {
+    ok = espnow_link_role_from_str(role_json->valuestring, &new_role);
+  }
+  if (ok && type_json && cJSON_IsString(type_json)) {
+    ok = espnow_link_slave_type_from_str(type_json->valuestring, &new_slave_type);
+  }
+
+  if (!ok) {
+    cJSON_Delete(root);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid role/type");
+    return ESP_FAIL;
+  }
+
+  esp_err_t err1 = nvs_manager_set_u8(NVS_NAMESPACE_ESPNOW, "role", (uint8_t)new_role);
+  esp_err_t err2 = nvs_manager_set_u8(NVS_NAMESPACE_ESPNOW, "type", (uint8_t)new_slave_type);
+
+  cJSON_Delete(root);
+
+  if (err1 != ESP_OK || err2 != ESP_OK) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save NVS");
+    return ESP_FAIL;
+  }
+
+  ESP_LOGI(TAG_WEBSERVER, "ESP-NOW config saved: role=%s type=%s (NVS)",
+           espnow_link_role_to_str(new_role),
+           espnow_link_slave_type_to_str(new_slave_type));
+
+  cJSON *resp = cJSON_CreateObject();
+  cJSON_AddStringToObject(resp, "st", "ok");
+  cJSON_AddStringToObject(resp, "role", espnow_link_role_to_str(new_role));
+  cJSON_AddStringToObject(resp, "type", espnow_link_slave_type_to_str(new_slave_type));
+  cJSON_AddBoolToObject(resp, "restart_required", true);
+
+  const char *json_string = cJSON_PrintUnformatted(resp);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_string);
+  free((void *)json_string);
+  cJSON_Delete(resp);
   return ESP_OK;
 }
 
@@ -1984,6 +2058,12 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t config_uri = {.uri = "/api/config", .method = HTTP_GET, .handler = config_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &config_uri);
+
+    httpd_uri_t espnow_get_uri = {.uri = "/api/espnow/config", .method = HTTP_GET, .handler = espnow_config_get_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_get_uri);
+
+    httpd_uri_t espnow_post_uri = {.uri = "/api/espnow/config", .method = HTTP_POST, .handler = espnow_config_post_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_post_uri);
 
     httpd_uri_t status_uri = {.uri = "/api/status", .method = HTTP_GET, .handler = status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &status_uri);
