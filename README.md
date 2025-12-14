@@ -39,7 +39,6 @@ Merci ! Ton soutien garde le projet libre et accessible.
 - 🛰️ Protocole GVRET / SavvyCAN : https://github.com/collin80/SavvyCAN/blob/master/connections/gvretserial.cpp (passerelle TCP)
 - 📡 CANserver (UDP Panda) : https://github.com/commaai/canserver (format et passerelle UDP)
 - 📘 ESP-IDF SDK : https://docs.espressif.com/projects/esp-idf/en/stable/esp32/ (guide complet)
-- 🌐 Serveur HTTP ESP-IDF : https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/protocols/esp_http_server.html (implémentation web)
 
 ## 🤝 Contribution
 - Fork, 
