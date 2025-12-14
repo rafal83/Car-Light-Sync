@@ -430,22 +430,22 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
   // Calcul de la charge CPU (ESP32-C6 mono-core / ESP32-S3 dual-core)
   // Utilise les statistiques d'exécution FreeRTOS (maintenant activées dans sdkconfig)
-  static uint32_t last_idle_time = 0;
-  static uint32_t last_total_time = 0;
+  static uint32_t last_idle_time     = 0;
+  static uint32_t last_total_time    = 0;
   static uint32_t cpu_usage_filtered = 0;
 
-  uint32_t current_total_time = 0;
-  uint32_t cpu_usage = 0;
+  uint32_t current_total_time        = 0;
+  uint32_t cpu_usage                 = 0;
 
   // Allouer de la mémoire pour les infos des tâches (estimer ~30 tâches max pour les serveurs)
-  const UBaseType_t max_tasks = 30;
-  TaskStatus_t *task_status_array = (TaskStatus_t *)malloc(max_tasks * sizeof(TaskStatus_t));
+  const UBaseType_t max_tasks        = 30;
+  TaskStatus_t *task_status_array    = (TaskStatus_t *)malloc(max_tasks * sizeof(TaskStatus_t));
 
   if (task_status_array != NULL) {
-    UBaseType_t task_count = uxTaskGetSystemState(task_status_array, max_tasks, &current_total_time);
+    UBaseType_t task_count     = uxTaskGetSystemState(task_status_array, max_tasks, &current_total_time);
 
     // Calculer le temps total d'exécution de TOUTES les tâches
-    uint32_t total_runtime = 0;
+    uint32_t total_runtime     = 0;
     uint32_t current_idle_time = 0;
 
     for (UBaseType_t i = 0; i < task_count; i++) {
@@ -462,13 +462,14 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
     // Calculer le pourcentage CPU si on a des données précédentes
     if (last_total_time > 0 && total_runtime > last_total_time) {
-      uint32_t idle_delta = current_idle_time - last_idle_time;
+      uint32_t idle_delta  = current_idle_time - last_idle_time;
       uint32_t total_delta = total_runtime - last_total_time;
 
       if (total_delta > 0 && idle_delta <= total_delta) {
         // CPU usage = 100 - (idle_time / total_time * 100)
         cpu_usage = 100 - ((idle_delta * 100) / total_delta);
-        if (cpu_usage > 100) cpu_usage = 100; // Clamp à 100%
+        if (cpu_usage > 100)
+          cpu_usage = 100; // Clamp à 100%
 
         // Filtre simple pour lisser les variations
         cpu_usage_filtered = (cpu_usage_filtered * 3 + cpu_usage) / 4;
@@ -481,7 +482,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
       cpu_usage = cpu_usage_filtered;
     }
 
-    last_idle_time = current_idle_time;
+    last_idle_time  = current_idle_time;
     last_total_time = total_runtime;
   } else {
     cpu_usage = cpu_usage_filtered;
@@ -490,8 +491,8 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(root, "cpu", cpu_usage_filtered);
 
   // Mémoire consommée (heap)
-  size_t free_heap = esp_get_free_heap_size();
-  size_t total_heap = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
+  size_t free_heap          = esp_get_free_heap_size();
+  size_t total_heap         = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
   uint32_t mem_used_percent = (total_heap > 0) ? (((total_heap - free_heap) * 100) / total_heap) : 0;
   cJSON_AddNumberToObject(root, "mem", mem_used_percent);
 

@@ -266,18 +266,18 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
     if (strcmp(name, "DAS_autopilotHandsOnState") == 0) {
       /*
-        0 "LC_HANDS_ON_NOT_REQD" 
-        1 "LC_HANDS_ON_REQD_DETECTED" 
-        2 "LC_HANDS_ON_REQD_NOT_DETECTED" 
-        3 "LC_HANDS_ON_REQD_VISUAL" 
-        4 "LC_HANDS_ON_REQD_CHIME_1" 
-        5 "LC_HANDS_ON_REQD_CHIME_2" 
-        6 "LC_HANDS_ON_REQD_SLOWING" 
-        7 "LC_HANDS_ON_REQD_STRUCK_OUT" 
+        0 "LC_HANDS_ON_NOT_REQD"
+        1 "LC_HANDS_ON_REQD_DETECTED"
+        2 "LC_HANDS_ON_REQD_NOT_DETECTED"
+        3 "LC_HANDS_ON_REQD_VISUAL"
+        4 "LC_HANDS_ON_REQD_CHIME_1"
+        5 "LC_HANDS_ON_REQD_CHIME_2"
+        6 "LC_HANDS_ON_REQD_SLOWING"
+        7 "LC_HANDS_ON_REQD_STRUCK_OUT"
         8 "LC_HANDS_ON_SUSPENDED" ;
-        9 "LC_HANDS_ON_REQD_ESCALATED_CHIME_1" 
-        10 "LC_HANDS_ON_REQD_ESCALATED_CHIME_2" 
-        15 "LC_HANDS_ON_SNA" 
+        9 "LC_HANDS_ON_REQD_ESCALATED_CHIME_1"
+        10 "LC_HANDS_ON_REQD_ESCALATED_CHIME_2"
+        15 "LC_HANDS_ON_SNA"
       */
       state->autopilot_alert_lv1 = value == 1 ? 1 : 0;
       state->autopilot_alert_lv2 = value >= 2 && value <= 5 ? 1 : 0;
@@ -304,14 +304,14 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
-      int v                 = (int)(value + 0.5f);
-      state->blindspot_left = (v > 0) ? 1 : 0;
+      int v                       = (int)(value + 0.5f);
+      state->blindspot_left       = (v > 0) ? 1 : 0;
       state->blindspot_left_alert = (v > 1) ? 1 : 0;
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
-      int v                  = (int)(value + 0.5f);
-      state->blindspot_right = (v > 0) ? 1 : 0;
+      int v                        = (int)(value + 0.5f);
+      state->blindspot_right       = (v > 0) ? 1 : 0;
       state->blindspot_right_alert = (v > 1) ? 1 : 0;
       return;
     }

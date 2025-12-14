@@ -343,7 +343,7 @@ static void can_event_task(void *pvParameters) {
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_ENGAGED);
       }
     }
-    
+
     if (current_state.autopilot_alert_lv1 != previous_state.autopilot_alert_lv1) {
       if (current_state.autopilot_alert_lv1) {
         config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ALERT_LV1);
@@ -753,7 +753,6 @@ void app_main(void) {
       ESP_ERROR_CHECK(canserver_udp_server_start());
       ESP_LOGI(TAG_MAIN, "  → Démarrage automatique activé (CANServer)");
     }
-
   }
 
   // Afficher les informations de connexion
