@@ -1,6 +1,6 @@
 # Car Light Sync — Firmware & Code
 
-Notes techniques sur l’architecture, les effets et la logique CAN du projet.
+Notes techniques sur l'architecture, les effets et la logique CAN du projet.
 
 ## Architecture du code
 - `include/` : headers, configuration matérielle et CAN.
@@ -13,6 +13,7 @@ Notes techniques sur l’architecture, les effets et la logique CAN du projet.
 - Architecture CAN unifiée basée sur DBC, avec décodage générique des signaux.
 - Fichiers générés contiennent messages, signaux (start_bit, length, byte_order, factor, offset) et mapping des événements.
 - Les événements CAN sont ensuite associés à des effets LED via la configuration.
+- Pour bénéficier de **toutes** les fonctionnalités CAN (double bus), une carte **ESP32-C6** est requise **et ESP-IDF ≥ 5.2** (support multi-contrôleur TWAI). Sur ESP32-S3 ou sans multi-contrôleur, un seul bus est actif et le second est automatiquement désactivé côté firmware.
 
 ## Effets LED disponibles
 | ID | Nom | Description courte |
@@ -41,7 +42,7 @@ Notes techniques sur l’architecture, les effets et la logique CAN du projet.
 | FFT_SPECTRUM | FFT Spectrum | Spectre FFT |
 | FFT_BASS_PULSE | FFT Bass Pulse | Pulse basses |
 | FFT_VOCAL_WAVE | FFT Vocal Wave | Onde voix |
-| FFT_ENERGY_BAR | FFT Energy Bar | Barre d’énergie |
+| FFT_ENERGY_BAR | FFT Energy Bar | Barre d'énergie |
 | COMET | Comet | Comète avec traînée |
 | METEOR_SHOWER | Meteor Shower | Pluie de météores |
 | RIPPLE_WAVE | Ripple Wave | Onde concentrique |
@@ -55,8 +56,8 @@ Notes techniques sur l’architecture, les effets et la logique CAN du projet.
 - Configuration matérielle : INMP441 connecté en I2S (pins configurables).
 - Activation :
   1) Connecter le micro,
-  2) Activer le micro dans l’interface web (onglet Configuration),
-  3) Cocher “Mode Audio Réactif” dans l’onglet Profils.
+  2) Activer le micro dans l'interface web (onglet Configuration),
+  3) Cocher “Mode Audio Réactif” dans l'onglet Profils.
 
 ## Événements CAN supportés (exemples)
 - Signaux conduite : clignotants, warning, marche arrière, drive, park.
@@ -69,4 +70,4 @@ Notes techniques sur l’architecture, les effets et la logique CAN du projet.
 - Latence CAN < 100 ms.
 - Audio temps réel ~50 Hz (tâche dédiée), RAM audio ~4 KB.
 - OTA intégrée, compression JSON avec clés courtes, WiFi AP + STA, BLE optionnel.
-- Priorisation d’effets (0–255) et effets temporaires avec retour à l’effet par défaut.
+- Priorisation d'effets (0–255) et effets temporaires avec retour à l'effet par défaut.

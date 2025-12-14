@@ -46,7 +46,7 @@ static const can_message_def_t *find_message_def(uint32_t id) {
 // ---------------------------------------------------------------------------
 
 static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit, uint8_t length) {
-  // little-endian (Intel) : start_bit est le bit LSB indexé à partir de l’octet
+  // little-endian (Intel) : start_bit est le bit LSB indexé à partir de l'octet
   // 0
   uint64_t raw = 0;
   for (int i = 0; i < 8; i++) {

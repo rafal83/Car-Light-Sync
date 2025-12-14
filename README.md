@@ -12,9 +12,9 @@ Merci ! Ton soutien garde le projet libre et accessible.
 
 ## 🚀 Aperçu rapide
 - LEDs WS2812/WS2812B avec effets audio-réactifs
-- Intégration CAN multi-véhicules (architecture unifiée)
+- Intégration CAN multi-véhicules (architecture unifiée, double TWAI requis → ESP32-C6 + ESP-IDF ≥ 5.2)
 - Interface web responsive + app mobile (BLE)
-- OTA intégrée et profilage d’effets événementiels
+- OTA intégrée et profilage d'effets événementiels
 - Licence MIT, contributions ouvertes
 
 ## ⚡ Démarrer vite
