@@ -187,23 +187,37 @@ esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
   // Passer en mode APSTA pour pouvoir se connecter en tant que client
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
 
+  // S'assurer que le driver est demarre (mode AP deja lance)
+  esp_err_t start_ret = esp_wifi_start();
+  if (start_ret != ESP_OK && start_ret != ESP_ERR_WIFI_CONN) {
+    ESP_ERROR_CHECK(start_ret);
+  }
+
   wifi_config_t sta_config = {0};
   strncpy((char *)sta_config.sta.ssid, ssid, sizeof(sta_config.sta.ssid) - 1);
   strncpy((char *)sta_config.sta.password, password, sizeof(sta_config.sta.password) - 1);
   sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+  // ESP-IDF 5.5: esp_wifi_set_config renvoie ESP_ERR_WIFI_STATE si une connexion est en cours.
+  // On force d'abord la deconnexion puis on applique la nouvelle config avant d'appeler connect.
+  esp_wifi_disconnect(); // ignore l'erreur si deja deconnecte
+  esp_err_t cfg_ret = esp_wifi_set_config(WIFI_IF_STA, &sta_config);
+  if (cfg_ret == ESP_ERR_WIFI_STATE) {
+    vTaskDelay(pdMS_TO_TICKS(50));
+    cfg_ret = esp_wifi_set_config(WIFI_IF_STA, &sta_config);
+  }
+  ESP_ERROR_CHECK(cfg_ret);
+  ESP_ERROR_CHECK(esp_wifi_connect());
 
   strncpy(current_status.sta_ssid, ssid, sizeof(current_status.sta_ssid) - 1);
 
-  // Réactiver la reconnexion automatique et réinitialiser le compteur
+  // Ré-activer la reconnexion automatique et reinitialiser le compteur
   sta_auto_reconnect = true;
   sta_retry_count    = 0;
 
   ESP_LOGI(TAG_WIFI, "Connexion à %s...", ssid);
   return ESP_OK;
 }
-
 esp_err_t wifi_manager_disconnect_sta(void) {
   current_status.sta_connected = false;
   current_status.sta_ssid[0]   = '\0';
