@@ -17,7 +17,6 @@ Merci ! Ton soutien garde le projet libre et accessible.
 - OTA intégrée et profilage d'effets événementiels
 - Passerelles CAN intégrées : GVRET TCP (SavvyCAN) + CANServer UDP
 - ESP-NOW : rôle maître par défaut, profils satellites disponibles (blindspot, speedometer)
-- Licence MIT, contributions ouvertes
 
 ## ⚡ Démarrer vite
 1. Cloner : `git clone https://github.com/raphaelgiga/car-light-sync.git`
@@ -46,7 +45,7 @@ Merci ! Ton soutien garde le projet libre et accessible.
 - PR. Zones utiles : configs CAN (autres véhicules), nouveaux effets LED, perfs, doc/traductions, tests.
 
 ## 📄 Licence
-MIT (voir `LICENSE`).
+- voir `LICENSE`
 
 ## 💬 Support & communauté
 - **Issues GitHub** : Pour signaler bugs et proposer fonctionnalités
