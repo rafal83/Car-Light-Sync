@@ -376,7 +376,6 @@ body {
 .slider-container {
     display: flex;
     align-items: center;
-    gap: 15px;
 }
 input[type="range"] {
     flex: 1;
