@@ -556,6 +556,7 @@ static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
   cJSON *root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "role", espnow_link_role_to_str(role));
   cJSON_AddStringToObject(root, "type", espnow_link_slave_type_to_str(slave_type));
+  cJSON_AddBoolToObject(root, "connected", espnow_link_is_connected());
 
   const char *json_string = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -618,6 +619,188 @@ static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
   httpd_resp_sendstr(req, json_string);
   free((void *)json_string);
   cJSON_Delete(resp);
+  return ESP_OK;
+}
+
+// POST to enable ESP-NOW pairing mode on the master
+static esp_err_t espnow_pairing_post_handler(httpd_req_t *req) {
+  char content[BUFFER_SIZE_SMALL] = {0};
+  cJSON *root = NULL;
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
+    // parse_json_request already sent an error response
+    return ESP_FAIL;
+  }
+
+  const cJSON *enable_json = cJSON_GetObjectItem(root, "enable");
+  if (!cJSON_IsBool(enable_json)) {
+    cJSON_Delete(root);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or invalid 'enable' field (must be boolean)");
+    return ESP_FAIL;
+  }
+
+  bool enable = cJSON_IsTrue(enable_json);
+  uint32_t duration_s = 60; // Default duration 60 seconds
+
+  const cJSON *duration_json = cJSON_GetObjectItem(root, "duration");
+  if (cJSON_IsNumber(duration_json)) {
+    duration_s = duration_json->valueint;
+  }
+
+  cJSON_Delete(root);
+
+  esp_err_t err = espnow_link_set_pairing_mode(enable, duration_s);
+
+  if (err == ESP_ERR_NOT_SUPPORTED) {
+      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Pairing mode is only available for master role");
+      return ESP_FAIL;
+  } else if (err != ESP_OK) {
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to set pairing mode");
+      return ESP_FAIL;
+  }
+  
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
+  
+  return ESP_OK;
+}
+
+// POST to trigger ESP-NOW slave pairing broadcast
+static esp_err_t espnow_slave_pairing_post_handler(httpd_req_t *req) {
+  esp_err_t err = espnow_link_trigger_slave_pairing();
+
+  if (err == ESP_ERR_NOT_SUPPORTED) {
+      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Pairing trigger is only available for slave role");
+      return ESP_FAIL;
+  } else if (err != ESP_OK) {
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to trigger slave pairing");
+      return ESP_FAIL;
+  }
+  
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
+  
+  return ESP_OK;
+}
+
+// POST to disconnect ESP-NOW slave from current master
+static esp_err_t espnow_slave_disconnect_post_handler(httpd_req_t *req) {
+  esp_err_t err = espnow_link_disconnect();
+  if (err == ESP_ERR_NOT_SUPPORTED) {
+      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Disconnect is only available for slave role");
+      return ESP_FAIL;
+  } else if (err != ESP_OK) {
+      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to disconnect ESP-NOW");
+      return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
+  return ESP_OK;
+}
+
+// GET peers (master only)
+static esp_err_t espnow_peers_get_handler(httpd_req_t *req) {
+  if (espnow_link_get_role() != ESP_NOW_ROLE_MASTER) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Peers listing only available on master");
+    return ESP_FAIL;
+  }
+  espnow_peer_info_t peers[ESPNOW_MAX_PEERS] = {0};
+  size_t count = 0;
+  espnow_link_get_peers(peers, ESPNOW_MAX_PEERS, &count);
+
+  cJSON *root = cJSON_CreateArray();
+  for (size_t i = 0; i < count; i++) {
+    cJSON *p = cJSON_CreateObject();
+    char mac_str[18];
+    snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+             peers[i].mac[0], peers[i].mac[1], peers[i].mac[2],
+             peers[i].mac[3], peers[i].mac[4], peers[i].mac[5]);
+    cJSON_AddStringToObject(p, "mac", mac_str);
+    cJSON_AddStringToObject(p, "type", espnow_link_slave_type_to_str(peers[i].type));
+    cJSON_AddNumberToObject(p, "device_id", peers[i].device_id);
+    cJSON_AddNumberToObject(p, "last_seen_us", (double)peers[i].last_seen_us);
+    cJSON_AddItemToArray(root, p);
+  }
+
+  const char *json_string = cJSON_PrintUnformatted(root);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_string);
+  free((void *)json_string);
+  cJSON_Delete(root);
+  return ESP_OK;
+}
+
+// POST test frame (master only)
+static esp_err_t espnow_test_frame_post_handler(httpd_req_t *req) {
+  if (espnow_link_get_role() != ESP_NOW_ROLE_MASTER) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Test frame only available on master");
+    return ESP_FAIL;
+  }
+  char content[BUFFER_SIZE_SMALL] = {0};
+  cJSON *root = NULL;
+  uint8_t mac_bytes[6] = {0};
+  bool has_mac = false;
+  if (req->content_len > 0 && req->content_len < sizeof(content)) {
+    if (parse_json_request(req, content, sizeof(content), &root) == ESP_OK) {
+      const cJSON *mac_json = cJSON_GetObjectItem(root, "mac");
+      if (cJSON_IsString(mac_json) && mac_json->valuestring) {
+        int a,b,c,d,e,f;
+        if (sscanf(mac_json->valuestring, "%x:%x:%x:%x:%x:%x", &a,&b,&c,&d,&e,&f) == 6) {
+          mac_bytes[0]=a; mac_bytes[1]=b; mac_bytes[2]=c; mac_bytes[3]=d; mac_bytes[4]=e; mac_bytes[5]=f;
+          has_mac = true;
+        }
+      }
+    }
+  }
+  if (root) cJSON_Delete(root);
+
+  esp_err_t err = espnow_link_send_test_frame(has_mac ? mac_bytes : NULL);
+  if (err == ESP_ERR_NOT_FOUND) {
+    httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Peer not found");
+    return ESP_FAIL;
+  } else if (err != ESP_OK) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send test frame");
+    return ESP_FAIL;
+  }
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
+  return ESP_OK;
+}
+
+// POST disconnect peer (master only)
+static esp_err_t espnow_disconnect_peer_post_handler(httpd_req_t *req) {
+  if (espnow_link_get_role() != ESP_NOW_ROLE_MASTER) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Disconnect peer only available on master");
+    return ESP_FAIL;
+  }
+  char content[BUFFER_SIZE_SMALL] = {0};
+  cJSON *root = NULL;
+  uint8_t mac_bytes[6] = {0};
+  if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
+    return ESP_FAIL;
+  }
+  const cJSON *mac_json = cJSON_GetObjectItem(root, "mac");
+  if (!cJSON_IsString(mac_json) || !mac_json->valuestring) {
+    cJSON_Delete(root);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing mac");
+    return ESP_FAIL;
+  }
+  int a,b,c,d,e,f;
+  if (sscanf(mac_json->valuestring, "%x:%x:%x:%x:%x:%x", &a,&b,&c,&d,&e,&f) != 6) {
+    cJSON_Delete(root);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid mac format");
+    return ESP_FAIL;
+  }
+  mac_bytes[0]=a; mac_bytes[1]=b; mac_bytes[2]=c; mac_bytes[3]=d; mac_bytes[4]=e; mac_bytes[5]=f;
+  cJSON_Delete(root);
+
+  esp_err_t err = espnow_link_disconnect_peer(mac_bytes);
+  if (err != ESP_OK) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to disconnect peer");
+    return ESP_FAIL;
+  }
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
   return ESP_OK;
 }
 
@@ -2064,6 +2247,24 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t espnow_post_uri = {.uri = "/api/espnow/config", .method = HTTP_POST, .handler = espnow_config_post_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &espnow_post_uri);
+
+    httpd_uri_t espnow_pairing_uri = {.uri = "/api/espnow/pairing", .method = HTTP_POST, .handler = espnow_pairing_post_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_pairing_uri);
+
+    httpd_uri_t espnow_slave_pairing_uri = {.uri = "/api/espnow/slave-pair", .method = HTTP_POST, .handler = espnow_slave_pairing_post_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_slave_pairing_uri);
+
+    httpd_uri_t espnow_slave_disconnect_uri = {.uri = "/api/espnow/disconnect", .method = HTTP_POST, .handler = espnow_slave_disconnect_post_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_slave_disconnect_uri);
+
+    httpd_uri_t espnow_peers_uri = {.uri = "/api/espnow/peers", .method = HTTP_GET, .handler = espnow_peers_get_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_peers_uri);
+
+    httpd_uri_t espnow_test_uri = {.uri = "/api/espnow/test-frame", .method = HTTP_POST, .handler = espnow_test_frame_post_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_test_uri);
+
+    httpd_uri_t espnow_disconnect_peer_uri = {.uri = "/api/espnow/peer-disconnect", .method = HTTP_POST, .handler = espnow_disconnect_peer_post_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &espnow_disconnect_peer_uri);
 
     httpd_uri_t status_uri = {.uri = "/api/status", .method = HTTP_GET, .handler = status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &status_uri);

@@ -614,6 +614,32 @@
                   <option value="speedometer" data-i18n="config.espnowTypeSpeedo">Speedometer</option>
                 </select>
               </div>
+              <div class="button-group" style="margin-top: 15px;">
+                <button class="btn-primary" id="espnow-pairing-button" onclick="startEspnowPairing()" data-i18n="config.espnowPairing">Démarrer l'appairage</button>
+              </div>
+              <div id="espnow-peers-section" style="display: none; margin-top: 15px;">
+                <div class="profile-section-header" style="margin-top: 0;">
+                  <h4>Slaves connectés</h4>
+                </div>
+                <div class="profile-section-content">
+                  <div id="espnow-peers-empty" style="color: var(--color-muted);">Aucun slave connecté</div>
+                  <table class="config-table" style="margin-top: 10px; display: none;" id="espnow-peers-table">
+                    <thead>
+                      <tr>
+                        <th>MAC</th>
+                        <th>Type</th>
+                        <th>ID</th>
+                        <th>Dernier contact</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="espnow-peers-body"></tbody>
+                  </table>
+                  <div class="button-group" style="margin-top: 10px;">
+                    <button class="btn-secondary" onclick="refreshEspnowPeers()">Rafraîchir</button>
+                  </div>
+                </div>
+              </div>
             </div>
             <div id="wheel-control-section">
               <div class="profile-section-header">

@@ -8,9 +8,13 @@
 #include "nvs_flash.h"
 #include "status_led.h"
 #include "status_manager.h"
+#include "espnow_link.h"
 
 static const char *TAG                       = "ResetButton";
 static TaskHandle_t reset_button_task_handle = NULL;
+
+#define SHORT_PRESS_MIN_MS 50
+#define SHORT_PRESS_MAX_MS 2000
 
 /**
  * @brief Tâche de surveillance du bouton reset
@@ -45,17 +49,27 @@ static void reset_button_task(void *arg) {
           // Ne devrait jamais arriver ici car factory_reset redémarre
         }
       }
-    } else {
+    } else { // Bouton relâché
       if (button_pressed) {
         uint32_t press_duration = esp_log_timestamp() - press_start_time;
         ESP_LOGI(TAG, "Bouton reset relâché après %lu ms", press_duration);
         button_pressed  = false;
         reset_led_shown = false;
-        // Restaurer l'état de la LED immédiatement si le bouton est relâché
-        // avant 5s
-        if (press_duration < RESET_BUTTON_HOLD_TIME_MS) {
-          ESP_LOGI(TAG, "Restauration de l'état LED normal");
-          status_manager_update_led_now();
+
+        if (press_duration >= SHORT_PRESS_MIN_MS && press_duration < SHORT_PRESS_MAX_MS) {
+            // Appui court
+            ESP_LOGI(TAG, "Appui court détecté");
+            if (espnow_link_get_role() == ESP_NOW_ROLE_SLAVE) {
+                ESP_LOGI(TAG, "Mode esclave, déclenchement de l'appairage ESP-NOW");
+                espnow_link_trigger_slave_pairing();
+            } else {
+                ESP_LOGI(TAG, "Mode master, l'appui court ne fait rien");
+                status_manager_update_led_now();
+            }
+        } else if (press_duration < RESET_BUTTON_HOLD_TIME_MS) {
+            // Appui trop court ou relâché avant le factory reset
+            ESP_LOGI(TAG, "Restauration de l'état LED normal");
+            status_manager_update_led_now();
         }
       }
     }
@@ -82,14 +96,14 @@ esp_err_t reset_button_init(void) {
   }
 
   // Créer la tâche de surveillance
-  BaseType_t task_created = xTaskCreatePinnedToCore(reset_button_task, "reset_button", 2048, NULL, 5, &reset_button_task_handle, tskNO_AFFINITY);
+  BaseType_t task_created = xTaskCreatePinnedToCore(reset_button_task, "reset_button", 2560, NULL, 5, &reset_button_task_handle, tskNO_AFFINITY);
 
   if (task_created != pdPASS) {
     ESP_LOGE(TAG, "Erreur création tâche bouton reset");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "Bouton reset initialisé (appui 5s = factory reset)");
+  ESP_LOGI(TAG, "Bouton reset initialisé (appui court = appairage, appui 5s = factory reset)");
   return ESP_OK;
 }
 

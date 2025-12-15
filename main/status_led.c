@@ -105,6 +105,17 @@ static void status_led_task(void *arg) {
       break;
     }
 
+    case STATUS_LED_ESPNOW_PAIRING: {
+      // Bleu clignotant rapide
+      if ((counter % 8) < 4) {
+        status_led_set_color(0, 0, 150);
+      } else {
+        status_led_set_color(0, 0, 0);
+      }
+      vTaskDelay(pdMS_TO_TICKS(50));
+      break;
+    }
+
     case STATUS_LED_CAN_ACTIVE: {
       // Violet pulsant lent
       float brightness = (sinf(counter * 0.02f) + 1.0f) / 2.0f;

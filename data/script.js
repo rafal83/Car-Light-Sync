@@ -1848,9 +1848,10 @@ async function loadEspnowConfig() {
         const cfg = await resp.json();
         if (cfg.role) $('espnow-role').value = cfg.role;
         if (cfg.type) $('espnow-type').value = cfg.type;
-        isMasterRole = (cfg.role === 'master');
         updateEspnowStatus(cfg);
+        refreshEspnowControls(cfg);
         applyEspnowVisibility();
+        refreshEspnowPeers();
     } catch (e) {
         console.warn('Cannot load ESP-NOW config', e);
     }
@@ -1879,8 +1880,8 @@ async function saveEspnowConfigImmediate() {
             throw new Error('HTTP ' + resp.status);
         }
         const data = await resp.json();
-        isMasterRole = (data.role === 'master');
         updateEspnowStatus(data);
+        refreshEspnowControls(data);
         applyEspnowVisibility();
         showNotification('config-notification',
             t('config.espnowSaved') || 'Config ESP-NOW sauvegardée. Redémarrage requis.',
@@ -1893,9 +1894,70 @@ async function saveEspnowConfigImmediate() {
     }
 }
 
+async function startEspnowPairing() {
+    const role = $('espnow-role').value;
+
+    if (role === 'master') {
+        showNotification('config-notification', t('config.espnowPairingStarted'), 'info');
+        try {
+            const response = await fetch(API_BASE + '/api/espnow/pairing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enable: true, duration: 60 }) // 60 seconds pairing window
+            });
+            const result = await response.json();
+            if (response.ok && result.st === 'ok') {
+                showNotification('config-notification', t('config.espnowPairingSuccess'), 'success');
+            } else {
+                const errorMsg = result.msg || t('config.espnowPairingError');
+                showNotification('config-notification', errorMsg, 'error');
+            }
+        } catch (e) {
+            console.error('Erreur:', e);
+            showNotification('config-notification', t('config.espnowPairingError'), 'error');
+        }
+    } else if (role === 'slave') {
+        showNotification('config-notification', t('config.espnowSlavePairingStarted'), 'info');
+        try {
+            const response = await fetch(API_BASE + '/api/espnow/slave-pair', {
+                method: 'POST'
+            });
+            const result = await response.json();
+            if (response.ok && result.st === 'ok') {
+                // Success is indicated by LED, no toast needed
+            } else {
+                const errorMsg = result.msg || t('config.espnowSlavePairingError');
+                showNotification('config-notification', errorMsg, 'error');
+            }
+        } catch (e) {
+            console.error('Erreur:', e);
+            showNotification('config-notification', t('config.espnowSlavePairingError'), 'error');
+        }
+    }
+}
+
+async function disconnectEspnow() {
+    try {
+        const response = await fetch(API_BASE + '/api/espnow/disconnect', { method: 'POST' });
+        const result = await response.json();
+        if (response.ok && result.st === 'ok') {
+            showNotification('config-notification', 'Déconnexion ESP-NOW effectuée', 'success');
+            loadEspnowConfig();
+        } else {
+            showNotification('config-notification', 'Erreur déconnexion ESP-NOW', 'error');
+        }
+    } catch (e) {
+        console.error('Erreur:', e);
+        showNotification('config-notification', 'Erreur déconnexion ESP-NOW', 'error');
+    }
+}
+
 function applyEspnowVisibility() {
-    const showMaster = !!isMasterRole;
-    const elements = [
+    const role = $('espnow-role').value;
+    const isMaster = role === 'master';
+    const isSlave = role === 'slave';
+
+    const masterElements = [
         $('tab-vehicle'),
         $('vehicle-tab'),
         $('tab-diagnostic'),
@@ -1907,17 +1969,28 @@ function applyEspnowVisibility() {
         $('wheel-control-section'),
         $('audio-section'),
     ];
-    elements.forEach(el => {
+    masterElements.forEach(el => {
         if (!el) return;
-        el.style.display = showMaster ? '' : 'none';
+        el.style.display = isMaster ? '' : 'none';
     });
-    if (!showMaster && (activeTabName === 'vehicle' || activeTabName === 'diagnostic')) {
+   
+    const slaveTypeSelector = $('espnow-type').parentNode;
+    if(slaveTypeSelector) {
+        slaveTypeSelector.style.display = isSlave ? '' : 'none';
+    }
+
+    if (!isMaster && (activeTabName === 'vehicle' || activeTabName === 'diagnostic')) {
         switchTab('config');
     }
 
     const espnowStatus = $('status-espnow');
     if (espnowStatus) {
-        espnowStatus.style.display = showMaster ? 'none' : '';
+        espnowStatus.style.display = isSlave ? '' : 'none';
+    }
+
+    const peersSection = $('espnow-peers-section');
+    if (peersSection) {
+        peersSection.style.display = isMaster ? '' : 'none';
     }
 }
 
@@ -1926,6 +1999,139 @@ function updateEspnowStatus(cfg) {
     if (!statusEl || !cfg) return;
     if (cfg.role === 'slave') {
         statusEl.textContent = cfg.type || 'slave';
+    }
+}
+
+function refreshEspnowControls(cfg) {
+    const btn = $('espnow-pairing-button');
+    if (!btn) return;
+    const connected = cfg && cfg.connected === true;
+    if (connected) {
+        btn.textContent = 'Déconnexion';
+        btn.onclick = disconnectEspnow;
+    } else {
+        btn.textContent = t('config.espnowPairing') || 'Démarrer l\'appairage';
+        btn.onclick = startEspnowPairing;
+    }
+}
+
+async function refreshEspnowPeers() {
+    const role = $('espnow-role').value;
+    if (role !== 'master') return;
+    try {
+        const resp = await fetch(API_BASE + '/api/espnow/peers');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const peers = await resp.json();
+        const tbody = $('espnow-peers-body');
+        const table = $('espnow-peers-table');
+        const empty = $('espnow-peers-empty');
+        tbody.innerHTML = '';
+        if (peers && peers.length > 0) {
+            peers.forEach(p => {
+                const tr = document.createElement('tr');
+                const lastMs = p.last_seen_us ? Math.round(p.last_seen_us / 1000) : 0;
+                tr.innerHTML = `
+                    <td>${p.mac || '--'}</td>
+                    <td>${p.type || '--'}</td>
+                    <td>${p.device_id ? ('0x' + p.device_id.toString(16).toUpperCase()) : '--'}</td>
+                    <td>${lastMs ? (lastMs + ' ms') : '--'}</td>
+                    <td>
+                      <div class="button-group" style="gap:4px;">
+                        <button class="btn-secondary" onclick="sendEspnowTestFrame('${p.mac || ''}')">Test</button>
+                        <button class="btn-danger" onclick="disconnectEspnowPeer('${p.mac || ''}')">Déconnecter</button>
+                      </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            table.style.display = '';
+            empty.style.display = 'none';
+        } else {
+            table.style.display = 'none';
+            empty.style.display = '';
+        }
+    } catch (e) {
+        console.error('Cannot load ESP-NOW peers', e);
+        showNotification('config-notification', 'Erreur chargement peers ESP-NOW', 'error');
+    }
+}
+
+async function sendEspnowTestFrame() {
+    const role = $('espnow-role').value;
+    if (role !== 'master') return;
+    try {
+        const resp = await fetch(API_BASE + '/api/espnow/test-frame', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+        const result = await resp.json();
+        if (resp.ok && result.st === 'ok') {
+            showNotification('config-notification', 'Frame de test envoyée', 'success');
+        } else {
+            showNotification('config-notification', 'Erreur envoi frame de test', 'error');
+        }
+    } catch (e) {
+        console.error('Cannot send test frame', e);
+        showNotification('config-notification', 'Erreur envoi frame de test', 'error');
+    }
+}
+
+async function sendEspnowTestFrame(mac) {
+    const role = $('espnow-role').value;
+    if (role !== 'master') return;
+    try {
+        const resp = await fetch(API_BASE + '/api/espnow/test-frame', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: mac ? JSON.stringify({ mac }) : '{}'
+        });
+        const result = await resp.json();
+        if (resp.ok && result.st === 'ok') {
+            showNotification('config-notification', 'Frame de test envoyée', 'success');
+        } else {
+            showNotification('config-notification', 'Erreur envoi frame de test', 'error');
+        }
+    } catch (e) {
+        console.error('Cannot send test frame', e);
+        showNotification('config-notification', 'Erreur envoi frame de test', 'error');
+    }
+}
+
+async function disconnectEspnowPeer(mac) {
+    if (!mac) return;
+    try {
+        const resp = await fetch(API_BASE + '/api/espnow/peer-disconnect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mac })
+        });
+        const result = await resp.json();
+        if (resp.ok && result.st === 'ok') {
+            showNotification('config-notification', 'Peer déconnecté', 'success');
+            refreshEspnowPeers();
+        } else {
+            showNotification('config-notification', 'Erreur déconnexion peer', 'error');
+        }
+    } catch (e) {
+        console.error('Cannot disconnect peer', e);
+        showNotification('config-notification', 'Erreur déconnexion peer', 'error');
+    }
+}
+
+// Override with correct logic (only slave+connected shows "Déconnexion")
+function refreshEspnowControls(cfg) {
+    const btn = $('espnow-pairing-button');
+    if (!btn) return;
+    const role = (cfg && cfg.role) || $('espnow-role').value;
+    const isSlave = role === 'slave';
+    const connected = cfg && cfg.connected === true;
+    if (isSlave && connected) {
+        btn.textContent = "Déconnexion";
+        btn.onclick = disconnectEspnow;
+    } else {
+        btn.textContent = (t('config.espnowPairing') || "Démarrer l'appairage");
+        btn.onclick = startEspnowPairing;
     }
 }
 // Factory Reset

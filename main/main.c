@@ -56,6 +56,7 @@
 
 
 static vehicle_state_t last_vehicle_state = {0};
+static void espnow_test_frame_log(void);
 
 // Callback pour les événements de scroll wheel (appelé depuis vehicle_state_apply_signal)
 static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
@@ -105,6 +106,10 @@ static void espnow_can_rx_handler(const espnow_can_frame_t *frame) {
     bus = CAN_BUS_CHASSIS;
   }
   vehicle_can_callback(&can, bus, NULL);
+}
+
+static void espnow_test_frame_log(void) {
+  ESP_LOGI(TAG_MAIN, "ESP-NOW: trame de test reçue (DE AD BE EF)");
 }
 
 // Tâche de mise à jour des LEDs
@@ -643,6 +648,7 @@ void app_main(void) {
     ESP_LOGI(TAG_MAIN, "Mode esclave ESP-NOW : CAN désactivé");
     // Les frames CAN reçues via ESP-NOW sont injectées dans le pipeline de décodage
     espnow_link_register_rx_callback(espnow_can_rx_handler);
+    espnow_link_register_test_rx_callback(espnow_test_frame_log);
   }
 
   // LEDs

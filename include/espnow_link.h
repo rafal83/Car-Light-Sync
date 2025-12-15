@@ -37,15 +37,32 @@ typedef struct {
   uint16_t ts_ms;
 } espnow_can_frame_t;
 
+typedef struct {
+  uint8_t mac[6];
+  espnow_slave_type_t type;
+  uint32_t device_id;
+  uint64_t last_seen_us;
+} espnow_peer_info_t;
+
+#define ESPNOW_MAX_PEERS 8
+
 typedef void (*espnow_can_rx_cb_t)(const espnow_can_frame_t *frame);
+typedef void (*espnow_test_rx_cb_t)(void);
 
 esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type);
 esp_err_t espnow_link_set_requests(const espnow_request_list_t *reqs);
 esp_err_t espnow_link_register_peer(const uint8_t mac[6]);
+esp_err_t espnow_link_get_peers(espnow_peer_info_t *out_peers, size_t max_peers, size_t *out_count);
+esp_err_t espnow_link_send_test_frame(const uint8_t mac[6]); // if mac==NULL, send to all
+esp_err_t espnow_link_disconnect(void); // slave disconnect from master
+esp_err_t espnow_link_disconnect_peer(const uint8_t mac[6]); // master disconnect specific peer
 void espnow_link_on_can_frame(const twai_message_t *msg, int bus);
 espnow_role_t espnow_link_get_role(void);
 espnow_slave_type_t espnow_link_get_slave_type(void);
 void espnow_link_register_rx_callback(espnow_can_rx_cb_t cb);
+void espnow_link_register_test_rx_callback(espnow_test_rx_cb_t cb);
+esp_err_t espnow_link_set_pairing_mode(bool enable, uint32_t duration_s);
+esp_err_t espnow_link_trigger_slave_pairing(void);
 
 // Helpers conversion/affichage
 const char *espnow_link_role_to_str(espnow_role_t role);
@@ -56,5 +73,6 @@ bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out);
 // Heartbeat
 uint64_t espnow_link_get_last_peer_heartbeat_us(void);
 bool espnow_link_peer_alive(uint32_t timeout_ms);
+bool espnow_link_is_connected(void);
 
 #endif // ESPNOW_LINK_H

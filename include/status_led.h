@@ -12,6 +12,7 @@ typedef enum {
   STATUS_LED_WIFI_AP,         // Mode AP (orange fixe)
   STATUS_LED_WIFI_STATION,    // WiFi connecté (cyan/blanc alternance lente)
   STATUS_LED_BLE_CONNECTED,   // BLE connecté (vert fixe)
+  STATUS_LED_ESPNOW_PAIRING,  // Appairage ESP-NOW (bleu clignotant rapide)
   STATUS_LED_CAN_ACTIVE,      // CAN actif (violet pulsant lent)
   STATUS_LED_ERROR,           // Erreur (rouge clignotant rapide)
   STATUS_LED_IDLE,            // Idle/Aucune connexion (jaune pulsant lent)
