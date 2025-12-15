@@ -45,20 +45,4 @@ menu "Car Light Sync Configuration"
         help
             Default LED effect on startup.
 
-    menu "ESP-NOW Bridging"
-        config ESP_NOW_ROLE
-            string "ESP-NOW role (master/slave)"
-            default "master"
-            help
-                Select ESP-NOW role for this firmware build.
-                - master  : diffuse des frames CAN aux esclaves selon leurs requêtes.
-                - slave   : envoie ses requêtes d'IDs au maître, reçoit les frames demandées.
-        config ESP_NOW_SLAVE_TYPE
-            string "ESP-NOW slave type (only if role=slave)"
-            default "none"
-            help
-                Type d'esclave pour définir les IDs CAN demandés par défaut.
-                Exemples: blindspot_left, blindspot_right, speedometer.
-    endmenu
-
 endmenu

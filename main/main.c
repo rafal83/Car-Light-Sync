@@ -457,6 +457,9 @@ static void monitor_task(void *pvParameters) {
         ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid, wifi_status.sta_ip);
       }
       ESP_LOGI(TAG_MAIN, "ESPNow: rôle %s, type %s", espnow_link_role_to_str(role), espnow_link_slave_type_to_str(slave_type));
+      uint64_t last_hb_us = espnow_link_get_last_peer_heartbeat_us();
+      ESP_LOGI(TAG_MAIN, "ESPNow: dernier heartbeat peer = %llu us (alive=%s)", (unsigned long long)last_hb_us,
+               espnow_link_peer_alive(5000) ? "oui" : "non");
       
       if (role == ESP_NOW_ROLE_MASTER) {
         if (can_body_status.running) {
@@ -557,6 +560,7 @@ void app_main(void) {
   // esp_log_level_set(TAG_OTA, ESP_LOG_INFO);
   // esp_log_level_set(TAG_AUDIO, ESP_LOG_INFO);
   // esp_log_level_set(TAG_BLE_API, ESP_LOG_INFO);
+  esp_log_level_set(TAG_ESP_NOW, ESP_LOG_INFO);
 
   ESP_LOGI(TAG_MAIN, "=================================");
   ESP_LOGI(TAG_MAIN, "        Car Light Sync           ");
@@ -592,9 +596,11 @@ void app_main(void) {
   espnow_role_t espnow_role = (saved_role_u8 <= ESP_NOW_ROLE_SLAVE) ? (espnow_role_t)saved_role_u8 : default_role;
   espnow_slave_type_t espnow_type = (saved_type_u8 < ESP_NOW_SLAVE_MAX) ? (espnow_slave_type_t)saved_type_u8 : default_type;
 
-  ESP_LOGI(TAG_MAIN, "ESPNow config: nvs_role=%u nvs_type=%u",
+  ESP_LOGI(TAG_MAIN, "ESPNow config: nvs_role=%s nvs_type=%s",
            espnow_link_role_to_str(espnow_role),
            espnow_link_slave_type_to_str(espnow_type));
+  uint64_t hb = espnow_link_get_last_peer_heartbeat_us();
+  ESP_LOGI(TAG_MAIN, "ESPNow heartbeat initial: %llu us", (unsigned long long)hb);
 
   // LED de statut (WS2812 intégrée)
   esp_err_t status_led_err = status_led_init();
@@ -612,9 +618,6 @@ void app_main(void) {
   } else {
     ESP_LOGW(TAG_MAIN, "Erreur init bouton reset");
   }
-
-  ESP_ERROR_CHECK(espnow_link_init(espnow_role, espnow_type));
-  ESP_LOGI(TAG_MAIN, "✓ ESPNow initialisé");
 
   // CAN : uniquement pour le maître (les esclaves ESP-NOW n'ont pas de contrôleur CAN)
   if (espnow_role == ESP_NOW_ROLE_MASTER) {
@@ -703,6 +706,9 @@ void app_main(void) {
 
   ESP_LOGI(TAG_MAIN, "✓ WiFi initialisé");
   status_led_set_state(STATUS_LED_WIFI_AP);
+
+  ESP_ERROR_CHECK(espnow_link_init(espnow_role, espnow_type));
+  ESP_LOGI(TAG_MAIN, "✓ ESPNow initialisé");
 
   // Serveur web
   ESP_ERROR_CHECK(web_server_init());

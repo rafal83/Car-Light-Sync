@@ -7,10 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// Active les hooks ESP-NOW dans les modules qui l'incluent
-#ifndef ESPNOW_LINK_ENABLED
-#define ESPNOW_LINK_ENABLED 1
-#endif
+#define TAG_ESP_NOW "ESP_NOW_LINK"
 
 // Rôles
 typedef enum {
@@ -55,5 +52,9 @@ const char *espnow_link_role_to_str(espnow_role_t role);
 const char *espnow_link_slave_type_to_str(espnow_slave_type_t type);
 bool espnow_link_role_from_str(const char *s, espnow_role_t *out);
 bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out);
+
+// Heartbeat
+uint64_t espnow_link_get_last_peer_heartbeat_us(void);
+bool espnow_link_peer_alive(uint32_t timeout_ms);
 
 #endif // ESPNOW_LINK_H

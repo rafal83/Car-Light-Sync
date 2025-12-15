@@ -8,17 +8,17 @@
 
 #include <string.h>
 
-static const char *TAG_ESP_NOW = "ESP_NOW_LINK";
-
 // Protocole minimal
 // type 0x01 HELLO {mac[6], slave_type, req_count, req_ids[]}
 // type 0x02 HELLO_ACK {status, interval_ms}
 // type 0x03 CAN_DATA {can_id u32, bus u8, dlc u8, data[8], ts_ms u16}
+// type 0x04 HEARTBEAT {type, role, slave_type}
 
 typedef enum {
   MSG_HELLO     = 0x01,
   MSG_HELLO_ACK = 0x02,
   MSG_CAN_DATA  = 0x03,
+  MSG_HEARTBEAT = 0x04,
 } msg_type_t;
 
 typedef struct __attribute__((packed)) {
@@ -45,10 +45,20 @@ typedef struct __attribute__((packed)) {
   uint8_t data[8];
 } msg_can_data_t;
 
+typedef struct __attribute__((packed)) {
+  uint8_t type;
+  uint8_t role;
+  uint8_t slave_type;
+  uint8_t reserved;
+} msg_heartbeat_t;
+
 static espnow_role_t s_role             = ESP_NOW_ROLE_MASTER;
 static espnow_slave_type_t s_slave_type = ESP_NOW_SLAVE_NONE;
 static espnow_request_list_t s_requests = {0};
 static espnow_can_rx_cb_t s_rx_cb       = NULL;
+static esp_timer_handle_t s_hb_timer    = NULL;
+static uint64_t s_last_peer_hb_us       = 0;
+static esp_timer_handle_t s_hello_timer = NULL;
 
 const char *espnow_link_role_to_str(espnow_role_t role) {
   return (role == ESP_NOW_ROLE_SLAVE) ? "slave" : "master";
@@ -131,6 +141,10 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     return;
   const uint8_t *mac = recv_info ? recv_info->src_addr : NULL;
   uint8_t type       = data[0];
+  ESP_LOGI(TAG_ESP_NOW, "RX type=0x%02X len=%d from %02X:%02X:%02X:%02X:%02X:%02X",
+           type, len,
+           mac ? mac[0] : 0, mac ? mac[1] : 0, mac ? mac[2] : 0,
+           mac ? mac[3] : 0, mac ? mac[4] : 0, mac ? mac[5] : 0);
 
   if (s_role == ESP_NOW_ROLE_MASTER && type == MSG_HELLO) {
     const msg_hello_t *hello = (const msg_hello_t *)data;
@@ -143,6 +157,11 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     if (mac) {
       esp_now_send(mac, (const uint8_t *)&ack, sizeof(ack));
     }
+    s_last_peer_hb_us = esp_timer_get_time();
+    ESP_LOGI(TAG_ESP_NOW, "HELLO rx -> peer alive ts=%llu", (unsigned long long)s_last_peer_hb_us);
+    if (mac) {
+      espnow_link_register_peer(mac);
+    }
   } else if (s_role == ESP_NOW_ROLE_SLAVE && type == MSG_CAN_DATA) {
     const msg_can_data_t *msg = (const msg_can_data_t *)data;
     if (s_rx_cb) {
@@ -152,6 +171,12 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
       memcpy(frame.data, msg->data, frame.dlc);
       s_rx_cb(&frame);
     }
+  } else if (type == MSG_HEARTBEAT) {
+    s_last_peer_hb_us = esp_timer_get_time();
+    ESP_LOGI(TAG_ESP_NOW, "HB rx -> peer alive ts=%llu", (unsigned long long)s_last_peer_hb_us);
+    if (s_hello_timer) {
+      esp_timer_stop(s_hello_timer);
+    }
   }
 }
 
@@ -160,19 +185,75 @@ static void espnow_send_cb(const wifi_tx_info_t *tx_info, esp_now_send_status_t 
   (void)status;
 }
 
+static void espnow_send_hello(void *arg) {
+  (void)arg;
+  if (!s_hello_timer) {
+    return;
+  }
+  if (s_role != ESP_NOW_ROLE_SLAVE) {
+    return;
+  }
+  if (s_last_peer_hb_us != 0) {
+    if (s_hello_timer) {
+      esp_timer_stop(s_hello_timer);
+    }
+    return;
+  }
+  uint8_t bcast[6]  = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  msg_hello_t hello = {0};
+  hello.type        = MSG_HELLO;
+  hello.slave_type  = (uint8_t)s_slave_type;
+  hello.req_count   = s_requests.count;
+  for (int i = 0; i < s_requests.count && i < 8; i++) {
+    hello.ids[i] = s_requests.ids[i];
+  }
+  ESP_LOGI(TAG_ESP_NOW, "HELLO tx slave_type=%d reqs=%d", hello.slave_type, hello.req_count);
+  esp_now_send(bcast, (uint8_t *)&hello, sizeof(msg_hello_t));
+}
+
+static void espnow_send_heartbeat(void *arg) {
+  (void)arg;
+  msg_heartbeat_t hb = {.type = MSG_HEARTBEAT, .role = (uint8_t)s_role, .slave_type = (uint8_t)s_slave_type, .reserved = 0};
+  uint8_t bcast[6]    = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  ESP_LOGD(TAG_ESP_NOW, "HB tx role=%d type=%d", hb.role, hb.slave_type);
+  esp_now_send(bcast, (uint8_t *)&hb, sizeof(hb));
+}
+
 esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
   s_role                 = role;
   s_slave_type           = slave_type;
-
-  // Init Wi-Fi (STA) if not already
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  esp_wifi_init(&cfg);
-  esp_wifi_set_mode(WIFI_MODE_STA);
-  esp_wifi_start();
-
+/*
   ESP_ERROR_CHECK(esp_now_init());
   esp_now_register_recv_cb(espnow_recv_cb);
   esp_now_register_send_cb(espnow_send_cb);
+
+  // Heartbeat timer (toutes les 2s)
+  const esp_timer_create_args_t hb_args = {
+      .callback = espnow_send_heartbeat,
+      .arg      = NULL,
+      .dispatch_method = ESP_TIMER_TASK,
+      .name     = "espnow_hb"};
+  esp_err_t hb_err = esp_timer_create(&hb_args, &s_hb_timer);
+  if (hb_err == ESP_OK && s_hb_timer) {
+    esp_timer_start_periodic(s_hb_timer, 2000000);
+  } else {
+    ESP_LOGE(TAG_ESP_NOW, "Failed to create HB timer: %s", esp_err_to_name(hb_err));
+  }
+
+  if (s_role == ESP_NOW_ROLE_SLAVE) {
+    ESP_LOGI(TAG_ESP_NOW, "Starting HELLO retry timer (slave)");
+    const esp_timer_create_args_t hello_args = {
+        .callback = espnow_send_hello,
+        .arg      = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name     = "espnow_hello"};
+    esp_err_t hello_err = esp_timer_create(&hello_args, &s_hello_timer);
+    if (hello_err == ESP_OK && s_hello_timer) {
+      esp_timer_start_periodic(s_hello_timer, 1000000);
+    } else {
+      ESP_LOGE(TAG_ESP_NOW, "Failed to create HELLO timer: %s", esp_err_to_name(hello_err));
+    }
+  }
 
   ESP_LOGI(TAG_ESP_NOW, "Initialisation du rôle: %s", s_role);
 
@@ -189,6 +270,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     }
     esp_now_send(bcast, (uint8_t *)&hello, sizeof(msg_hello_t));
   }
+    */
   return ESP_OK;
 }
 
@@ -249,4 +331,13 @@ espnow_slave_type_t espnow_link_get_slave_type(void) {
 
 void espnow_link_register_rx_callback(espnow_can_rx_cb_t cb) {
   s_rx_cb = cb;
+}
+
+uint64_t espnow_link_get_last_peer_heartbeat_us(void) {
+  return s_last_peer_hb_us;
+}
+
+bool espnow_link_peer_alive(uint32_t timeout_ms) {
+  uint64_t now = esp_timer_get_time();
+  return (s_last_peer_hb_us != 0) && ((now - s_last_peer_hb_us) <= ((uint64_t)timeout_ms * 1000ULL));
 }

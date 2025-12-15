@@ -25,12 +25,6 @@ Notes techniques sur l'architecture, les effets et la logique CAN du projet.
 - Support BLE pour API mobile (optionnel selon build).
 - Statut CPU/mémoire exposé via l'API web.
 
-## ESP-NOW (modules satellites)
-- Rôle configurable via build flags (`ESP_NOW_ROLE_STR`) ou profils PlatformIO :
-  - `esp32c6` : maître (par défaut), rebroadcast CAN vers satellites.
-  - `esp32c6_bll` / `esp32c6_blr` / `esp32c6_speedometer` : modes esclave (blindspot gauche/droite, speedometer).
-- Les frames reçues en ESP-NOW repassent par le pipeline CAN (mêmes effets/événements).
-
 ## Contrôles avancés
 - **Molette/scroll wheel** : changement de profil (opt-in) avec seuil de vitesse pour sécurité.
 - **Luminosité dynamique** : peut suivre la luminosité du véhicule (flag `dynamic_brightness_enabled` dans les profils).
