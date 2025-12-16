@@ -71,6 +71,9 @@ static uint64_t s_last_peer_hb_us       = 0;
 static esp_timer_handle_t s_discovery_timer = NULL;
 static int s_discovery_retries = 0;
 static bool s_broadcast_peer_added = false;
+static bool s_slave_pairing_active = false;
+static uint64_t s_last_test_rx_us = 0;
+static uint8_t s_self_mac[6] = {0};
 
 #define ESPNOW_MAX_PEERS 8
 static espnow_peer_info_t s_peers[ESPNOW_MAX_PEERS];
@@ -85,28 +88,43 @@ static void persist_peers_to_nvs(void) {
   if (blob.count) {
     memcpy(blob.peers, s_peers, blob.count * sizeof(espnow_peer_info_t));
   }
-  nvs_manager_set_blob(NVS_NAMESPACE_ESPNOW, "peers", &blob, sizeof(blob));
+  esp_err_t err = nvs_manager_set_blob(NVS_NAMESPACE_ESPNOW, "peers", &blob, sizeof(blob));
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG_ESP_NOW, "Failed to persist peers to NVS: %s", esp_err_to_name(err));
+  } else {
+    ESP_LOGI(TAG_ESP_NOW, "Persisted %u peer(s) to NVS", (unsigned int)blob.count);
+  }
 }
 
 static void load_peers_from_nvs(void) {
   size_t required = 0;
   esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_ESPNOW, "peers", NULL, &required);
-  if (err != ESP_OK || required == 0 || required > sizeof(espnow_peer_info_t) * ESPNOW_MAX_PEERS + 1) {
-    s_peer_count = 0;
-    return;
-  }
   struct {
     uint8_t count;
     espnow_peer_info_t peers[ESPNOW_MAX_PEERS];
   } blob = {0};
+  size_t max_expected = sizeof(blob);
+  if (err != ESP_OK || required == 0 || required > max_expected) {
+    s_peer_count = 0;
+    ESP_LOGI(TAG_ESP_NOW, "No peers in NVS (err=%s, size=%u, max=%u)",
+             esp_err_to_name(err), (unsigned int)required, (unsigned int)max_expected);
+    return;
+  }
   err = nvs_manager_get_blob(NVS_NAMESPACE_ESPNOW, "peers", &blob, &required);
   if (err == ESP_OK) {
     s_peer_count = (blob.count > ESPNOW_MAX_PEERS) ? ESPNOW_MAX_PEERS : blob.count;
     if (s_peer_count) {
       memcpy(s_peers, blob.peers, s_peer_count * sizeof(espnow_peer_info_t));
+      for (size_t i = 0; i < s_peer_count; i++) {
+        if (s_peers[i].role != ESP_NOW_ROLE_MASTER && s_peers[i].role != ESP_NOW_ROLE_SLAVE) {
+          s_peers[i].role = (s_role == ESP_NOW_ROLE_MASTER) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
+        }
+      }
     }
+    ESP_LOGI(TAG_ESP_NOW, "Loaded %u peer(s) from NVS", (unsigned int)s_peer_count);
   } else {
     s_peer_count = 0;
+    ESP_LOGW(TAG_ESP_NOW, "Failed to load peers from NVS: %s", esp_err_to_name(err));
   }
 }
 
@@ -197,18 +215,129 @@ static void pairing_mode_timer_callback(void *arg) {
 }
 
 // Prototypes
+static uint8_t get_current_channel(void);
 static void espnow_send_discovery_request(void *arg);
-static void update_peer_info(const uint8_t mac[6], espnow_slave_type_t type, uint32_t device_id);
+static void update_peer_info(const uint8_t mac[6], espnow_role_t role, espnow_slave_type_t type, uint32_t device_id, uint8_t channel_hint);
 static void remove_peer_from_cache(const uint8_t mac[6]);
+static void register_cached_peers(void);
+static bool is_peer_known(const uint8_t mac[6], uint32_t device_id);
+static esp_err_t load_self_mac(void);
 
-static void update_peer_info(const uint8_t mac[6], espnow_slave_type_t type, uint32_t device_id) {
+static uint8_t get_current_channel(void) {
+  uint8_t primary_channel = 0;
+  wifi_second_chan_t second_channel;
+  if (esp_wifi_get_channel(&primary_channel, &second_channel) != ESP_OK) {
+    primary_channel = 0;
+  }
+  return primary_channel;
+}
+
+static esp_err_t load_self_mac(void) {
+  wifi_mode_t wifi_mode = WIFI_MODE_NULL;
+  if (esp_wifi_get_mode(&wifi_mode) != ESP_OK) {
+    wifi_mode = WIFI_MODE_APSTA;
+  }
+  wifi_interface_t ifx = (wifi_mode == WIFI_MODE_STA || wifi_mode == WIFI_MODE_APSTA) ? WIFI_IF_STA : WIFI_IF_AP;
+  esp_err_t err = esp_wifi_get_mac(ifx, s_self_mac);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG_ESP_NOW, "Failed to get MAC: %s", esp_err_to_name(err));
+  }
+  return err;
+}
+
+// Re-register peers stored in NVS into esp_now peer table
+static void register_cached_peers(void) {
+  if (s_peer_count == 0) return;
+
+  ESP_LOGI(TAG_ESP_NOW, "Restoring %u cached peer(s)", (unsigned int)s_peer_count);
+  uint8_t current_channel = get_current_channel();
+  // For slave, if we have a stored master channel, try to switch to it before registering
+  if (s_role == ESP_NOW_ROLE_SLAVE) {
+    for (size_t i = 0; i < s_peer_count; i++) {
+      if (s_peers[i].channel > 0 && s_peers[i].channel != current_channel) {
+        esp_err_t ch_ret = esp_wifi_set_channel(s_peers[i].channel, WIFI_SECOND_CHAN_NONE);
+        if (ch_ret == ESP_OK) {
+          current_channel = s_peers[i].channel;
+          ESP_LOGI(TAG_ESP_NOW, "SLAVE: restored channel %u from cache", current_channel);
+        } else {
+          ESP_LOGW(TAG_ESP_NOW, "SLAVE: failed to set channel %u from cache: %s", s_peers[i].channel, esp_err_to_name(ch_ret));
+        }
+        break;
+      }
+    }
+  }
+
+  for (size_t i = 0; i < s_peer_count; i++) {
+    esp_now_peer_info_t peer = {0};
+    memcpy(peer.peer_addr, s_peers[i].mac, 6);
+
+    wifi_mode_t wifi_mode = WIFI_MODE_NULL;
+    if (esp_wifi_get_mode(&wifi_mode) != ESP_OK) {
+      wifi_mode = WIFI_MODE_APSTA;
+    }
+    bool sta_active = (wifi_mode == WIFI_MODE_STA || wifi_mode == WIFI_MODE_APSTA);
+    peer.ifidx     = sta_active ? ESP_IF_WIFI_STA : ESP_IF_WIFI_AP;
+
+    peer.channel = s_peers[i].channel ? s_peers[i].channel : current_channel;
+    peer.encrypt = false;
+
+    esp_err_t add_ret = esp_now_add_peer(&peer);
+    if (add_ret != ESP_OK && add_ret != ESP_ERR_ESPNOW_EXIST) {
+      ESP_LOGW(TAG_ESP_NOW, "Failed to restore peer %02X:%02X:%02X:%02X:%02X:%02X: %s",
+               peer.peer_addr[0], peer.peer_addr[1], peer.peer_addr[2],
+               peer.peer_addr[3], peer.peer_addr[4], peer.peer_addr[5],
+               esp_err_to_name(add_ret));
+    } else {
+      ESP_LOGI(TAG_ESP_NOW, "Restored peer %02X:%02X:%02X:%02X:%02X:%02X (ch=%d)",
+               peer.peer_addr[0], peer.peer_addr[1], peer.peer_addr[2],
+               peer.peer_addr[3], peer.peer_addr[4], peer.peer_addr[5],
+               peer.channel);
+    }
+  }
+}
+
+static bool is_peer_known(const uint8_t mac[6], uint32_t device_id) {
+  for (size_t i = 0; i < s_peer_count; i++) {
+    if (mac && memcmp(s_peers[i].mac, mac, 6) == 0) {
+      return true;
+    }
+    if (device_id != 0 && s_peers[i].device_id == device_id) {
+      return true;
+    }
+  }
+  if (mac && esp_now_is_peer_exist(mac)) {
+    return true;
+  }
+  return false;
+}
+
+static void update_peer_info(const uint8_t mac[6], espnow_role_t role, espnow_slave_type_t type, uint32_t device_id, uint8_t channel_hint) {
   if (!mac) return;
+  uint8_t channel = channel_hint ? channel_hint : get_current_channel();
   // search existing
   for (size_t i = 0; i < s_peer_count; i++) {
     if (memcmp(s_peers[i].mac, mac, 6) == 0) {
-      s_peers[i].type = type;
-      if (device_id != 0) s_peers[i].device_id = device_id;
+      bool changed = false;
+      if (s_peers[i].role != role) {
+        s_peers[i].role = role;
+        changed = true;
+      }
+      if (s_peers[i].type != type) {
+        s_peers[i].type = type;
+        changed = true;
+      }
+      if (device_id != 0 && s_peers[i].device_id != device_id) {
+        s_peers[i].device_id = device_id;
+        changed = true;
+      }
+      if (s_peers[i].channel != channel) {
+        s_peers[i].channel = channel;
+        changed = true;
+      }
       s_peers[i].last_seen_us = esp_timer_get_time();
+      if (changed) {
+        persist_peers_to_nvs();
+      }
       return;
     }
   }
@@ -221,15 +350,19 @@ static void update_peer_info(const uint8_t mac[6], espnow_slave_type_t type, uin
       }
     }
     memcpy(s_peers[oldest].mac, mac, 6);
+    s_peers[oldest].role = role;
     s_peers[oldest].type = type;
     s_peers[oldest].device_id = device_id;
     s_peers[oldest].last_seen_us = esp_timer_get_time();
+    s_peers[oldest].channel = channel;
     return;
   }
   memcpy(s_peers[s_peer_count].mac, mac, 6);
+  s_peers[s_peer_count].role = role;
   s_peers[s_peer_count].type = type;
   s_peers[s_peer_count].device_id = device_id;
   s_peers[s_peer_count].last_seen_us = esp_timer_get_time();
+  s_peers[s_peer_count].channel = channel;
   s_peer_count++;
   persist_peers_to_nvs();
 }
@@ -260,19 +393,20 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
            mac ? mac[3] : 0, mac ? mac[4] : 0, mac ? mac[5] : 0);
 
   if (s_role == ESP_NOW_ROLE_MASTER && type == MSG_DISCOVERY_REQ && len == sizeof(msg_discovery_req_t)) {
-    if (!s_is_pairing_mode) {
-        ESP_LOGW(TAG_ESP_NOW, "Master not in pairing mode, ignoring discovery request");
-        return;
-    }
     const msg_discovery_req_t *req = (const msg_discovery_req_t *)data;
     if (req->proto_ver != PROTOCOL_VERSION) {
         ESP_LOGW(TAG_ESP_NOW, "Discovery request with wrong protocol version: %d", req->proto_ver);
         return;
     }
+    bool known = is_peer_known(mac, req->device_id);
+    if (!s_is_pairing_mode && !known) {
+        ESP_LOGW(TAG_ESP_NOW, "Master not in pairing mode, ignoring discovery request (unknown peer) count=%u", (unsigned int)s_peer_count);
+        return;
+    }
 
     ESP_LOGI(TAG_ESP_NOW, "Discovery request received from slave id=0x%08X", (unsigned int)req->device_id);
     if (mac) {
-      update_peer_info(mac, (espnow_slave_type_t)req->slave_type, req->device_id);
+      update_peer_info(mac, ESP_NOW_ROLE_SLAVE, (espnow_slave_type_t)req->slave_type, req->device_id, 0);
     }
     s_requests.count = (req->req_count > 16) ? 16 : req->req_count;
     for (uint8_t i = 0; i < s_requests.count && i < 8; i++) {
@@ -297,11 +431,13 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     s_last_peer_hb_us = esp_timer_get_time();
     if (mac) {
       espnow_link_register_peer(mac);
+      update_peer_info(mac, ESP_NOW_ROLE_MASTER, ESP_NOW_SLAVE_NONE, resp->master_device_id, 0);
     }
     ESP_LOGI(TAG_ESP_NOW, "Paired with master, stopping discovery timer");
     if (s_discovery_timer && esp_timer_is_active(s_discovery_timer)) {
         esp_timer_stop(s_discovery_timer);
     }
+    s_slave_pairing_active = false;
     status_manager_update_led_now();
 
   } else if (s_role == ESP_NOW_ROLE_SLAVE && type == MSG_CAN_DATA) {
@@ -318,6 +454,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
         msg->dlc == 4 &&
         msg->data[0] == 0xDE && msg->data[1] == 0xAD &&
         msg->data[2] == 0xBE && msg->data[3] == 0xEF) {
+      s_last_test_rx_us = esp_timer_get_time();
       ESP_LOGI(TAG_ESP_NOW, "Test frame received from %02X:%02X:%02X:%02X:%02X:%02X",
                mac ? mac[0] : 0, mac ? mac[1] : 0, mac ? mac[2] : 0,
                mac ? mac[3] : 0, mac ? mac[4] : 0, mac ? mac[5] : 0);
@@ -330,13 +467,15 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     }
     s_last_peer_hb_us = esp_timer_get_time();
     ESP_LOGD(TAG_ESP_NOW, "HB rx -> peer alive ts=%llu", (unsigned long long)s_last_peer_hb_us);
-    if (s_role == ESP_NOW_ROLE_MASTER && mac) {
-      const msg_heartbeat_t *hb = (const msg_heartbeat_t *)data;
-      update_peer_info(mac, (espnow_slave_type_t)hb->slave_type, 0);
+    const msg_heartbeat_t *hb = (const msg_heartbeat_t *)data;
+    if (mac && hb) {
+      espnow_role_t peer_role = (hb->role <= ESP_NOW_ROLE_SLAVE) ? (espnow_role_t)hb->role : ESP_NOW_ROLE_SLAVE;
+      update_peer_info(mac, peer_role, (espnow_slave_type_t)hb->slave_type, 0, 0);
     }
     if (s_role == ESP_NOW_ROLE_SLAVE && s_discovery_timer && esp_timer_is_active(s_discovery_timer)) {
       esp_timer_stop(s_discovery_timer);
       ESP_LOGI(TAG_ESP_NOW, "Slave paired, stopping discovery timer");
+      s_slave_pairing_active = false;
       status_manager_update_led_now();
     }
   }
@@ -360,6 +499,7 @@ static void espnow_send_discovery_request(void *arg) {
   if (espnow_link_peer_alive(10000)) {
     esp_timer_stop(s_discovery_timer);
     ESP_LOGI(TAG_ESP_NOW, "Slave paired, stopping discovery timer");
+    s_slave_pairing_active = false;
     status_manager_update_led_now();
     return;
   }
@@ -367,6 +507,7 @@ static void espnow_send_discovery_request(void *arg) {
   if (s_discovery_retries * 2 > DISCOVERY_TIMEOUT_S) {
     esp_timer_stop(s_discovery_timer);
     ESP_LOGW(TAG_ESP_NOW, "Slave discovery timed out, no master found");
+    s_slave_pairing_active = false;
     status_manager_update_led_now();
     return;
   }
@@ -410,6 +551,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
 
   // Charger les pairs persistés
   load_peers_from_nvs();
+  load_self_mac();
 
   ESP_ERROR_CHECK(esp_now_init());
   ESP_ERROR_CHECK(esp_now_register_recv_cb(espnow_recv_cb));
@@ -450,6 +592,9 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     ESP_LOGE(TAG_ESP_NOW, "Failed to create HB timer: %s", esp_err_to_name(hb_err));
   }
 
+  // Restaurer les peers enregistrés en NVS (master & slave)
+  register_cached_peers();
+
   if (s_role == ESP_NOW_ROLE_SLAVE) {
     // Charger les IDs CAN par défaut pour ce type d'esclave
     load_default_requests(s_slave_type, &s_requests);
@@ -463,6 +608,14 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     if (discovery_err != ESP_OK) {
       ESP_LOGE(TAG_ESP_NOW, "Failed to create discovery timer: %s", esp_err_to_name(discovery_err));
     }
+  }
+
+  // Restaurer les peers enregistrés en NVS (master & slave)
+  register_cached_peers();
+
+  // Auto-relaunch slave discovery on boot if not connected
+  if (s_role == ESP_NOW_ROLE_SLAVE && !espnow_link_peer_alive(5000) && s_discovery_timer) {
+    espnow_link_trigger_slave_pairing();
   }
 
   ESP_LOGI(TAG_ESP_NOW, "Initialised role: %s, device_id: 0x%08X", espnow_link_role_to_str(s_role), (unsigned int)s_device_id);
@@ -520,14 +673,17 @@ esp_err_t espnow_link_set_pairing_mode(bool enable, uint32_t duration_s) {
 
 esp_err_t espnow_link_trigger_slave_pairing(void) {
     if (s_role != ESP_NOW_ROLE_SLAVE) {
+        s_slave_pairing_active = false;
         return ESP_ERR_NOT_SUPPORTED;
     }
     if (s_discovery_timer == NULL) {
         ESP_LOGE(TAG_ESP_NOW, "Discovery timer not initialized");
+        s_slave_pairing_active = false;
         return ESP_FAIL;
     }
     if (esp_timer_is_active(s_discovery_timer)) {
         ESP_LOGI(TAG_ESP_NOW, "Slave pairing broadcast already active");
+        s_slave_pairing_active = true;
         return ESP_OK;
     }
     
@@ -557,11 +713,16 @@ esp_err_t espnow_link_trigger_slave_pairing(void) {
     ESP_LOGI(TAG_ESP_NOW, "SLAVE: Pairing will run on Wi-Fi channel: %d", primary_channel);
 
     s_discovery_retries = 0;
+    s_slave_pairing_active = true;
     status_led_set_state(STATUS_LED_ESPNOW_PAIRING);
 
     // Start broadcasting immediately, then every 2 seconds
     espnow_send_discovery_request(NULL);
-    return esp_timer_start_periodic(s_discovery_timer, 2000000);
+    esp_err_t start_err = esp_timer_start_periodic(s_discovery_timer, 2000000);
+    if (start_err != ESP_OK) {
+      s_slave_pairing_active = false;
+    }
+    return start_err;
 }
 
 esp_err_t espnow_link_set_requests(const espnow_request_list_t *reqs) {
@@ -602,7 +763,8 @@ esp_err_t espnow_link_register_peer(const uint8_t mac[6]) {
   ESP_LOGI(TAG_ESP_NOW, "Adding peer %02X:%02X:%02X:%02X:%02X:%02X on if=%d channel=%d", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5], peer.ifidx, peer.channel);
   esp_err_t add_ret = esp_now_add_peer(&peer);
   if (add_ret == ESP_OK) {
-    update_peer_info(mac, ESP_NOW_SLAVE_NONE, 0);
+    espnow_role_t peer_role = (s_role == ESP_NOW_ROLE_MASTER) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
+    update_peer_info(mac, peer_role, ESP_NOW_SLAVE_NONE, 0, peer.channel);
   }
   return add_ret;
 }
@@ -683,6 +845,10 @@ esp_err_t espnow_link_disconnect(void) {
   s_peer_count = 0;
   persist_peers_to_nvs();
   s_last_peer_hb_us = 0;
+  if (s_discovery_timer && esp_timer_is_active(s_discovery_timer)) {
+    esp_timer_stop(s_discovery_timer);
+  }
+  s_slave_pairing_active = false;
   status_manager_update_led_now();
   return ESP_OK;
 }
@@ -745,4 +911,83 @@ esp_err_t espnow_link_send_test_frame(const uint8_t mac[6]) {
     esp_now_send(peer.peer_addr, (const uint8_t *)&out, sizeof(out));
   }
   return ESP_OK;
+}
+
+uint8_t espnow_link_get_channel(void) {
+  return get_current_channel();
+}
+
+bool espnow_link_is_pairing_active(void) {
+  if (s_role == ESP_NOW_ROLE_MASTER) {
+    bool timer_active = s_pairing_mode_timer && esp_timer_is_active(s_pairing_mode_timer);
+    return s_is_pairing_mode || timer_active;
+  }
+  if (s_role == ESP_NOW_ROLE_SLAVE) {
+    bool timer_active = s_discovery_timer && esp_timer_is_active(s_discovery_timer);
+    return s_slave_pairing_active || timer_active;
+  }
+  return false;
+}
+
+bool espnow_link_get_master_info(espnow_peer_info_t *out_master) {
+  if (!out_master || s_role != ESP_NOW_ROLE_SLAVE) {
+    return false;
+  }
+  for (size_t i = 0; i < s_peer_count; i++) {
+    if (s_peers[i].role == ESP_NOW_ROLE_MASTER) {
+      memcpy(out_master, &s_peers[i], sizeof(espnow_peer_info_t));
+      return true;
+    }
+  }
+  if (s_peer_count > 0) {
+    memcpy(out_master, &s_peers[0], sizeof(espnow_peer_info_t));
+    return true;
+  }
+  return false;
+}
+
+uint64_t espnow_link_get_last_test_rx_us(void) {
+  return s_last_test_rx_us;
+}
+
+void espnow_link_set_role_type(espnow_role_t role, espnow_slave_type_t type) {
+  s_role = role;
+  s_slave_type = type;
+
+  if (role == ESP_NOW_ROLE_MASTER) {
+    // Stop any slave discovery state
+    if (s_discovery_timer && esp_timer_is_active(s_discovery_timer)) {
+      esp_timer_stop(s_discovery_timer);
+    }
+    s_slave_pairing_active = false;
+
+    // Ensure pairing timer exists for master
+    if (!s_pairing_mode_timer) {
+      const esp_timer_create_args_t pairing_timer_args = {
+          .callback = &pairing_mode_timer_callback,
+          .name = "espnow_pairing"
+      };
+      esp_timer_create(&pairing_timer_args, &s_pairing_mode_timer);
+    }
+  } else {
+    // Switching to slave: stop pairing mode if active
+    if (s_pairing_mode_timer && esp_timer_is_active(s_pairing_mode_timer)) {
+      esp_timer_stop(s_pairing_mode_timer);
+    }
+    s_is_pairing_mode = false;
+    load_default_requests(type, &s_requests);
+  }
+}
+
+esp_err_t espnow_link_get_mac(uint8_t mac_out[6]) {
+  if (!mac_out) return ESP_ERR_INVALID_ARG;
+  if (s_self_mac[0] == 0 && s_self_mac[1] == 0) {
+    load_self_mac();
+  }
+  memcpy(mac_out, s_self_mac, 6);
+  return ESP_OK;
+}
+
+uint32_t espnow_link_get_device_id(void) {
+  return s_device_id;
 }

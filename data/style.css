@@ -1306,3 +1306,64 @@ button {
     grid-template-columns: 1fr;
     gap: 12px;
 }
+
+/* ESP-NOW */
+.espnow-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+.espnow-status-card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px;
+}
+.espnow-status-label {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-muted);
+}
+.espnow-status-value {
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+.espnow-status-sub {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-top: 4px;
+}
+.espnow-master-card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 15px;
+}
+.espnow-master-header {
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.espnow-master-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+.espnow-master-label {
+    font-size: 12px;
+    color: var(--color-muted);
+}
+.espnow-master-value {
+    font-weight: 700;
+}
+
+.status-highlight {
+    animation: flashHighlight 0.8s ease;
+}
+
+@keyframes flashHighlight {
+    0% { color: var(--color-text); }
+    30% { color: var(--color-success); }
+    100% { color: var(--color-text); }
+}

@@ -325,6 +325,11 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddBoolToObject(root, "wc", wifi_status.sta_connected);
   cJSON_AddStringToObject(root, "wip", wifi_status.sta_ip);
 
+  // ESP-NOW test info (poll-friendly)
+  cJSON *esn = cJSON_CreateObject();
+  cJSON_AddNumberToObject(esn, "lt_us", (double)espnow_link_get_last_test_rx_us());
+  cJSON_AddItemToObject(root, "esn", esn);
+
   // Statut CAN Bus - Body
   can_bus_status_t can_body_status;
   can_bus_get_status(CAN_BUS_BODY, &can_body_status);
@@ -552,11 +557,44 @@ static esp_err_t config_handler(httpd_req_t *req) {
 static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
   espnow_role_t role             = espnow_link_get_role();
   espnow_slave_type_t slave_type = espnow_link_get_slave_type();
+  uint64_t now_us = esp_timer_get_time();
+  uint8_t self_mac[6] = {0};
+  espnow_link_get_mac(self_mac);
 
   cJSON *root = cJSON_CreateObject();
   cJSON_AddStringToObject(root, "role", espnow_link_role_to_str(role));
   cJSON_AddStringToObject(root, "type", espnow_link_slave_type_to_str(slave_type));
   cJSON_AddBoolToObject(root, "connected", espnow_link_is_connected());
+  cJSON_AddNumberToObject(root, "channel", (double)espnow_link_get_channel());
+  cJSON_AddBoolToObject(root, "pairing", espnow_link_is_pairing_active());
+  cJSON *self = cJSON_CreateObject();
+  char self_mac_str[18];
+  snprintf(self_mac_str, sizeof(self_mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+           self_mac[0], self_mac[1], self_mac[2], self_mac[3], self_mac[4], self_mac[5]);
+  cJSON_AddStringToObject(self, "mac", self_mac_str);
+  cJSON_AddNumberToObject(self, "device_id", espnow_link_get_device_id());
+  cJSON_AddItemToObject(root, "self", self);
+
+  if (role == ESP_NOW_ROLE_SLAVE) {
+    espnow_peer_info_t master_info = {0};
+    if (espnow_link_get_master_info(&master_info)) {
+      cJSON *master = cJSON_CreateObject();
+      char mac_str[18];
+      snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+               master_info.mac[0], master_info.mac[1], master_info.mac[2],
+               master_info.mac[3], master_info.mac[4], master_info.mac[5]);
+      cJSON_AddStringToObject(master, "mac", mac_str);
+      cJSON_AddStringToObject(master, "type", espnow_link_slave_type_to_str(master_info.type));
+      cJSON_AddNumberToObject(master, "device_id", master_info.device_id);
+      cJSON_AddNumberToObject(master, "last_seen_us", (double)master_info.last_seen_us);
+      uint64_t age_ms = (master_info.last_seen_us && now_us > master_info.last_seen_us)
+                            ? (now_us - master_info.last_seen_us) / 1000ULL
+                            : 0;
+      cJSON_AddNumberToObject(master, "age_ms", (double)age_ms);
+      cJSON_AddNumberToObject(master, "channel", (double)master_info.channel);
+      cJSON_AddItemToObject(root, "master", master);
+    }
+  }
 
   const char *json_string = cJSON_PrintUnformatted(root);
   httpd_resp_set_type(req, "application/json");
@@ -596,6 +634,9 @@ static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
 
   esp_err_t err1 = nvs_manager_set_u8(NVS_NAMESPACE_ESPNOW, "role", (uint8_t)new_role);
   esp_err_t err2 = nvs_manager_set_u8(NVS_NAMESPACE_ESPNOW, "type", (uint8_t)new_slave_type);
+
+  // Mettre à jour l'état courant (pour que la réponse et les futures requêtes reflètent immédiatement les nouveaux choix)
+  espnow_link_set_role_type(new_role, new_slave_type);
 
   cJSON_Delete(root);
 
@@ -698,15 +739,12 @@ static esp_err_t espnow_slave_disconnect_post_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// GET peers (master only)
+// GET peers
 static esp_err_t espnow_peers_get_handler(httpd_req_t *req) {
-  if (espnow_link_get_role() != ESP_NOW_ROLE_MASTER) {
-    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Peers listing only available on master");
-    return ESP_FAIL;
-  }
   espnow_peer_info_t peers[ESPNOW_MAX_PEERS] = {0};
   size_t count = 0;
   espnow_link_get_peers(peers, ESPNOW_MAX_PEERS, &count);
+  uint64_t now_us = esp_timer_get_time();
 
   cJSON *root = cJSON_CreateArray();
   for (size_t i = 0; i < count; i++) {
@@ -716,9 +754,15 @@ static esp_err_t espnow_peers_get_handler(httpd_req_t *req) {
              peers[i].mac[0], peers[i].mac[1], peers[i].mac[2],
              peers[i].mac[3], peers[i].mac[4], peers[i].mac[5]);
     cJSON_AddStringToObject(p, "mac", mac_str);
+    cJSON_AddStringToObject(p, "role", espnow_link_role_to_str(peers[i].role));
     cJSON_AddStringToObject(p, "type", espnow_link_slave_type_to_str(peers[i].type));
     cJSON_AddNumberToObject(p, "device_id", peers[i].device_id);
     cJSON_AddNumberToObject(p, "last_seen_us", (double)peers[i].last_seen_us);
+    uint64_t age_ms = (peers[i].last_seen_us && now_us > peers[i].last_seen_us)
+                          ? (now_us - peers[i].last_seen_us) / 1000ULL
+                          : 0;
+    cJSON_AddNumberToObject(p, "age_ms", (double)age_ms);
+    cJSON_AddNumberToObject(p, "channel", (double)peers[i].channel);
     cJSON_AddItemToArray(root, p);
   }
 

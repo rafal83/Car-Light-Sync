@@ -126,7 +126,9 @@
           <button class="tab" id="tab-vehicle" data-tab="vehicle" onclick="switchTab('vehicle', event)"
             data-i18n="tabs.vehicle">Véhicule</button>
           <button class="tab" data-tab="config" onclick="switchTab('config', event)"
-            data-i18n="tabs.hardware">Matérielle</button>
+            data-i18n="tabs.hardware">Matériel</button>
+          <button class="tab" data-tab="espnow" onclick="switchTab('espnow', event)"
+            data-i18n="tabs.espnow">ESP-NOW</button>
           <button class="tab" id="tab-diagnostic" data-tab="diagnostic" onclick="switchTab('diagnostic', event)"
             data-i18n="tabs.diagnostic">Diagnostic CAN</button>
           <button class="tab" id="logs-tab-button" data-tab="logs" onclick="switchTab('logs', event)"
@@ -594,53 +596,6 @@
                 <input type="number" id="led-count" value="" min="1" max="200" onchange="saveHardwareConfig()">
               </div>
             </div>
-            <div class="profile-section-header">
-              <h3 data-i18n="config.espnowTitle">ESP-NOW</h3>
-            </div>
-            <div class="profile-section-content">
-              <div class="control-group">
-                <label class="control-label" data-i18n="config.espnowRole">Rôle</label>
-                <select id="espnow-role" onchange="saveEspnowConfig()">
-                  <option value="master" data-i18n="config.espnowRoleMaster">Master</option>
-                  <option value="slave" data-i18n="config.espnowRoleSlave">Slave</option>
-                </select>
-              </div>
-              <div class="control-group">
-                <label class="control-label" data-i18n="config.espnowType">Type d'esclave</label>
-                <select id="espnow-type" onchange="saveEspnowConfig()">
-                  <option value="none" data-i18n="config.espnowTypeNone">Aucun</option>
-                  <option value="blindspot_left" data-i18n="config.espnowTypeBsl">Blindspot gauche</option>
-                  <option value="blindspot_right" data-i18n="config.espnowTypeBsr">Blindspot droite</option>
-                  <option value="speedometer" data-i18n="config.espnowTypeSpeedo">Speedometer</option>
-                </select>
-              </div>
-              <div class="button-group" style="margin-top: 15px;">
-                <button class="btn-primary" id="espnow-pairing-button" onclick="startEspnowPairing()" data-i18n="config.espnowPairing">Démarrer l'appairage</button>
-              </div>
-              <div id="espnow-peers-section" style="display: none; margin-top: 15px;">
-                <div class="profile-section-header" style="margin-top: 0;">
-                  <h4>Slaves connectés</h4>
-                </div>
-                <div class="profile-section-content">
-                  <div id="espnow-peers-empty" style="color: var(--color-muted);">Aucun slave connecté</div>
-                  <table class="config-table" style="margin-top: 10px; display: none;" id="espnow-peers-table">
-                    <thead>
-                      <tr>
-                        <th>MAC</th>
-                        <th>Type</th>
-                        <th>ID</th>
-                        <th>Dernier contact</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="espnow-peers-body"></tbody>
-                  </table>
-                  <div class="button-group" style="margin-top: 10px;">
-                    <button class="btn-secondary" onclick="refreshEspnowPeers()">Rafraîchir</button>
-                  </div>
-                </div>
-              </div>
-            </div>
             <div id="wheel-control-section">
               <div class="profile-section-header">
                 <h3 data-i18n="config.wheelSettings">Paramètres Molette</h3>
@@ -848,6 +803,107 @@
             <div class="profile-section-content">
               <button class="btn-danger" onclick="confirmFactoryReset()"
                 data-i18n="config.factoryReset">Réinitialisation Usine</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: ESP-NOW -->
+        <div id="espnow-tab" class="tab-content">
+          <div class="section-title" data-i18n="espnow.title">ESP-NOW</div>
+          <div id="espnow-notification" class="notification"></div>
+
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="espnow.configTitle">Configuration</h3>
+              <p style="margin: 6px 0 0 0; color: var(--color-muted);" data-i18n="espnow.configDescription">
+                Configure le rôle et l'appairage ESP-NOW.
+              </p>
+            </div>
+            <div class="profile-section-content">
+              <div class="espnow-grid">
+                <div class="control-group">
+                  <label class="control-label" data-i18n="config.espnowRole">Rôle</label>
+                  <select id="espnow-role" onchange="saveEspnowConfig()">
+                    <option value="master" data-i18n="config.espnowRoleMaster">Master</option>
+                    <option value="slave" data-i18n="config.espnowRoleSlave">Slave</option>
+                  </select>
+                </div>
+                <div class="control-group">
+                  <label class="control-label" data-i18n="config.espnowType">Type d'esclave</label>
+                  <select id="espnow-type" onchange="saveEspnowConfig()">
+                    <option value="none" data-i18n="config.espnowTypeNone">Aucun</option>
+                    <option value="blindspot_left" data-i18n="config.espnowTypeBsl">Blindspot gauche</option>
+                    <option value="blindspot_right" data-i18n="config.espnowTypeBsr">Blindspot droite</option>
+                    <option value="speedometer" data-i18n="config.espnowTypeSpeedo">Speedometer</option>
+                  </select>
+                </div>
+                <div class="espnow-status-card">
+                  <div class="espnow-status-label" data-i18n="espnow.channel">Canal</div>
+                  <div class="espnow-status-value" id="espnow-channel">--</div>
+                  <div class="espnow-status-sub" data-i18n="espnow.channelHelp">Canal Wi-Fi utilisé pour ESP-NOW.</div>
+                </div>
+              <div class="espnow-status-card">
+                <div class="espnow-status-label" data-i18n="espnow.pairingState">Appairage</div>
+                <div class="espnow-status-value" id="espnow-pairing-state">--</div>
+                <div class="espnow-status-sub" id="espnow-role-summary">--</div>
+              </div>
+              <div class="espnow-status-card">
+                <div class="espnow-status-label" data-i18n="espnow.selfTitle">Cet appareil</div>
+                <div class="espnow-status-value" id="espnow-self-id">ID: --</div>
+                <div class="espnow-status-sub" id="espnow-self-mac">MAC: --</div>
+              </div>
+            </div>
+            <div id="espnow-master-card" class="espnow-master-card" style="display: none;">
+              <div class="espnow-master-header" data-i18n="espnow.masterConnected">Master connecté</div>
+              <div class="espnow-master-grid">
+                <div>
+                    <div class="espnow-master-label" data-i18n="espnow.masterMac">MAC</div>
+                    <div class="espnow-master-value" id="espnow-master-mac">--</div>
+                  </div>
+                  <div>
+                    <div class="espnow-master-label" data-i18n="espnow.masterId">ID</div>
+                    <div class="espnow-master-value" id="espnow-master-id">--</div>
+                  </div>
+                  <div>
+                    <div class="espnow-master-label" data-i18n="espnow.masterChannel">Canal</div>
+                    <div class="espnow-master-value" id="espnow-master-channel">--</div>
+                  </div>
+                  <div>
+                    <div class="espnow-master-label" data-i18n="espnow.masterLastSeen">Dernier contact</div>
+                    <div class="espnow-master-value" id="espnow-master-last">--</div>
+                  </div>
+                </div>
+              </div>
+              <div class="button-group" style="margin-top: 15px;">
+                <button class="btn-primary" id="espnow-pairing-button" onclick="startEspnowPairing()" data-i18n="config.espnowPairing">Démarrer l'appairage</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-section" id="espnow-peers-section" style="display: none;">
+            <div class="profile-section-header">
+              <h3 data-i18n="espnow.peersTitle">Appareils connectés</h3>
+              <p id="espnow-peers-subtitle" style="margin: 6px 0 0 0; color: var(--color-muted);" data-i18n="espnow.peersSubtitle">Liste des masters/slaves détectés.</p>
+            </div>
+            <div class="profile-section-content">
+              <div id="espnow-peers-empty" style="color: var(--color-muted);" data-i18n="espnow.noPeers">Aucun appareil connecté</div>
+              <table class="config-table" style="margin-top: 10px; display: none;" id="espnow-peers-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="espnow.role">Rôle</th>
+                    <th>MAC</th>
+                    <th data-i18n="espnow.type">Type</th>
+                    <th data-i18n="espnow.deviceId">ID</th>
+                    <th data-i18n="espnow.channelShort">Ch</th>
+                    <th data-i18n="espnow.lastSeen">Dernier contact</th>
+                    <th data-i18n="espnow.actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="espnow-peers-body"></tbody>
+              </table>
+              <div class="button-group" style="margin-top: 10px;">
+                <button class="btn-secondary" onclick="refreshEspnowPeers()" data-i18n="espnow.refresh">Rafraîchir</button>
+              </div>
             </div>
           </div>
         </div>

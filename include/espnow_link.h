@@ -39,9 +39,11 @@ typedef struct {
 
 typedef struct {
   uint8_t mac[6];
+  espnow_role_t role;
   espnow_slave_type_t type;
   uint32_t device_id;
   uint64_t last_seen_us;
+  uint8_t channel;
 } espnow_peer_info_t;
 
 #define ESPNOW_MAX_PEERS 8
@@ -63,6 +65,13 @@ void espnow_link_register_rx_callback(espnow_can_rx_cb_t cb);
 void espnow_link_register_test_rx_callback(espnow_test_rx_cb_t cb);
 esp_err_t espnow_link_set_pairing_mode(bool enable, uint32_t duration_s);
 esp_err_t espnow_link_trigger_slave_pairing(void);
+uint8_t espnow_link_get_channel(void);
+bool espnow_link_is_pairing_active(void);
+bool espnow_link_get_master_info(espnow_peer_info_t *out_master);
+uint64_t espnow_link_get_last_test_rx_us(void);
+void espnow_link_set_role_type(espnow_role_t role, espnow_slave_type_t type);
+esp_err_t espnow_link_get_mac(uint8_t mac_out[6]);
+uint32_t espnow_link_get_device_id(void);
 
 // Helpers conversion/affichage
 const char *espnow_link_role_to_str(espnow_role_t role);
