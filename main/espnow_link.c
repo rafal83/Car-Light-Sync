@@ -12,6 +12,7 @@
 #include "wifi_manager.h"
 #include "vehicle_can_unified.h"
 
+#include <assert.h>
 #include <string.h>
 #include <stddef.h>
 
@@ -52,67 +53,9 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
   uint8_t type;
-  float speed_kph;
-  float speed_threshold;
-  int8_t gear;
-  uint8_t accel_pedal_pos;
-  uint8_t brake_pressed;
-  uint8_t locked;
-  uint8_t doors_open_count;
-  uint8_t door_front_left_open;
-  uint8_t door_rear_left_open;
-  uint8_t door_front_right_open;
-  uint8_t door_rear_right_open;
-  uint8_t frunk_open;
-  uint8_t trunk_open;
-  uint8_t left_btn_scroll_up;
-  uint8_t left_btn_scroll_down;
-  uint8_t left_btn_press;
-  uint8_t left_btn_dbl_press;
-  uint8_t left_btn_tilt_right;
-  uint8_t left_btn_tilt_left;
-  uint8_t right_btn_scroll_up;
-  uint8_t right_btn_scroll_down;
-  uint8_t right_btn_press;
-  uint8_t right_btn_dbl_press;
-  uint8_t right_btn_tilt_right;
-  uint8_t right_btn_tilt_left;
-  uint8_t turn_left;
-  uint8_t turn_right;
-  uint8_t hazard;
-  uint8_t headlights;
-  uint8_t high_beams;
-  uint8_t fog_lights;
-  float soc_percent;
-  uint8_t charging_cable;
-  uint8_t charging;
-  uint8_t charge_status;
-  float charge_power_kw;
-  uint8_t charging_port;
-  uint8_t sentry_mode;
-  uint8_t sentry_alert;
-  float battery_voltage_LV;
-  float battery_voltage_HV;
-  float odometer_km;
-  uint8_t blindspot_left;
-  uint8_t blindspot_right;
-  uint8_t blindspot_left_alert;
-  uint8_t blindspot_right_alert;
-  uint8_t side_collision_left;
-  uint8_t side_collision_right;
-  uint8_t lane_departure_left_lv1;
-  uint8_t lane_departure_left_lv2;
-  uint8_t lane_departure_right_lv1;
-  uint8_t lane_departure_right_lv2;
-  uint8_t forward_collision;
-  uint8_t night_mode;
-  float brightness;
-  uint8_t autopilot;
-  uint8_t autopilot_alert_lv1;
-  uint8_t autopilot_alert_lv2;
-  uint8_t autopilot_alert_lv3;
-  uint32_t last_update_ms;
+  vehicle_state_t state;
 } msg_vehicle_state_t;
+_Static_assert(sizeof(msg_vehicle_state_t) == (1 + sizeof(vehicle_state_t)), "msg_vehicle_state_t size mismatch");
 
 static espnow_role_t s_role             = ESP_NOW_ROLE_MASTER;
 static espnow_slave_type_t s_slave_type = ESP_NOW_SLAVE_NONE;
@@ -487,66 +430,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     }
     const msg_vehicle_state_t *msg = (const msg_vehicle_state_t *)data;
     vehicle_state_t state = {0};
-    state.speed_kph = msg->speed_kph;
-    state.speed_threshold = msg->speed_threshold;
-    state.gear = msg->gear;
-    state.accel_pedal_pos = msg->accel_pedal_pos;
-    state.brake_pressed = msg->brake_pressed;
-    state.locked = msg->locked;
-    state.doors_open_count = msg->doors_open_count;
-    state.door_front_left_open = msg->door_front_left_open;
-    state.door_rear_left_open = msg->door_rear_left_open;
-    state.door_front_right_open = msg->door_front_right_open;
-    state.door_rear_right_open = msg->door_rear_right_open;
-    state.frunk_open = msg->frunk_open;
-    state.trunk_open = msg->trunk_open;
-    state.left_btn_scroll_up = msg->left_btn_scroll_up;
-    state.left_btn_scroll_down = msg->left_btn_scroll_down;
-    state.left_btn_press = msg->left_btn_press;
-    state.left_btn_dbl_press = msg->left_btn_dbl_press;
-    state.left_btn_tilt_right = msg->left_btn_tilt_right;
-    state.left_btn_tilt_left = msg->left_btn_tilt_left;
-    state.right_btn_scroll_up = msg->right_btn_scroll_up;
-    state.right_btn_scroll_down = msg->right_btn_scroll_down;
-    state.right_btn_press = msg->right_btn_press;
-    state.right_btn_dbl_press = msg->right_btn_dbl_press;
-    state.right_btn_tilt_right = msg->right_btn_tilt_right;
-    state.right_btn_tilt_left = msg->right_btn_tilt_left;
-    state.turn_left = msg->turn_left;
-    state.turn_right = msg->turn_right;
-    state.hazard = msg->hazard;
-    state.headlights = msg->headlights;
-    state.high_beams = msg->high_beams;
-    state.fog_lights = msg->fog_lights;
-    state.soc_percent = msg->soc_percent;
-    state.charging_cable = msg->charging_cable;
-    state.charging = msg->charging;
-    state.charge_status = msg->charge_status;
-    state.charge_power_kw = msg->charge_power_kw;
-    state.charging_port = msg->charging_port;
-    state.sentry_mode = msg->sentry_mode;
-    state.sentry_alert = msg->sentry_alert;
-    state.battery_voltage_LV = msg->battery_voltage_LV;
-    state.battery_voltage_HV = msg->battery_voltage_HV;
-    state.odometer_km = msg->odometer_km;
-    state.blindspot_left = msg->blindspot_left;
-    state.blindspot_right = msg->blindspot_right;
-    state.blindspot_left_alert = msg->blindspot_left_alert;
-    state.blindspot_right_alert = msg->blindspot_right_alert;
-    state.side_collision_left = msg->side_collision_left;
-    state.side_collision_right = msg->side_collision_right;
-    state.lane_departure_left_lv1 = msg->lane_departure_left_lv1;
-    state.lane_departure_left_lv2 = msg->lane_departure_left_lv2;
-    state.lane_departure_right_lv1 = msg->lane_departure_right_lv1;
-    state.lane_departure_right_lv2 = msg->lane_departure_right_lv2;
-    state.forward_collision = msg->forward_collision;
-    state.night_mode = msg->night_mode;
-    state.brightness = msg->brightness;
-    state.autopilot = msg->autopilot;
-    state.autopilot_alert_lv1 = msg->autopilot_alert_lv1;
-    state.autopilot_alert_lv2 = msg->autopilot_alert_lv2;
-    state.autopilot_alert_lv3 = msg->autopilot_alert_lv3;
-    state.last_update_ms = msg->last_update_ms;
+    memcpy(&state, &msg->state, sizeof(vehicle_state_t));
     s_last_peer_hb_us = esp_timer_get_time();
     s_last_vehicle_state = state;
     if (s_vehicle_state_cb) {
@@ -811,69 +695,8 @@ esp_err_t espnow_link_send_vehicle_state(const vehicle_state_t *state) {
     return ESP_ERR_INVALID_STATE;
   }
 
-  msg_vehicle_state_t msg = {
-      .type = MSG_VEHICLE_STATE,
-      .speed_kph = state->speed_kph,
-      .speed_threshold = state->speed_threshold,
-      .gear = state->gear,
-      .accel_pedal_pos = state->accel_pedal_pos,
-      .brake_pressed = state->brake_pressed,
-      .locked = state->locked,
-      .doors_open_count = state->doors_open_count,
-      .door_front_left_open = state->door_front_left_open,
-      .door_rear_left_open = state->door_rear_left_open,
-      .door_front_right_open = state->door_front_right_open,
-      .door_rear_right_open = state->door_rear_right_open,
-      .frunk_open = state->frunk_open,
-      .trunk_open = state->trunk_open,
-      .left_btn_scroll_up = state->left_btn_scroll_up,
-      .left_btn_scroll_down = state->left_btn_scroll_down,
-      .left_btn_press = state->left_btn_press,
-      .left_btn_dbl_press = state->left_btn_dbl_press,
-      .left_btn_tilt_right = state->left_btn_tilt_right,
-      .left_btn_tilt_left = state->left_btn_tilt_left,
-      .right_btn_scroll_up = state->right_btn_scroll_up,
-      .right_btn_scroll_down = state->right_btn_scroll_down,
-      .right_btn_press = state->right_btn_press,
-      .right_btn_dbl_press = state->right_btn_dbl_press,
-      .right_btn_tilt_right = state->right_btn_tilt_right,
-      .right_btn_tilt_left = state->right_btn_tilt_left,
-      .turn_left = state->turn_left,
-      .turn_right = state->turn_right,
-      .hazard = state->hazard,
-      .headlights = state->headlights,
-      .high_beams = state->high_beams,
-      .fog_lights = state->fog_lights,
-      .soc_percent = state->soc_percent,
-      .charging_cable = state->charging_cable,
-      .charging = state->charging,
-      .charge_status = state->charge_status,
-      .charge_power_kw = state->charge_power_kw,
-      .charging_port = state->charging_port,
-      .sentry_mode = state->sentry_mode,
-      .sentry_alert = state->sentry_alert,
-      .battery_voltage_LV = state->battery_voltage_LV,
-      .battery_voltage_HV = state->battery_voltage_HV,
-      .odometer_km = state->odometer_km,
-      .blindspot_left = state->blindspot_left,
-      .blindspot_right = state->blindspot_right,
-      .blindspot_left_alert = state->blindspot_left_alert,
-      .blindspot_right_alert = state->blindspot_right_alert,
-      .side_collision_left = state->side_collision_left,
-      .side_collision_right = state->side_collision_right,
-      .lane_departure_left_lv1 = state->lane_departure_left_lv1,
-      .lane_departure_left_lv2 = state->lane_departure_left_lv2,
-      .lane_departure_right_lv1 = state->lane_departure_right_lv1,
-      .lane_departure_right_lv2 = state->lane_departure_right_lv2,
-      .forward_collision = state->forward_collision,
-      .night_mode = state->night_mode,
-      .brightness = state->brightness,
-      .autopilot = state->autopilot,
-      .autopilot_alert_lv1 = state->autopilot_alert_lv1,
-      .autopilot_alert_lv2 = state->autopilot_alert_lv2,
-      .autopilot_alert_lv3 = state->autopilot_alert_lv3,
-      .last_update_ms = state->last_update_ms,
-  };
+  msg_vehicle_state_t msg = {.type = MSG_VEHICLE_STATE};
+  memcpy(&msg.state, state, sizeof(vehicle_state_t));
 
   uint8_t bcast[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   esp_err_t ret = esp_now_send(bcast, (const uint8_t *)&msg, sizeof(msg));

@@ -163,14 +163,27 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Portes
-    bool doors_open_now    = current_state.doors_open_count > 0;
-    bool doors_open_before = previous_state.doors_open_count > 0;
+    bool doors_open_left_now    = current_state.door_front_left_open + current_state.door_rear_left_open > 0;
+    bool doors_open_left_before = previous_state.door_front_left_open + previous_state.door_rear_left_open > 0;
+    bool doors_open_right_now    = current_state.door_front_right_open + current_state.door_rear_right_open > 0;
+    bool doors_open_right_before = previous_state.door_front_right_open + previous_state.door_rear_right_open > 0;
 
-    if (doors_open_now != doors_open_before) {
-      if (doors_open_now) {
-        config_manager_process_can_event(CAN_EVENT_DOOR_OPEN);
+    if (doors_open_left_now != doors_open_left_before) {
+      if (doors_open_left_now) {
+        config_manager_process_can_event(CAN_EVENT_DOOR_OPEN_LEFT);
+        config_manager_stop_event(CAN_EVENT_DOOR_CLOSE_LEFT);
       } else {
-        config_manager_process_can_event(CAN_EVENT_DOOR_CLOSE);
+        config_manager_process_can_event(CAN_EVENT_DOOR_CLOSE_LEFT);
+        config_manager_stop_event(CAN_EVENT_DOOR_OPEN_LEFT);
+      }
+    }
+    if (doors_open_right_now != doors_open_right_before) {
+      if (doors_open_right_now) {
+        config_manager_process_can_event(CAN_EVENT_DOOR_OPEN_RIGHT);
+        config_manager_stop_event(CAN_EVENT_DOOR_CLOSE_RIGHT);
+      } else {
+        config_manager_process_can_event(CAN_EVENT_DOOR_CLOSE_RIGHT);
+        config_manager_stop_event(CAN_EVENT_DOOR_OPEN_RIGHT); 
       }
     }
 

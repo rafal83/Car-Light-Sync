@@ -986,10 +986,14 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
     return EVENT_ID_CHARGING_CABLE_DISCONNECTED;
   case CAN_EVENT_CHARGING_PORT_OPENED:
     return EVENT_ID_CHARGING_PORT_OPENED;
-  case CAN_EVENT_DOOR_OPEN:
-    return EVENT_ID_DOOR_OPEN;
-  case CAN_EVENT_DOOR_CLOSE:
-    return EVENT_ID_DOOR_CLOSE;
+  case CAN_EVENT_DOOR_OPEN_LEFT:
+    return EVENT_ID_DOOR_OPEN_LEFT;
+  case CAN_EVENT_DOOR_CLOSE_LEFT:
+    return EVENT_ID_DOOR_CLOSE_LEFT;
+  case CAN_EVENT_DOOR_OPEN_RIGHT:
+    return EVENT_ID_DOOR_OPEN_RIGHT;
+  case CAN_EVENT_DOOR_CLOSE_RIGHT:
+    return EVENT_ID_DOOR_CLOSE_RIGHT;
   case CAN_EVENT_LOCKED:
     return EVENT_ID_LOCKED;
   case CAN_EVENT_UNLOCKED:
@@ -1074,10 +1078,14 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_CHARGING_CABLE_DISCONNECTED;
   if (strcmp(id, EVENT_ID_CHARGING_PORT_OPENED) == 0)
     return CAN_EVENT_CHARGING_PORT_OPENED;
-  if (strcmp(id, EVENT_ID_DOOR_OPEN) == 0)
-    return CAN_EVENT_DOOR_OPEN;
-  if (strcmp(id, EVENT_ID_DOOR_CLOSE) == 0)
-    return CAN_EVENT_DOOR_CLOSE;
+  if (strcmp(id, EVENT_ID_DOOR_OPEN_LEFT) == 0)
+    return CAN_EVENT_DOOR_OPEN_LEFT;
+  if (strcmp(id, EVENT_ID_DOOR_CLOSE_LEFT) == 0)
+    return CAN_EVENT_DOOR_CLOSE_LEFT;
+  if (strcmp(id, EVENT_ID_DOOR_OPEN_RIGHT) == 0)
+    return CAN_EVENT_DOOR_OPEN_RIGHT;
+  if (strcmp(id, EVENT_ID_DOOR_CLOSE_RIGHT) == 0)
+    return CAN_EVENT_DOOR_CLOSE_RIGHT;
   if (strcmp(id, EVENT_ID_LOCKED) == 0)
     return CAN_EVENT_LOCKED;
   if (strcmp(id, EVENT_ID_UNLOCKED) == 0)
@@ -1138,8 +1146,10 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
 // Vérifie si un événement peut déclencher un changement de profil
 bool config_manager_event_can_switch_profile(can_event_type_t event) {
   switch (event) {
-  case CAN_EVENT_DOOR_OPEN:
-  case CAN_EVENT_DOOR_CLOSE:
+  case CAN_EVENT_DOOR_OPEN_LEFT:
+  case CAN_EVENT_DOOR_CLOSE_LEFT:
+  case CAN_EVENT_DOOR_OPEN_RIGHT:
+  case CAN_EVENT_DOOR_CLOSE_RIGHT:
   case CAN_EVENT_CHARGING:
   case CAN_EVENT_CHARGE_COMPLETE:
   case CAN_EVENT_SPEED_THRESHOLD:

@@ -144,7 +144,7 @@ python tools/can/dbc_to_config.py custom.dbc --interactive
 **Événements détectés automatiquement:**
 - `GEAR_PARK`, `GEAR_REVERSE`, `GEAR_DRIVE`
 - `TURN_LEFT`, `TURN_RIGHT`, `TURN_HAZARD`
-- `DOOR_OPEN`, `DOOR_CLOSE`
+- `DOOR_OPEN_LEFT`, `DOOR_OPEN_RIGHT`, `DOOR_CLOSE_LEFT`, `DOOR_CLOSE_RIGHT`
 - `LOCKED`, `UNLOCKED`
 - `CHARGING_STARTED`, `CHARGING_STOPPED`
 - `SENTRY_MODE_ON`, `SENTRY_MODE_OFF`, `SENTRY_ALERT`

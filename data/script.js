@@ -635,8 +635,10 @@ const simulationSections = [
     {
         titleKey: 'simulation.doors',
         events: [
-            { id: 'DOOR_OPEN', labelKey: 'simulation.doorOpen' },
-            { id: 'DOOR_CLOSE', labelKey: 'simulation.doorClose' }
+            { id: 'DOOR_OPEN_LEFT', labelKey: 'simulation.doorOpenLeft' },
+            { id: 'DOOR_OPEN_RIGHT', labelKey: 'simulation.doorOpenRight' },
+            { id: 'DOOR_CLOSE_LEFT', labelKey: 'simulation.doorCloseLeft' },
+            { id: 'DOOR_CLOSE_RIGHT', labelKey: 'simulation.doorCloseRight' }
         ]
     },
     {
@@ -2006,10 +2008,6 @@ function applyEspnowVisibility() {
     const slaveTypeSelector = $('espnow-type') ? $('espnow-type').parentNode : null;
     if (slaveTypeSelector) {
         slaveTypeSelector.style.display = isSlave ? '' : 'none';
-    }
-
-    if (!isMaster && (activeTabName === 'vehicle' || activeTabName === 'diagnostic')) {
-        switchTab('espnow');
     }
 
     const espnowStatus = $('status-espnow');
@@ -3593,8 +3591,10 @@ const EVENT_TO_COMMON = {
     'TURN_HAZARD': 'hazard',
     'CHARGING': 'charging', 
     'CHARGE_COMPLETE': 'chargeComplete',
-    'DOOR_OPEN': 'doorOpen', 
-    'DOOR_CLOSE': 'doorClose',
+    'DOOR_OPEN_LEFT': 'doorOpenLeft', 
+    'DOOR_OPEN_RIGHT': 'doorOpenRight', 
+    'DOOR_CLOSE_LEFT': 'doorCloseLeft',
+    'DOOR_CLOSE_RIGHT': 'doorCloseRight',
     'LOCKED': 'locked', 
     'UNLOCKED': 'unlocked',
     'BRAKE_ON': 'brakeOn',
@@ -3618,14 +3618,18 @@ function getAllowedEventsForSlaveType(slaveType) {
             'BLINDSPOT_LEFT_ALERT',
             'SIDE_COLLISION_LEFT',
             'LANE_DEPARTURE_LEFT_LV1',
-            'LANE_DEPARTURE_LEFT_LV2'
+            'LANE_DEPARTURE_LEFT_LV2',
+            'DOOR_OPEN_LEFT',
+            'DOOR_CLOSE_LEFT'
         ],
         'events_right': [
             'BLINDSPOT_RIGHT',
             'BLINDSPOT_RIGHT_ALERT',
             'SIDE_COLLISION_RIGHT',
             'LANE_DEPARTURE_RIGHT_LV1',
-            'LANE_DEPARTURE_RIGHT_LV2'
+            'LANE_DEPARTURE_RIGHT_LV2',
+            'DOOR_OPEN_RIGHT',
+            'DOOR_CLOSE_RIGHT'
         ],
         'speedometer': [
             'SPEED_THRESHOLD'
