@@ -24,8 +24,10 @@ typedef enum {
   ESP_NOW_SLAVE_MAX
 } espnow_slave_type_t;
 
+#define ESPNOW_MAX_REQUEST_IDS 24
+
 typedef struct {
-  uint32_t ids[16];
+  uint32_t ids[ESPNOW_MAX_REQUEST_IDS];
   uint8_t count;
 } espnow_request_list_t;
 

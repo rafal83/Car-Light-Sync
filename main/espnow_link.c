@@ -32,7 +32,7 @@ typedef struct __attribute__((packed)) {
   uint8_t slave_type;
   uint8_t req_count;
   uint32_t device_id;
-  uint32_t req_ids[8]; // up to 8 requested CAN IDs
+  uint32_t req_ids[ESPNOW_MAX_REQUEST_IDS]; // requested CAN IDs
 } msg_discovery_req_t;
 
 // Sent by master in response
@@ -188,24 +188,43 @@ bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out) {
   return false;
 }
 
-// Table simplifiée des IDs par type d'esclave
+static void add_request_id(espnow_request_list_t *out, uint32_t id) {
+  if (!out) return;
+  if (out->count >= ESPNOW_MAX_REQUEST_IDS) return;
+  out->ids[out->count++] = id;
+}
+
+// Table simplifiée des IDs par type d'esclave (limitée pour éviter le flux excessif)
 static void load_default_requests(espnow_slave_type_t type, espnow_request_list_t *out) {
   memset(out, 0, sizeof(*out));
-  switch (type) {
-  case ESP_NOW_SLAVE_EVENTS_LEFT:
-    out->ids[out->count++] = 0x399; // exemple Tesla blindspot left
-    break;
-  case ESP_NOW_SLAVE_EVENTS_RIGHT:
-    out->ids[out->count++] = 0x399; // exemple Tesla blindspot right
-    break;
-  case ESP_NOW_SLAVE_SPEEDOMETER:
-    out->ids[out->count++] = 0x257; // vitesse
-    out->ids[out->count++] = 0x118; // rapport
-    out->ids[out->count++] = 0x334; // conso/puissance
-    break;
-  default:
-    break;
+  // IDs traités dans vehicle_state_apply_signal (liste exhaustive utilisée pour limiter le flux)
+  const uint32_t base_ids[] = {
+      0x3C2, // scroll wheels / steering buttons
+      0x257, // vitesse
+      0x118, // gear / accel
+      0x39D, // brake
+      0x3F3, // odometer
+      0x102, // portes G
+      0x103, // portes D + trunk
+      0x2E1, // frunk
+      0x3F5, // lights/turns
+      0x399, // blindspot/autopilot/lane/side
+      0x313, // speed limit
+      0x292, // SOC
+      0x132, // HV voltage
+      0x261, // 12V voltage
+      0x204, // charge status
+      0x273, // lock/night mode
+      0x284, // cable presence
+      0x212, // charge status (UI)
+      0x25D  // charge door
+  };
+
+  for (size_t i = 0; i < sizeof(base_ids) / sizeof(base_ids[0]); i++) {
+    add_request_id(out, base_ids[i]);
   }
+
+  // Pas d'ajout spécifique par type pour limiter le flux : la liste couvre les frames utilisées
 }
 
 static void pairing_mode_timer_callback(void *arg) {
@@ -392,7 +411,11 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
            mac ? mac[0] : 0, mac ? mac[1] : 0, mac ? mac[2] : 0,
            mac ? mac[3] : 0, mac ? mac[4] : 0, mac ? mac[5] : 0);
 
-  if (s_role == ESP_NOW_ROLE_MASTER && type == MSG_DISCOVERY_REQ && len == sizeof(msg_discovery_req_t)) {
+  if (s_role == ESP_NOW_ROLE_MASTER && type == MSG_DISCOVERY_REQ) {
+    if (len < 8) {
+        ESP_LOGW(TAG_ESP_NOW, "Discovery request too short: len=%d", len);
+        return;
+    }
     const msg_discovery_req_t *req = (const msg_discovery_req_t *)data;
     if (req->proto_ver != PROTOCOL_VERSION) {
         ESP_LOGW(TAG_ESP_NOW, "Discovery request with wrong protocol version: %d", req->proto_ver);
@@ -408,8 +431,12 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     if (mac) {
       update_peer_info(mac, ESP_NOW_ROLE_SLAVE, (espnow_slave_type_t)req->slave_type, req->device_id, 0);
     }
-    s_requests.count = (req->req_count > 16) ? 16 : req->req_count;
-    for (uint8_t i = 0; i < s_requests.count && i < 8; i++) {
+    uint8_t max_ids_from_len = (len > 8) ? (uint8_t)((len - 8) / 4) : 0;
+    if (max_ids_from_len > ESPNOW_MAX_REQUEST_IDS) {
+      max_ids_from_len = ESPNOW_MAX_REQUEST_IDS;
+    }
+    s_requests.count = (req->req_count > max_ids_from_len) ? max_ids_from_len : req->req_count;
+    for (uint8_t i = 0; i < s_requests.count; i++) {
       s_requests.ids[i] = req->req_ids[i];
     }
 
@@ -520,13 +547,14 @@ static void espnow_send_discovery_request(void *arg) {
     .device_id = s_device_id,
     .req_count = 0
   };
-  uint8_t req_count = s_requests.count > 8 ? 8 : s_requests.count;
+  uint8_t req_count = s_requests.count > ESPNOW_MAX_REQUEST_IDS ? ESPNOW_MAX_REQUEST_IDS : s_requests.count;
   req.req_count = req_count;
   for (uint8_t i = 0; i < req_count; i++) {
     req.req_ids[i] = s_requests.ids[i];
   }
+  size_t payload_len = 8 + ((size_t)req_count * sizeof(uint32_t));
   ESP_LOGI(TAG_ESP_NOW, "Broadcasting discovery request (try %d)", s_discovery_retries);
-  esp_err_t err = esp_now_send(bcast, (uint8_t *)&req, sizeof(req));
+  esp_err_t err = esp_now_send(bcast, (uint8_t *)&req, payload_len);
   if (err != ESP_OK) {
     ESP_LOGW(TAG_ESP_NOW, "esp_now_send discovery failed: %s", esp_err_to_name(err));
   }
@@ -729,7 +757,7 @@ esp_err_t espnow_link_set_requests(const espnow_request_list_t *reqs) {
   if (!reqs) {
     return ESP_ERR_INVALID_ARG;
   }
-  uint8_t count = (reqs->count > 16) ? 16 : reqs->count;
+  uint8_t count = (reqs->count > ESPNOW_MAX_REQUEST_IDS) ? ESPNOW_MAX_REQUEST_IDS : reqs->count;
   s_requests.count = count;
   for (uint8_t i = 0; i < count; i++) {
     s_requests.ids[i] = reqs->ids[i];
@@ -777,7 +805,7 @@ void espnow_link_on_can_frame(const twai_message_t *msg, int bus) {
   
   if (s_requests.count > 0) {
     bool interested = false;
-    for (uint8_t i = 0; i < s_requests.count && i < 16; i++) {
+    for (uint8_t i = 0; i < s_requests.count && i < ESPNOW_MAX_REQUEST_IDS; i++) {
       if (s_requests.ids[i] == msg->identifier) {
         interested = true;
         break;
