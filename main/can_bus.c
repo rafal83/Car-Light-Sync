@@ -74,9 +74,6 @@ static void can_rx_task(void *pvParameters) {
       // Broadcast vers clients CANServer TCP (si serveur actif)
       canserver_udp_broadcast_can_frame((int)bus_type, &msg);
 
-      // Broadcast ESP-NOW (maître uniquement)
-      espnow_link_on_can_frame(&msg, (int)bus_type);
-
       if (s_callback) {
         can_frame_t frame = {0};
         frame.id          = msg.identifier;

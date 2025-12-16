@@ -91,21 +91,15 @@ static void vehicle_can_callback(const can_frame_t *frame, can_bus_type_t bus_ty
 }
 
 // Callback pour les frames ESP-NOW reçues côté esclave : on réutilise le pipeline CAN existant
-static void espnow_can_rx_handler(const espnow_can_frame_t *frame) {
-  if (!frame) {
+static void espnow_vehicle_state_rx_handler(const vehicle_state_t *state) {
+  if (!state) {
     return;
   }
-  can_frame_t can = {0};
-  can.id          = frame->can_id;
-  can.dlc         = (frame->dlc > 8) ? 8 : frame->dlc;
-  if (can.dlc) {
-    memcpy(can.data, frame->data, can.dlc);
-  }
-  can_bus_type_t bus = CAN_BUS_BODY;
-  if (frame->bus == CAN_BUS_CHASSIS) {
-    bus = CAN_BUS_CHASSIS;
-  }
-  vehicle_can_callback(&can, bus, NULL);
+  // Mettre à jour l'état partagé avec un timestamp local (ticks) pour les timeouts frontend
+  memcpy(&last_vehicle_state, state, sizeof(vehicle_state_t));
+  last_vehicle_state.last_update_ms = xTaskGetTickCount();
+  led_effects_update_vehicle_state(&last_vehicle_state);
+  web_server_update_vehicle_state(&last_vehicle_state);
 }
 
 static void espnow_test_frame_log(void) {
@@ -646,9 +640,8 @@ void app_main(void) {
     ESP_LOGI(TAG_MAIN, "✓ Les deux bus CAN sont démarrés");
   } else {
     ESP_LOGI(TAG_MAIN, "Mode esclave ESP-NOW : CAN désactivé");
-    // Les frames CAN reçues via ESP-NOW sont injectées dans le pipeline de décodage
-    espnow_link_register_rx_callback(espnow_can_rx_handler);
     espnow_link_register_test_rx_callback(espnow_test_frame_log);
+    espnow_link_register_vehicle_state_rx_callback(espnow_vehicle_state_rx_handler);
   }
 
   // LEDs

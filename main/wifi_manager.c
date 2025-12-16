@@ -142,7 +142,7 @@ esp_err_t wifi_manager_start_ap(void) {
   // Configuration du point d'accès avec le nom personnalisé incluant le suffixe
   // MAC
   wifi_config_t ap_config = {
-      .ap = {.ssid = "", .ssid_len = 0, .password = WIFI_AP_PASSWORD, .max_connection = WIFI_MAX_CLIENTS, .authmode = WIFI_AUTH_WPA2_PSK, .channel = 6},
+      .ap = {.ssid = "", .ssid_len = 0, .password = WIFI_AP_PASSWORD, .max_connection = WIFI_MAX_CLIENTS, .authmode = WIFI_AUTH_WPA2_PSK, .channel = 1},
   };
 
   // Copier le SSID avec suffixe MAC
