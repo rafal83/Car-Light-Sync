@@ -1,7 +1,6 @@
 #ifndef ESPNOW_LINK_H
 #define ESPNOW_LINK_H
 
-#include "driver/twai.h"
 #include "esp_err.h"
 #include "vehicle_can_unified.h"
 
@@ -28,19 +27,6 @@ typedef enum {
 #define ESPNOW_MAX_REQUEST_IDS 24
 
 typedef struct {
-  uint32_t ids[ESPNOW_MAX_REQUEST_IDS];
-  uint8_t count;
-} espnow_request_list_t;
-
-typedef struct {
-  uint32_t can_id;
-  uint8_t bus;
-  uint8_t dlc;
-  uint8_t data[8];
-  uint16_t ts_ms;
-} espnow_can_frame_t;
-
-typedef struct {
   uint8_t mac[6];
   espnow_role_t role;
   espnow_slave_type_t type;
@@ -51,12 +37,10 @@ typedef struct {
 
 #define ESPNOW_MAX_PEERS 8
 
-typedef void (*espnow_can_rx_cb_t)(const espnow_can_frame_t *frame);
 typedef void (*espnow_test_rx_cb_t)(void);
 typedef void (*espnow_vehicle_state_rx_cb_t)(const vehicle_state_t *state);
 
 esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type);
-esp_err_t espnow_link_set_requests(const espnow_request_list_t *reqs);
 esp_err_t espnow_link_register_peer(const uint8_t mac[6]);
 esp_err_t espnow_link_get_peers(espnow_peer_info_t *out_peers, size_t max_peers, size_t *out_count);
 esp_err_t espnow_link_send_test_frame(const uint8_t mac[6]); // if mac==NULL, send to all
@@ -64,7 +48,6 @@ esp_err_t espnow_link_disconnect(void); // slave disconnect from master
 esp_err_t espnow_link_disconnect_peer(const uint8_t mac[6]); // master disconnect specific peer
 esp_err_t espnow_link_send_vehicle_state(const vehicle_state_t *state);
 void espnow_link_register_vehicle_state_rx_callback(espnow_vehicle_state_rx_cb_t cb);
-bool espnow_link_get_last_vehicle_state(vehicle_state_t *out_state);
 espnow_role_t espnow_link_get_role(void);
 espnow_slave_type_t espnow_link_get_slave_type(void);
 void espnow_link_register_test_rx_callback(espnow_test_rx_cb_t cb);

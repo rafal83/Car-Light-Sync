@@ -13,6 +13,7 @@
 #include "vehicle_can_unified.h"
 
 #include <string.h>
+#include <stddef.h>
 
 #define DISCOVERY_TIMEOUT_S 30
 
@@ -22,9 +23,8 @@
 typedef enum {
   MSG_DISCOVERY_REQ  = 0x01,
   MSG_DISCOVERY_RESP = 0x02,
-  MSG_HEARTBEAT      = 0x04,
-  MSG_VEHICLE_STATE  = 0x05,
-  MSG_TEST           = 0x06,
+  MSG_TEST           = 0x03,
+  MSG_VEHICLE_STATE  = 0x04,
 } msg_type_t;
 
 // Sent by slave during discovery
@@ -34,7 +34,6 @@ typedef struct __attribute__((packed)) {
   uint8_t slave_type;
   uint8_t req_count;
   uint32_t device_id;
-  uint32_t req_ids[ESPNOW_MAX_REQUEST_IDS]; // requested CAN IDs
 } msg_discovery_req_t;
 
 // Sent by master in response
@@ -45,13 +44,6 @@ typedef struct __attribute__((packed)) {
   uint32_t master_device_id;
 } msg_discovery_resp_t;
 
-
-typedef struct __attribute__((packed)) {
-  uint8_t type;
-  uint8_t role;
-  uint8_t slave_type;
-  uint8_t reserved;
-} msg_heartbeat_t;
 
 typedef struct __attribute__((packed)) {
   uint8_t type;
@@ -125,9 +117,7 @@ typedef struct __attribute__((packed)) {
 static espnow_role_t s_role             = ESP_NOW_ROLE_MASTER;
 static espnow_slave_type_t s_slave_type = ESP_NOW_SLAVE_NONE;
 static uint32_t s_device_id             = 0;
-static espnow_request_list_t s_requests = {0};
 static espnow_test_rx_cb_t s_test_rx_cb = NULL;
-static esp_timer_handle_t s_hb_timer    = NULL;
 static uint64_t s_last_peer_hb_us       = 0;
 static esp_timer_handle_t s_discovery_timer = NULL;
 static int s_discovery_retries = 0;
@@ -171,8 +161,6 @@ static void persist_peers_to_nvs(void) {
   esp_err_t err = nvs_manager_set_blob(NVS_NAMESPACE_ESPNOW, "peers", &blob, sizeof(blob));
   if (err != ESP_OK) {
     ESP_LOGW(TAG_ESP_NOW, "Failed to persist peers to NVS: %s", esp_err_to_name(err));
-  } else {
-    ESP_LOGI(TAG_ESP_NOW, "Persisted %u peer(s) to NVS", (unsigned int)blob.count);
   }
 }
 
@@ -186,8 +174,6 @@ static void load_peers_from_nvs(void) {
   size_t max_expected = sizeof(blob);
   if (err != ESP_OK || required == 0 || required > max_expected) {
     s_peer_count = 0;
-    ESP_LOGI(TAG_ESP_NOW, "No peers in NVS (err=%s, size=%u, max=%u)",
-             esp_err_to_name(err), (unsigned int)required, (unsigned int)max_expected);
     return;
   }
   err = nvs_manager_get_blob(NVS_NAMESPACE_ESPNOW, "peers", &blob, &required);
@@ -201,7 +187,6 @@ static void load_peers_from_nvs(void) {
         }
       }
     }
-    ESP_LOGI(TAG_ESP_NOW, "Loaded %u peer(s) from NVS", (unsigned int)s_peer_count);
   } else {
     s_peer_count = 0;
     ESP_LOGW(TAG_ESP_NOW, "Failed to load peers from NVS: %s", esp_err_to_name(err));
@@ -268,45 +253,6 @@ bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out) {
   return false;
 }
 
-static void add_request_id(espnow_request_list_t *out, uint32_t id) {
-  if (!out) return;
-  if (out->count >= ESPNOW_MAX_REQUEST_IDS) return;
-  out->ids[out->count++] = id;
-}
-
-// Table simplifiée des IDs par type d'esclave (limitée pour éviter le flux excessif)
-static void load_default_requests(espnow_slave_type_t type, espnow_request_list_t *out) {
-  memset(out, 0, sizeof(*out));
-  // IDs traités dans vehicle_state_apply_signal (liste exhaustive utilisée pour limiter le flux)
-  const uint32_t base_ids[] = {
-      0x3C2, // scroll wheels / steering buttons
-      0x257, // vitesse
-      0x118, // gear / accel
-      0x39D, // brake
-      0x3F3, // odometer
-      0x102, // portes G
-      0x103, // portes D + trunk
-      0x2E1, // frunk
-      0x3F5, // lights/turns
-      0x399, // blindspot/autopilot/lane/side
-      0x313, // speed limit
-      0x292, // SOC
-      0x132, // HV voltage
-      0x261, // 12V voltage
-      0x204, // charge status
-      0x273, // lock/night mode
-      0x284, // cable presence
-      0x212, // charge status (UI)
-      0x25D  // charge door
-  };
-
-  for (size_t i = 0; i < sizeof(base_ids) / sizeof(base_ids[0]); i++) {
-    add_request_id(out, base_ids[i]);
-  }
-
-  // Pas d'ajout spécifique par type pour limiter le flux : la liste couvre les frames utilisées
-}
-
 static void pairing_mode_timer_callback(void *arg) {
     ESP_LOGI(TAG_ESP_NOW, "Pairing mode disabled by timer");
     s_is_pairing_mode = false;
@@ -348,7 +294,6 @@ static esp_err_t load_self_mac(void) {
 static void register_cached_peers(void) {
   if (s_peer_count == 0) return;
 
-  ESP_LOGI(TAG_ESP_NOW, "Restoring %u cached peer(s)", (unsigned int)s_peer_count);
   uint8_t current_channel = get_current_channel();
   // For slave, if we have a stored master channel, try to switch to it before registering
   if (s_role == ESP_NOW_ROLE_SLAVE) {
@@ -386,11 +331,6 @@ static void register_cached_peers(void) {
                peer.peer_addr[0], peer.peer_addr[1], peer.peer_addr[2],
                peer.peer_addr[3], peer.peer_addr[4], peer.peer_addr[5],
                esp_err_to_name(add_ret));
-    } else {
-      ESP_LOGI(TAG_ESP_NOW, "Restored peer %02X:%02X:%02X:%02X:%02X:%02X (ch=%d)",
-               peer.peer_addr[0], peer.peer_addr[1], peer.peer_addr[2],
-               peer.peer_addr[3], peer.peer_addr[4], peer.peer_addr[5],
-               peer.channel);
     }
   }
 }
@@ -507,17 +447,12 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
         return;
     }
 
-    ESP_LOGI(TAG_ESP_NOW, "Discovery request received from slave id=0x%08X", (unsigned int)req->device_id);
     if (mac) {
       update_peer_info(mac, ESP_NOW_ROLE_SLAVE, (espnow_slave_type_t)req->slave_type, req->device_id, 0);
     }
     uint8_t max_ids_from_len = (len > 8) ? (uint8_t)((len - 8) / 4) : 0;
     if (max_ids_from_len > ESPNOW_MAX_REQUEST_IDS) {
       max_ids_from_len = ESPNOW_MAX_REQUEST_IDS;
-    }
-    s_requests.count = (req->req_count > max_ids_from_len) ? max_ids_from_len : req->req_count;
-    for (uint8_t i = 0; i < s_requests.count; i++) {
-      s_requests.ids[i] = req->req_ids[i];
     }
 
     msg_discovery_resp_t resp = {
@@ -534,13 +469,11 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
 
   } else if (s_role == ESP_NOW_ROLE_SLAVE && type == MSG_DISCOVERY_RESP && len == sizeof(msg_discovery_resp_t)) {
     const msg_discovery_resp_t* resp = (const msg_discovery_resp_t*)data;
-    ESP_LOGI(TAG_ESP_NOW, "Discovery response received from master id=0x%08X", (unsigned int)resp->master_device_id);
     s_last_peer_hb_us = esp_timer_get_time();
     if (mac) {
       espnow_link_register_peer(mac);
       update_peer_info(mac, ESP_NOW_ROLE_MASTER, ESP_NOW_SLAVE_NONE, resp->master_device_id, 0);
     }
-    ESP_LOGI(TAG_ESP_NOW, "Paired with master, stopping discovery timer");
     if (s_discovery_timer && esp_timer_is_active(s_discovery_timer)) {
         esp_timer_stop(s_discovery_timer);
     }
@@ -614,6 +547,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     state.autopilot_alert_lv2 = msg->autopilot_alert_lv2;
     state.autopilot_alert_lv3 = msg->autopilot_alert_lv3;
     state.last_update_ms = msg->last_update_ms;
+    s_last_peer_hb_us = esp_timer_get_time();
     s_last_vehicle_state = state;
     if (s_vehicle_state_cb) {
       s_vehicle_state_cb(&state);
@@ -622,24 +556,6 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *
     s_last_test_rx_us = esp_timer_get_time();
     if (s_test_rx_cb) {
       s_test_rx_cb();
-    }
-  } else if (type == MSG_HEARTBEAT) {
-    // If slave has no peers (after a manual disconnect), ignore heartbeats
-    if (s_role == ESP_NOW_ROLE_SLAVE && s_peer_count == 0) {
-      return;
-    }
-    s_last_peer_hb_us = esp_timer_get_time();
-    ESP_LOGD(TAG_ESP_NOW, "HB rx -> peer alive ts=%llu", (unsigned long long)s_last_peer_hb_us);
-    const msg_heartbeat_t *hb = (const msg_heartbeat_t *)data;
-    if (mac && hb) {
-      espnow_role_t peer_role = (hb->role <= ESP_NOW_ROLE_SLAVE) ? (espnow_role_t)hb->role : ESP_NOW_ROLE_SLAVE;
-      update_peer_info(mac, peer_role, (espnow_slave_type_t)hb->slave_type, 0, 0);
-    }
-    if (s_role == ESP_NOW_ROLE_SLAVE && s_discovery_timer && esp_timer_is_active(s_discovery_timer)) {
-      esp_timer_stop(s_discovery_timer);
-      ESP_LOGI(TAG_ESP_NOW, "Slave paired, stopping discovery timer");
-      s_slave_pairing_active = false;
-      status_manager_update_led_now();
     }
   }
 }
@@ -683,30 +599,14 @@ static void espnow_send_discovery_request(void *arg) {
     .device_id = s_device_id,
     .req_count = 0
   };
-  uint8_t req_count = s_requests.count > ESPNOW_MAX_REQUEST_IDS ? ESPNOW_MAX_REQUEST_IDS : s_requests.count;
-  req.req_count = req_count;
-  for (uint8_t i = 0; i < req_count; i++) {
-    req.req_ids[i] = s_requests.ids[i];
-  }
-  size_t payload_len = 8 + ((size_t)req_count * sizeof(uint32_t));
-  ESP_LOGI(TAG_ESP_NOW, "Broadcasting discovery request (try %d)", s_discovery_retries);
+  size_t payload_len = sizeof(msg_discovery_req_t);
   esp_err_t err = esp_now_send(bcast, (uint8_t *)&req, payload_len);
   if (err != ESP_OK) {
     ESP_LOGW(TAG_ESP_NOW, "esp_now_send discovery failed: %s", esp_err_to_name(err));
   }
 }
 
-static void espnow_send_heartbeat(void *arg) {
-  (void)arg;
-  if (s_role == ESP_NOW_ROLE_SLAVE && s_peer_count == 0) {
-    // Unpaired slave: ne pas émettre de heartbeat pour éviter de se re-announcer au master
-    return;
-  }
-  msg_heartbeat_t hb = {.type = MSG_HEARTBEAT, .role = (uint8_t)s_role, .slave_type = (uint8_t)s_slave_type, .reserved = 0};
-  uint8_t bcast[6]    = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  ESP_LOGD(TAG_ESP_NOW, "HB tx role=%d type=%d", hb.role, hb.slave_type);
-  esp_now_send(bcast, (uint8_t *)&hb, sizeof(hb));
-}
+// Heartbeat removed: vehicle state messages now act as liveness indicator
 
 esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
   s_role                 = role;
@@ -744,25 +644,10 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     ESP_ERROR_CHECK(esp_timer_create(&pairing_timer_args, &s_pairing_mode_timer));
   }
 
-  const esp_timer_create_args_t hb_args = {
-      .callback = espnow_send_heartbeat,
-      .arg      = NULL,
-      .dispatch_method = ESP_TIMER_TASK,
-      .name     = "espnow_hb"};
-  esp_err_t hb_err = esp_timer_create(&hb_args, &s_hb_timer);
-  if (hb_err == ESP_OK && s_hb_timer) {
-    esp_timer_start_periodic(s_hb_timer, 2000000);
-  } else {
-    ESP_LOGE(TAG_ESP_NOW, "Failed to create HB timer: %s", esp_err_to_name(hb_err));
-  }
-
   // Restaurer les peers enregistrés en NVS (master & slave)
   register_cached_peers();
 
   if (s_role == ESP_NOW_ROLE_SLAVE) {
-    // Charger les IDs CAN par défaut pour ce type d'esclave
-    load_default_requests(s_slave_type, &s_requests);
-
     const esp_timer_create_args_t discovery_args = {
         .callback = espnow_send_discovery_request,
         .arg      = NULL,
@@ -782,8 +667,6 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     espnow_link_trigger_slave_pairing();
   }
 
-  ESP_LOGI(TAG_ESP_NOW, "Initialised role: %s, device_id: 0x%08X", espnow_link_role_to_str(s_role), (unsigned int)s_device_id);
-
   s_init_done = true;
   return ESP_OK;
 }
@@ -798,16 +681,16 @@ esp_err_t espnow_link_set_pairing_mode(bool enable, uint32_t duration_s) {
         uint8_t primary_channel;
         wifi_second_chan_t second_channel;
         esp_wifi_get_channel(&primary_channel, &second_channel);
-        ESP_LOGI(TAG_ESP_NOW, "MASTER: Starting pairing on current Wi-Fi channel: %d", primary_channel);
+        ESP_LOGD(TAG_ESP_NOW, "MASTER: Starting pairing on current Wi-Fi channel: %d", primary_channel);
 
         int target_channel = 0;
         wifi_ap_record_t ap_info;
         bool sta_connected = (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK);
         if (target_channel == 0 && sta_connected) {
             target_channel = ap_info.primary;
-            ESP_LOGI(TAG_ESP_NOW, "MASTER: STA connected, using AP channel %d for ESP-NOW", target_channel);
+            ESP_LOGD(TAG_ESP_NOW, "MASTER: STA connected, using AP channel %d for ESP-NOW", target_channel);
         } else if (target_channel > 0) {
-            ESP_LOGI(TAG_ESP_NOW, "MASTER: Using fixed channel %d for ESP-NOW", target_channel);
+            ESP_LOGD(TAG_ESP_NOW, "MASTER: Using fixed channel %d for ESP-NOW", target_channel);
         }
         if (target_channel > 0 && primary_channel != target_channel) {
             esp_err_t ch_ret = esp_wifi_set_channel(target_channel, WIFI_SECOND_CHAN_NONE);
@@ -818,7 +701,7 @@ esp_err_t espnow_link_set_pairing_mode(bool enable, uint32_t duration_s) {
             }
         }
         esp_wifi_get_channel(&primary_channel, &second_channel);
-        ESP_LOGI(TAG_ESP_NOW, "MASTER: Pairing will run on Wi-Fi channel: %d", primary_channel);
+        ESP_LOGD(TAG_ESP_NOW, "MASTER: Pairing will run on Wi-Fi channel: %d", primary_channel);
 
         s_is_pairing_mode = true;
         status_led_set_state(STATUS_LED_ESPNOW_PAIRING);
@@ -855,16 +738,15 @@ esp_err_t espnow_link_trigger_slave_pairing(void) {
     uint8_t primary_channel;
     wifi_second_chan_t second_channel;
     esp_wifi_get_channel(&primary_channel, &second_channel);
-    ESP_LOGI(TAG_ESP_NOW, "SLAVE: Starting pairing on current Wi-Fi channel: %d", primary_channel);
 
     int target_channel = 0;
     wifi_ap_record_t ap_info;
     bool sta_connected = (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK);
     if (target_channel == 0 && sta_connected) {
         target_channel = ap_info.primary;
-        ESP_LOGI(TAG_ESP_NOW, "SLAVE: STA connected, using AP channel %d for ESP-NOW", target_channel);
+        ESP_LOGD(TAG_ESP_NOW, "SLAVE: STA connected, using AP channel %d for ESP-NOW", target_channel);
     } else if (target_channel > 0) {
-        ESP_LOGI(TAG_ESP_NOW, "SLAVE: Using fixed channel %d for ESP-NOW", target_channel);
+        ESP_LOGD(TAG_ESP_NOW, "SLAVE: Using fixed channel %d for ESP-NOW", target_channel);
     }
     if (target_channel > 0 && primary_channel != target_channel) {
         esp_err_t ch_ret = esp_wifi_set_channel(target_channel, WIFI_SECOND_CHAN_NONE);
@@ -875,7 +757,6 @@ esp_err_t espnow_link_trigger_slave_pairing(void) {
         }
     }
     esp_wifi_get_channel(&primary_channel, &second_channel);
-    ESP_LOGI(TAG_ESP_NOW, "SLAVE: Pairing will run on Wi-Fi channel: %d", primary_channel);
 
     s_discovery_retries = 0;
     s_slave_pairing_active = true;
@@ -888,18 +769,6 @@ esp_err_t espnow_link_trigger_slave_pairing(void) {
       s_slave_pairing_active = false;
     }
     return start_err;
-}
-
-esp_err_t espnow_link_set_requests(const espnow_request_list_t *reqs) {
-  if (!reqs) {
-    return ESP_ERR_INVALID_ARG;
-  }
-  uint8_t count = (reqs->count > ESPNOW_MAX_REQUEST_IDS) ? ESPNOW_MAX_REQUEST_IDS : reqs->count;
-  s_requests.count = count;
-  for (uint8_t i = 0; i < count; i++) {
-    s_requests.ids[i] = reqs->ids[i];
-  }
-  return ESP_OK;
 }
 
 esp_err_t espnow_link_register_peer(const uint8_t mac[6]) {
@@ -1172,7 +1041,6 @@ void espnow_link_set_role_type(espnow_role_t role, espnow_slave_type_t type) {
       esp_timer_stop(s_pairing_mode_timer);
     }
     s_is_pairing_mode = false;
-    load_default_requests(type, &s_requests);
   }
 }
 
@@ -1187,15 +1055,4 @@ esp_err_t espnow_link_get_mac(uint8_t mac_out[6]) {
 
 uint32_t espnow_link_get_device_id(void) {
   return s_device_id;
-}
-
-bool espnow_link_get_last_vehicle_state(vehicle_state_t *out_state) {
-  if (!out_state) {
-    return false;
-  }
-  if (!s_init_done) {
-    return false;
-  }
-  memcpy(out_state, &s_last_vehicle_state, sizeof(vehicle_state_t));
-  return true;
 }
