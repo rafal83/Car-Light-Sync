@@ -22,8 +22,8 @@
 // GPIO
 #define CAN_TX_BODY_PIN 15
 #define CAN_RX_BODY_PIN 14
-#define CAN_TX_CHASSIS_PIN 6
-#define CAN_RX_CHASSIS_PIN 7
+#define CAN_TX_CHASSIS_PIN 7
+#define CAN_RX_CHASSIS_PIN 6
 
 #else
 // Configuration ESP32-S3 (défaut)
