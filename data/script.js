@@ -1854,6 +1854,19 @@ async function loadEspnowConfig() {
         const cfg = await resp.json();
         if (cfg.role) $('espnow-role').value = cfg.role;
         if (cfg.type) $('espnow-type').value = cfg.type;
+        if (cfg.types && Array.isArray(cfg.types)) {
+            const sel = $('espnow-type');
+            if (sel) {
+                sel.innerHTML = '';
+                cfg.types.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = translateSlaveType(t.id);
+                    sel.appendChild(opt);
+                });
+                sel.value = cfg.type || sel.value;
+            }
+        }
         currentEspnowRole = cfg.role || currentEspnowRole;
         updateEspnowStatus(cfg);
         refreshEspnowControls(cfg);
@@ -2008,7 +2021,7 @@ function updateEspnowStatus(cfg) {
     const statusEl = $('espnow-status');
     if (statusEl) {
         const roleLabel = cfg.role === 'master' ? (t('config.espnowRoleMaster') || 'Master') : (t('config.espnowRoleSlave') || 'Slave');
-        const typeLabel = cfg.type || roleLabel;
+        const typeLabel = translateSlaveType(cfg.type) || roleLabel;
         statusEl.textContent = cfg.role === 'slave' ? typeLabel : roleLabel;
     }
 
@@ -2117,7 +2130,7 @@ async function refreshEspnowPeers() {
                 tr.innerHTML = `
                     <td>${peerRole === 'master' ? (t('config.espnowRoleMaster') || 'Master') : (t('config.espnowRoleSlave') || 'Slave')}</td>
                     <td>${p.mac || '--'}</td>
-                    <td>${p.type || '--'}</td>
+                    <td>${translateSlaveType(p.type) || '--'}</td>
                     <td>${deviceHex}</td>
                     <td>${p.channel || '--'}</td>
                     <td>${ageMs ? (ageMs + ' ms') : '--'}</td>
@@ -4279,3 +4292,12 @@ updateLanguageSelector();
 updateBleUiState();
 updateApiConnectionState();
 scheduleInitialDataLoad();
+function translateSlaveType(id) {
+    const map = {
+        'none': t('config.espnowTypeNone'),
+        'blindspot_left': t('config.espnowTypeBsl'),
+        'blindspot_right': t('config.espnowTypeBsr'),
+        'speedometer': t('config.espnowTypeSpeedo'),
+    };
+    return map[id] || id || '--';
+}

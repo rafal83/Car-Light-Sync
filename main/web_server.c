@@ -575,6 +575,16 @@ static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(self, "device_id", espnow_link_get_device_id());
   cJSON_AddItemToObject(root, "self", self);
 
+  cJSON *types = cJSON_CreateArray();
+  for (int t = 0; t < ESP_NOW_SLAVE_MAX; t++) {
+    cJSON *item = cJSON_CreateObject();
+    const char *name = espnow_link_slave_type_to_str((espnow_slave_type_t)t);
+    cJSON_AddStringToObject(item, "id", name);
+    cJSON_AddNumberToObject(item, "value", t);
+    cJSON_AddItemToArray(types, item);
+  }
+  cJSON_AddItemToObject(root, "types", types);
+
   if (role == ESP_NOW_ROLE_SLAVE) {
     espnow_peer_info_t master_info = {0};
     if (espnow_link_get_master_info(&master_info)) {
