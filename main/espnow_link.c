@@ -139,10 +139,10 @@ const char *espnow_link_role_to_str(espnow_role_t role) {
 
 const char *espnow_link_slave_type_to_str(espnow_slave_type_t type) {
   switch (type) {
-  case ESP_NOW_SLAVE_BLINDSPOT_LEFT:
-    return "blindspot_left";
-  case ESP_NOW_SLAVE_BLINDSPOT_RIGHT:
-    return "blindspot_right";
+  case ESP_NOW_SLAVE_EVENTS_LEFT:
+    return "events_left";
+  case ESP_NOW_SLAVE_EVENTS_RIGHT:
+    return "events_right";
   case ESP_NOW_SLAVE_SPEEDOMETER:
     return "speedometer";
   default:
@@ -169,12 +169,12 @@ bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out) {
   if (!s || !out) {
     return false;
   }
-  if (strcmp(s, "blindspot_left") == 0) {
-    *out = ESP_NOW_SLAVE_BLINDSPOT_LEFT;
+  if (strcmp(s, "events_left") == 0) {
+    *out = ESP_NOW_SLAVE_EVENTS_LEFT;
     return true;
   }
-  if (strcmp(s, "blindspot_right") == 0) {
-    *out = ESP_NOW_SLAVE_BLINDSPOT_RIGHT;
+  if (strcmp(s, "events_right") == 0) {
+    *out = ESP_NOW_SLAVE_EVENTS_RIGHT;
     return true;
   }
   if (strcmp(s, "speedometer") == 0) {
@@ -192,10 +192,10 @@ bool espnow_link_slave_type_from_str(const char *s, espnow_slave_type_t *out) {
 static void load_default_requests(espnow_slave_type_t type, espnow_request_list_t *out) {
   memset(out, 0, sizeof(*out));
   switch (type) {
-  case ESP_NOW_SLAVE_BLINDSPOT_LEFT:
+  case ESP_NOW_SLAVE_EVENTS_LEFT:
     out->ids[out->count++] = 0x399; // exemple Tesla blindspot left
     break;
-  case ESP_NOW_SLAVE_BLINDSPOT_RIGHT:
+  case ESP_NOW_SLAVE_EVENTS_RIGHT:
     out->ids[out->count++] = 0x399; // exemple Tesla blindspot right
     break;
   case ESP_NOW_SLAVE_SPEEDOMETER:

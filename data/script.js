@@ -1313,6 +1313,9 @@ function renderEventsTable() {
     });
 
     container.innerHTML = '';
+    const currentRole = $('espnow-role')?.value || currentEspnowRole;
+    const currentType = $('espnow-type')?.value || 'none';
+    const allowedEvents = (currentRole === 'slave') ? getAllowedEventsForSlaveType(currentType) : [];
     // If no data from API, create default rows for all events
     if (eventsConfigData.length === 0) {
         const defaultEffectId =
@@ -1344,6 +1347,9 @@ function renderEventsTable() {
     eventsConfigData.forEach((event, index) => {
         // Skip CAN_EVENT_NONE only
         if (event.ev === 'NONE') {
+            return;
+        }
+        if (allowedEvents.length > 0 && !allowedEvents.includes(event.ev)) {
             return;
         }
         const eventName = getEventName(event.ev);
@@ -3603,6 +3609,30 @@ const EVENT_TO_COMMON = {
     'LANE_DEPARTURE_RIGHT_LV2': 'laneDepartureRightLv2',
     'SPEED_THRESHOLD': 'speedThreshold'
 };
+
+function getAllowedEventsForSlaveType(slaveType) {
+    const map = {
+        'events_left': [
+            'BLINDSPOT_LEFT',
+            'BLINDSPOT_LEFT_ALERT',
+            'SIDE_COLLISION_LEFT',
+            'LANE_DEPARTURE_LEFT_LV1',
+            'LANE_DEPARTURE_LEFT_LV2'
+        ],
+        'events_right': [
+            'BLINDSPOT_RIGHT',
+            'BLINDSPOT_RIGHT_ALERT',
+            'SIDE_COLLISION_RIGHT',
+            'LANE_DEPARTURE_RIGHT_LV1',
+            'LANE_DEPARTURE_RIGHT_LV2'
+        ],
+        'speedometer': [
+            'SPEED_THRESHOLD'
+        ],
+        'none': []
+    };
+    return map[slaveType] || [];
+}
 function translateEventId(eventId) {
     if (!eventId) return null;
     const lang = translations[currentLang];
@@ -4295,8 +4325,8 @@ scheduleInitialDataLoad();
 function translateSlaveType(id) {
     const map = {
         'none': t('config.espnowTypeNone'),
-        'blindspot_left': t('config.espnowTypeBsl'),
-        'blindspot_right': t('config.espnowTypeBsr'),
+        'events_left': t('config.espnowTypeEvl'),
+        'events_right': t('config.espnowTypeEvr'),
         'speedometer': t('config.espnowTypeSpeedo'),
     };
     return map[id] || id || '--';

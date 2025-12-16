@@ -18,8 +18,8 @@ typedef enum {
 // Types d'esclaves supportés
 typedef enum {
   ESP_NOW_SLAVE_NONE = 0,
-  ESP_NOW_SLAVE_BLINDSPOT_LEFT,
-  ESP_NOW_SLAVE_BLINDSPOT_RIGHT,
+  ESP_NOW_SLAVE_EVENTS_LEFT,
+  ESP_NOW_SLAVE_EVENTS_RIGHT,
   ESP_NOW_SLAVE_SPEEDOMETER,
   ESP_NOW_SLAVE_MAX
 } espnow_slave_type_t;
