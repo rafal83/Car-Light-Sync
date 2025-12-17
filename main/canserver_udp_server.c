@@ -239,7 +239,7 @@ static void canserver_tx_task(void *arg) {
 
   while (server_running) {
     // Wait a bit to accumulate frames (keep small to limit drops)
-    vTaskDelay(pdMS_TO_TICKS(1)); // 10ms batching interval
+    vTaskDelay(pdMS_TO_TICKS(10)); // 10ms batching interval
 
     // Remove stale clients
     remove_stale_clients();
@@ -294,7 +294,7 @@ static void canserver_tx_task(void *arg) {
             // Buffer full, wait and retry
             retry_count++;
             if (retry_count < max_retries) {
-              vTaskDelay(pdMS_TO_TICKS(5)); // Wait 20ms before retry
+              vTaskDelay(pdMS_TO_TICKS(20)); // Wait 20ms before retry
             }
           } else if (sent < 0) {
             // Other error (or ENOMEM after max retries), don't retry
