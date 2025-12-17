@@ -1,13 +1,13 @@
 /**
  * @file web_server.c
- * @brief Serveur HTTP pour l'interface web et l'API REST
+ * @brief HTTP server for the web interface and REST API
  *
- * Gère:
- * - Serveur HTTP avec routes statiques (HTML, CSS, JS) compressées GZIP
- * - API REST pour configuration profils, événements CAN, effets LED
- * - Portail captif pour configuration WiFi initiale
- * - Mise à jour OTA (Over-The-Air)
- * - Streaming de l'état véhicule et des événements CAN
+ * Handles:
+ * - HTTP server with static routes (HTML, CSS, JS) served as GZIP
+ * - REST API for profiles, CAN events, and LED effects
+ * - Captive portal for initial WiFi configuration
+ * - OTA updates (Over-The-Air)
+ * - Vehicle state streaming and CAN event streaming
  */
 
 #include "web_server.h"
@@ -15,7 +15,7 @@
 #include "audio_input.h"
 #include "cJSON.h"
 #include "can_bus.h"
-#include "canserver_udp_server.h" // Pour le serveur CANServer UDP
+#include "canserver_udp_server.h" // For the CANServer UDP service
 #include "config.h"
 #include "config_manager.h"
 #include "esp_heap_caps.h"
@@ -24,9 +24,9 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "espnow_link.h"
-#include "gvret_tcp_server.h" // Pour le serveur GVRET TCP
+#include "gvret_tcp_server.h" // For the GVRET TCP service
 #include "led_effects.h"
-#include "log_stream.h" // Pour le streaming de logs en temps réel
+#include "log_stream.h" // For real-time log streaming
 #include "nvs_flash.h"
 #include "settings_manager.h"
 #include "spiffs_storage.h"
@@ -43,7 +43,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-// Constantes pour les tailles de buffers
+// Buffer size constants
 #define BUFFER_SIZE_SMALL 128
 #define BUFFER_SIZE_MEDIUM 256
 #define BUFFER_SIZE_LARGE 512
@@ -51,22 +51,22 @@
 #define BUFFER_SIZE_PROFILE 16384
 #define BUFFER_SIZE_EVENT_MAX 16384
 
-// Constantes pour les limites du système
+// System limit constants
 #define LED_COUNT_MIN 1
 #define LED_COUNT_MAX 200
 #define MAX_CONTENT_LENGTH 4096
 
-// Constantes de timing
+// Timing constants
 #define VEHICLE_STATE_TIMEOUT_MS 5000
 #define TASK_DELAY_MS 1000
 #define RETRY_DELAY_BASE_MS 20
 #define RETRY_DELAY_MAX_MS 500
 
-// Constantes de configuration serveur
+// Server configuration constants
 #define HTTP_MAX_URI_HANDLERS 60
 #define HTTP_MAX_OPEN_SOCKETS 13
 
-// Constantes de configuration par défaut
+// Default configuration constants
 #define DEFAULT_BRIGHTNESS 128
 #define DEFAULT_SPEED 50
 #define DEFAULT_PRIORITY 100
@@ -75,47 +75,47 @@
 #define CACHE_ONE_YEAR "public, max-age=31536000"
 
 /**
- * Clés JSON abrégées utilisées dans l'API REST (pour réduire la taille des paquets)
+ * Shortened JSON keys used in the REST API (to reduce payload size)
  *
- * EFFETS LED:
- *   fx  = effect (ID alphanumérique de l'effet)
+ * LED EFFECTS:
+ *   fx  = effect (alphanumeric effect ID)
  *   br  = brightness (0-255)
  *   sp  = speed (0-100)
  *   c1  = color1 (format 0xRRGGBB)
  *   c2  = color2
  *   c3  = color3
- *   rv  = reverse (bool: direction de l'animation)
+ *   rv  = reverse (bool: animation direction)
  *   ar  = audio_reactive (bool)
  *   sm  = sync_mode
  *
- * ÉVÉNEMENTS CAN:
- *   ev  = event (ID alphanumérique de l'événement)
- *   dur = duration_ms (durée en millisecondes)
- *   pri = priority (0-255, plus haut = plus prioritaire)
+ * CAN EVENTS:
+ *   ev  = event (alphanumeric event ID)
+ *   dur = duration_ms (duration in milliseconds)
+ *   pri = priority (0-255, higher = more priority)
  *   en  = enabled (bool)
- *   at  = action_type (0=effet, 1=switch profil)
+ *   at  = action_type (0=effect, 1=switch profile)
  *   csp = can_switch_profile (bool)
  *
- * SEGMENTS LED:
- *   st  = segment_start (index de départ, 0-based)
- *   ln  = segment_length (longueur, 0=full strip)
+ * LED SEGMENTS:
+ *   st  = segment_start (start index, 0-based)
+ *   ln  = segment_length (length, 0=full strip)
  *
- * PROFILS:
+ * PROFILES:
  *   pid = profile_id (0-9)
  *
- * RÉPONSES:
- *   st  = status ("ok" ou "error")
- *   msg = message (texte descriptif)
+ * RESPONSES:
+ *   st  = status ("ok" or "error")
+ *   msg = message (descriptive text)
  *   pg  = progress (0-100)
- *   upd = updated (nombre d'éléments mis à jour)
+ *   upd = updated (number of updated elements)
  *   rr  = requires_restart (bool)
  *
  * AUDIO/FFT:
- *   sen = sensitivity (sensibilité micro)
+ *   sen = sensitivity (microphone sensitivity)
  *   gn  = gain
  *   sr  = sample_rate
  *
- * VÉHICULE:
+ * VEHICLE:
  *   va  = vehicle_active (bool)
  *   nm  = night_mode (bool)
  *   ap  = autopilot (0-3)
@@ -129,7 +129,7 @@ static httpd_handle_t server                 = NULL;
 static vehicle_state_t current_vehicle_state = {0};
 static esp_err_t event_single_post_handler(httpd_req_t *req);
 
-// HTML de la page principale (embarqué, version compressée GZIP)
+// Main page HTML (embedded, GZIP-compressed version)
 extern const uint8_t index_html_gz_start[] asm("_binary_index_html_gz_start");
 extern const uint8_t index_html_gz_end[] asm("_binary_index_html_gz_end");
 extern const uint8_t i18n_js_gz_start[] asm("_binary_i18n_js_gz_start");
@@ -159,26 +159,26 @@ void web_server_update_vehicle_state(const vehicle_state_t *state) {
 }
 
 /**
- * @brief Parse une requête JSON HTTP et retourne l'objet cJSON
+ * @brief Parse an HTTP JSON request and return the cJSON object
  *
- * @param req Requête HTTP
- * @param buffer Buffer pour recevoir le contenu
- * @param buffer_size Taille du buffer
- * @param out_json Pointeur pour recevoir l'objet cJSON parsé (doit être libéré avec cJSON_Delete)
- * @return ESP_OK si succès, ESP_FAIL si erreur (réponse HTTP déjà envoyée)
+ * @param req HTTP request
+ * @param buffer Buffer to receive the content
+ * @param buffer_size Buffer size
+ * @param out_json Pointer to receive the parsed cJSON object (must be freed with cJSON_Delete)
+ * @return ESP_OK on success, ESP_FAIL on error (HTTP response already sent)
  */
 static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffer_size, cJSON **out_json) {
   if (!req || !buffer || !out_json || buffer_size == 0) {
     return ESP_FAIL;
   }
 
-  // Vérifier qu'il y a bien des données à recevoir
+  // Ensure there is a body to read
   if (req->content_len == 0) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty request body");
     return ESP_FAIL;
   }
 
-  // Valider que le contenu ne dépasse pas la taille du buffer
+  // Validate that the body does not exceed buffer size
   if (req->content_len >= buffer_size) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request body too large");
     return ESP_FAIL;
@@ -187,7 +187,7 @@ static esp_err_t parse_json_request(httpd_req_t *req, char *buffer, size_t buffe
   size_t remaining = req->content_len;
   size_t offset    = 0;
 
-  // Lire tout le corps de la requête, même si httpd_req_recv renvoie par fragments
+  // Read the entire body, even if httpd_req_recv returns fragments
   while (remaining > 0) {
     size_t to_read = MIN(remaining, buffer_size - 1 - offset);
     int ret        = httpd_req_recv(req, buffer + offset, to_read);
@@ -218,10 +218,10 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
   static_file_route_t *route = (static_file_route_t *)req->user_ctx;
   const size_t file_size     = (route->end - route->start);
 
-  // Vérifier si la connexion est toujours valide
+  // Check if the connection is still valid
   int sockfd                 = httpd_req_to_sockfd(req);
   if (sockfd < 0) {
-    ESP_LOGW(TAG_WEBSERVER, "Socket invalide pour URI %s", route->uri);
+    ESP_LOGW(TAG_WEBSERVER, "Invalid socket for URI %s", route->uri);
     return ESP_FAIL;
   }
 
@@ -233,12 +233,12 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     httpd_resp_set_hdr(req, "Content-Encoding", route->content_encoding);
   }
 
-  // Fermer la connexion après l'envoi (désactive keep-alive pour cette requête)
+  // Close the connection after sending (disables keep-alive for this request)
   httpd_resp_set_hdr(req, "Connection", "close");
 
-// Toujours envoyer par chunks pour éviter EAGAIN, même pour petits fichiers
-#define CHUNK_SIZE 1024 // Réduit à 1KB pour éviter buffer overflow
-#define MAX_RETRIES 10  // Augmenté à 10 retries
+// Always send by chunks to avoid EAGAIN, even for small files
+#define CHUNK_SIZE 1024 // Reduced to 1 KB to avoid buffer overflow
+#define MAX_RETRIES 10  // Increased to 10 retries
 
   const uint8_t *data = route->start;
   size_t remaining    = file_size;
@@ -249,61 +249,60 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
   while (remaining > 0) {
     size_t chunk_size = (remaining > CHUNK_SIZE) ? CHUNK_SIZE : remaining;
 
-    // Réessayer jusqu'à MAX_RETRIES fois en cas d'EAGAIN
+    // Retry up to MAX_RETRIES when EAGAIN occurs
     int retries       = 0;
     while (retries < MAX_RETRIES) {
       err = httpd_resp_send_chunk(req, (const char *)data, chunk_size);
 
       if (err == ESP_OK) {
-        break; // Succès
+        break; // Success
       }
 
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         retries++;
-        // Délai exponentiel: 20ms, 40ms, 80ms, etc.
+        // Exponential backoff: 20 ms, 40 ms, 80 ms, etc.
         int delay_ms = RETRY_DELAY_BASE_MS * (1 << (retries - 1));
         if (delay_ms > RETRY_DELAY_MAX_MS)
           delay_ms = RETRY_DELAY_MAX_MS;
-        ESP_LOGD(TAG_WEBSERVER, "EAGAIN pour %s, retry %d/%d (wait %dms)", route->uri, retries, MAX_RETRIES, delay_ms);
+        ESP_LOGD(TAG_WEBSERVER, "EAGAIN for %s, retry %d/%d (wait %dms)", route->uri, retries, MAX_RETRIES, delay_ms);
         vTaskDelay(pdMS_TO_TICKS(delay_ms));
       } else {
-        // Autre erreur, abandonner
-        ESP_LOGW(TAG_WEBSERVER, "Erreur envoi chunk pour %s: %s (errno: %d)", route->uri, esp_err_to_name(err), errno);
+        // Other error, abort
+        ESP_LOGW(TAG_WEBSERVER, "Chunk send error for %s: %s (errno: %d)", route->uri, esp_err_to_name(err), errno);
         return err;
       }
     }
 
     if (err != ESP_OK) {
-      ESP_LOGW(TAG_WEBSERVER, "Échec envoi après %d retries pour %s", MAX_RETRIES, route->uri);
+      ESP_LOGW(TAG_WEBSERVER, "Failed to send after %d retries for %s", MAX_RETRIES, route->uri);
       return err;
     }
 
     data += chunk_size;
     remaining -= chunk_size;
 
-    // Petit délai entre chunks pour laisser le buffer TCP se vider
+    // Small delay between chunks to let the TCP buffer drain
     if (remaining > 0) {
       vTaskDelay(pdMS_TO_TICKS(2));
     }
   }
 
-  // Terminer l'envoi chunké
+  // Finish the chunked send
   err = httpd_resp_send_chunk(req, NULL, 0);
   if (err != ESP_OK) {
-    ESP_LOGW(TAG_WEBSERVER, "Erreur fin chunk pour %s: %s", route->uri, esp_err_to_name(err));
+    ESP_LOGW(TAG_WEBSERVER, "Error finishing chunks for %s: %s", route->uri, esp_err_to_name(err));
   } else {
-    ESP_LOGD(TAG_WEBSERVER, "Fichier %s envoyé avec succès", route->uri);
+    ESP_LOGD(TAG_WEBSERVER, "File %s sent successfully", route->uri);
   }
 
   return err;
 }
 
-// Handler d'erreur 404 pour le portail captif
-// Redirige toutes les URLs non trouvées vers la page principale
+// 404 handler for the captive portal
+// Redirects all unknown URLs to the main page
 static esp_err_t captive_portal_404_handler(httpd_req_t *req, httpd_err_code_t err) {
   if (err == HTTPD_404_NOT_FOUND) {
-    // Envoyer la page principale (index.html) pour toutes les requêtes non
-    // trouvées
+    // Send the main page (index.html) for all not-found requests
     const size_t file_size = (index_html_gz_end - index_html_gz_start);
 
     httpd_resp_set_type(req, "text/html");
@@ -313,7 +312,7 @@ static esp_err_t captive_portal_404_handler(httpd_req_t *req, httpd_err_code_t e
     return httpd_resp_send(req, (const char *)index_html_gz_start, file_size);
   }
 
-  // Pour les autres erreurs, retourner l'erreur par défaut
+  // For other errors, return the default
   return ESP_FAIL;
 }
 
@@ -353,15 +352,15 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(can_chassis, "er", can_chassis_status.errors);
   cJSON_AddItemToObject(root, "cbc", can_chassis);
 
-  // Statut véhicule
+  // Vehicle status
   uint32_t now        = xTaskGetTickCount();
   bool vehicle_active = (now - current_vehicle_state.last_update_ms) < pdMS_TO_TICKS(VEHICLE_STATE_TIMEOUT_MS);
   cJSON_AddBoolToObject(root, "va", vehicle_active);
 
-  // Données véhicule complètes
+  // Full vehicle data
   cJSON *vehicle = cJSON_CreateObject();
 
-  // État général
+  // General state
   cJSON_AddNumberToObject(vehicle, "g", current_vehicle_state.gear);
   cJSON_AddNumberToObject(vehicle, "s", current_vehicle_state.speed_kph);
   cJSON_AddNumberToObject(vehicle, "bp", current_vehicle_state.brake_pressed);
@@ -381,7 +380,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   // Verrouillage
   cJSON_AddBoolToObject(vehicle, "lk", current_vehicle_state.locked);
 
-  // Lumières
+  // Lights
   cJSON *lights = cJSON_CreateObject();
   cJSON_AddBoolToObject(lights, "h", current_vehicle_state.headlights);
   cJSON_AddBoolToObject(lights, "hb", current_vehicle_state.high_beams);
@@ -403,7 +402,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(vehicle, "bhv", current_vehicle_state.battery_voltage_HV);
   cJSON_AddNumberToObject(vehicle, "odo", current_vehicle_state.odometer_km);
 
-  // Sécurité
+  // Safety
   cJSON *safety = cJSON_CreateObject();
   cJSON_AddBoolToObject(safety, "bsl", current_vehicle_state.blindspot_left);
   cJSON_AddBoolToObject(safety, "bsla", current_vehicle_state.blindspot_left_alert);
@@ -423,7 +422,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
   cJSON_AddItemToObject(root, "vehicle", vehicle);
 
-  // Profil actuellement appliqué (peut changer temporairement via évènements)
+  // Currently applied profile (may change temporarily via events)
   int active_profile_id = config_manager_get_active_profile_id();
   cJSON_AddNumberToObject(root, "pid", active_profile_id);
   config_profile_t *active_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
@@ -437,7 +436,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   }
 
   // Calcul de la charge CPU (ESP32-C6 mono-core / ESP32-S3 dual-core)
-  // Utilise les statistiques d'exécution FreeRTOS (maintenant activées dans sdkconfig)
+  // Uses FreeRTOS runtime stats (now enabled in sdkconfig)
   static uint32_t last_idle_time     = 0;
   static uint32_t last_total_time    = 0;
   static uint32_t cpu_usage_filtered = 0;
@@ -445,21 +444,21 @@ static esp_err_t status_handler(httpd_req_t *req) {
   uint32_t current_total_time        = 0;
   uint32_t cpu_usage                 = 0;
 
-  // Allouer de la mémoire pour les infos des tâches (estimer ~30 tâches max pour les serveurs)
+  // Allocate memory for task info (estimate ~30 tasks max for the servers)
   const UBaseType_t max_tasks        = 30;
   TaskStatus_t *task_status_array    = (TaskStatus_t *)malloc(max_tasks * sizeof(TaskStatus_t));
 
   if (task_status_array != NULL) {
     UBaseType_t task_count     = uxTaskGetSystemState(task_status_array, max_tasks, &current_total_time);
 
-    // Calculer le temps total d'exécution de TOUTES les tâches
+    // Compute total runtime of ALL tasks
     uint32_t total_runtime     = 0;
     uint32_t current_idle_time = 0;
 
     for (UBaseType_t i = 0; i < task_count; i++) {
       total_runtime += task_status_array[i].ulRunTimeCounter;
 
-      // Trouver les tâches IDLE (nom "IDLE" ou "IDLE0" pour mono-core, "IDLE0" et "IDLE1" pour dual-core)
+      // Find IDLE tasks (name "IDLE" or "IDLE0" single-core, "IDLE0" and "IDLE1" dual-core)
       const char *task_name = task_status_array[i].pcTaskName;
       if (strncmp(task_name, "IDLE", 4) == 0) {
         current_idle_time += task_status_array[i].ulRunTimeCounter;
@@ -468,7 +467,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
     free(task_status_array);
 
-    // Calculer le pourcentage CPU si on a des données précédentes
+    // Compute CPU percentage if previous data is available
     if (last_total_time > 0 && total_runtime > last_total_time) {
       uint32_t idle_delta  = current_idle_time - last_idle_time;
       uint32_t total_delta = total_runtime - last_total_time;
@@ -477,16 +476,16 @@ static esp_err_t status_handler(httpd_req_t *req) {
         // CPU usage = 100 - (idle_time / total_time * 100)
         cpu_usage = 100 - ((idle_delta * 100) / total_delta);
         if (cpu_usage > 100)
-          cpu_usage = 100; // Clamp à 100%
+          cpu_usage = 100; // Clamp to 100%
 
         // Filtre simple pour lisser les variations
         cpu_usage_filtered = (cpu_usage_filtered * 3 + cpu_usage) / 4;
       } else {
-        // Si les deltas sont incohérents, garder la dernière valeur
+        // If deltas are inconsistent, keep the last value
         cpu_usage = cpu_usage_filtered;
       }
     } else {
-      // Réinitialiser si overflow ou incohérence
+      // Reset if overflow or inconsistent
       cpu_usage = cpu_usage_filtered;
     }
 
@@ -498,7 +497,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
   cJSON_AddNumberToObject(root, "cpu", cpu_usage_filtered);
 
-  // Mémoire consommée (heap)
+  // Memory usage (heap)
   size_t free_heap          = esp_get_free_heap_size();
   size_t total_heap         = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
   uint32_t mem_used_percent = (total_heap > 0) ? (((total_heap - free_heap) * 100) / total_heap) : 0;
@@ -529,8 +528,7 @@ static esp_err_t config_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(root, "sm", config.sync_mode);
   cJSON_AddBoolToObject(root, "rv", config.reverse);
 
-  // Ajouter les paramètres du profil actif (allouer dynamiquement pour éviter
-  // stack overflow)
+  // Add active profile settings (allocate dynamically to avoid stack overflow)
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile != NULL && config_manager_get_active_profile(profile)) {
     free(profile);
@@ -538,10 +536,10 @@ static esp_err_t config_handler(httpd_req_t *req) {
     free(profile);
   }
 
-  // Ajouter la configuration matérielle LED
+  // Add LED hardware configuration
   cJSON_AddNumberToObject(root, "lc", config_manager_get_led_count());
 
-  // Réglages globaux (wheel control)
+  // Global settings (wheel control)
   cJSON_AddBoolToObject(root, "wheel_ctl", config_manager_get_wheel_control_enabled());
   cJSON_AddNumberToObject(root, "wheel_spd", config_manager_get_wheel_control_speed_limit());
 
@@ -616,7 +614,7 @@ static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// POST ESP-NOW config (role/type) -> sauvegarde NVS, reboot nécessaire pour appliquer
+// POST ESP-NOW config (role/type) -> saves to SPIFFS, reboot required to apply
 static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL] = {0};
   cJSON *root = NULL;
@@ -647,7 +645,7 @@ static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
   esp_err_t err1 = settings_set_u8("espnow_role", (uint8_t)new_role);
   esp_err_t err2 = settings_set_u8("espnow_type", (uint8_t)new_slave_type);
 
-  // Mettre à jour l'état courant (pour que la réponse et les futures requêtes reflètent immédiatement les nouveaux choix)
+  // Update the current state so the response and future requests reflect the new choices immediately
   espnow_link_set_role_type(new_role, new_slave_type);
 
   cJSON_Delete(root);
@@ -860,7 +858,7 @@ static esp_err_t espnow_disconnect_peer_post_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour configurer le matériel LED (POST)
+// Handler to configure LED hardware (POST)
 static esp_err_t config_post_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_MEDIUM];
   cJSON *root = NULL;
@@ -881,7 +879,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
 
   uint16_t led_count = (uint16_t)led_count_json->valueint;
 
-  // Appliquer réglages wheel control (optionnels)
+  // Apply wheel control settings (optional)
   if (wheel_ctl_json && cJSON_IsBool(wheel_ctl_json)) {
     config_manager_set_wheel_control_enabled(cJSON_IsTrue(wheel_ctl_json));
   }
@@ -896,7 +894,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Sauvegarder en SPIFFS (seulement le nombre de LEDs)
+  // Save to SPIFFS (LED count only)
   bool success = config_manager_set_led_count(led_count);
 
   cJSON_Delete(root);
@@ -919,7 +917,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     free((void *)json_string);
     cJSON_Delete(response);
 
-    ESP_LOGI(TAG_WEBSERVER, "Configuration appliquée: %d LEDs, Molette: %d, Vitesse: %d", led_count, config_manager_get_wheel_control_enabled(), config_manager_get_wheel_control_speed_limit());
+    ESP_LOGI(TAG_WEBSERVER, "Configuration applied: %d LEDs, Wheel: %d, Speed: %d", led_count, config_manager_get_wheel_control_enabled(), config_manager_get_wheel_control_speed_limit());
   } else {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save configuration");
   }
@@ -927,12 +925,12 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour lister les profils
+// Handler to list profiles
 static esp_err_t profiles_handler(httpd_req_t *req) {
-  // Allouer un seul profil à la fois pour économiser la mémoire
+  // Allocate one profile at a time to save memory
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire pour profil");
+    ESP_LOGE(TAG_WEBSERVER, "Memory allocation error for profile");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     return ESP_FAIL;
   }
@@ -941,10 +939,10 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
   cJSON *root           = cJSON_CreateObject();
   cJSON *profiles_array = cJSON_CreateArray();
 
-  // Charger chaque profil un par un (scanner dynamiquement)
+  // Load each profile one by one (dynamic scan)
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     if (!config_manager_load_profile(i, profile)) {
-      continue; // Profil n'existe pas, passer au suivant
+      continue; // Profile does not exist, skip
     }
 
     cJSON *profile_obj = cJSON_CreateObject();
@@ -952,7 +950,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(profile_obj, "n", profile->name);
     cJSON_AddBoolToObject(profile_obj, "ac", (i == active_id));
 
-    // Ajouter l'effet par défaut
+    // Add default effect
     cJSON *default_effect_obj = cJSON_CreateObject();
     cJSON_AddNumberToObject(default_effect_obj, "fx", profile->default_effect.effect);
     cJSON_AddNumberToObject(default_effect_obj, "br", profile->default_effect.brightness);
@@ -966,7 +964,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddNumberToObject(default_effect_obj, "apo", profile->default_effect.accel_pedal_offset);
     cJSON_AddItemToObject(profile_obj, "default_effect", default_effect_obj);
 
-    // Ajouter les paramètres de luminosité dynamique
+    // Add dynamic brightness parameters
     cJSON_AddBoolToObject(profile_obj, "dbe", profile->dynamic_brightness_enabled);
     cJSON_AddNumberToObject(profile_obj, "dbr", profile->dynamic_brightness_rate);
 
@@ -1029,7 +1027,7 @@ static esp_err_t profile_activate_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour créer un nouveau profil
+// Handler to create a new profile
 static esp_err_t profile_create_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_MEDIUM];
   cJSON *root = NULL;
@@ -1045,7 +1043,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Vérifier d'abord s'il reste assez d'espace SPIFFS
+  // First check if SPIFFS has enough space
   if (!config_manager_can_create_profile()) {
     cJSON_Delete(root);
     httpd_resp_set_type(req, "application/json");
@@ -1053,12 +1051,12 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Allouer dynamiquement pour éviter le stack overflow
+  // Allocate dynamically to avoid stack overflow
   config_profile_t *temp        = (config_profile_t *)malloc(sizeof(config_profile_t));
   config_profile_t *new_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
 
   if (temp == NULL || new_profile == NULL) {
-    ESP_LOGE(TAG_WEBSERVER, "Échec allocation mémoire pour profil");
+    ESP_LOGE(TAG_WEBSERVER, "Memory allocation failed for profile");
     if (temp)
       free(temp);
     if (new_profile)
@@ -1068,11 +1066,11 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Trouver un slot libre (scanner dynamiquement)
+  // Find a free slot (dynamic scan)
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
     if (!config_manager_load_profile(i, temp)) {
-      // Slot libre
-      ESP_LOGI(TAG_WEBSERVER, "Création profil '%s' dans slot %d", name->valuestring, i);
+      // Free slot
+      ESP_LOGI(TAG_WEBSERVER, "Creating profile '%s' in slot %d", name->valuestring, i);
       config_manager_create_default_profile(new_profile, name->valuestring);
 
       bool saved = config_manager_save_profile(i, new_profile);
@@ -1177,7 +1175,7 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
   free((void *)json_string);
   cJSON_Delete(response);
 
-  // Redémarrer l'ESP32 après un court délai
+  // Restart the ESP32 after a short delay
   if (success) {
     vTaskDelay(pdMS_TO_TICKS(TASK_DELAY_MS));
     esp_restart();
@@ -1186,9 +1184,9 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour mettre à jour les paramètres d'un profil
+// Handler to update profile settings
 static esp_err_t profile_update_handler(httpd_req_t *req) {
-  char content[BUFFER_SIZE_LARGE]; // Augmenté pour accepter settings + effet par défaut
+  char content[BUFFER_SIZE_LARGE]; // Increased to accept settings + default effect
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
@@ -1204,10 +1202,10 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
 
   uint16_t profile_id       = (uint16_t)profile_id_json->valueint;
 
-  // Allouer dynamiquement pour éviter stack overflow
+  // Allocate dynamically to avoid stack overflow
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_WEBSERVER, "Memory allocation error");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
     cJSON_Delete(root);
     return ESP_FAIL;
@@ -1220,7 +1218,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Mettre à jour l'effet par défaut si fourni
+  // Update default effect if provided
   bool default_effect_updated           = false;
   const cJSON *effect_json              = cJSON_GetObjectItem(root, "fx");
   const cJSON *brightness_json          = cJSON_GetObjectItem(root, "br");
@@ -1276,7 +1274,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     default_effect_updated                     = true;
   }
 
-  // Mettre à jour les paramètres de luminosité dynamique
+  // Update dynamic brightness parameters
   if (dyn_bright_enabled_json && cJSON_IsBool(dyn_bright_enabled_json)) {
     profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled_json);
   }
@@ -1287,9 +1285,9 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   // Sauvegarder le profil
   bool success = config_manager_save_profile(profile_id, profile);
 
-  // Si c'est le profil actif, mettre à jour la configuration
+  // If it is the active profile, update the configuration
   if (success && config_manager_get_active_profile_id() == profile_id) {
-    // Appliquer l'effet par défaut si modifié
+    // Apply the default effect if modified
     if (default_effect_updated) {
       config_manager_stop_all_events();
       led_effects_set_config(&profile->default_effect);
@@ -1305,9 +1303,9 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour exporter un profil en JSON
+// Handler to export a profile as JSON
 static esp_err_t profile_export_handler(httpd_req_t *req) {
-  // Récupérer le profile_id depuis les paramètres de query
+  // Retrieve profile_id from query parameters
   char query[32];
   if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing profile_id parameter");
@@ -1322,7 +1320,7 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
 
   uint16_t profile_id = atoi(param_value);
 
-  // Allouer un buffer pour le JSON (16KB devrait suffire pour un profil complet)
+  // Allocate a buffer for JSON (16 KB should be enough for a full profile)
   char *json_buffer   = malloc(BUFFER_SIZE_PROFILE);
   if (!json_buffer) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
@@ -1332,7 +1330,7 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
   bool success = config_manager_export_profile(profile_id, json_buffer, BUFFER_SIZE_PROFILE);
 
   if (success) {
-    // Envoyer le JSON avec les bons headers pour le téléchargement
+    // Send the JSON with correct headers for download
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Content-Disposition", "attachment; filename=profile.json");
     httpd_resp_sendstr(req, json_buffer);
@@ -1345,49 +1343,49 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
 }
 
 static int find_free_profile_slot(int preferred_id) {
-  // Vérifier d'abord s'il reste assez d'espace SPIFFS
+  // First ensure there is enough SPIFFS space
   if (!config_manager_can_create_profile()) {
-    ESP_LOGW(TAG_WEBSERVER, "Espace SPIFFS insuffisant pour créer un nouveau profil");
+    ESP_LOGW(TAG_WEBSERVER, "Insufficient SPIFFS space to create a new profile");
     return -1;
   }
 
   int target_id = -1;
 
-  // Si un ID préféré est fourni, vérifier s'il est libre
+  // If a preferred ID is provided, check if it is free
   if (preferred_id >= 0 && preferred_id < MAX_PROFILE_SCAN_LIMIT) {
     char filepath[64];
     snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", preferred_id);
     if (!spiffs_file_exists(filepath)) {
       target_id = preferred_id;
-      ESP_LOGI(TAG_WEBSERVER, "Slot %d libre (preferred)", preferred_id);
+      ESP_LOGI(TAG_WEBSERVER, "Slot %d free (preferred)", preferred_id);
     } else {
-      ESP_LOGW(TAG_WEBSERVER, "Slot préféré %d déjà occupé", preferred_id);
+      ESP_LOGW(TAG_WEBSERVER, "Preferred slot %d already in use", preferred_id);
     }
   }
 
-  // Sinon, chercher le premier slot libre
+  // Otherwise, search for the first free slot
   if (target_id < 0) {
     for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
       char filepath[64];
       snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", i);
       if (!spiffs_file_exists(filepath)) {
         target_id = i;
-        ESP_LOGI(TAG_WEBSERVER, "Slot %d libre (scan)", i);
+        ESP_LOGI(TAG_WEBSERVER, "Slot %d free (scan)", i);
         break;
       }
     }
   }
 
   if (target_id < 0) {
-    ESP_LOGE(TAG_WEBSERVER, "Aucun slot libre trouvé");
+    ESP_LOGE(TAG_WEBSERVER, "No free slot found");
   }
 
   return target_id;
 }
 
-// Handler pour importer un profil depuis JSON
+// Handler to import a profile from JSON
 static esp_err_t profile_import_handler(httpd_req_t *req) {
-  // Allouer un buffer pour recevoir le JSON
+  // Allocate a buffer to receive the JSON
   char *content = malloc(BUFFER_SIZE_PROFILE);
   if (!content) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
@@ -1415,7 +1413,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
     preferred_id = profile_id_json->valueint;
   }
 
-  // Convertir profile_data en chaîne JSON
+  // Convert profile_data into a JSON string
   char *profile_json = cJSON_PrintUnformatted(profile_data);
   if (!profile_json) {
     cJSON_Delete(root);
@@ -1436,7 +1434,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   }
 
   ESP_LOGI(TAG_WEBSERVER, "Importing profile to slot %d (preferred=%d)", target_id, preferred_id);
-  // Utiliser l'import direct pour éviter la re-génération JSON (économie mémoire)
+  // Use direct import to avoid JSON re-generation (saves memory)
   bool success = config_manager_import_profile_direct((uint16_t)target_id, profile_json);
 
   if (!success) {
@@ -1451,7 +1449,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
 
   httpd_resp_set_type(req, "application/json");
   if (success) {
-    // Activer le profil importé
+    // Activate the imported profile
     bool activated = config_manager_activate_profile((uint16_t)target_id);
     if (!activated) {
       ESP_LOGE(TAG_WEBSERVER, "Profile imported but activation failed!");
@@ -1498,7 +1496,7 @@ static esp_err_t ota_info_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour uploader le firmware OTA
+// Handler to upload OTA firmware
 static esp_err_t ota_upload_handler(httpd_req_t *req) {
   char buf[BUFFER_SIZE_JSON];
   int remaining = req->content_len;
@@ -1506,34 +1504,34 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
   bool first_chunk = true;
   esp_err_t ret    = ESP_OK;
 
-  ESP_LOGI(TAG_WEBSERVER, "Début upload OTA, taille: %d octets", remaining);
+  ESP_LOGI(TAG_WEBSERVER, "Starting OTA upload, size: %d bytes", remaining);
 
-  // Démarrer l'OTA
+  // Start OTA
   ret = ota_begin(req->content_len);
   if (ret != ESP_OK) {
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA begin failed");
     return ESP_FAIL;
   }
 
-  // Recevoir et écrire les données
+  // Receive and write data
   while (remaining > 0) {
-    // Lire les données du socket
+    // Read data from the socket
     received = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)));
     if (received <= 0) {
       if (received == HTTPD_SOCK_ERR_TIMEOUT) {
-        // Réessayer
+        // Retry
         continue;
       }
-      ESP_LOGE(TAG_WEBSERVER, "Erreur réception données OTA");
+      ESP_LOGE(TAG_WEBSERVER, "OTA data receive error");
       ota_abort();
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Upload failed");
       return ESP_FAIL;
     }
 
-    // Écrire dans la partition OTA
+    // Write into the OTA partition
     ret = ota_write(buf, received);
     if (ret != ESP_OK) {
-      ESP_LOGE(TAG_WEBSERVER, "Erreur écriture OTA");
+      ESP_LOGE(TAG_WEBSERVER, "OTA write error");
       ota_abort();
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Write failed");
       return ESP_FAIL;
@@ -1542,20 +1540,20 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
     remaining -= received;
 
     if (first_chunk) {
-      ESP_LOGI(TAG_WEBSERVER, "Premier chunk reçu et écrit");
+      ESP_LOGI(TAG_WEBSERVER, "First chunk received and written");
       first_chunk = false;
     }
   }
 
-  // Terminer l'OTA
+  // Finish OTA
   ret = ota_end();
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_WEBSERVER, "Erreur fin OTA");
+    ESP_LOGE(TAG_WEBSERVER, "OTA finalize error");
     httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA end failed");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG_WEBSERVER, "Upload OTA terminé avec succès");
+  ESP_LOGI(TAG_WEBSERVER, "OTA upload completed successfully");
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req,
@@ -1565,14 +1563,14 @@ static esp_err_t ota_upload_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour redémarrer l'ESP32
+// Handler to restart the ESP32
 static esp_err_t ota_restart_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, "{\"status\":\"ok\",\"message\":\"Restarting...\"}");
 
-  ESP_LOGI(TAG_WEBSERVER, "Redémarrage demandé via API");
+  ESP_LOGI(TAG_WEBSERVER, "Restart requested via API");
 
-  // Redémarrer après un court délai
+  // Restart after a short delay
   vTaskDelay(pdMS_TO_TICKS(1000));
   ota_restart();
 
@@ -1584,7 +1582,7 @@ static esp_err_t ota_restart_handler(httpd_req_t *req) {
 // ============================================================================
 
 // ============================================================================
-// Helpers génériques pour les serveurs CAN (factorisation)
+// Generic helpers for CAN-related servers (factorized)
 // ============================================================================
 
 typedef esp_err_t (*server_start_fn_t)(void);
@@ -1594,34 +1592,34 @@ typedef int (*server_get_client_count_fn_t)(void);
 typedef bool (*server_get_autostart_fn_t)(void);
 typedef esp_err_t (*server_set_autostart_fn_t)(bool);
 
-// Helper générique pour start
+// Generic helper for start
 static esp_err_t handle_server_start(httpd_req_t *req, server_start_fn_t start_fn, const char *name) {
   httpd_resp_set_type(req, "application/json");
 
   esp_err_t ret = start_fn();
   if (ret == ESP_OK) {
-    ESP_LOGI(TAG_WEBSERVER, "Serveur %s TCP démarré via API", name);
+    ESP_LOGI(TAG_WEBSERVER, "Server %s TCP started via API", name);
     httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":true}");
   } else {
-    ESP_LOGW(TAG_WEBSERVER, "Échec démarrage serveur %s: %s", name, esp_err_to_name(ret));
+    ESP_LOGW(TAG_WEBSERVER, "Failed to start server %s: %s", name, esp_err_to_name(ret));
     httpd_resp_sendstr(req, "{\"status\":\"error\",\"message\":\"Failed to start server\"}");
   }
 
   return ESP_OK;
 }
 
-// Helper générique pour stop
+// Generic helper for stop
 static esp_err_t handle_server_stop(httpd_req_t *req, server_stop_fn_t stop_fn, const char *name) {
   httpd_resp_set_type(req, "application/json");
 
   stop_fn();
-  ESP_LOGI(TAG_WEBSERVER, "Serveur %s TCP arrêté via API", name);
+  ESP_LOGI(TAG_WEBSERVER, "Server %s TCP stopped via API", name);
 
   httpd_resp_sendstr(req, "{\"status\":\"ok\",\"running\":false}");
   return ESP_OK;
 }
 
-// Helper générique pour status
+// Generic helper for status
 static esp_err_t handle_server_status(httpd_req_t *req, server_is_running_fn_t is_running_fn, server_get_client_count_fn_t get_clients_fn, server_get_autostart_fn_t get_autostart_fn, int port) {
   httpd_resp_set_type(req, "application/json");
 
@@ -1640,7 +1638,7 @@ static esp_err_t handle_server_status(httpd_req_t *req, server_is_running_fn_t i
   return ESP_OK;
 }
 
-// Helper générique pour autostart
+// Generic helper for autostart
 static esp_err_t handle_server_autostart(httpd_req_t *req, server_set_autostart_fn_t set_fn) {
   httpd_resp_set_type(req, "application/json");
 
@@ -1683,12 +1681,12 @@ static esp_err_t handle_server_autostart(httpd_req_t *req, server_set_autostart_
 // GVRET TCP Server API Handlers
 // ============================================================================
 
-// Handler pour démarrer le serveur GVRET TCP
+// Handler to start the GVRET TCP server
 static esp_err_t gvret_start_handler(httpd_req_t *req) {
   return handle_server_start(req, gvret_tcp_server_start, "GVRET");
 }
 
-// Handler pour arrêter le serveur GVRET TCP
+// Handler to stop the GVRET TCP server
 static esp_err_t gvret_stop_handler(httpd_req_t *req) {
   return handle_server_stop(req, gvret_tcp_server_stop, "GVRET");
 }
@@ -1698,7 +1696,7 @@ static esp_err_t gvret_status_handler(httpd_req_t *req) {
   return handle_server_status(req, gvret_tcp_server_is_running, gvret_tcp_server_get_client_count, gvret_tcp_server_get_autostart, 23);
 }
 
-// Handler pour définir l'autostart du serveur GVRET TCP
+// Handler to set autostart for the GVRET TCP server
 static esp_err_t gvret_autostart_handler(httpd_req_t *req) {
   return handle_server_autostart(req, gvret_tcp_server_set_autostart);
 }
@@ -1707,12 +1705,12 @@ static esp_err_t gvret_autostart_handler(httpd_req_t *req) {
 // CANServer UDP Server API Handlers
 // ============================================================================
 
-// Handler pour démarrer le serveur CANServer UDP
+// Handler to start the CANServer UDP server
 static esp_err_t canserver_start_handler(httpd_req_t *req) {
   return handle_server_start(req, canserver_udp_server_start, "CANServer");
 }
 
-// Handler pour arrêter le serveur CANServer UDP
+// Handler to stop the CANServer UDP server
 static esp_err_t canserver_stop_handler(httpd_req_t *req) {
   return handle_server_stop(req, canserver_udp_server_stop, "CANServer");
 }
@@ -1722,7 +1720,7 @@ static esp_err_t canserver_status_handler(httpd_req_t *req) {
   return handle_server_status(req, canserver_udp_server_is_running, canserver_udp_server_get_client_count, canserver_udp_server_get_autostart, 1338);
 }
 
-// Handler pour définir l'autostart du serveur CANServer UDP
+// Handler to set autostart for the CANServer UDP server
 static esp_err_t canserver_autostart_handler(httpd_req_t *req) {
   return handle_server_autostart(req, canserver_udp_server_set_autostart);
 }
@@ -1776,7 +1774,7 @@ static esp_err_t log_stream_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour arrêter un événement CAN
+// Handler to stop a CAN event
 static esp_err_t stop_event_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
@@ -1801,7 +1799,7 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Arrêter l'événement
+  // Stop the event
   config_manager_stop_event(event);
 
   httpd_resp_set_type(req, "application/json");
@@ -1837,12 +1835,12 @@ static esp_err_t effects_list_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour obtenir la liste des types d'événements CAN
+// Handler to get the list of CAN event types
 static esp_err_t event_types_list_handler(httpd_req_t *req) {
   cJSON *root        = cJSON_CreateObject();
   cJSON *event_types = cJSON_CreateArray();
 
-  // Parcourir tous les types d'événements CAN
+  // Iterate over all CAN event types
   for (int i = 0; i < CAN_EVENT_MAX; i++) {
     cJSON *event_type = cJSON_CreateObject();
     cJSON_AddStringToObject(event_type, "id", config_manager_enum_to_id((can_event_type_t)i));
@@ -1860,7 +1858,7 @@ static esp_err_t event_types_list_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour simuler un événement CAN
+// Handler to simulate a CAN event
 static esp_err_t simulate_event_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
@@ -1885,17 +1883,17 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Vérifier que l'événement est valide
+  // Validate the event
   if (event <= CAN_EVENT_NONE || event >= CAN_EVENT_MAX) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid event type");
     cJSON_Delete(root);
     return ESP_FAIL;
   }
 
-  // Traiter l'événement
+  // Process the event
   bool success = config_manager_process_can_event(event);
 
-  ESP_LOGI(TAG_WEBSERVER, "Simulation événement CAN: %s (%d)", config_manager_enum_to_id(event), event);
+  ESP_LOGI(TAG_WEBSERVER, "Simulating CAN event: %s (%d)", config_manager_enum_to_id(event), event);
 
   cJSON *response = cJSON_CreateObject();
   cJSON_AddStringToObject(response, "st", success ? "ok" : "error");
@@ -1912,7 +1910,7 @@ static esp_err_t simulate_event_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour obtenir tous les événements CAN (GET)
+// Handler to get all CAN events (GET)
 static bool apply_event_update_from_json(config_profile_t *profile, int profile_id, cJSON *event_obj) {
   if (profile == NULL || event_obj == NULL) {
     return false;
@@ -1933,13 +1931,13 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   const cJSON *segment_length   = cJSON_GetObjectItem(event_obj, "ln");
 
   if (event_json == NULL || effect_json == NULL || !cJSON_IsString(event_json) || !cJSON_IsString(effect_json)) {
-    ESP_LOGW(TAG_WEBSERVER, "Payload d'evenement invalide");
+    ESP_LOGW(TAG_WEBSERVER, "Invalid payload for event");
     return false;
   }
 
   can_event_type_t event_type = config_manager_id_to_enum(event_json->valuestring);
   if (event_type <= CAN_EVENT_NONE || event_type >= CAN_EVENT_MAX) {
-    ESP_LOGW(TAG_WEBSERVER, "Evenement inconnu: %s", event_json->valuestring);
+    ESP_LOGW(TAG_WEBSERVER, "Unknown event: %s", event_json->valuestring);
     return false;
   }
 
@@ -1997,16 +1995,16 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
   cJSON *root         = cJSON_CreateObject();
   cJSON *events_array = cJSON_CreateArray();
 
-  // Itérer à travers tous les événements CAN (sauf CAN_EVENT_NONE)
+  // Iterate across all CAN events (except CAN_EVENT_NONE)
   for (int i = CAN_EVENT_TURN_LEFT; i < CAN_EVENT_MAX; i++) {
     can_event_type_t event_type = (can_event_type_t)i;
     can_event_effect_t event_effect;
 
-    // Obtenir la configuration de l'événement
+    // Get the event configuration
     if (config_manager_get_effect_for_event(event_type, &event_effect)) {
       cJSON *event_obj = cJSON_CreateObject();
 
-      // Utiliser des IDs alphanumériques
+      // Use alphanumeric IDs
       cJSON_AddStringToObject(event_obj, "ev", config_manager_enum_to_id(event_effect.event));
       cJSON_AddStringToObject(event_obj, "fx", led_effects_enum_to_id(event_effect.effect_config.effect));
       cJSON_AddNumberToObject(event_obj, "br", event_effect.effect_config.brightness);
@@ -2042,7 +2040,7 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
 // HANDLERS AUDIO
 // ============================================================================
 
-// Handler GET /api/audio/status - Statut et configuration du micro
+// Handler GET /api/audio/status - Status and configuration microphone
 static esp_err_t audio_status_handler(httpd_req_t *req) {
   cJSON *root = cJSON_CreateObject();
   audio_config_t config;
@@ -2074,7 +2072,7 @@ static esp_err_t audio_status_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler POST /api/audio/enable - Activer/désactiver le micro
+// Handler POST /api/audio/enable - Enable/disable microphone
 static esp_err_t audio_enable_handler(httpd_req_t *req) {
   char buf[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
@@ -2087,7 +2085,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
     bool enable = cJSON_IsTrue(enabled);
     if (audio_input_set_enabled(enable)) {
       audio_input_save_config();
-      ESP_LOGI(TAG_WEBSERVER, "Micro %s", enable ? "activé" : "désactivé");
+      ESP_LOGI(TAG_WEBSERVER, "Microphone %s", enable ? "enabled" : "disabled");
     } else {
       cJSON_Delete(root);
       httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to toggle audio");
@@ -2108,7 +2106,7 @@ static esp_err_t audio_enable_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler POST /api/audio/config - Mettre à jour la configuration audio
+// Handler POST /api/audio/config - Update audio configuration
 static esp_err_t audio_config_handler(httpd_req_t *req) {
   char buf[BUFFER_SIZE_MEDIUM];
   cJSON *root = NULL;
@@ -2119,7 +2117,7 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   audio_config_t config;
   audio_input_get_config(&config);
 
-  // Mettre à jour les paramètres fournis
+  // Update provided parameters
   cJSON *sensitivity = cJSON_GetObjectItem(root, "sen");
   if (cJSON_IsNumber(sensitivity)) {
     config.sensitivity = (uint8_t)sensitivity->valueint;
@@ -2157,13 +2155,13 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
   cJSON_free((void *)json_str);
   cJSON_Delete(response);
 
-  ESP_LOGI(TAG_WEBSERVER, "Configuration audio mise à jour");
+  ESP_LOGI(TAG_WEBSERVER, "Audio configuration updated");
   return ESP_OK;
 }
 
-// Handler POST /api/audio/calibrate - Lance une calibration ponctuelle
+// Handler POST /api/audio/calibrate - Run manual calibration
 static esp_err_t audio_calibrate_handler(httpd_req_t *req) {
-  uint32_t duration_ms = 5000; // fenêtre par défaut
+  uint32_t duration_ms = 5000; // default window
   char buf[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
 
@@ -2219,14 +2217,13 @@ static esp_err_t audio_calibrate_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler GET /api/audio/data - Données audio en temps réel (avec FFT si
-// activé)
+// Handler GET /api/audio/data - Real-time audio data (with FFT if enabled)
 static esp_err_t audio_data_handler(httpd_req_t *req) {
   audio_data_t audio_data;
   audio_fft_data_t fft_data;
   cJSON *root = cJSON_CreateObject();
 
-  // Données audio de base
+  // Basic audio data
   if (audio_input_get_data(&audio_data)) {
     cJSON_AddNumberToObject(root, "amp", audio_data.amplitude);
     cJSON_AddNumberToObject(root, "ram", audio_data.raw_amplitude);
@@ -2244,9 +2241,9 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(root, "av", false);
   }
 
-  // Données FFT (si activées)
+  // FFT data (if enabled)
   if (audio_input_is_fft_enabled() && audio_input_get_fft_data(&fft_data)) {
-    // Créer un objet FFT
+    // Create an FFT object
     cJSON *fft_obj     = cJSON_CreateObject();
 
     // Ajouter les bandes FFT
@@ -2256,7 +2253,7 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
     }
     cJSON_AddItemToObject(fft_obj, "bands", bands_array);
 
-    // Ajouter les métadonnées FFT
+    // Add FFT metadata
     cJSON_AddNumberToObject(fft_obj, "pf", fft_data.peak_freq);
     cJSON_AddNumberToObject(fft_obj, "sc", fft_data.spectral_centroid);
     cJSON_AddNumberToObject(fft_obj, "db", fft_data.dominant_band);
@@ -2270,7 +2267,7 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
 
     cJSON_AddItemToObject(root, "fft", fft_obj);
   } else {
-    // FFT non disponible
+    // FFT unavailable
     cJSON *fft_obj = cJSON_CreateObject();
     cJSON_AddBoolToObject(fft_obj, "av", false);
     cJSON_AddItemToObject(root, "fft", fft_obj);
@@ -2286,7 +2283,7 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
 }
 
 esp_err_t web_server_init(void) {
-  ESP_LOGI(TAG_WEBSERVER, "Serveur web initialise");
+  ESP_LOGI(TAG_WEBSERVER, "Web server initialized");
   return ESP_OK;
 }
 
@@ -2295,10 +2292,10 @@ esp_err_t web_server_start(void) {
   config.server_port      = WEB_SERVER_PORT;
   config.max_uri_handlers = HTTP_MAX_URI_HANDLERS;
   config.max_open_sockets = HTTP_MAX_OPEN_SOCKETS;
-  config.lru_purge_enable = true; // Ferme les plus anciennes connexions si limite atteinte
+  config.lru_purge_enable = true; 
   // config.core_id          = 1;    // Serveur web sur core 1 (WiFi sur core 0)
 
-  ESP_LOGI(TAG_WEBSERVER, "Demarrage du serveur web sur port %d", config.server_port);
+  ESP_LOGI(TAG_WEBSERVER, "Web server started on port %d", config.server_port);
 
   if (httpd_start(&server, &config) == ESP_OK) {
     static static_file_route_t static_files[] = {{"/", index_html_gz_start, index_html_gz_end, "text/html", "CACHE_ONE_YEAR", "gzip"},
@@ -2382,32 +2379,31 @@ esp_err_t web_server_start(void) {
     httpd_uri_t ota_restart_uri = {.uri = "/api/ota/restart", .method = HTTP_POST, .handler = ota_restart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &ota_restart_uri);
 
-    // Route de simulation
     httpd_uri_t simulate_event_uri = {.uri = "/api/simulate/event", .method = HTTP_POST, .handler = simulate_event_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &simulate_event_uri);
 
     httpd_uri_t stop_event_uri = {.uri = "/api/stop/event", .method = HTTP_POST, .handler = stop_event_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &stop_event_uri);
 
-    // Routes pour obtenir les listes d'effets et d'événements
+    // Routes to retrieve effect and event lists
     httpd_uri_t effects_list_uri = {.uri = "/api/effects", .method = HTTP_GET, .handler = effects_list_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &effects_list_uri);
 
     httpd_uri_t event_types_list_uri = {.uri = "/api/event-types", .method = HTTP_GET, .handler = event_types_list_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &event_types_list_uri);
 
-    // Route POST /api/config pour configurer le matériel LED
+    // Route POST /api/config to configure LED hardware
     httpd_uri_t config_post_uri = {.uri = "/api/config", .method = HTTP_POST, .handler = config_post_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &config_post_uri);
 
     httpd_uri_t event_single_post_uri = {.uri = "/api/events/update", .method = HTTP_POST, .handler = event_single_post_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &event_single_post_uri);
 
-    // Route GET /api/events pour obtenir les événements CAN
+    // Route GET /api/events to fetch CAN events
     httpd_uri_t events_get_uri = {.uri = "/api/events", .method = HTTP_GET, .handler = events_get_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &events_get_uri);
 
-    // Routes audio (micro INMP441)
+    // Audio routes (INMP441 mic)
     httpd_uri_t audio_status_uri = {.uri = "/api/audio/status", .method = HTTP_GET, .handler = audio_status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_status_uri);
 
@@ -2423,14 +2419,14 @@ esp_err_t web_server_start(void) {
     httpd_uri_t audio_data_uri = {.uri = "/api/audio/data", .method = HTTP_GET, .handler = audio_data_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_data_uri);
 
-    // Alias pour les nouveaux endpoints système
+    // Aliases for new system endpoints
     httpd_uri_t system_restart_uri = {.uri = "/api/system/restart", .method = HTTP_POST, .handler = ota_restart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &system_restart_uri);
 
     httpd_uri_t system_factory_reset_uri = {.uri = "/api/system/factory-reset", .method = HTTP_POST, .handler = factory_reset_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &system_factory_reset_uri);
 
-    // Routes GVRET TCP Server
+    // GVRET TCP Server routes
     httpd_uri_t gvret_start_uri = {.uri = "/api/gvret/start", .method = HTTP_POST, .handler = gvret_start_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &gvret_start_uri);
 
@@ -2443,7 +2439,7 @@ esp_err_t web_server_start(void) {
     httpd_uri_t gvret_autostart_uri = {.uri = "/api/gvret/autostart", .method = HTTP_POST, .handler = gvret_autostart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &gvret_autostart_uri);
 
-    // Routes CANServer TCP Server
+    // CANServer TCP Server routes
     httpd_uri_t canserver_start_uri = {.uri = "/api/canserver/start", .method = HTTP_POST, .handler = canserver_start_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &canserver_start_uri);
 
@@ -2456,19 +2452,19 @@ esp_err_t web_server_start(void) {
     httpd_uri_t canserver_autostart_uri = {.uri = "/api/canserver/autostart", .method = HTTP_POST, .handler = canserver_autostart_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &canserver_autostart_uri);
 
-    // Route Log Streaming (Server-Sent Events)
+    // Log Streaming route (Server-Sent Events)
     httpd_uri_t log_stream_uri = {.uri = "/api/logs/stream", .method = HTTP_GET, .handler = log_stream_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &log_stream_uri);
 
-    // Enregistrer le handler d'erreur 404 pour le portail captif
-    // Toutes les URLs non trouvées seront redirigées vers la page principale
+    // Register the 404 handler for the captive portal
+    // All unknown URLs are redirected to the main page
     httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, captive_portal_404_handler);
 
-    ESP_LOGI(TAG_WEBSERVER, "Serveur web démarré avec support portail captif (handler 404)");
+    ESP_LOGI(TAG_WEBSERVER, "Web server started with captive portal support (404 handler)");
     return ESP_OK;
   }
 
-  ESP_LOGE(TAG_WEBSERVER, "Erreur démarrage serveur web");
+  ESP_LOGE(TAG_WEBSERVER, "Failed to start web server");
   return ESP_FAIL;
 }
 
@@ -2552,7 +2548,7 @@ esp_err_t web_server_stop(void) {
   if (server) {
     httpd_stop(server);
     server = NULL;
-    ESP_LOGI(TAG_WEBSERVER, "Serveur web arrêté");
+    ESP_LOGI(TAG_WEBSERVER, "Web server stopped");
   }
   return ESP_OK;
 }

@@ -12,37 +12,36 @@
 static const char *TAG = "BootLoopGuard";
 
 /**
- * @brief Structure stockée en LP SRAM (RTC Fast Memory)
+ * @brief Structure stored in LP SRAM (RTC Fast Memory)
  *
- * Cette mémoire persiste pendant le deep sleep et les redémarrages,
- * mais est effacée lors d'une mise hors tension complète.
+ * This memory persists during deep sleep and reboots,
+ * but is cleared on full power-off.
  */
 typedef struct {
-  uint32_t magic;        // Signature pour valider les données
-  uint32_t boot_count;   // Compteur de boots consécutifs
-  uint64_t last_boot_us; // Timestamp du dernier boot (en microsecondes)
+  uint32_t magic;        // Signature to validate data
+  uint32_t boot_count;   // Consecutive boot counter
+  uint64_t last_boot_us; // Timestamp of last boot (microseconds)
 } boot_loop_data_t;
 
-// Stocker en RTC Fast Memory (LP SRAM) avec l'attribut RTC_NOINIT_ATTR
-// pour que les données persistent entre les redémarrages
+// Store in RTC Fast Memory (LP SRAM) with RTC_NOINIT_ATTR so data persists across reboots
 static RTC_NOINIT_ATTR boot_loop_data_t s_boot_data;
 
-#define BOOT_LOOP_MAGIC 0xB007C0DE  // Signature magique pour valider les données
+#define BOOT_LOOP_MAGIC 0xB007C0DE  // Magic signature to validate data
 
 static TaskHandle_t watchdog_task_handle = NULL;
 
 /**
- * @brief Tâche qui surveille le bon fonctionnement et réinitialise le compteur
+ * @brief Task that monitors successful boot and resets the counter
  */
 static void boot_watchdog_task(void *pvParameters) {
-  ESP_LOGI(TAG, "Watchdog de boot démarré, attente de %d ms avant de marquer le boot comme réussi",
+  ESP_LOGI(TAG, "Boot watchdog started, waiting %d ms before marking boot successful",
            BOOT_LOOP_SUCCESS_TIMEOUT_MS);
 
   vTaskDelay(pdMS_TO_TICKS(BOOT_LOOP_SUCCESS_TIMEOUT_MS));
 
   boot_loop_guard_mark_success();
 
-  // Tâche terminée
+  // Task done
   watchdog_task_handle = NULL;
   vTaskDelete(NULL);
 }
@@ -50,74 +49,73 @@ static void boot_watchdog_task(void *pvParameters) {
 esp_err_t boot_loop_guard_init(void) {
   uint64_t current_time_us = esp_timer_get_time();
 
-  // Vérifier si les données en RTC sont valides
+  // Check if RTC data is valid
   if (s_boot_data.magic != BOOT_LOOP_MAGIC) {
-    ESP_LOGI(TAG, "Première initialisation ou reset complet détecté, initialisation du compteur");
+    ESP_LOGI(TAG, "First initialization or full reset detected, initializing counter");
     s_boot_data.magic = BOOT_LOOP_MAGIC;
     s_boot_data.boot_count = 0;
     s_boot_data.last_boot_us = current_time_us;
   }
 
-  // Incrémenter le compteur de boot
+  // Increment the boot counter
   s_boot_data.boot_count++;
   uint64_t time_since_last_boot_us = current_time_us - s_boot_data.last_boot_us;
   uint32_t time_since_last_boot_ms = (uint32_t)(time_since_last_boot_us / 1000);
 
   s_boot_data.last_boot_us = current_time_us;
 
-  ESP_LOGI(TAG, "Boot count: %lu (temps depuis dernier boot: %lu ms)",
+  ESP_LOGI(TAG, "Boot count: %lu (time since last boot: %lu ms)",
            s_boot_data.boot_count, time_since_last_boot_ms);
 
-  // Vérifier si on est dans une boot loop
+  // Check for boot loop
   if (s_boot_data.boot_count >= BOOT_LOOP_MAX_COUNT) {
     ESP_LOGE(TAG, "========================================");
-    ESP_LOGE(TAG, "   BOOT LOOP DÉTECTÉ !");
-    ESP_LOGE(TAG, "   %lu redémarrages consécutifs", s_boot_data.boot_count);
-    ESP_LOGE(TAG, "   FACTORY RESET AUTOMATIQUE");
+    ESP_LOGE(TAG, "   BOOT LOOP DETECTED!");
+    ESP_LOGE(TAG, "   %lu consecutive reboots", s_boot_data.boot_count);
+    ESP_LOGE(TAG, "   AUTOMATIC FACTORY RESET");
     ESP_LOGE(TAG, "========================================");
 
-    // Attendre un peu pour que les logs s'affichent
+    // Small delay to flush logs
     vTaskDelay(pdMS_TO_TICKS(1000));
 
-    // Réinitialiser le compteur avant le factory reset
+    // Reset counter before factory reset
     s_boot_data.boot_count = 0;
 
-    // Déclencher un factory reset
+    // Trigger factory reset
     reset_button_factory_reset();
 
     // Ne devrait jamais arriver ici
     return ESP_FAIL;
   }
 
-  // Si le temps depuis le dernier boot est long (> timeout),
-  // c'est probablement un boot normal, pas une loop
+  // If time since last boot is long (> timeout), treat as normal boot
   if (time_since_last_boot_ms > BOOT_LOOP_SUCCESS_TIMEOUT_MS) {
-    ESP_LOGI(TAG, "Temps depuis dernier boot > timeout, reset du compteur");
+    ESP_LOGI(TAG, "Time since last boot > timeout, resetting counter");
     s_boot_data.boot_count = 1;
   }
 
-  // Créer une tâche watchdog qui marquera le boot comme réussi après le timeout
+  // Create a watchdog task to mark boot as successful after the timeout
   BaseType_t task_created = xTaskCreate(
     boot_watchdog_task,
     "boot_watchdog",
     2048,
     NULL,
-    1,  // Priorité basse
+    1,  // Low priority
     &watchdog_task_handle
   );
 
   if (task_created != pdPASS) {
-    ESP_LOGE(TAG, "Erreur création tâche watchdog");
+    ESP_LOGE(TAG, "Error creating watchdog task");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "Protection boot loop initialisée (seuil: %d redémarrages)", BOOT_LOOP_MAX_COUNT);
+  ESP_LOGI(TAG, "Boot loop protection initialized (threshold: %d reboots)", BOOT_LOOP_MAX_COUNT);
   return ESP_OK;
 }
 
 void boot_loop_guard_mark_success(void) {
   if (s_boot_data.boot_count > 0) {
-    ESP_LOGI(TAG, "Boot réussi après %lu tentatives, réinitialisation du compteur", s_boot_data.boot_count);
+    ESP_LOGI(TAG, "Boot successful after %lu attempts, resetting counter", s_boot_data.boot_count);
     s_boot_data.boot_count = 0;
   }
 }

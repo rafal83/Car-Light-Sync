@@ -11,10 +11,10 @@
 #include <math.h>
 #include <string.h>
 
-// État du module
+// Module state
 static bool initialized                  = false;
 static bool enabled                      = false;
-// Note: fft_enabled est maintenant dans current_config.fft_enabled
+// Note: fft_enabled now lives in current_config.fft_enabled
 static i2s_chan_handle_t rx_handle       = NULL;
 static TaskHandle_t audio_task_handle    = NULL;
 
@@ -27,16 +27,16 @@ static volatile bool calibration_ready   = false;
 static TickType_t calibration_end_tick   = 0;
 static float calibration_min             = 0.0f;
 static float calibration_max             = 0.0f;
-static const float CALIB_MIN_RANGE       = 0.20f; // Écart minimal bruit->pic pour garantir du headroom
-static const float NOISE_GATE_MARGIN     = 0.01f; // Marge au-dessus du bruit avant de commencer à réagir
+static const float CALIB_MIN_RANGE       = 0.20f; // Minimum noise-to-peak gap to keep headroom
+static const float NOISE_GATE_MARGIN     = 0.01f; // Margin above noise before reacting
 
-// Auto-gain simple : cherche à maintenir l'amplitude normalisée autour d'une cible
+// Simple auto-gain: keeps normalized amplitude around a target
 static float auto_gain_multiplier        = 1.0f;
 static const float AUTO_GAIN_TARGET      = 0.4f;
 static const float AUTO_GAIN_ALPHA       = 0.02f;
 static const float AUTO_GAIN_MIN         = 0.5f;
 static const float AUTO_GAIN_MAX         = 5.0f;
-// Données audio
+// Audio data
 static audio_data_t current_audio_data   = {0};
 static audio_fft_data_t current_fft_data = {0};
 static bool audio_data_ready             = false;
@@ -46,7 +46,7 @@ static bool fft_data_ready               = false;
 static int32_t audio_buffer[AUDIO_BUFFER_SIZE];
 static float fft_output[AUDIO_FFT_SIZE]; // Pour stocker les magnitudes FFT
 
-// Variables pour la détection de BPM
+// Variables for BPM detection
 static float bpm_history[AUDIO_BPM_HISTORY_SIZE] = {0};
 static uint8_t bpm_history_index                 = 0;
 static uint32_t last_beat_time_ms                = 0;
@@ -63,21 +63,21 @@ static float apply_calibration(float amplitude);
 static bool audio_input_save_calibration(void);
 static bool audio_input_load_calibration(void);
 
-// Fonction pour calculer l'amplitude RMS
-// IRAM_ATTR: fonction appelée fréquemment dans le traitement audio temps-réel
+// Function to compute RMS amplitude
+// IRAM_ATTR: frequently called in the real-time audio pipeline
 static float IRAM_ATTR calculate_rms(int32_t *buffer, size_t size) {
   float sum = 0.0f;
   for (size_t i = 0; i < size; i++) {
-    float sample = (float)buffer[i] / 2147483648.0f; // Normaliser 32-bit
+    float sample = (float)buffer[i] / 2147483648.0f; // Normalize 32-bit
     sum += sample * sample;
   }
   return sqrtf(sum / size);
 }
 
-// Fonction simplifiée pour calculer l'énergie par bande de fréquence
-// IRAM_ATTR: calcul temps-réel pour l'analyse audio
+// Simplified function to compute energy per frequency band
+// IRAM_ATTR: real-time calculation for audio analysis
 static void IRAM_ATTR calculate_frequency_bands(int32_t *buffer, size_t size, float *bass, float *mid, float *treble) {
-  // Calculer l'énergie dans différentes plages du signal temporel
+  // Compute energy across different time ranges
   float low_energy    = 0.0f;
   float mid_energy    = 0.0f;
   float high_energy   = 0.0f;
@@ -95,7 +95,7 @@ static void IRAM_ATTR calculate_frequency_bands(int32_t *buffer, size_t size, fl
       }
     }
 
-    // Répartir l'énergie selon les segments (approximation des fréquences)
+  // Distribute energy by segment (frequency approximation)
     if (seg < 2) {
       low_energy += seg_energy;
     } else if (seg < 5) {
@@ -118,7 +118,7 @@ static void IRAM_ATTR calculate_frequency_bands(int32_t *buffer, size_t size, fl
   }
 }
 
-// Réinitialise l'état de calibration et démarre une nouvelle fenêtre
+// Reset calibration state and start a new window
 static void calibration_reset_state(uint32_t duration_ms) {
   calibration_running  = true;
   calibration_ready    = false;
@@ -128,7 +128,7 @@ static void calibration_reset_state(uint32_t duration_ms) {
   calibration_end_tick = xTaskGetTickCount() + pdMS_TO_TICKS(duration_ms > 0 ? duration_ms : 3000);
 }
 
-// Capture min/max amplitude pendant la calibration et finalise quand la fenêtre est écoulée
+// Capture min/max amplitude during calibration and finalize when the window ends
 static void calibration_process_sample(float amplitude) {
   if (!calibration_running) {
     return;
@@ -181,30 +181,30 @@ static float apply_calibration(float amplitude) {
   return normalized;
 }
 
-// Détection de battement simple basée sur l'énergie
-// IRAM_ATTR: détection de beat en temps-réel
+// Simple beat detection based on energy
+// IRAM_ATTR: real-time beat detection
 static bool IRAM_ATTR detect_beat(float amplitude) {
-  // Calculer l'énergie actuelle
+  // Compute current energy
   float current_energy = amplitude * amplitude;
 
-  // Calculer l'énergie moyenne sur l'historique
+  // Compute average energy over history
   float avg_energy     = 0.0f;
   for (int i = 0; i < 8; i++) {
     avg_energy += energy_history[i];
   }
   avg_energy /= 8.0f;
 
-  // Stocker l'énergie actuelle
+  // Store current energy
   energy_history[energy_index] = current_energy;
   energy_index                 = (energy_index + 1) % 8;
 
-  // Détection de pic: énergie actuelle > 1.5x la moyenne
+  // Peak detection: current energy > 1.5x average
   bool beat                    = (current_energy > avg_energy * 1.5f) && (avg_energy > 0.01f);
 
   return beat;
 }
 
-// Calcul du BPM basé sur l'intervalle entre battements
+// BPM calculation based on interval between beats
 static float calculate_bpm(uint32_t current_time_ms) {
   if (last_beat_time_ms == 0) {
     last_beat_time_ms = current_time_ms;
@@ -242,9 +242,9 @@ static float calculate_bpm(uint32_t current_time_ms) {
   return avg_bpm;
 }
 
-// Tâche de traitement audio
+// Audio processing task
 static void audio_task(void *pvParameters) {
-  ESP_LOGI(TAG_AUDIO, "Tâche audio démarrée");
+  ESP_LOGI(TAG_AUDIO, "Audio task started");
 
   size_t bytes_read = 0;
 
@@ -254,7 +254,7 @@ static void audio_task(void *pvParameters) {
       continue;
     }
 
-    // Lire les données I2S
+    // Read I2S data
     esp_err_t ret = i2s_channel_read(rx_handle, audio_buffer, sizeof(audio_buffer), &bytes_read, pdMS_TO_TICKS(100));
 
     if (ret != ESP_OK || bytes_read == 0) {
@@ -264,26 +264,26 @@ static void audio_task(void *pvParameters) {
 
     size_t samples           = bytes_read / sizeof(int32_t);
 
-    // Calculer l'amplitude RMS
+    // Compute RMS amplitude
     float rms                = calculate_rms(audio_buffer, samples);
 
-    // Appliquer la sensibilité et le gain
+    // Apply sensitivity and gain
     float sensitivity_factor = (float)current_config.sensitivity / 128.0f;
     float gain_factor        = (float)current_config.gain / 128.0f;
     float amplitude_raw      = rms * sensitivity_factor * gain_factor * 10.0f;
 
-    // Limiter à 0.0-1.0
+    // Clamp to 0.0-1.0
     if (amplitude_raw > 1.0f)
       amplitude_raw = 1.0f;
 
-    // Collecte des bornes min/max pendant la calibration
+    // Collect min/max bounds during calibration
     calibration_process_sample(amplitude_raw);
 
-    // Application de la calibration (suppression du bruit de fond)
+    // Apply calibration (remove noise floor)
     float amplitude_calibrated = apply_calibration(amplitude_raw);
     float amplitude            = amplitude_calibrated;
 
-    // Auto-gain optionnel pour rehausser un signal faible
+    // Optional auto-gain to boost weak signal
     if (current_config.auto_gain) {
       float error = AUTO_GAIN_TARGET - amplitude;
       auto_gain_multiplier += error * AUTO_GAIN_ALPHA;
@@ -298,11 +298,11 @@ static void audio_task(void *pvParameters) {
       auto_gain_multiplier = 1.0f;
     }
 
-    // Calculer les bandes de fréquence
+    // Compute frequency bands
     float bass, mid, treble;
     calculate_frequency_bands(audio_buffer, samples, &bass, &mid, &treble);
 
-    // Détection de battement
+    // Beat detection
     uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
     bool beat             = detect_beat(amplitude);
 
@@ -312,7 +312,7 @@ static void audio_task(void *pvParameters) {
       current_audio_data.last_beat_ms = current_time;
     }
 
-    // Mettre à jour les données
+    // Update data
     current_audio_data.amplitude            = amplitude;
     current_audio_data.raw_amplitude        = amplitude_raw;
     current_audio_data.calibrated_amplitude = amplitude_calibrated;
@@ -327,36 +327,36 @@ static void audio_task(void *pvParameters) {
 
     audio_data_ready                        = true;
 
-    // Si FFT activée, calculer le spectre FFT
+    // If FFT enabled, compute the FFT spectrum
     if (current_config.fft_enabled) {
       compute_fft_magnitude(audio_buffer, samples);
       group_fft_into_bands(&current_fft_data);
       fft_data_ready = true;
     }
 
-    // Petit délai pour ne pas saturer le CPU
-    vTaskDelay(pdMS_TO_TICKS(20)); // ~50Hz de mise à jour
+    // Small delay to avoid saturating the CPU
+    vTaskDelay(pdMS_TO_TICKS(20)); // ~50Hz update
   }
 }
 
 bool audio_input_init(void) {
   if (initialized) {
-    ESP_LOGW(TAG_AUDIO, "Module audio déjà initialisé");
+    ESP_LOGW(TAG_AUDIO, "Audio module already initialized");
     return true;
   }
 
-  // Charger la configuration sauvegardée
+  // Load saved configuration
   audio_input_load_config();
   audio_input_load_calibration();
 
-  // Créer le canal I2S RX
+  // Create the I2S RX channel
   i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
   chan_cfg.dma_desc_num      = AUDIO_DMA_BUFFER_COUNT;
   chan_cfg.dma_frame_num     = AUDIO_BUFFER_SIZE / 2;
 
   esp_err_t ret              = i2s_new_channel(&chan_cfg, NULL, &rx_handle);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_AUDIO, "Erreur création canal I2S: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_AUDIO, "Error creating I2S channel: %s", esp_err_to_name(ret));
     return false;
   }
 
@@ -388,19 +388,19 @@ bool audio_input_init(void) {
     return false;
   }
 
-  // Créer la tâche de traitement audio
+  // Create the audio processing task
   BaseType_t task_ret = xTaskCreate(audio_task, "audio_task", 4096, NULL, 5, &audio_task_handle);
   if (task_ret != pdPASS) {
-    ESP_LOGE(TAG_AUDIO, "Erreur création tâche audio");
+    ESP_LOGE(TAG_AUDIO, "Error creating audio task");
     i2s_del_channel(rx_handle);
     rx_handle = NULL;
     return false;
   }
 
   initialized = true;
-  ESP_LOGI(TAG_AUDIO, "Module audio initialisé (GPIO: SCK=%d, WS=%d, SD=%d)", AUDIO_I2S_SCK_PIN, AUDIO_I2S_WS_PIN, AUDIO_I2S_SD_PIN);
+  ESP_LOGI(TAG_AUDIO, "Audio module initialized (GPIO: SCK=%d, WS=%d, SD=%d)", AUDIO_I2S_SCK_PIN, AUDIO_I2S_WS_PIN, AUDIO_I2S_SD_PIN);
 
-  // Activer si configuré
+  // Enable if configured
   if (current_config.enabled) {
     audio_input_set_enabled(true);
   }
@@ -426,12 +426,12 @@ void audio_input_deinit(void) {
   }
 
   initialized = false;
-  ESP_LOGI(TAG_AUDIO, "Module audio désinitalisé");
+  ESP_LOGI(TAG_AUDIO, "Audio module deinitialized");
 }
 
 bool audio_input_set_enabled(bool enable) {
   if (!initialized) {
-    ESP_LOGE(TAG_AUDIO, "Module audio non initialisé");
+    ESP_LOGE(TAG_AUDIO, "Audio module not initialized");
     return false;
   }
 
@@ -447,18 +447,18 @@ bool audio_input_set_enabled(bool enable) {
     }
     enabled                = true;
     current_config.enabled = true;
-    ESP_LOGI(TAG_AUDIO, "Micro activé");
+    ESP_LOGI(TAG_AUDIO, "Microphone enabled");
   } else {
     esp_err_t ret = i2s_channel_disable(rx_handle);
     if (ret != ESP_OK) {
-      ESP_LOGE(TAG_AUDIO, "Erreur désactivation canal I2S: %s", esp_err_to_name(ret));
+      ESP_LOGE(TAG_AUDIO, "Error disabling I2S channel: %s", esp_err_to_name(ret));
       return false;
     }
     enabled                = false;
     current_config.enabled = false;
     audio_data_ready       = false;
     memset(&current_audio_data, 0, sizeof(audio_data_t));
-    ESP_LOGI(TAG_AUDIO, "Micro désactivé");
+    ESP_LOGI(TAG_AUDIO, "Microphone disabled");
   }
 
   return true;
@@ -491,7 +491,7 @@ bool audio_input_get_data(audio_data_t *data) {
 
 void audio_input_set_sensitivity(uint8_t sensitivity) {
   current_config.sensitivity = sensitivity;
-  ESP_LOGI(TAG_AUDIO, "Sensibilité: %d", sensitivity);
+  ESP_LOGI(TAG_AUDIO, "Sensitivity: %d", sensitivity);
 }
 
 void audio_input_set_gain(uint8_t gain) {
@@ -508,7 +508,7 @@ bool audio_input_save_config(void) {
   esp_err_t ret = spiffs_save_blob("/spiffs/audio/config.bin", &current_config, sizeof(audio_config_t));
 
   if (ret == ESP_OK) {
-    ESP_LOGI(TAG_AUDIO, "Configuration sauvegardée");
+    ESP_LOGI(TAG_AUDIO, "Configuration saved");
     return true;
   }
 
@@ -519,7 +519,7 @@ static bool audio_input_save_calibration(void) {
   esp_err_t ret = spiffs_save_blob("/spiffs/audio/calibration.bin", &calibration, sizeof(audio_calibration_t));
 
   if (ret == ESP_OK) {
-    ESP_LOGI(TAG_AUDIO, "Calibration sauvegardée (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
+    ESP_LOGI(TAG_AUDIO, "Calibration saved (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
     return true;
   }
 
@@ -531,12 +531,12 @@ bool audio_input_load_config(void) {
   esp_err_t ret        = spiffs_load_blob("/spiffs/audio/config.bin", &current_config, &required_size);
 
   if (ret == ESP_OK) {
-    ESP_LOGI(TAG_AUDIO, "Configuration chargée");
+    ESP_LOGI(TAG_AUDIO, "Configuration loaded");
     return true;
   }
 
   if (ret == ESP_ERR_NOT_FOUND) {
-    ESP_LOGW(TAG_AUDIO, "Pas de config audio sauvegardée");
+    ESP_LOGW(TAG_AUDIO, "No saved audio configuration");
   }
   return false;
 }
@@ -547,14 +547,14 @@ static bool audio_input_load_calibration(void) {
 
   if (ret != ESP_OK) {
     if (ret == ESP_ERR_NOT_FOUND) {
-      ESP_LOGW(TAG_AUDIO, "Pas de calibration sauvegardée");
+      ESP_LOGW(TAG_AUDIO, "No saved calibration");
     } else {
       ESP_LOGW(TAG_AUDIO, "Calibration absente ou invalide (%s)", esp_err_to_name(ret));
     }
     return false;
   }
 
-  ESP_LOGI(TAG_AUDIO, "Calibration chargée (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
+  ESP_LOGI(TAG_AUDIO, "Calibration loaded (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
   return calibration.calibrated;
 }
 
@@ -568,29 +568,29 @@ void audio_input_reset_config(void) {
   calibration.noise_floor    = 0.0f;
   calibration.peak_level     = 1.0f;
 
-  ESP_LOGI(TAG_AUDIO, "Configuration réinitialisée");
+  ESP_LOGI(TAG_AUDIO, "Configuration reset");
 }
 
 bool audio_input_run_calibration(uint32_t duration_ms, audio_calibration_t *result) {
   if (!initialized) {
-    ESP_LOGE(TAG_AUDIO, "Module audio non initialisé");
+    ESP_LOGE(TAG_AUDIO, "Audio module not initialized");
     return false;
   }
 
   if (!enabled) {
-    ESP_LOGE(TAG_AUDIO, "Micro désactivé : activer avant calibration");
+    ESP_LOGE(TAG_AUDIO, "Microphone disabled: enable before calibration");
     return false;
   }
 
   if (calibration_running) {
-    ESP_LOGW(TAG_AUDIO, "Calibration déjà en cours");
+    ESP_LOGW(TAG_AUDIO, "Calibration already running");
     return false;
   }
 
   uint32_t window_ms = duration_ms > 0 ? duration_ms : 5000;
   calibration_reset_state(window_ms);
 
-  // Attendre la fin de la fenêtre de calibration (boucle courte)
+  // Wait for the calibration window to finish (short loop)
   TickType_t guard_tick = calibration_end_tick + pdMS_TO_TICKS(1000);
   while (calibration_running) {
     vTaskDelay(pdMS_TO_TICKS(50));
@@ -601,11 +601,11 @@ bool audio_input_run_calibration(uint32_t duration_ms, audio_calibration_t *resu
   }
 
   if (!calibration_ready || !calib_result.calibrated) {
-    ESP_LOGE(TAG_AUDIO, "Calibration échouée (pas de données)");
+    ESP_LOGE(TAG_AUDIO, "Calibration failed (no data)");
     return false;
   }
 
-  // Mettre à jour la calibration active et sauvegarder
+  // Update active calibration and save
   calibration = calib_result;
   audio_input_save_calibration();
 
@@ -613,7 +613,7 @@ bool audio_input_run_calibration(uint32_t duration_ms, audio_calibration_t *resu
     memcpy(result, &calibration, sizeof(audio_calibration_t));
   }
 
-  ESP_LOGI(TAG_AUDIO, "Calibration réussie (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
+  ESP_LOGI(TAG_AUDIO, "Calibration successful (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
   return true;
 }
 
@@ -700,33 +700,33 @@ static void fft_radix2(float *data, int size, bool inverse) {
   }
 }
 
-// Calcule la magnitude du spectre FFT et le stocke dans fft_output
+// Compute FFT spectrum magnitude and store in fft_output
 static void compute_fft_magnitude(int32_t *audio_samples, int num_samples) {
-  // Préparer les données pour la FFT (format [real, imag, real, imag, ...])
+  // Prepare data for FFT (format [real, imag, real, imag, ...])
   static float fft_complex[AUDIO_FFT_SIZE * 2]; // 512 * 2 = 1024 floats
 
-  // Copier les échantillons audio en partie réelle, imag = 0
+  // Copy audio samples into real part, imag = 0
   for (int i = 0; i < AUDIO_FFT_SIZE && i < num_samples; i++) {
-    fft_complex[i * 2]     = (float)audio_samples[i] / 2147483648.0f; // Normaliser
-    fft_complex[i * 2 + 1] = 0.0f;                                    // Partie imaginaire = 0
+    fft_complex[i * 2]     = (float)audio_samples[i] / 2147483648.0f; // Normalize
+    fft_complex[i * 2 + 1] = 0.0f;                                    // Imaginary part = 0
   }
 
-  // Remplir de zéros si nécessaire
+  // Zero-pad if needed
   for (int i = num_samples; i < AUDIO_FFT_SIZE; i++) {
     fft_complex[i * 2]     = 0.0f;
     fft_complex[i * 2 + 1] = 0.0f;
   }
 
-  // Appliquer la fenêtre de Hann pour réduire les fuites spectrales
+  // Apply Hann window to reduce spectral leakage
   for (int i = 0; i < AUDIO_FFT_SIZE; i++) {
     float multiplier = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (AUDIO_FFT_SIZE - 1)));
     fft_complex[i * 2] *= multiplier;
   }
 
-  // Calculer la FFT
+  // Compute the FFT
   fft_radix2(fft_complex, AUDIO_FFT_SIZE, false);
 
-  // Calculer les magnitudes (seulement la première moitié, car symétrique)
+  // Compute magnitudes (first half only, symmetric)
   for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
     float real    = fft_complex[i * 2];
     float imag    = fft_complex[i * 2 + 1];
@@ -734,18 +734,18 @@ static void compute_fft_magnitude(int32_t *audio_samples, int num_samples) {
   }
 }
 
-// Groupe les bins FFT en bandes de fréquence logarithmiques
+// Group FFT bins into logarithmic frequency bands
 static void group_fft_into_bands(audio_fft_data_t *fft_data) {
-  // Résolution fréquentielle: freq_resolution = SAMPLE_RATE / FFT_SIZE
-  // Pour 44100 Hz et FFT 512: 44100 / 512 = 86.13 Hz par bin
+  // Frequency resolution: freq_resolution = SAMPLE_RATE / FFT_SIZE
+  // For 44100 Hz and FFT 512: 44100 / 512 = 86.13 Hz per bin
   float freq_resolution = (float)AUDIO_SAMPLE_RATE / (float)AUDIO_FFT_SIZE;
 
-  // Grouper en AUDIO_FFT_BANDS bandes logarithmiques
-  // Plage utile: 20 Hz - 20000 Hz (limite humaine)
+  // Group into AUDIO_FFT_BANDS logarithmic bands
+  // Useful range: 20 Hz - 20000 Hz (human limit)
   float min_freq        = 20.0f;
   float max_freq        = 20000.0f;
 
-  // Facteur logarithmique
+  // Logarithmic factor
   float log_min         = logf(min_freq);
   float log_max         = logf(max_freq);
   float log_step        = (log_max - log_min) / AUDIO_FFT_BANDS;
@@ -765,7 +765,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
     if (bin_high >= AUDIO_FFT_SIZE / 2)
       bin_high = AUDIO_FFT_SIZE / 2 - 1;
 
-    // Moyenne de l'énergie dans cette bande
+    // Average energy in this band
     float band_energy = 0.0f;
     int bin_count     = bin_high - bin_low + 1;
     if (bin_count > 0) {
@@ -783,7 +783,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
     }
   }
 
-  // Normaliser les bandes (0.0 - 1.0)
+  // Normalize bands (0.0 - 1.0)
   if (max_band_value > 0.0f) {
     for (int i = 0; i < AUDIO_FFT_BANDS; i++) {
       fft_data->bands[i] /= max_band_value;
@@ -792,7 +792,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
 
   fft_data->dominant_band = max_band_index;
 
-  // Calculer la fréquence pic
+  // Compute peak frequency
   float max_magnitude     = 0.0f;
   int max_bin             = 0;
   for (int i = 1; i < AUDIO_FFT_SIZE / 2; i++) {
@@ -803,7 +803,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
   }
   fft_data->peak_freq = max_bin * freq_resolution;
 
-  // Calculer le centroïde spectral (centre de masse du spectre)
+  // Compute spectral centroid (spectrum center of mass)
   float weighted_sum  = 0.0f;
   float magnitude_sum = 0.0f;
   for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
@@ -813,7 +813,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
   }
   fft_data->spectral_centroid = (magnitude_sum > 0.0f) ? (weighted_sum / magnitude_sum) : 0.0f;
 
-  // Calculer l'énergie par plage de fréquence
+  // Compute energy per frequency range
   fft_data->bass_energy       = 0.0f;
   fft_data->mid_energy        = 0.0f;
   fft_data->treble_energy     = 0.0f;
@@ -829,7 +829,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
     }
   }
 
-  // Normaliser les énergies
+  // Normalize energies
   float total_energy = fft_data->bass_energy + fft_data->mid_energy + fft_data->treble_energy;
   if (total_energy > 0.0f) {
     fft_data->bass_energy /= total_energy;
@@ -837,7 +837,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
     fft_data->treble_energy /= total_energy;
   }
 
-  // Détection de kick (20-120 Hz, forte énergie soudaine)
+  // Kick detection (20-120 Hz, sudden high energy)
   float kick_energy = 0.0f;
   for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
     float freq = i * freq_resolution;
@@ -845,9 +845,9 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
       kick_energy += fft_output[i];
     }
   }
-  fft_data->kick_detected = (kick_energy > 0.5f); // Seuil arbitraire
+  fft_data->kick_detected = (kick_energy > 0.5f); // Arbitrary threshold
 
-  // Détection de snare (150-250 Hz)
+  // Snare detection (150-250 Hz)
   float snare_energy      = 0.0f;
   for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
     float freq = i * freq_resolution;
@@ -855,9 +855,9 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
       snare_energy += fft_output[i];
     }
   }
-  fft_data->snare_detected = (snare_energy > 0.3f); // Seuil arbitraire
+  fft_data->snare_detected = (snare_energy > 0.3f); // Arbitrary threshold
 
-  // Détection de voix (500-2000 Hz, énergie concentrée)
+  // Vocal detection (500-2000 Hz, concentrated energy)
   float vocal_energy       = 0.0f;
   for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
     float freq = i * freq_resolution;
@@ -865,7 +865,7 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
       vocal_energy += fft_output[i];
     }
   }
-  fft_data->vocal_detected = (vocal_energy > 0.4f); // Seuil arbitraire
+  fft_data->vocal_detected = (vocal_energy > 0.4f); // Arbitrary threshold
 }
 
 // ============================================================================
@@ -880,9 +880,9 @@ void audio_input_set_fft_enabled(bool enable) {
   current_config.fft_enabled = enable;
 
   if (enable) {
-    ESP_LOGI(TAG_AUDIO, "Mode FFT activé (coût: ~20KB RAM, ~20%% CPU)");
+    ESP_LOGI(TAG_AUDIO, "FFT mode enabled (cost: ~20KB RAM, ~20%% CPU)");
   } else {
-    ESP_LOGI(TAG_AUDIO, "Mode FFT désactivé");
+    ESP_LOGI(TAG_AUDIO, "FFT mode disabled");
     fft_data_ready = false;
     memset(&current_fft_data, 0, sizeof(audio_fft_data_t));
   }

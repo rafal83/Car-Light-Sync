@@ -5,36 +5,36 @@
 #include <stdbool.h>
 
 /**
- * @brief Nombre maximum de redémarrages consécutifs avant factory reset
+ * @brief Maximum consecutive reboots before factory reset
  */
 #define BOOT_LOOP_MAX_COUNT 10
 
 /**
- * @brief Temps en ms après lequel le compteur est réinitialisé (boot réussi)
+ * @brief Time in ms after which the counter resets (successful boot)
  */
 #define BOOT_LOOP_SUCCESS_TIMEOUT_MS 30000  // 30 secondes
 
 /**
- * @brief Initialise le système de protection contre les boot loops
+ * @brief Initialize boot loop protection
  *
- * Vérifie le compteur de boot en LP SRAM et déclenche un factory reset
- * si le nombre de redémarrages consécutifs dépasse le seuil.
+ * Checks the boot counter in LP SRAM and triggers a factory reset
+ * if the number of consecutive reboots exceeds the threshold.
  *
- * @return ESP_OK si OK, ESP_FAIL si factory reset déclenché
+ * @return ESP_OK on success, ESP_FAIL if factory reset was triggered
  */
 esp_err_t boot_loop_guard_init(void);
 
 /**
- * @brief Marque le démarrage comme réussi et réinitialise le compteur
+ * @brief Mark startup as successful and reset the counter
  *
- * À appeler après que tous les composants critiques ont démarré avec succès.
+ * Call after all critical components have started successfully.
  */
 void boot_loop_guard_mark_success(void);
 
 /**
- * @brief Obtient le compteur actuel de boot loops
+ * @brief Get current boot loop count
  *
- * @return Nombre de redémarrages consécutifs
+ * @return Number of consecutive reboots
  */
 uint32_t boot_loop_guard_get_count(void);
 

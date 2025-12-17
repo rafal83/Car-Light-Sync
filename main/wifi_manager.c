@@ -32,26 +32,26 @@ bool wifi_wait_for_sta(uint32_t timeout_ms) {
   return false;
 }
 
-// Event handler pour les événements WiFi
+// Event handler for Wi-Fi events
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
   if (event_base == WIFI_EVENT) {
     switch (event_id) {
     case WIFI_EVENT_AP_STACONNECTED: {
       wifi_event_ap_staconnected_t *event = (wifi_event_ap_staconnected_t *)event_data;
-      ESP_LOGI(TAG_WIFI, "Client connecté, MAC: %02x:%02x:%02x:%02x:%02x:%02x", MAC2STR(event->mac));
+      ESP_LOGI(TAG_WIFI, "Client connected, MAC: %02x:%02x:%02x:%02x:%02x:%02x", MAC2STR(event->mac));
       current_status.connected_clients++;
       break;
     }
     case WIFI_EVENT_AP_STADISCONNECTED: {
       wifi_event_ap_stadisconnected_t *event = (wifi_event_ap_stadisconnected_t *)event_data;
-      ESP_LOGI(TAG_WIFI, "Client déconnecté, MAC: %02x:%02x:%02x:%02x:%02x:%02x", MAC2STR(event->mac));
+      ESP_LOGI(TAG_WIFI, "Client disconnected, MAC: %02x:%02x:%02x:%02x:%02x:%02x", MAC2STR(event->mac));
       if (current_status.connected_clients > 0) {
         current_status.connected_clients--;
       }
       break;
     }
     case WIFI_EVENT_STA_START:
-      ESP_LOGI(TAG_WIFI, "Mode Station démarré");
+      ESP_LOGI(TAG_WIFI, "Station mode started");
       sta_retry_count = 0;
       esp_wifi_connect();
       break;
@@ -59,12 +59,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
       current_status.sta_connected = false;
       if (sta_auto_reconnect && sta_retry_count < STA_MAX_RETRY) {
         sta_retry_count++;
-        ESP_LOGI(TAG_WIFI, "Déconnecté du réseau, tentative %d/%d...", sta_retry_count, STA_MAX_RETRY);
+        ESP_LOGI(TAG_WIFI, "Disconnected from network, retry %d/%d...", sta_retry_count, STA_MAX_RETRY);
         esp_wifi_connect();
       } else if (sta_retry_count >= STA_MAX_RETRY) {
-        ESP_LOGW(TAG_WIFI,
-                 "Nombre max de tentatives atteint, arrêt de la "
-                 "reconnexion automatique");
+        ESP_LOGW(TAG_WIFI, "Maximum retries reached, stopping automatic reconnection");
         sta_auto_reconnect = false;
       }
       break;
@@ -74,21 +72,21 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
   } else if (event_base == IP_EVENT) {
     if (event_id == IP_EVENT_STA_GOT_IP) {
       ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-      ESP_LOGI(TAG_WIFI, "IP obtenue: " IPSTR, IP2STR(&event->ip_info.ip));
+      ESP_LOGI(TAG_WIFI, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
       snprintf(current_status.sta_ip, sizeof(current_status.sta_ip), IPSTR, IP2STR(&event->ip_info.ip));
       current_status.sta_connected = true;
-      sta_retry_count              = 0; // Réinitialiser le compteur en cas de succès
+      sta_retry_count              = 0; // Reset counter on success
     }
   }
 }
 
 esp_err_t wifi_manager_init(void) {
   if (wifi_initialized) {
-    ESP_LOGW(TAG_WIFI, "WiFi déjà initialisé");
+    ESP_LOGW(TAG_WIFI, "WiFi already initialized");
     return ESP_OK;
   }
 
-  // Initialiser NVS
+  // Initialize NVS
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     ESP_ERROR_CHECK(nvs_flash_erase());
@@ -96,20 +94,19 @@ esp_err_t wifi_manager_init(void) {
   }
   ESP_ERROR_CHECK(ret);
 
-  // Initialiser TCP/IP
+  // Initialize TCP/IP
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  // Créer les interfaces réseau
+  // Create network interfaces
   ap_netif  = esp_netif_create_default_wifi_ap();
   sta_netif = esp_netif_create_default_wifi_sta();
 
-  // Configurer le hostname pour mDNS (visible sur le réseau local)
-  // Utilise directement le SSID qui contient déjà le suffixe MAC (ex:
-  // "CarLightSync-A1B2C3")
+  // Configure hostname for mDNS (visible on the local network)
+  // Uses the SSID that already embeds the MAC suffix (e.g., "CarLightSync-A1B2C3")
   ESP_ERROR_CHECK(esp_netif_set_hostname(sta_netif, g_wifi_ssid_with_suffix));
   ESP_ERROR_CHECK(esp_netif_set_hostname(ap_netif, g_wifi_ssid_with_suffix));
-  ESP_LOGI(TAG_WIFI, "Hostname configuré: %s", g_wifi_ssid_with_suffix);
+  ESP_LOGI(TAG_WIFI, "Hostname set: %s", g_wifi_ssid_with_suffix);
 
   esp_netif_ip_info_t ip_info;
   IP4_ADDR(&ip_info.ip, 192, 168, 4, 1);
@@ -120,63 +117,61 @@ esp_err_t wifi_manager_init(void) {
   ESP_ERROR_CHECK(esp_netif_set_ip_info(ap_netif, &ip_info));
   ESP_ERROR_CHECK(esp_netif_dhcps_start(ap_netif));
 
-  // Configuration WiFi par défaut
+  // Default Wi-Fi configuration
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-  // Enregistrer les event handlers
+  // Register event handlers
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
 
   wifi_initialized = true;
-  ESP_LOGI(TAG_WIFI, "WiFi initialisé");
+  ESP_LOGI(TAG_WIFI, "WiFi initialized");
   return ESP_OK;
 }
 
 esp_err_t wifi_manager_start_ap(void) {
   if (!wifi_initialized) {
-    ESP_LOGE(TAG_WIFI, "WiFi non initialisé");
+    ESP_LOGE(TAG_WIFI, "WiFi not initialized");
     return ESP_FAIL;
   }
 
-  // Configuration du point d'accès avec le nom personnalisé incluant le suffixe
-  // MAC
+  // Access point configuration with the SSID including the MAC suffix
   wifi_config_t ap_config = {
       .ap = {.ssid = "", .ssid_len = 0, .password = WIFI_AP_PASSWORD, .max_connection = WIFI_MAX_CLIENTS, .authmode = WIFI_AUTH_WPA2_PSK, .channel = 1},
   };
 
-  // Copier le SSID avec suffixe MAC (garantir null termination)
+  // Copy SSID with MAC suffix (ensure null termination)
   size_t ssid_len = strlen(g_wifi_ssid_with_suffix);
-  size_t max_len = sizeof(ap_config.ap.ssid) - 1;
+  size_t max_len  = sizeof(ap_config.ap.ssid) - 1;
   if (ssid_len > max_len) ssid_len = max_len;
   memcpy(ap_config.ap.ssid, g_wifi_ssid_with_suffix, ssid_len);
   ap_config.ap.ssid[ssid_len] = '\0';
-  ap_config.ap.ssid_len = ssid_len;
+  ap_config.ap.ssid_len       = ssid_len;
 
   if (strlen(WIFI_AP_PASSWORD) == 0) {
     ap_config.ap.authmode = WIFI_AUTH_OPEN;
   }
 
-  // Démarrer uniquement en mode AP (pas de mode STA pour éviter les tentatives
-  // de connexion)
+  // Start AP only (no STA mode to avoid connection attempts)
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
   ESP_ERROR_CHECK(esp_wifi_start());
 
-  // Obtenir l'IP du AP
+  // Retrieve AP IP
   esp_netif_ip_info_t ip_info;
   esp_netif_get_ip_info(ap_netif, &ip_info);
   snprintf(current_status.ap_ip, sizeof(current_status.ap_ip), IPSTR, IP2STR(&ip_info.ip));
 
   current_status.ap_started = true;
-  ESP_LOGI(TAG_WIFI, "Point d'accès démarré: %s, IP: %s", g_wifi_ssid_with_suffix, current_status.ap_ip);
+  ESP_LOGI(TAG_WIFI, "Access point started: %s, IP: %s", g_wifi_ssid_with_suffix, current_status.ap_ip);
 
-  // Démarrer le portail captif
+  // Start captive portal
   esp_err_t portal_ret = captive_portal_start();
   if (portal_ret != ESP_OK) {
-    ESP_LOGW(TAG_WIFI, "Erreur démarrage portail captif: %s", esp_err_to_name(portal_ret));
+    ESP_LOGW(TAG_WIFI, "Captive portal start failed: %s", esp_err_to_name(portal_ret));
   } else {
-    ESP_LOGI(TAG_WIFI, "Portail captif activé");
+    ESP_LOGI(TAG_WIFI, "Captive portal enabled");
   }
 
   return ESP_OK;
@@ -184,14 +179,14 @@ esp_err_t wifi_manager_start_ap(void) {
 
 esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
   if (!wifi_initialized) {
-    ESP_LOGE(TAG_WIFI, "WiFi non initialisé");
+    ESP_LOGE(TAG_WIFI, "WiFi not initialized");
     return ESP_FAIL;
   }
 
-  // Passer en mode APSTA pour pouvoir se connecter en tant que client
+  // Switch to APSTA mode to allow client connection
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
 
-  // S'assurer que le driver est demarre (mode AP deja lance)
+  // Ensure the driver is started (AP mode already running)
   esp_err_t start_ret = esp_wifi_start();
   if (start_ret != ESP_OK && start_ret != ESP_ERR_WIFI_CONN) {
     ESP_ERROR_CHECK(start_ret);
@@ -202,9 +197,9 @@ esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
   strncpy((char *)sta_config.sta.password, password, sizeof(sta_config.sta.password) - 1);
   sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-  // ESP-IDF 5.5: esp_wifi_set_config renvoie ESP_ERR_WIFI_STATE si une connexion est en cours.
-  // On force d'abord la deconnexion puis on applique la nouvelle config avant d'appeler connect.
-  esp_wifi_disconnect(); // ignore l'erreur si deja deconnecte
+  // ESP-IDF 5.5: esp_wifi_set_config returns ESP_ERR_WIFI_STATE if a connection is in progress.
+  // Force a disconnect first then apply the new config before calling connect.
+  esp_wifi_disconnect(); // ignore error if already disconnected
   esp_err_t cfg_ret = esp_wifi_set_config(WIFI_IF_STA, &sta_config);
   if (cfg_ret == ESP_ERR_WIFI_STATE) {
     vTaskDelay(pdMS_TO_TICKS(50));
@@ -215,25 +210,26 @@ esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
 
   strncpy(current_status.sta_ssid, ssid, sizeof(current_status.sta_ssid) - 1);
 
-  // Ré-activer la reconnexion automatique et reinitialiser le compteur
+  // Re-enable automatic reconnection and reset counter
   sta_auto_reconnect = true;
   sta_retry_count    = 0;
 
-  ESP_LOGI(TAG_WIFI, "Connexion à %s...", ssid);
+  ESP_LOGI(TAG_WIFI, "Connecting to %s...", ssid);
   return ESP_OK;
 }
+
 esp_err_t wifi_manager_disconnect_sta(void) {
   current_status.sta_connected = false;
   current_status.sta_ssid[0]   = '\0';
   current_status.sta_ip[0]     = '\0';
 
-  // Désactiver la reconnexion automatique lors de la déconnexion manuelle
+  // Disable auto-reconnect during manual disconnect
   sta_auto_reconnect           = false;
   sta_retry_count              = 0;
 
-  ESP_LOGI(TAG_WIFI, "Déconnexion manuelle du réseau WiFi");
+  ESP_LOGI(TAG_WIFI, "Manual disconnection from WiFi network");
 
-  // Déconnecter et repasser en mode AP uniquement
+  // Disconnect and switch back to AP-only mode
   esp_wifi_disconnect();
   esp_wifi_set_mode(WIFI_MODE_AP);
 
@@ -250,14 +246,14 @@ int wifi_manager_scan_networks(uint32_t scan_time) {
 
   esp_err_t ret = esp_wifi_scan_start(&scan_config, true);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_WIFI, "Erreur scan: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_WIFI, "Scan error: %s", esp_err_to_name(ret));
     return 0;
   }
 
   uint16_t ap_count = 0;
   esp_wifi_scan_get_ap_num(&ap_count);
 
-  ESP_LOGI(TAG_WIFI, "%d réseaux trouvés", ap_count);
+  ESP_LOGI(TAG_WIFI, "%d networks found", ap_count);
   return ap_count;
 }
 
@@ -274,7 +270,7 @@ esp_err_t wifi_manager_stop(void) {
     return ESP_OK;
   }
 
-  // Arrêter le portail captif
+  // Stop captive portal
   captive_portal_stop();
 
   esp_wifi_stop();
@@ -282,7 +278,7 @@ esp_err_t wifi_manager_stop(void) {
   current_status.sta_connected     = false;
   current_status.connected_clients = 0;
 
-  ESP_LOGI(TAG_WIFI, "WiFi arrêté");
+  ESP_LOGI(TAG_WIFI, "WiFi stopped");
   return ESP_OK;
 }
 

@@ -3,10 +3,10 @@
  * @brief Gestionnaire de profils et événements CAN
  *
  * Gère:
- * - Profils d'effets LED avec sauvegarde SPIFFS (JSON)
+ * - LED effect profiles with SPIFFS storage (JSON)
  * - Événements CAN avec priorités et segments
  * - Système multi-pass de rendu: réservation → effet par défaut → événements
- * - Import/export JSON des profils
+ * - Profile JSON import/export
  * - Activation/désactivation d'événements
  */
 
@@ -53,7 +53,7 @@ static config_profile_t active_profile;
 static int active_profile_id             = -1;
 static bool active_profile_loaded        = false;
 
-// Commande par boutons volant (opt-in)
+// Steering wheel control (opt-in)
 static bool wheel_control_enabled        = false;
 static uint8_t wheel_control_speed_limit = 5; // km/h
 

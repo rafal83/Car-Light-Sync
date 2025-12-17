@@ -27,7 +27,7 @@
 #include <string.h>
 #include <strings.h>
 
-// UUIDs (128-bit) - NimBLE attend les octets en ordre inversé
+// UUIDs (128-bit) - NimBLE expects bytes in reverse order
 // Service: 4fafc201-1fb5-459e-8fcc-c5c9c331914b
 static const ble_uuid128_t ble_service_uuid  = BLE_UUID128_INIT(0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f, 0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
 
@@ -452,8 +452,8 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
     return true;
   }
 
-  // Utiliser MTU - 3 pour l'overhead BLE, avec un maximum de 244 bytes
-  // (244 est une taille sûre qui évite les problèmes de fragmentation)
+  // Use MTU - 3 for BLE overhead, capped at 244 bytes
+  // (244 is a safe size that avoids fragmentation issues)
   size_t max_payload = negotiated_mtu > 3 ? (negotiated_mtu - 3) : 20;
   if (max_payload > 244) {
     max_payload = 244;
@@ -468,41 +468,41 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
 
     om           = ble_hs_mbuf_from_flat(data + offset, chunk);
     if (!om) {
-      ESP_LOGE(TAG_BLE_API, "Erreur allocation mbuf (chunk %d/%d, offset=%d)", chunk_count + 1, (len + max_payload - 1) / max_payload, offset);
-      // Attendre un peu plus et réessayer une fois
+      ESP_LOGE(TAG_BLE_API, "mbuf allocation error (chunk %d/%d, offset=%d)", chunk_count + 1, (len + max_payload - 1) / max_payload, offset);
+      // Wait a bit longer and retry once
       vTaskDelay(pdMS_TO_TICKS(50));
       om = ble_hs_mbuf_from_flat(data + offset, chunk);
       if (!om) {
-        ESP_LOGE(TAG_BLE_API, "Erreur allocation mbuf après retry");
+        ESP_LOGE(TAG_BLE_API, "mbuf allocation error after retry");
         return false;
       }
     }
 
-    // Revérifier l'état avant chaque envoi
+    // Re-check state before each send
     if (!ble_connected || !notifications_enabled || ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
-      ESP_LOGW(TAG_BLE_API, "Connexion perdue pendant l'envoi (chunk %d)", chunk_count);
+      ESP_LOGW(TAG_BLE_API, "Connection lost during send (chunk %d)", chunk_count);
       os_mbuf_free_chain(om);
       return false;
     }
 
     int rc = ble_gattc_notify_custom(ble_conn_handle, ble_response_val_handle, om);
     if (rc != 0) {
-      ESP_LOGE(TAG_BLE_API, "Erreur notification BLE: %d (chunk %d/%d)", rc, chunk_count + 1, (len + max_payload - 1) / max_payload);
+      ESP_LOGE(TAG_BLE_API, "BLE notification error: %d (chunk %d/%d)", rc, chunk_count + 1, (len + max_payload - 1) / max_payload);
       return false;
     }
 
     chunk_count++;
     offset += chunk;
 
-    // Délai entre chunks pour éviter de saturer le buffer BLE
-    // Plus le transfert est gros, plus on attend pour laisser le temps au client de traiter
-    if (offset < len) { // Pas de délai après le dernier chunk
+    // Delay between chunks to avoid saturating the BLE buffer
+    // Bigger transfers wait longer to let the client process
+    if (offset < len) { // No delay after the last chunk
       if (len > 2000) {
-        vTaskDelay(pdMS_TO_TICKS(30)); // 30ms pour les très gros transferts
+        vTaskDelay(pdMS_TO_TICKS(30)); // 30ms for very large transfers
       } else if (len > 500) {
-        vTaskDelay(pdMS_TO_TICKS(20)); // 20ms pour les transferts moyens
+        vTaskDelay(pdMS_TO_TICKS(20)); // 20ms for medium transfers
       } else {
-        vTaskDelay(pdMS_TO_TICKS(10)); // 10ms pour les petits transferts
+        vTaskDelay(pdMS_TO_TICKS(10)); // 10ms for small transfers
       }
     }
   }
@@ -530,7 +530,7 @@ static void ble_send_text_response(const char *text) {
 static void ble_on_sync(void) {
   int rc;
 
-  // Générer et configurer une adresse aléatoire statique
+  // Generate and configure a static random address
   ble_addr_t addr;
   rc = ble_hs_id_gen_rnd(1, &addr);
   if (rc != 0) {
@@ -564,7 +564,7 @@ static void ble_on_sync(void) {
   adv_params.itvl_min                  = 0; // Use default min interval
   adv_params.itvl_max                  = 0; // Use default max interval
 
-  // Utiliser une adresse aléatoire statique (BLE_OWN_ADDR_RANDOM)
+  // Use a static random address (BLE_OWN_ADDR_RANDOM)
   rc                                   = ble_gap_adv_start(BLE_OWN_ADDR_RANDOM, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
   if (rc != 0) {
     ESP_LOGE(TAG_BLE_API, "Erreur demarrage advertising: %d", rc);

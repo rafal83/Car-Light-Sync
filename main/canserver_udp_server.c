@@ -25,7 +25,7 @@ static const char *TAG = "CANSERVER_UDP";
 
 // Panda Protocol Format
 // Le protocole Panda utilise UDP avec un format binaire simple :
-// - Client envoie "ehllo"/"hello" pour démarrer le streaming
+// - Client sends "ehllo"/"hello" to start streaming
 // - Serveur envoie des paquets UDP contenant des frames (16 bytes chacune)
 // - Client doit renvoyer un ping toutes les 5 secondes pour maintenir la connexion
 //
