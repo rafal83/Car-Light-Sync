@@ -50,6 +50,7 @@ let bleAutoConnectInProgress = false;
 let bleAutoConnectGestureCaptured = false;
 let bleAutoConnectGestureHandlerRegistered = false;
 let bleAutoConnectAwaitingGesture = false;
+let bleManualDisconnect = false;
 let wifiOnline = !usingFileProtocol && !usingCapacitor && navigator.onLine;
 let apiConnectionReady = wifiOnline;
 let apiConnectionResolvers = [];
@@ -131,6 +132,18 @@ function maybeAutoConnectBle(fromGesture = false) {
         bleAutoConnectAwaitingGesture = false;
         return;
     }
+    // Don't auto-reconnect if user manually disconnected
+    if (bleManualDisconnect) {
+        return;
+    }
+    // On web, auto-reconnect only works on Capacitor (mobile) because it requires user gesture
+    // Skip auto-connect on web browser (will require manual click)
+    if (!usingCapacitor && !fromGesture) {
+        console.log('[BLE] Auto-reconnect skipped on web (requires user gesture)');
+        // Show the manual connect button on web
+        updateLoadingBleButton();
+        return;
+    }
     const status = bleTransport.getStatus();
     if (status === 'connected' || status === 'connecting') {
         bleAutoConnectAwaitingGesture = false;
@@ -154,12 +167,21 @@ function maybeAutoConnectBle(fromGesture = false) {
         bleButton.style.display = 'none';
     }
 
-    bleTransport.connect().catch(error => {
+    // On Capacitor (mobile), use autoConnectMode to enable silent reconnect
+    // On web, don't use autoConnectMode even with gesture (getDevices() will still work)
+    const autoConnectMode = usingCapacitor;
+    bleTransport.connect(autoConnectMode).catch(error => {
         if (error && (error.n === 'SecurityError' || /SecurityError/i.test(error.message || ''))) {
             console.warn('BLE auto-connect blocked by browser security, waiting for interaction');
             bleAutoConnectGestureCaptured = false;
             bleAutoConnectAwaitingGesture = true;
             registerBleAutoConnectGestureHandler();
+        } else if (error && (error.message === 'AutoConnectDeviceNotFound')) {
+            console.log('BLE auto-connect: last device not found, user will need to select manually');
+            // Device pas trouvé lors de l'auto-reconnect - ne rien faire, l'utilisateur devra cliquer manuellement
+            bleAutoConnectGestureCaptured = true;
+            updateLoadingProgress(0, t('loading.connecting'));
+            updateLoadingBleButton();
         } else if (error && (error.name === 'NotFoundError' || /User cancelled/i.test(error.message || ''))) {
             console.warn('BLE connection cancelled by user');
             // L'utilisateur a annulé - afficher le bouton pour lui permettre de réessayer
@@ -274,10 +296,86 @@ class BleTransport {
           $('ble-status-item').style.display = 'none';
         }
     }
-    async requestDevice(forceNew = false) {
+    async tryReconnectToLastDevice() {
+        // Try to reconnect to the last connected device without showing the picker
+        const lastDevice = getLastConnectedDevice();
+        if (!lastDevice || (!lastDevice.deviceName && !lastDevice.deviceId)) {
+            return null;
+        }
+
+        try {
+            console.log('[BLE] Attempting to reconnect to last device:', lastDevice.deviceName, lastDevice.deviceId);
+
+            // Check if we're on Capacitor (mobile) or web
+            if (navigator.bluetooth && navigator.bluetooth.scanForDeviceByName) {
+                // On Capacitor/mobile: use scan to find the device BY NAME (ID changes on each scan)
+                if (!lastDevice.deviceName) {
+                    console.log('[BLE] No device name saved, cannot auto-reconnect on mobile');
+                    return null;
+                }
+                console.log('[BLE] Using Capacitor scan method by name');
+                const matchingDevice = await navigator.bluetooth.scanForDeviceByName(lastDevice.deviceName, 5000);
+
+                if (matchingDevice) {
+                    console.log('[BLE] Found device via scan:', matchingDevice.name);
+                    if (this.device && this.device !== matchingDevice) {
+                        try {
+                            this.device.removeEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                        } catch (e) {}
+                    }
+                    this.device = matchingDevice;
+                    this.device.addEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                    return matchingDevice;
+                }
+            } else if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+                // On web: use getDevices() API to get previously authorized devices
+                console.log('[BLE] Using Web Bluetooth getDevices method');
+                const devices = await navigator.bluetooth.getDevices();
+                const matchingDevice = devices.find(d => d.id === lastDevice.deviceId);
+
+                if (matchingDevice) {
+                    console.log('[BLE] Found previously authorized device:', matchingDevice.name);
+                    if (this.device && this.device !== matchingDevice) {
+                        try {
+                            this.device.removeEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                        } catch (e) {}
+                    }
+                    this.device = matchingDevice;
+                    this.device.addEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
+                    return matchingDevice;
+                }
+            }
+
+            console.log('[BLE] Last device not found');
+            return null;
+        } catch (error) {
+            console.warn('[BLE] Failed to reconnect to last device:', error);
+            return null;
+        }
+    }
+
+    async requestDevice(forceNew = false, tryLastDevice = true, autoConnectMode = false) {
         if (!forceNew && this.device) {
             return this.device;
         }
+
+        // Try to reconnect to last device first (without showing picker)
+        // On Capacitor (mobile), use scan. On web, use getDevices() only if not in autoConnectMode
+        // (because getDevices() also requires user gesture on web)
+        if (tryLastDevice && !forceNew && (!autoConnectMode || usingCapacitor)) {
+            const lastDevice = await this.tryReconnectToLastDevice();
+            if (lastDevice) {
+                return lastDevice;
+            }
+
+            // If in auto-connect mode and no device found, throw error instead of showing picker
+            // This only happens on Capacitor (mobile) where scan is allowed without gesture
+            if (autoConnectMode) {
+                throw new Error('AutoConnectDeviceNotFound');
+            }
+        }
+
+        // If no last device or failed to reconnect, show device picker
         const filters = [{ services: [BLE_CONFIG.serviceUuid] }];
         if (BLE_CONFIG.deviceName) {
             filters.push({ name: BLE_CONFIG.deviceName });
@@ -347,7 +445,7 @@ class BleTransport {
     shouldUseBle() {
         return this.isConnected();
     }
-    async connect() {
+    async connect(autoConnectMode = false) {
         if (!this.isSupported()) {
             throw new Error(t('ble.notSupported'));
         }
@@ -356,7 +454,7 @@ class BleTransport {
         }
         this.setStatus('connecting');
         try {
-            const device = await this.requestDevice();
+            const device = await this.requestDevice(false, true, autoConnectMode);
             let server = await this.ensureGattConnection(device);
             let service;
             try {
@@ -374,6 +472,14 @@ class BleTransport {
             await this.responseCharacteristic.startNotifications();
             this.responseCharacteristic.addEventListener('characteristicvaluechanged', this.boundNotificationHandler);
             this.setStatus('connected');
+
+            // Save last connected device for auto-reconnect
+            if (this.device && this.device.id) {
+                saveLastConnectedDevice(this.device.id, this.device.name);
+            }
+
+            // Reset manual disconnect flag on successful connection
+            bleManualDisconnect = false;
         } catch (error) {
             console.error('BLE connect error', error);
             this.teardown();
@@ -381,7 +487,10 @@ class BleTransport {
             throw error;
         }
     }
-    async disconnect() {
+    async disconnect(clearHistory = true) {
+        // Set flag to prevent auto-reconnect on manual disconnect
+        bleManualDisconnect = true;
+
         if (this.device) {
             try {
                 this.device.removeEventListener('gattserverdisconnected', this.boundDeviceDisconnect);
@@ -394,6 +503,11 @@ class BleTransport {
         }
         this.teardown();
         this.setStatus(this.isSupported() ? 'disconnected' : 'unsupported');
+
+        // Clear saved device on manual disconnect
+        if (clearHistory) {
+            clearLastConnectedDevice();
+        }
     }
     handleDeviceDisconnected() {
         this.teardown();
@@ -710,6 +824,48 @@ const simulationSections = [
 // Language & theme management
 currentLang = localStorage.getItem('language') || currentLang;
 currentTheme = localStorage.getItem('theme') || currentTheme;
+
+// Last connected BLE device storage
+const LAST_DEVICE_STORAGE_KEY = 'last-ble-device-id';
+const LAST_DEVICE_NAME_KEY = 'last-ble-device-name';
+const LAST_DEVICE_TIMESTAMP_KEY = 'last-ble-connection-time';
+
+function saveLastConnectedDevice(deviceId, deviceName) {
+    if (!deviceId) return;
+    try {
+        localStorage.setItem(LAST_DEVICE_STORAGE_KEY, deviceId);
+        localStorage.setItem(LAST_DEVICE_NAME_KEY, deviceName || '');
+        localStorage.setItem(LAST_DEVICE_TIMESTAMP_KEY, Date.now().toString());
+        console.log('[BLE] Saved last connected device:', deviceName, deviceId);
+    } catch (error) {
+        console.warn('[BLE] Failed to save last device:', error);
+    }
+}
+
+function getLastConnectedDevice() {
+    try {
+        const deviceId = localStorage.getItem(LAST_DEVICE_STORAGE_KEY);
+        const deviceName = localStorage.getItem(LAST_DEVICE_NAME_KEY);
+        const timestamp = localStorage.getItem(LAST_DEVICE_TIMESTAMP_KEY);
+        if (deviceId) {
+            return { deviceId, deviceName, timestamp: parseInt(timestamp) || 0 };
+        }
+    } catch (error) {
+        console.warn('[BLE] Failed to load last device:', error);
+    }
+    return null;
+}
+
+function clearLastConnectedDevice() {
+    try {
+        localStorage.removeItem(LAST_DEVICE_STORAGE_KEY);
+        localStorage.removeItem(LAST_DEVICE_NAME_KEY);
+        localStorage.removeItem(LAST_DEVICE_TIMESTAMP_KEY);
+        console.log('[BLE] Cleared last connected device');
+    } catch (error) {
+        console.warn('[BLE] Failed to clear last device:', error);
+    }
+}
 function updateBleUiState() {
     const button = $('ble-connect-button');
     const statusValue = $('ble-status-text');
@@ -803,6 +959,8 @@ async function toggleBleConnection() {
         if (bleTransport.isConnected()) {
             await bleTransport.disconnect();
         } else {
+            // Reset manual disconnect flag when user manually connects
+            bleManualDisconnect = false;
             await bleTransport.connect();
         }
     } catch (error) {
@@ -3921,6 +4079,9 @@ async function manualBleConnect() {
         // Forcer la capture du geste
         bleAutoConnectGestureCaptured = true;
         bleAutoConnectAwaitingGesture = false;
+
+        // Reset manual disconnect flag when user manually connects
+        bleManualDisconnect = false;
 
         await bleTransport.connect();
     } catch (error) {
