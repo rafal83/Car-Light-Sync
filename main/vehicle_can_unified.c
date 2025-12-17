@@ -32,7 +32,8 @@ void vehicle_can_unified_init(void) {
 // ---------------------------------------------------------------------------
 // Recherche de message DBC par ID
 // ---------------------------------------------------------------------------
-static const can_message_def_t *find_message_def(uint32_t id) {
+// IRAM_ATTR: Called for every CAN frame received (~2000 times/s)
+static const can_message_def_t * IRAM_ATTR find_message_def(uint32_t id) {
   for (uint16_t i = 0; i < g_can_message_count; i++) {
     if (g_can_messages[i].id == id) {
       return &g_can_messages[i];
@@ -45,7 +46,8 @@ static const can_message_def_t *find_message_def(uint32_t id) {
 // Extraction de bits (Intel / Motorola) + cast / scaling
 // ---------------------------------------------------------------------------
 
-static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit, uint8_t length) {
+// IRAM_ATTR: Called for every CAN signal with little-endian byte order (~100k-200k times/s)
+static uint64_t IRAM_ATTR extract_bits_le(const uint8_t *data, uint8_t start_bit, uint8_t length) {
   // little-endian (Intel): start_bit is the LSB bit indexed from the byte
   // 0
   uint64_t raw = 0;
@@ -56,7 +58,8 @@ static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit, uint8_t 
   return (raw >> start_bit) & mask;
 }
 
-static uint64_t extract_bits_be(const uint8_t *data, uint8_t start_bit, uint8_t length) {
+// IRAM_ATTR: Called for every CAN signal with big-endian byte order (~100k-200k times/s)
+static uint64_t IRAM_ATTR extract_bits_be(const uint8_t *data, uint8_t start_bit, uint8_t length) {
   // big-endian (Motorola): rebuild in network order
   uint64_t raw = 0;
   for (int i = 0; i < 8; i++) {
@@ -69,7 +72,8 @@ static uint64_t extract_bits_be(const uint8_t *data, uint8_t start_bit, uint8_t 
   return (raw >> shift) & mask;
 }
 
-static float decode_signal_value(const can_signal_def_t *sig, const uint8_t *data, uint8_t dlc) {
+// IRAM_ATTR: Called for every CAN signal to decode and scale values (~100k-200k times/s)
+static float IRAM_ATTR decode_signal_value(const can_signal_def_t *sig, const uint8_t *data, uint8_t dlc) {
   (void)dlc; // not used here but kept for future extension
 
   uint64_t raw = 0;
@@ -98,6 +102,7 @@ static float decode_signal_value(const can_signal_def_t *sig, const uint8_t *dat
 // Pipeline principal
 // ---------------------------------------------------------------------------
 
+// IRAM_ATTR declared in header for public function
 void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t *state) {
   if (!frame || !state)
     return;

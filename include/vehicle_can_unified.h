@@ -5,6 +5,7 @@
 #include "vehicle_can_unified_config.h"
 
 #include <stdint.h>
+#include "esp_attr.h"  // For IRAM_ATTR
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,7 +107,8 @@ void vehicle_can_unified_init(void);
 
 // Pipeline unique : une trame CAN brute => mise à jour éventuelle de l'état +
 // events
-void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t *state);
+// IRAM_ATTR: Main entry point for CAN frame decoding, called for every frame (~2000 times/s)
+void IRAM_ATTR vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t *state);
 
 #ifdef __cplusplus
 }
