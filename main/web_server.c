@@ -1355,7 +1355,7 @@ static int find_free_profile_slot(int preferred_id) {
   // Si un ID préféré est fourni, vérifier s'il est libre
   if (preferred_id >= 0 && preferred_id < MAX_PROFILE_SCAN_LIMIT) {
     char filepath[64];
-    snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", preferred_id);
+    snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", preferred_id);
     if (!spiffs_file_exists(filepath)) {
       target_id = preferred_id;
       ESP_LOGI(TAG_WEBSERVER, "Slot %d libre (preferred)", preferred_id);
@@ -1368,7 +1368,7 @@ static int find_free_profile_slot(int preferred_id) {
   if (target_id < 0) {
     for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
       char filepath[64];
-      snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", i);
+      snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", i);
       if (!spiffs_file_exists(filepath)) {
         target_id = i;
         ESP_LOGI(TAG_WEBSERVER, "Slot %d libre (scan)", i);

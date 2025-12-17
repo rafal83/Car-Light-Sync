@@ -161,6 +161,18 @@ typedef struct {
   uint32_t modified_timestamp;
 } config_profile_t;
 
+// Format de fichier binaire pour stockage SPIFFS (avec versioning)
+#define PROFILE_FILE_MAGIC 0x50524F46  // "PROF" en ASCII
+#define PROFILE_FILE_VERSION 1
+
+typedef struct __attribute__((packed)) {
+  uint32_t magic;           // 0x50524F46 ("PROF") pour validation
+  uint16_t version;         // Version du format (1 pour v1)
+  uint16_t data_size;       // Taille de config_profile_t (pour vérification)
+  config_profile_t data;    // Données du profil
+  uint32_t checksum;        // Checksum simple de data pour intégrité
+} profile_file_t;
+
 /**
  * @brief Initialise le gestionnaire de configuration
  * @return true si succès
@@ -230,6 +242,14 @@ int config_manager_get_active_profile_id(void);
  * @return true si un profil a été activé
  */
 bool config_manager_cycle_active_profile(int direction);
+
+/**
+ * @brief Obtient les paramètres de luminosité dynamique du profil actif
+ * @param enabled Pointeur pour stocker si la luminosité dynamique est activée
+ * @param rate Pointeur pour stocker le taux d'application (0-100%)
+ * @return true si le profil actif existe
+ */
+bool config_manager_get_dynamic_brightness(bool *enabled, uint8_t *rate);
 
 /**
  * @brief Liste tous les profils disponibles

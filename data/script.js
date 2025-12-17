@@ -1509,10 +1509,10 @@ function renderEventsTable() {
                     <div class="event-form-field">
                         <label class="event-form-label" data-i18n="eventsConfig.priority">${t('eventsConfig.priority')}</label>
                         <div class="slider-container">
-                            <input type="range" id="event-priority-${index}" min="1" max="100" value="${to255ToPercent(event.pri)}"
+                            <input type="range" id="event-priority-${index}" min="1" max="100" value="${event.pri}"
                                 oninput="$('event-priority-value-${index}').textContent = this.value"
-                                onchange="updateEventConfig(${index}, 'pri', percentTo255(parseInt(this.value)))" ${!event.en ? 'disabled' : ''}>
-                            <span class="slider-value" id="event-priority-value-${index}">${to255ToPercent(event.pri)}</span>
+                                onchange="updateEventConfig(${index}, 'pri', parseInt(this.value))" ${!event.en ? 'disabled' : ''}>
+                            <span class="slider-value" id="event-priority-value-${index}">${event.pri}</span>
                         </div>
                     </div>
                     <div class="event-form-field">
@@ -2272,8 +2272,8 @@ async function loadProfiles() {
                 storageBar.style.background = '#F44336';
             }
 
-            // Désactiver les boutons si espace insuffisant (< 20KB pour un profil)
-            const canCreate = freeBytes >= 20480; // 20KB minimum (10KB données + 8KB overhead SPIFFS)
+            // Désactiver les boutons si espace insuffisant (< 12KB pour un profil)
+            const canCreate = freeBytes >= 12288; // 12KB minimum (2.5KB données binaires + 8KB overhead SPIFFS)
             const newButton = $('profile-new-button');
             const importButton = $('profile-import-button');
             if (newButton) {

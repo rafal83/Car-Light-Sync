@@ -172,14 +172,15 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   result.b = (color.b * brightness) / 255;
 
   // Apply dynamic brightness if enabled (from active profile)
-  config_profile_t active_profile;
-  if (config_manager_get_active_profile(&active_profile)) {
-    if (active_profile.dynamic_brightness_enabled) {
+  bool dynamic_enabled;
+  uint8_t dynamic_rate;
+  if (config_manager_get_dynamic_brightness(&dynamic_enabled, &dynamic_rate)) {
+    if (dynamic_enabled) {
       // Formula: final_brightness = effect_brightness × (vehicle_brightness × rate / 100)
       // Minimum 1% pour garantir que la strip reste visible
-      float vehicle_brightness = last_vehicle_state.brightness;                                                                  // 0-100 from CAN
-      float rate               = (active_profile.dynamic_brightness_rate ? active_profile.dynamic_brightness_rate : 1) / 100.0f; // 0-1
-      float applied_brightness = vehicle_brightness * rate / 100.0f;                                                             // normalized to 0-1
+      float vehicle_brightness = last_vehicle_state.brightness;                                          // 0-100 from CAN
+      float rate               = (dynamic_rate ? dynamic_rate : 1) / 100.0f;                             // 0-1
+      float applied_brightness = vehicle_brightness * rate / 100.0f;                                     // normalized to 0-1
       if (applied_brightness < 0.01f)
         applied_brightness = 0.01f; // Minimum 1%
 

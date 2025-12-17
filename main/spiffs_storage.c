@@ -68,13 +68,37 @@ esp_err_t spiffs_save_json(const char *path, const char *json_string) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  // Tester si on peut ouvrir le fichier
+  size_t len = strlen(json_string);
+
+  // Si le fichier existe déjà, le supprimer AVANT de vérifier l'espace
+  // Car SPIFFS ne libère les blocs qu'après suppression explicite, pas juste après troncature
+  bool file_existed = spiffs_file_exists(path);
+  if (file_existed) {
+    if (unlink(path) != 0) {
+      ESP_LOGW(TAG_SPIFFS, "Erreur suppression ancien fichier %s (errno=%d)", path, errno);
+      // Continuer quand même, fopen("w") va tronquer
+    } else {
+      ESP_LOGD(TAG_SPIFFS, "Ancien fichier supprimé pour libérer l'espace: %s", path);
+    }
+  }
+
+  // Vérifier l'espace disponible maintenant (après suppression éventuelle)
+  size_t total = 0, used = 0;
+  spiffs_get_stats(&total, &used);
+  size_t free = total - used;
+
+  // SPIFFS a besoin de marge pour métadonnées + allocation de blocs
+  const size_t SPIFFS_OVERHEAD = 8192; // 8KB de marge minimum
+  if (free < len + SPIFFS_OVERHEAD) {
+    ESP_LOGE(TAG_SPIFFS, "SPIFFS presque plein: besoin de %d bytes + %d overhead, seulement %d disponibles",
+             len, SPIFFS_OVERHEAD, free);
+    return ESP_ERR_NO_MEM;
+  }
+
+  // Maintenant créer le nouveau fichier
   FILE *f = fopen(path, "w");
   if (f == NULL) {
     int err = errno;
-    size_t total = 0, used = 0;
-    spiffs_get_stats(&total, &used);
-
     const char *err_msg = "Unknown";
     if (err == ENOMEM) err_msg = "ENOMEM (out of memory)";
     else if (err == EMFILE) err_msg = "EMFILE (too many open files)";
@@ -84,22 +108,6 @@ esp_err_t spiffs_save_json(const char *path, const char *json_string) {
     ESP_LOGE(TAG_SPIFFS, "Erreur ouverture %s: errno=%d (%s), SPIFFS: %d/%d bytes used (%.1f%%)",
              path, err, err_msg, used, total, total > 0 ? (used * 100.0 / total) : 0);
     return ESP_FAIL;
-  }
-
-  size_t len = strlen(json_string);
-
-  // Vérifier qu'il y a assez d'espace avant d'écrire
-  size_t total = 0, used = 0;
-  spiffs_get_stats(&total, &used);
-  size_t free = total - used;
-
-  // SPIFFS a besoin de beaucoup de marge pour métadonnées + allocation de blocs
-  const size_t SPIFFS_OVERHEAD = 8192; // 8KB de marge minimum
-  if (free < len + SPIFFS_OVERHEAD) {
-    ESP_LOGE(TAG_SPIFFS, "SPIFFS presque plein: besoin de %d bytes + %d overhead, seulement %d disponibles",
-             len, SPIFFS_OVERHEAD, free);
-    fclose(f);
-    return ESP_ERR_NO_MEM;
   }
 
   size_t written = fwrite(json_string, 1, len, f);

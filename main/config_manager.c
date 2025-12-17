@@ -33,6 +33,21 @@
 // Forward declaration
 static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size);
 
+// ============================================================================
+// Checksum simple pour validation de l'intégrité des profils binaires
+// ============================================================================
+
+static uint32_t calculate_checksum(const void *data, size_t length) {
+  uint32_t sum = 0;
+  const uint8_t *buf = (const uint8_t *)data;
+
+  for (size_t i = 0; i < length; i++) {
+    sum += buf[i];
+  }
+
+  return sum;
+}
+
 // Cache RAM: profil actif (stocké en SPIFFS, ~2KB en RAM)
 static config_profile_t active_profile;
 static int active_profile_id             = -1;
@@ -137,60 +152,53 @@ bool config_manager_init(void) {
 
 // Cette fonction n'est plus nécessaire - on charge uniquement le profil actif à la demande
 
+// ============================================================================
+// Sauvegarde/Chargement binaire des profils (format binaire avec CRC32)
+// ============================================================================
+
 bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile) {
   if (profile == NULL) {
     return false;
   }
 
-  // Allouer dynamiquement pour éviter le stack overflow
-  config_profile_t *profile_copy = (config_profile_t *)malloc(sizeof(config_profile_t));
-  if (profile_copy == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+  // Allouer sur le heap pour éviter stack overflow (~2.5KB)
+  profile_file_t *file_data = (profile_file_t *)malloc(sizeof(profile_file_t));
+  if (file_data == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour sauvegarde profil %d", profile_id);
     return false;
   }
 
-  // Mettre à jour le timestamp
-  memcpy(profile_copy, profile, sizeof(config_profile_t));
-  profile_copy->modified_timestamp = (uint32_t)time(NULL);
+  // Copier les données et mettre à jour le timestamp
+  memcpy(&file_data->data, profile, sizeof(config_profile_t));
+  file_data->data.modified_timestamp = (uint32_t)time(NULL);
 
-  // Exporter en JSON directement depuis profile_copy
-  char *json_buffer = (char *)malloc(JSON_EXPORT_BUFFER_SIZE);
-  if (json_buffer == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation JSON buffer");
-    free(profile_copy);
-    return false;
-  }
+  // Remplir l'en-tête
+  file_data->magic = PROFILE_FILE_MAGIC;
+  file_data->version = PROFILE_FILE_VERSION;
+  file_data->data_size = sizeof(config_profile_t);
 
-  bool export_success = export_profile_to_json(profile_copy, profile_id, json_buffer, JSON_EXPORT_BUFFER_SIZE);
+  // Calculer le checksum sur les données du profil
+  file_data->checksum = calculate_checksum(&file_data->data, sizeof(config_profile_t));
 
-  if (!export_success) {
-    ESP_LOGE(TAG_CONFIG, "Erreur export JSON profil %d", profile_id);
-    free(json_buffer);
-    free(profile_copy);
-    return false;
-  }
-
-  // Sauvegarder en SPIFFS
+  // Sauvegarder en SPIFFS (binaire)
   char filepath[64];
-  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
 
-  esp_err_t err = spiffs_save_json(filepath, json_buffer);
-  free(json_buffer);
+  esp_err_t err = spiffs_save_blob(filepath, file_data, sizeof(profile_file_t));
 
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
-    free(profile_copy);
+    free(file_data);
     return false;
   }
 
   // Mettre à jour le profil actif en RAM si c'est celui qu'on vient de sauvegarder
   if (profile_id == active_profile_id && active_profile_loaded) {
-    memcpy(&active_profile, profile_copy, sizeof(config_profile_t));
+    memcpy(&active_profile, &file_data->data, sizeof(config_profile_t));
   }
 
-  free(profile_copy);
-
-  ESP_LOGI(TAG_CONFIG, "Profil %d sauvegardé en SPIFFS: %s", profile_id, profile->name);
+  ESP_LOGI(TAG_CONFIG, "Profil %d sauvegardé (binaire, %d bytes): %s", profile_id, sizeof(profile_file_t), profile->name);
+  free(file_data);
   return true;
 }
 
@@ -199,47 +207,71 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
     return false;
   }
 
-  // Charger depuis SPIFFS
+  // Charger depuis SPIFFS (binaire)
   char filepath[64];
-  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
 
   // Vérifier si le fichier existe
   if (!spiffs_file_exists(filepath)) {
     return false;
   }
 
-  // Allouer buffer pour JSON
-  char *json_buffer = (char *)malloc(JSON_EXPORT_BUFFER_SIZE);
-  if (json_buffer == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation JSON buffer");
+  // Allouer sur le heap pour éviter stack overflow (~2.5KB)
+  profile_file_t *file_data = (profile_file_t *)malloc(sizeof(profile_file_t));
+  if (file_data == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour chargement profil %d", profile_id);
     return false;
   }
 
-  // Charger le JSON depuis SPIFFS
-  esp_err_t err = spiffs_load_json(filepath, json_buffer, JSON_EXPORT_BUFFER_SIZE);
+  size_t buffer_size = sizeof(profile_file_t);
+  esp_err_t err = spiffs_load_blob(filepath, file_data, &buffer_size);
+
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Erreur chargement SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
-    free(json_buffer);
+    free(file_data);
     return false;
   }
 
-  // Importer depuis JSON
-  bool success = config_manager_import_profile_from_json(json_buffer, profile);
-  free(json_buffer);
-
-  if (success) {
-    ESP_LOGD(TAG_CONFIG, "Profil %d chargé depuis SPIFFS: %s", profile_id, profile->name);
-  } else {
-    ESP_LOGE(TAG_CONFIG, "Erreur import JSON profil %d", profile_id);
+  // Vérifier la taille lue
+  if (buffer_size != sizeof(profile_file_t)) {
+    ESP_LOGE(TAG_CONFIG, "Taille fichier invalide pour profil %d: %d bytes (attendu %d)", profile_id, buffer_size, sizeof(profile_file_t));
+    free(file_data);
+    return false;
   }
 
-  return success;
+  // Vérifier le magic number
+  if (file_data->magic != PROFILE_FILE_MAGIC) {
+    ESP_LOGE(TAG_CONFIG, "Magic number invalide pour profil %d: 0x%08X", profile_id, file_data->magic);
+    free(file_data);
+    return false;
+  }
+
+  // Vérifier la version (pour compatibilité future)
+  if (file_data->version != PROFILE_FILE_VERSION) {
+    ESP_LOGW(TAG_CONFIG, "Version différente pour profil %d: v%d (actuel: v%d)", profile_id, file_data->version, PROFILE_FILE_VERSION);
+    // Continuer quand même pour rétrocompatibilité future
+  }
+
+  // Vérifier le checksum
+  uint32_t calculated_checksum = calculate_checksum(&file_data->data, sizeof(config_profile_t));
+  if (calculated_checksum != file_data->checksum) {
+    ESP_LOGE(TAG_CONFIG, "Checksum invalide pour profil %d: 0x%08X (attendu 0x%08X)", profile_id, calculated_checksum, file_data->checksum);
+    free(file_data);
+    return false;
+  }
+
+  // Copier les données
+  memcpy(profile, &file_data->data, sizeof(config_profile_t));
+
+  ESP_LOGD(TAG_CONFIG, "Profil %d chargé (binaire, %d bytes): %s", profile_id, buffer_size, profile->name);
+  free(file_data);
+  return true;
 }
 
 bool config_manager_delete_profile(uint16_t profile_id) {
   // Vérifier que le profil existe
   char filepath[64];
-  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
 
   if (!spiffs_file_exists(filepath)) {
     ESP_LOGW(TAG_CONFIG, "Profil %d n'existe pas", profile_id);
@@ -398,12 +430,25 @@ bool config_manager_cycle_active_profile(int direction) {
     if (candidate < 0 || candidate >= MAX_PROFILE_SCAN_LIMIT) {
       break;
     }
-    config_profile_t temp;
-    if (config_manager_load_profile((uint16_t)candidate, &temp)) {
+
+    // Vérifier si le profil existe (sans le charger complètement)
+    char filepath[64];
+    snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", candidate);
+    if (spiffs_file_exists(filepath)) {
       return config_manager_activate_profile((uint16_t)candidate);
     }
   }
   return false;
+}
+
+bool config_manager_get_dynamic_brightness(bool *enabled, uint8_t *rate) {
+  if (!active_profile_loaded || !enabled || !rate) {
+    return false;
+  }
+
+  *enabled = active_profile.dynamic_brightness_enabled;
+  *rate = active_profile.dynamic_brightness_rate;
+  return true;
 }
 
 bool config_manager_get_wheel_control_enabled(void) {
@@ -1250,7 +1295,7 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
       const char *event_id = config_manager_enum_to_id(profile->event_effects[i].event);
       cJSON_AddStringToObject(event, "event_id", event_id);
       cJSON_AddBoolToObject(event, "enabled", profile->event_effects[i].enabled);
-      cJSON_AddNumberToObject(event, "priority", value_to_percent(profile->event_effects[i].priority));
+      cJSON_AddNumberToObject(event, "priority", profile->event_effects[i].priority);
       cJSON_AddNumberToObject(event, "duration_ms", profile->event_effects[i].duration_ms);
 
       cJSON *event_effect = cJSON_CreateObject();
@@ -1447,7 +1492,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
 
       const cJSON *priority = cJSON_GetObjectItem(event, "priority");
       if (priority && cJSON_IsNumber(priority)) {
-        profile->event_effects[evt].priority = percent_to_value(priority->valueint);
+        profile->event_effects[evt].priority = priority->valueint;
       }
 
       const cJSON *duration = cJSON_GetObjectItem(event, "duration_ms");
@@ -1550,37 +1595,30 @@ bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_
   size_t free_heap = esp_get_free_heap_size();
   ESP_LOGI(TAG_CONFIG, "Import direct profil %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
 
-  // Valider le JSON en le parsant
+  // Allouer sur le heap pour éviter stack overflow (~2.2KB)
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour validation");
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour import profil %d", profile_id);
     return false;
   }
 
+  // Parser le JSON en structure
   if (!config_manager_import_profile_from_json(json_string, temp_profile)) {
     free(temp_profile);
     return false;
   }
 
-  // Copier le nom avant de libérer
-  char profile_name[PROFILE_NAME_MAX_LEN];
-  strncpy(profile_name, temp_profile->name, PROFILE_NAME_MAX_LEN - 1);
-  profile_name[PROFILE_NAME_MAX_LEN - 1] = '\0';
-  free(temp_profile);
+  // Sauvegarder en binaire (utilise la fonction standard qui gère CRC32, etc.)
+  bool success = config_manager_save_profile(profile_id, temp_profile);
 
-  // Sauvegarder directement le JSON tel quel en SPIFFS (économie mémoire max)
-  char filepath[64];
-  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
-
-  esp_err_t err = spiffs_save_json(filepath, json_string);
-
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
-    return false;
+  if (success) {
+    ESP_LOGI(TAG_CONFIG, "Profil %d importé et sauvegardé en binaire: %s", profile_id, temp_profile->name);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde profil %d", profile_id);
   }
 
-  ESP_LOGI(TAG_CONFIG, "Profil %d importé: %s", profile_id, profile_name);
-  return true;
+  free(temp_profile);
+  return success;
 }
 
 bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t *event_effect) {
@@ -1631,9 +1669,9 @@ bool config_manager_can_create_profile(void) {
     return false;
   }
 
-  // Un profil en JSON nécessite environ 8-10 KB + 8KB overhead SPIFFS
-  // On garde une marge de sécurité : vérifier qu'il reste au moins 20 KB libres
-  const size_t BYTES_PER_PROFILE = 20 * 1024; // 20 KB par profil (10KB données + 8KB overhead + marge)
+  // Un profil binaire fait ~2.5 KB + 8KB overhead SPIFFS
+  // On garde une marge de sécurité : vérifier qu'il reste au moins 12 KB libres
+  const size_t BYTES_PER_PROFILE = 12 * 1024; // 12 KB par profil (2.5KB données + 8KB overhead + marge)
   size_t spiffs_free = spiffs_total - spiffs_used;
 
   bool can_create = spiffs_free >= BYTES_PER_PROFILE;
