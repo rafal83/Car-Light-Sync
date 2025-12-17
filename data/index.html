@@ -321,6 +321,13 @@
               data-i18n="eventsConfig.description">
               Configurez les effets lumineux pour chaque événement CAN détecté par le véhicule.
             </p>
+            <div class="control-group" style="margin-bottom: 20px;">
+              <label class="control-label" data-i18n="eventsConfig.filter">Filtrer les événements</label>
+              <input type="text" id="events-filter-input" data-i18n-placeholder="eventsConfig.filterPlaceholder"
+                placeholder="Tapez pour filtrer..."
+                oninput="filterEvents(this.value)"
+                style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--color-input-border); background: var(--color-input); color: var(--color-text);">
+            </div>
             <div class="events-accordion-wrapper">
               <div id="events-accordion-container">
                 <!-- Will be populated dynamically with accordion items -->

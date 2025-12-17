@@ -1560,6 +1560,44 @@ function renderEventsTable() {
         }
     });
 }
+function filterEvents(searchText) {
+    const container = $('events-accordion-container');
+    if (!container) return;
+
+    const searchLower = searchText.toLowerCase().trim();
+    const items = container.querySelectorAll('.event-accordion-item');
+
+    let visibleCount = 0;
+    items.forEach(item => {
+        const titleElement = item.querySelector('.event-accordion-title');
+        if (!titleElement) return;
+
+        const eventName = titleElement.textContent.toLowerCase();
+
+        if (searchLower === '' || eventName.includes(searchLower)) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    // Afficher un message si aucun résultat
+    let noResultsMsg = container.querySelector('.events-no-results');
+    if (visibleCount === 0 && searchLower !== '') {
+        if (!noResultsMsg) {
+            noResultsMsg = doc.createElement('div');
+            noResultsMsg.className = 'events-no-results';
+            noResultsMsg.style.cssText = 'padding: 20px; text-align: center; color: var(--color-muted);';
+            noResultsMsg.setAttribute('data-i18n', 'eventsConfig.noResults');
+            noResultsMsg.textContent = t('eventsConfig.noResults') || 'Aucun événement trouvé';
+            container.appendChild(noResultsMsg);
+        }
+        noResultsMsg.style.display = 'block';
+    } else if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+    }
+}
 function updateSegmentRange(index) {
     const minSlider = $('segment-range-min-' + index);
     const maxSlider = $('segment-range-max-' + index);
