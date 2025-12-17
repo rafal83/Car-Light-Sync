@@ -64,8 +64,7 @@ static bool audio_input_save_calibration(void);
 static bool audio_input_load_calibration(void);
 
 // Function to compute RMS amplitude
-// IRAM_ATTR: frequently called in the real-time audio pipeline
-static float IRAM_ATTR calculate_rms(int32_t *buffer, size_t size) {
+static float calculate_rms(int32_t *buffer, size_t size) {
   float sum = 0.0f;
   for (size_t i = 0; i < size; i++) {
     float sample = (float)buffer[i] / 2147483648.0f; // Normalize 32-bit
@@ -75,8 +74,7 @@ static float IRAM_ATTR calculate_rms(int32_t *buffer, size_t size) {
 }
 
 // Simplified function to compute energy per frequency band
-// IRAM_ATTR: real-time calculation for audio analysis
-static void IRAM_ATTR calculate_frequency_bands(int32_t *buffer, size_t size, float *bass, float *mid, float *treble) {
+static void calculate_frequency_bands(int32_t *buffer, size_t size, float *bass, float *mid, float *treble) {
   // Compute energy across different time ranges
   float low_energy    = 0.0f;
   float mid_energy    = 0.0f;
@@ -182,8 +180,7 @@ static float apply_calibration(float amplitude) {
 }
 
 // Simple beat detection based on energy
-// IRAM_ATTR: real-time beat detection
-static bool IRAM_ATTR detect_beat(float amplitude) {
+static bool detect_beat(float amplitude) {
   // Compute current energy
   float current_energy = amplitude * amplitude;
 

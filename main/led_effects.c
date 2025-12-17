@@ -128,8 +128,7 @@ static bool configure_rmt_channel(void);
 static uint16_t sanitize_led_count(uint16_t requested);
 
 // Conversion couleur 0xRRGGBB vers rgb_t
-// IRAM_ATTR: fast conversion used by all LED effects
-static rgb_t IRAM_ATTR color_to_rgb(uint32_t color) {
+static rgb_t color_to_rgb(uint32_t color) {
   rgb_t rgb;
   rgb.r = (color >> 16) & 0xFF;
   rgb.g = (color >> 8) & 0xFF;
@@ -137,8 +136,7 @@ static rgb_t IRAM_ATTR color_to_rgb(uint32_t color) {
   return rgb;
 }
 
-// IRAM_ATTR: color interpolation used in animations
-static rgb_t IRAM_ATTR rgb_lerp(rgb_t a, rgb_t b, float t) {
+static rgb_t rgb_lerp(rgb_t a, rgb_t b, float t) {
   if (t < 0.0f) {
     t = 0.0f;
   } else if (t > 1.0f) {
@@ -152,8 +150,7 @@ static rgb_t IRAM_ATTR rgb_lerp(rgb_t a, rgb_t b, float t) {
   return out;
 }
 
-// IRAM_ATTR: color blending for layered effects
-static rgb_t IRAM_ATTR rgb_max(rgb_t a, rgb_t b) {
+static rgb_t rgb_max(rgb_t a, rgb_t b) {
   rgb_t out;
   out.r = (a.r > b.r) ? a.r : b.r;
   out.g = (a.g > b.g) ? a.g : b.g;
@@ -164,8 +161,7 @@ static rgb_t IRAM_ATTR rgb_max(rgb_t a, rgb_t b) {
 static void fill_solid(rgb_t color);
 
 // Apply brightness to a color (accounts for dynamic and audio brightness)
-// IRAM_ATTR: function called for each LED every frame
-static rgb_t IRAM_ATTR apply_brightness(rgb_t color, uint8_t brightness) {
+static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   rgb_t result;
   // Apply effect brightness
   result.r = (color.r * brightness) / 255;
@@ -249,8 +245,7 @@ static void render_status_display(bool error_mode) {
 }
 
 // Conversion HSV vers RGB pour rainbow
-// IRAM_ATTR: used in rainbow effects (frequent)
-static rgb_t IRAM_ATTR hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
+static rgb_t hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
   rgb_t rgb;
   uint8_t region, remainder, p, q, t;
 
@@ -305,8 +300,7 @@ static rgb_t IRAM_ATTR hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
 }
 
 // Send data to LEDs via RMT
-// IRAM_ATTR: critical function called every frame (50 FPS)
-static void IRAM_ATTR led_strip_show(void) {
+static void led_strip_show(void) {
   if (led_chan == NULL || led_encoder == NULL) {
     ESP_LOGE(TAG_LED, "RMT not initialized");
     return;
@@ -429,8 +423,7 @@ static bool configure_rmt_channel(void) {
 }
 
 // Remplit toutes les LEDs avec une couleur
-// IRAM_ATTR: basic operation used in multiple effects
-static void IRAM_ATTR fill_solid(rgb_t color) {
+static void fill_solid(rgb_t color) {
   for (int i = 0; i < led_count; i++) {
     leds[i] = color;
   }
