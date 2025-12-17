@@ -347,15 +347,7 @@ bool config_manager_has_active_events(void);
 bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size);
 
 /**
- * @brief Importe un profil depuis JSON
- * @param profile_id ID du profil
- * @param json_string JSON du profil
- * @return true si succès
- */
-bool config_manager_import_profile(uint16_t profile_id, const char *json_string);
-
-/**
- * @brief Importe un profil depuis JSON et sauve directement le JSON en SPIFFS (optimisé)
+ * @brief Importe un profil depuis JSON et sauve en binaire
  * @param profile_id ID du profil (0-99)
  * @param json_string JSON du profil
  * @return true si succès

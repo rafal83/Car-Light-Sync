@@ -3,7 +3,6 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
-#include <dirent.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -178,36 +177,6 @@ bool spiffs_file_exists(const char *path) {
 
   struct stat st;
   return (stat(path, &st) == 0);
-}
-
-int spiffs_list_files(const char *dir_path, char **files, int max_files) {
-  if (!s_spiffs_initialized || !dir_path || !files) {
-    return 0;
-  }
-
-  DIR *dir = opendir(dir_path);
-  if (!dir) {
-    ESP_LOGW(TAG_SPIFFS, "Impossible d'ouvrir répertoire %s", dir_path);
-    return 0;
-  }
-
-  int count = 0;
-  struct dirent *entry;
-  while ((entry = readdir(dir)) != NULL && count < max_files) {
-    // Ignorer . et ..
-    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-      continue;
-    }
-
-    // Copier le nom du fichier
-    files[count] = strdup(entry->d_name);
-    if (files[count]) {
-      count++;
-    }
-  }
-
-  closedir(dir);
-  return count;
 }
 
 int spiffs_get_file_size(const char *path) {

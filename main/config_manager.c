@@ -1549,43 +1549,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   return true;
 }
 
-bool config_manager_import_profile(uint16_t profile_id, const char *json_string) {
-  if (json_string == NULL) {
-    return false;
-  }
-
-  size_t json_len = strlen(json_string);
-  size_t free_heap = esp_get_free_heap_size();
-  ESP_LOGI(TAG_CONFIG, "Import profil %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
-
-  // Allouer dynamiquement pour éviter stack overflow
-  config_profile_t *imported_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
-  if (imported_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour imported_profile");
-    return false;
-  }
-
-  // Utiliser la fonction générique pour parser le JSON
-  if (!config_manager_import_profile_from_json(json_string, imported_profile)) {
-    free(imported_profile);
-    return false;
-  }
-
-  ESP_LOGI(TAG_CONFIG, "Profil parsé avec succès: name='%s'", imported_profile->name);
-
-  // Sauvegarder le profil importé
-  bool success = config_manager_save_profile(profile_id, imported_profile);
-  if (success) {
-    ESP_LOGI(TAG_CONFIG, "Profil %d importé avec succès: %s", profile_id, imported_profile->name);
-  } else {
-    ESP_LOGE(TAG_CONFIG, "Erreur lors de la sauvegarde du profil %d", profile_id);
-  }
-
-  free(imported_profile);
-  return success;
-}
-
-// Import optimisé: sauve le JSON directement sans re-génération
+// Import depuis JSON avec sauvegarde binaire
 bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_string) {
   if (json_string == NULL) {
     return false;

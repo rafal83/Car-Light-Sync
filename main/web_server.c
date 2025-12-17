@@ -22,6 +22,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "espnow_link.h"
 #include "gvret_tcp_server.h" // Pour le serveur GVRET TCP
 #include "led_effects.h"

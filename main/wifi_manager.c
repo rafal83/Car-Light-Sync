@@ -145,9 +145,13 @@ esp_err_t wifi_manager_start_ap(void) {
       .ap = {.ssid = "", .ssid_len = 0, .password = WIFI_AP_PASSWORD, .max_connection = WIFI_MAX_CLIENTS, .authmode = WIFI_AUTH_WPA2_PSK, .channel = 1},
   };
 
-  // Copier le SSID avec suffixe MAC
-  strncpy((char *)ap_config.ap.ssid, g_wifi_ssid_with_suffix, sizeof(ap_config.ap.ssid) - 1);
-  ap_config.ap.ssid_len = strlen(g_wifi_ssid_with_suffix);
+  // Copier le SSID avec suffixe MAC (garantir null termination)
+  size_t ssid_len = strlen(g_wifi_ssid_with_suffix);
+  size_t max_len = sizeof(ap_config.ap.ssid) - 1;
+  if (ssid_len > max_len) ssid_len = max_len;
+  memcpy(ap_config.ap.ssid, g_wifi_ssid_with_suffix, ssid_len);
+  ap_config.ap.ssid[ssid_len] = '\0';
+  ap_config.ap.ssid_len = ssid_len;
 
   if (strlen(WIFI_AP_PASSWORD) == 0) {
     ap_config.ap.authmode = WIFI_AUTH_OPEN;

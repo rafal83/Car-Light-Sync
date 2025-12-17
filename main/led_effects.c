@@ -164,7 +164,8 @@ static rgb_t IRAM_ATTR rgb_max(rgb_t a, rgb_t b) {
 static void fill_solid(rgb_t color);
 
 // Applique la luminosité à une couleur (avec prise en compte de la luminosité dynamique et audio)
-static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
+// IRAM_ATTR: fonction appelée pour chaque LED à chaque frame
+static rgb_t IRAM_ATTR apply_brightness(rgb_t color, uint8_t brightness) {
   rgb_t result;
   // Apply effect brightness
   result.r = (color.r * brightness) / 255;
@@ -248,7 +249,8 @@ static void render_status_display(bool error_mode) {
 }
 
 // Conversion HSV vers RGB pour rainbow
-static rgb_t hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
+// IRAM_ATTR: utilisée dans effets rainbow (fréquent)
+static rgb_t IRAM_ATTR hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
   rgb_t rgb;
   uint8_t region, remainder, p, q, t;
 
@@ -303,7 +305,8 @@ static rgb_t hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
 }
 
 // Envoie les données aux LEDs via RMT
-static void led_strip_show(void) {
+// IRAM_ATTR: fonction critique appelée à chaque frame (50 FPS)
+static void IRAM_ATTR led_strip_show(void) {
   if (led_chan == NULL || led_encoder == NULL) {
     ESP_LOGE(TAG_LED, "RMT non initialisé");
     return;
@@ -426,7 +429,8 @@ static bool configure_rmt_channel(void) {
 }
 
 // Remplit toutes les LEDs avec une couleur
-static void fill_solid(rgb_t color) {
+// IRAM_ATTR: opération de base utilisée dans plusieurs effets
+static void IRAM_ATTR fill_solid(rgb_t color) {
   for (int i = 0; i < led_count; i++) {
     leds[i] = color;
   }

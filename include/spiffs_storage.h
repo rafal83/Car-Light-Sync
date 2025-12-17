@@ -46,15 +46,6 @@ esp_err_t spiffs_delete_file(const char *path);
 bool spiffs_file_exists(const char *path);
 
 /**
- * @brief Liste tous les fichiers d'un répertoire
- * @param dir_path Chemin du répertoire (ex: "/spiffs/profiles")
- * @param files Buffer pour stocker les noms de fichiers (tableau de pointeurs)
- * @param max_files Nombre maximum de fichiers à lister
- * @return Nombre de fichiers trouvés
- */
-int spiffs_list_files(const char *dir_path, char **files, int max_files);
-
-/**
  * @brief Obtient la taille d'un fichier
  * @param path Chemin du fichier
  * @return Taille en bytes, -1 si erreur
