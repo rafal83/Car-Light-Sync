@@ -1367,3 +1367,355 @@ button {
     30% { color: var(--color-success); }
     100% { color: var(--color-text); }
 }
+
+/* =================================
+   UTILITY CLASSES
+   ================================= */
+
+/* Margin utilities */
+.mt-8 { margin-top: 8px; }
+.mt-10 { margin-top: 10px; }
+.mt-12 { margin-top: 12px; }
+.mt-15 { margin-top: 15px; }
+.mt-20 { margin-top: 20px; }
+.mt-30 { margin-top: 30px; }
+.mb-5 { margin-bottom: 5px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-15 { margin-bottom: 15px; }
+.mb-20 { margin-bottom: 20px; }
+.mx-6 { margin-left: 6px; margin-right: 6px; }
+
+/* Padding utilities */
+.p-10 { padding: 10px; }
+.p-15 { padding: 15px; }
+
+/* Flexbox utilities */
+.hidden { display: none !important; }
+.flex-row {
+    display: flex;
+    align-items: center;
+}
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.gap-10 { gap: 10px; }
+.gap-12 { gap: 12px; }
+.gap-15 { gap: 15px; }
+.flex-wrap { flex-wrap: wrap; }
+
+/* Width utilities */
+.w-100 { width: 100%; }
+.max-w-320 { max-width: 320px; }
+.w-120 { width: 120px; }
+
+/* Font utilities */
+.text-sm { font-size: 12px; }
+.text-md { font-size: 13px; }
+.text-muted { color: var(--color-muted); }
+.font-600 { font-weight: 600; }
+.font-bold { font-weight: bold; }
+.font-mono { font-family: monospace; }
+
+/* Background utilities */
+.bg-panel { background: var(--color-panel); }
+.bg-surface { background: var(--color-surface); }
+
+/* Border utilities */
+.border-radius-4 { border-radius: 4px; }
+.border-radius-6 { border-radius: 6px; }
+.border-radius-8 { border-radius: 8px; }
+.border-1 { border: 1px solid var(--color-input-border); }
+
+/* Warning/Info/Success boxes */
+.warning-box {
+    padding: 10px;
+    background: rgba(250, 204, 21, 0.1);
+    border-left: 3px solid #FACC15;
+    font-size: 13px;
+    margin-top: 10px;
+}
+.info-box {
+    padding: 10px;
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid #3B82F6;
+    font-size: 13px;
+    margin-top: 10px;
+}
+.info-box-cyan {
+    background: var(--color-info);
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+.info-box-cyan small {
+    color: var(--color-text);
+}
+.info-box-blue {
+    padding: 10px;
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid #3B82F6;
+    font-size: 13px;
+    margin-top: 10px;
+}
+.info-box-green {
+    padding: 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 3px solid #10B981;
+    font-size: 13px;
+    margin-top: 10px;
+}
+.info-box-orange {
+    padding: 10px;
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 3px solid #F59E0B;
+    font-size: 13px;
+    margin-top: 10px;
+}
+.success-box {
+    padding: 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 3px solid #10B981;
+    font-size: 13px;
+    margin-top: 10px;
+}
+.danger-box {
+    padding: 10px;
+    background: rgba(232, 33, 39, 0.1);
+    border-left: 3px solid #E82127;
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+/* Storage bar */
+.storage-bar {
+    width: 100%;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.storage-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336);
+    transition: width 0.3s;
+}
+
+/* Storage info container */
+.storage-info-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.storage-text {
+    font-size: 0.9em;
+    color: #aaa;
+}
+.storage-bar {
+    width: 100%;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.storage-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336);
+    transition: width 0.3s;
+}
+
+/* Logs container */
+.logs-container {
+    margin-top: 15px;
+    background: #1f2937;
+    border-radius: 4px;
+    padding: 10px;
+    max-height: 600px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #10b981;
+}
+
+/* OTA Styles */
+.ota-version-box {
+    padding: 12px;
+    background: var(--color-panel);
+    border-radius: 4px;
+    font-weight: bold;
+    border: 1px solid var(--color-input-border);
+}
+.ota-progress-container,
+.ota-progress-panel {
+    background: var(--color-panel);
+    border-radius: 4px;
+    padding: 15px;
+    border: 1px solid var(--color-input-border);
+}
+.ota-progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.ota-progress-bar-container,
+.ota-progress-track {
+    background: var(--color-input-border);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.ota-progress-bar-fill {
+    background: #E82127;
+    height: 100%;
+    transition: width 0.3s;
+}
+.ota-status-message {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--color-muted);
+}
+.ota-reboot-countdown {
+    margin-top: 6px;
+    font-size: 14px;
+    color: #FACC15;
+}
+
+/* FFT Status Box */
+.fft-status-box {
+    background: var(--color-surface);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+}
+.fft-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.fft-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.fft-spectrum-container {
+    margin-top: 15px;
+}
+.fft-spectrum-title {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+.fft-spectrum-canvas {
+    width: 100%;
+    max-width: 600px;
+    background: #000;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+}
+
+/* Audio data grid */
+.audio-data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    font-size: 14px;
+}
+
+/* Audio calibration box */
+.audio-calibration-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--color-panel);
+    border-radius: 6px;
+}
+.audio-calibration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.audio-calibration-status {
+    font-weight: 600;
+    color: var(--color-muted);
+}
+.audio-calibration-details {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin-top: 4px;
+}
+.audio-calibration-hint {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin: 8px 0 0 0;
+}
+
+/* Audio data section */
+.audio-data-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--color-panel);
+    border-radius: 6px;
+}
+.audio-data-title {
+    margin: 0 0 15px 0;
+}
+
+/* Modal styles enhancement */
+.modal-title {
+    margin-bottom: 20px;
+}
+.modal-input {
+    margin-bottom: 20px;
+}
+
+/* Config table */
+.config-table {
+    margin-top: 10px;
+}
+
+/* Red color for danger zone */
+.color-red {
+    color: #E82127;
+}
+
+/* Padding and margin for profile section header */
+.profile-header-description {
+    margin: 6px 0 0 0;
+    color: var(--color-muted);
+}
+
+/* Control zero margin */
+.m-0 { margin: 0; }
+
+/* Grid for live audio/FFT data */
+.live-data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    font-size: 14px;
+}
+
+/* FFT value colors */
+.fft-value-green { color: #4CAF50; }
+.fft-value-blue { color: #2196F3; }
+
+/* Danger zone styling */
+.danger-zone-section {
+    border: 2px solid #E82127;
+}
+.danger-zone-title {
+    color: #E82127;
+}

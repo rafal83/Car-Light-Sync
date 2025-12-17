@@ -151,14 +151,13 @@
                   <option value="-1" data-i18n="profiles.loading"></option>
                 </select>
               </div>
-              <div class="control-group" id="storage-info" style="margin-top: 10px; display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+              <div class="control-group mt-10" id="storage-info" style="display: none;">
+                <div class="storage-info-container">
                   <label class="control-label" data-i18n="profiles.storage"></label>
-                  <span id="storage-text" style="font-size: 0.9em; color: #aaa;">-</span>
+                  <span id="storage-text" class="storage-text">-</span>
                 </div>
-                <div style="width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden;">
-                  <div id="storage-bar"
-                    style="height: 100%; background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336); width: 0%; transition: width 0.3s;">
+                <div class="storage-bar">
+                  <div id="storage-bar" class="storage-bar-fill" style="width: 0%;">
                   </div>
                 </div>
               </div>
@@ -189,13 +188,13 @@
                 </div>
                 <span class="toggle-label" data-i18n="profiles.dynamicBrightnessEnable"></span>
               </label>
-              <div class="control-group" style="margin-top: 15px;">
+              <div class="control-group mt-15">
                 <label class="control-label" data-i18n="profiles.dynamicBrightnessRate"></label>
                 <div class="slider-container">
                   <input type="range" id="dynamic-brightness-rate" min="1" max="100" value="50">
                   <span class="slider-value" id="dynamic-brightness-rate-value">50%</span>
                 </div>
-                <p style="font-size: 12px; color: var(--color-muted); margin-top: 8px;"
+                <p class="text-sm text-muted mt-8"
                   data-i18n="profiles.dynamicBrightnessHelp">
                 </p>
               </div>
@@ -238,7 +237,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="control-group" style="margin: 0;">
+                <div class="control-group m-0">
                   <label class="control-label" data-i18n="eventsConfig.segmentRange"></label>
                   <div class="segment-range-container">
                     <div class="segment-range-slider" id="default-segment-range">
@@ -277,8 +276,8 @@
                   </label>
                 </div>
                 <hr>
-                <div class="default-effect-stack">                  
-                  <div class="control-group" style="margin: 0;">
+                <div class="default-effect-stack">
+                  <div class="control-group m-0">
                     <label class="toggle-container" for="default-accel-pedal-enabled">
                       <div class="toggle-switch">
                         <input type="checkbox" id="default-accel-pedal-enabled">
@@ -289,7 +288,7 @@
                     <p class="default-effect-subtitle" data-i18n="effects.accelPedalEnabledDesc">
                     </p>
                   </div>
-                  <div class="control-group" style="margin: 0;">
+                  <div class="control-group m-0">
                     <label class="control-label" data-i18n="effects.accelPedalOffset"></label>
                     <div class="slider-container">
                       <input type="range" id="default-accel-pedal-offset-slider" min="0" max="100" value="0">
@@ -310,14 +309,13 @@
           <div id="events-loading" class="loading" data-i18n="eventsConfig.loading">
           </div>
           <div id="events-content" style="display: none;">
-            <p style="margin-bottom: 20px; color: var(--color-muted); font-size: 14px;"
+            <p class="mb-20 text-muted text-md"
               data-i18n="eventsConfig.description">
             </p>
-            <div class="control-group" style="margin-bottom: 20px;">
+            <div class="control-group mb-20">
               <label class="control-label" data-i18n="eventsConfig.filter"></label>
               <input type="text" id="events-filter-input" data-i18n-placeholder="eventsConfig.filterPlaceholder"
-                oninput="filterEvents(this.value)"
-                style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--color-input-border); background: var(--color-input); color: var(--color-text);">
+                oninput="filterEvents(this.value)">
             </div>
             <div class="events-accordion-wrapper">
               <div id="events-accordion-container">
@@ -599,7 +597,7 @@
                 <h3 data-i18n="config.wheelSettings"></h3>
               </div>
               <div class="profile-section-content">
-                <div class="control-row" style="margin-top: 12px;">
+                <div class="control-row mt-10">
                   <label class="toggle-container" for="wheel-control-toggle">
                     <div class="toggle-switch">
                       <input type="checkbox" id="wheel-control-toggle" onchange="saveHardwareConfig()">
@@ -610,15 +608,15 @@
                 </div>
                 <div class="control-group">
                   <label class="control-label" data-i18n="config.wheelControlDesc"></label>
-                  <div style="display: flex; gap: 10px; align-items: center; max-width: 320px;">
-                    <input type="number" id="wheel-speed-limit" min="0" max="100" step="5" value="5" style="width: 120px;"
+                  <div class="flex-row gap-10 max-w-320">
+                    <input type="number" id="wheel-speed-limit" min="0" max="100" step="5" value="5" class="w-120"
                       onchange="saveHardwareConfig()">
                     <span data-i18n="config.wheelSpeedLimit"></span>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="button-group" style="margin-top: 20px;">
+            <div class="button-group mt-20">
               <button class="btn-secondary" onclick="loadHardwareConfig()"
                 data-i18n="config.reload"></button>
               <button class="btn-danger" onclick="restartDevice()" data-i18n="config.restart"></button>
@@ -629,12 +627,12 @@
           <div class="profile-section" id="audio-section">
             <div class="profile-section-header">
               <h3 data-i18n="audio.title"></h3>
-              <p style="padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px; margin-top: 10px;"
+              <p class="warning-box"
                 data-i18n="audio.warning">
               </p>
             </div>
             <div class="profile-section-content">
-              <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+              <div class="flex-row gap-15 mb-15">
                 <label class="toggle-container" for="audio-enable">
                   <div class="toggle-switch">
                     <input type="checkbox" id="audio-enable" onchange="toggleAudio(this.checked)">
@@ -642,7 +640,7 @@
                   </div>
                   <span class="toggle-label" data-i18n="audio.enable"></span>
                 </label>
-                <span id="audio-status" style="font-weight: bold; color: var(--color-muted);"
+                <span id="audio-status" class="font-bold text-muted"
                   data-i18n="audio.disabled"></span>
               </div>
 
@@ -674,34 +672,30 @@
                 </label>
               </div>
 
-              <div id="audio-calibration-box" class="section"
-                style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
-                <div
-                  style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <div id="audio-calibration-box" class="audio-calibration-box">
+                <div class="audio-calibration-header">
                   <div>
                     <div class="section-title" data-i18n="audio.calibrationTitle"></div>
-                    <div id="audio-calibration-status" style="font-weight: 600; color: var(--color-muted);"
+                    <div id="audio-calibration-status" class="audio-calibration-status"
                       data-i18n="audio.notCalibrated"></div>
-                    <div style="font-size: 13px; color: var(--color-muted); margin-top: 4px;">
+                    <div class="audio-calibration-details">
                       <span data-i18n="audio.calibrationNoise"></span>: <strong
                         id="audio-calibration-noise">-</strong>
-                      <span style="margin: 0 6px;">|</span>
+                      <span class="mx-6">|</span>
                       <span data-i18n="audio.calibrationPeak"></span>: <strong id="audio-calibration-peak">-</strong>
                     </div>
                   </div>
                   <button id="audio-calibrate-btn" class="btn-primary" onclick="startAudioCalibration()"
                     data-i18n="audio.calibrate"></button>
                 </div>
-                <p style="font-size: 12px; color: var(--color-muted); margin: 8px 0 0 0;"
+                <p class="audio-calibration-hint"
                   data-i18n="audio.calibrationHint">
                 </p>
               </div>
 
-              <div id="audio-data" class="section"
-                style="margin-top: 20px; padding: 15px; background: var(--color-panel); border-radius: 6px;">
-                <h4 style="margin: 0 0 15px 0;" data-i18n="audio.liveData"></h4>
-                <div
-                  style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">
+              <div id="audio-data" class="audio-data-section">
+                <h4 class="audio-data-title" data-i18n="audio.liveData"></h4>
+                <div class="audio-data-grid">
                   <div>
                     <span data-i18n="audio.amplitude"></span>:
                     <strong id="audio-amplitude-value">-</strong>
@@ -734,30 +728,28 @@
               </div>
 
               <!-- FFT Advanced Mode -->
-              <div id="audio-fft-data" class="section" style="margin-top: 30px;">
+              <div id="audio-fft-data" class="section mt-30">
                 <div class="section-title" data-i18n="fft.title"></div>
 
-                <div
-                  style="background: var(--color-info); padding: 10px 15px; border-radius: 6px; margin-bottom: 15px;">
-                  <small style="color: var(--color-text);" data-i18n="fft.autoInfo">
+                <div class="info-box-cyan">
+                  <small data-i18n="fft.autoInfo">
                   </small>
                 </div>
 
-                <div id="fftStatusBox" style="display: none; margin-top: 10px;">
-                  <div
-                    style="background: var(--color-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--color-border);">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <div id="fftStatusBox" class="mt-10" style="display: none;">
+                  <div class="fft-status-box">
+                    <div class="fft-grid-2">
                       <div>
                         <span data-i18n="fft.peakFreq"></span>:
-                        <strong id="fftPeakFreq" style="color: #4CAF50;">-</strong> Hz
+                        <strong id="fftPeakFreq" class="fft-value-green">-</strong> Hz
                       </div>
                       <div>
                         <span data-i18n="fft.centroid"></span>:
-                        <strong id="fftCentroid" style="color: #2196F3;">-</strong> Hz
+                        <strong id="fftCentroid" class="fft-value-blue">-</strong> Hz
                       </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div class="fft-grid-3">
                       <div>
                         <span data-i18n="fft.kick"></span>:
                         <strong id="fftKick">-</strong>
@@ -773,10 +765,10 @@
                     </div>
 
                     <!-- Canvas pour visualisation spectre -->
-                    <div style="margin-top: 15px;">
-                      <div style="font-weight: 500; margin-bottom: 8px;" data-i18n="fft.spectrum"></div>
+                    <div class="fft-spectrum-container">
+                      <div class="fft-spectrum-title" data-i18n="fft.spectrum"></div>
                       <canvas id="fftSpectrumCanvas" width="600" height="200"
-                        style="width: 100%; max-width: 600px; background: #000; border-radius: 4px; border: 1px solid var(--color-border);"></canvas>
+                        class="fft-spectrum-canvas"></canvas>
                     </div>
                   </div>
                 </div>
@@ -785,10 +777,10 @@
           </div>
 
           <!-- Section: Zone Dangereuse -->
-          <div class="profile-section" style="border: 2px solid #E82127;">
+          <div class="profile-section danger-zone-section">
             <div class="profile-section-header">
-              <h3 style="color: #E82127;" data-i18n="config.dangerZone"></h3>
-              <p style="padding: 10px; background: rgba(232, 33, 39, 0.1); border-left: 3px solid #E82127; font-size: 13px; margin-top: 10px;"
+              <h3 class="danger-zone-title" data-i18n="config.dangerZone"></h3>
+              <p class="danger-box"
                 data-i18n="config.factoryResetWarning">
               </p>
             </div>
@@ -813,7 +805,7 @@
           <div class="profile-section">
             <div class="profile-section-header">
               <h3 data-i18n="espnow.configTitle"></h3>
-              <p style="margin: 6px 0 0 0; color: var(--color-muted);" data-i18n="espnow.configDescription">
+              <p class="profile-header-description" data-i18n="espnow.configDescription">
               </p>
             </div>
             <div class="profile-section-content">
@@ -867,7 +859,7 @@
                   </div>
                 </div>
               </div>
-              <div class="button-group" style="margin-top: 15px;">
+              <div class="button-group mt-15">
                 <button class="btn-primary" id="espnow-pairing-button" onclick="startEspnowPairing()" data-i18n="config.espnowPairing"></button>
               </div>
             </div>
@@ -876,11 +868,11 @@
           <div class="profile-section" id="espnow-peers-section" style="display: none;">
             <div class="profile-section-header">
               <h3 data-i18n="espnow.peersTitle"></h3>
-              <p id="espnow-peers-subtitle" style="margin: 6px 0 0 0; color: var(--color-muted);" data-i18n="espnow.peersSubtitle"></p>
+              <p id="espnow-peers-subtitle" class="profile-header-description" data-i18n="espnow.peersSubtitle"></p>
             </div>
             <div class="profile-section-content">
-              <div id="espnow-peers-empty" style="color: var(--color-muted);" data-i18n="espnow.noPeers"></div>
-              <table class="config-table" style="margin-top: 10px; display: none;" id="espnow-peers-table">
+              <div id="espnow-peers-empty" class="text-muted" data-i18n="espnow.noPeers"></div>
+              <table class="config-table mt-10" style="display: none;" id="espnow-peers-table">
                 <thead>
                   <tr>
                     <th data-i18n="espnow.role"></th>
@@ -894,7 +886,7 @@
                 </thead>
                 <tbody id="espnow-peers-body"></tbody>
               </table>
-              <div class="button-group" style="margin-top: 10px;">
+              <div class="button-group mt-10">
                 <button class="btn-secondary" onclick="refreshEspnowPeers()" data-i18n="espnow.refresh"></button>
               </div>
             </div>
@@ -911,22 +903,22 @@
             <div class="profile-section">
               <div class="profile-section-header">
                 <h3 data-i18n="server.gvretTitle"></h3>
-                <p style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; font-size: 13px; margin-top: 10px;"
+                <p class="info-box-blue"
                   data-i18n="server.gvretDescription">
                 </p>
               </div>
               <div class="profile-section-content">
                 <div class="control-group">
                   <label class="control-label" data-i18n="server.gvretStatus"></label>
-                  <div id="gvret-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
+                  <div id="gvret-status" class="font-600 text-muted">Chargement...</div>
                 </div>
                 <div class="control-group">
                   <label class="control-label" data-i18n="server.gvretClients"></label>
-                  <div id="gvret-clients" style="font-weight: 600;">0</div>
+                  <div id="gvret-clients" class="font-600">0</div>
                 </div>
                 <div class="control-group">
                   <label class="control-label" data-i18n="server.gvretPort"></label>
-                  <div style="font-weight: 600; font-family: monospace;">23</div>
+                  <div class="font-600 font-mono">23</div>
                 </div>
                 <label class="toggle-container" for="gvret-autostart">
                   <div class="toggle-switch">
@@ -935,7 +927,7 @@
                   </div>
                   <span class="toggle-label" data-i18n="server.autostart"></span>
                 </label>
-                <div class="button-group" style="margin-top: 15px;">
+                <div class="button-group mt-15">
                   <button class="btn-primary" onclick="toggleGvretTcp()" id="gvret-toggle-btn"
                     data-i18n="server.gvretStart"></button>
                 </div>
@@ -946,22 +938,22 @@
             <div class="profile-section">
               <div class="profile-section-header">
                 <h3 data-i18n="server.canserverTitle"></h3>
-                <p style="padding: 10px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #F59E0B; font-size: 13px; margin-top: 10px;"
+                <p class="info-box-orange"
                   data-i18n="server.canserverDescription">
                 </p>
               </div>
               <div class="profile-section-content">
                 <div class="control-group">
                   <label class="control-label" data-i18n="server.canserverStatus"></label>
-                  <div id="canserver-status" style="font-weight: 600; color: var(--color-muted);">Chargement...</div>
+                  <div id="canserver-status" class="font-600 text-muted">Chargement...</div>
                 </div>
                 <div class="control-group">
                   <label class="control-label" data-i18n="server.canserverClients"></label>
-                  <div id="canserver-clients" style="font-weight: 600;">0</div>
+                  <div id="canserver-clients" class="font-600">0</div>
                 </div>
                 <div class="control-group">
                   <label class="control-label" data-i18n="server.canserverPort"></label>
-                  <div style="font-weight: 600; font-family: monospace;">1338</div>
+                  <div class="font-600 font-mono">1338</div>
                 </div>
                 <label class="toggle-container" for="canserver-autostart">
                   <div class="toggle-switch">
@@ -971,7 +963,7 @@
                   </div>
                   <span class="toggle-label" data-i18n="server.autostart"></span>
                 </label>
-                <div class="button-group" style="margin-top: 15px;">
+                <div class="button-group mt-15">
                   <button class="btn-primary" onclick="toggleCanserver()" id="canserver-toggle-btn"
                     data-i18n="server.canserverStart"></button>
                 </div>
@@ -989,23 +981,21 @@
           <div class="profile-section">
             <div class="profile-section-header">
               <h3 data-i18n="logs.streamTitle"></h3>
-              <p style="padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; font-size: 13px; margin-top: 10px;"
+              <p class="info-box-green"
                 data-i18n="logs.description">
               </p>
             </div>
             <div class="profile-section-content">
               <div class="control-group">
-                <label class="control-label" data-i18n="logs.status"></label>
-                <div id="logs-status" style="font-weight: 600; color: var(--color-muted);">Déconnecté</div>
+                <label class="control-label" data-i18n="logs.statusLabel"></label>
+                <div id="logs-status" class="font-600 text-muted" data-i18n="logs.disconnected"></div>
               </div>
-              <div class="button-group" style="margin-top: 15px;">
+              <div class="button-group mt-15">
                 <button class="btn-primary" onclick="toggleLiveLogs()" id="logs-toggle-btn"
                   data-i18n="logs.start"></button>
                 <button class="btn-secondary" onclick="clearLogs()" data-i18n="logs.clear"></button>
               </div>
-              <div
-                style="margin-top: 15px; background: #1f2937; border-radius: 4px; padding: 10px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #10b981;"
-                id="logs-container">
+              <div class="logs-container" id="logs-container">
                 <div data-i18n="logs.empty"></div>
               </div>
             </div>
@@ -1023,9 +1013,7 @@
               <h3 data-i18n="ota.currentVersion"></h3>
             </div>
             <div class="profile-section-content">
-              <div
-                style="padding: 12px; background: var(--color-panel); border-radius: 4px; font-weight: bold; border: 1px solid var(--color-input-border);"
-                id="ota-version">
+              <div class="ota-version-box" id="ota-version">
                 <span data-i18n="ota.loading"></span>
               </div>
             </div>
@@ -1035,8 +1023,7 @@
           <div class="profile-section">
             <div class="profile-section-header">
               <h3 data-i18n="ota.updateFirmware"></h3>
-              <div id="ota-ble-note"
-                style="display: none; margin-top: 10px; padding: 10px; background: rgba(250, 204, 21, 0.1); border-left: 3px solid #FACC15; font-size: 13px;"
+              <div id="ota-ble-note" class="warning-box" style="display: none;"
                 data-i18n="ota.bleNote">
               </div>
             </div>
@@ -1045,25 +1032,21 @@
                 <label class="control-label" data-i18n="ota.firmwareFile"></label>
                 <input type="file" id="firmware-file" accept=".bin">
               </div>
-              <div id="ota-progress-container" style="display: none; margin-top: 15px;">
-                <div
-                  style="background: var(--color-panel); border-radius: 4px; padding: 15px; border: 1px solid var(--color-input-border);">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <div id="ota-progress-container" class="mt-15" style="display: none;">
+                <div class="ota-progress-panel">
+                  <div class="ota-progress-header">
                     <span data-i18n="ota.progress"></span>
-                    <span id="ota-progress-percent" style="font-weight: bold;">0%</span>
+                    <span id="ota-progress-percent" class="font-bold">0%</span>
                   </div>
-                  <div
-                    style="background: var(--color-input-border); height: 8px; border-radius: 4px; overflow: hidden;">
-                    <div id="ota-progress-bar"
-                      style="background: #E82127; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                  <div class="ota-progress-track">
+                    <div id="ota-progress-bar" class="ota-progress-bar-fill" style="width: 0%;"></div>
                   </div>
-                  <div id="ota-status-message" style="margin-top: 10px; font-size: 14px; color: var(--color-muted);">
+                  <div id="ota-status-message" class="ota-status-message">
                   </div>
-                  <div id="ota-reboot-countdown"
-                    style="margin-top: 6px; font-size: 14px; color: #FACC15; display: none;"></div>
+                  <div id="ota-reboot-countdown" class="ota-reboot-countdown" style="display: none;"></div>
                 </div>
               </div>
-              <div class="button-group" style="margin-top: 15px;">
+              <div class="button-group mt-15">
                 <button class="btn-primary" onclick="uploadFirmware()" id="ota-upload-btn"
                   data-i18n="ota.upload"></button>
                 <button class="btn-secondary" onclick="restartDevice()" id="ota-restart-btn" style="display: none;"
@@ -1076,9 +1059,9 @@
       <!-- Modal pour nouveau profil -->
       <div id="newProfileModal" class="modal">
         <div class="modal-content">
-          <h3 style="margin-bottom: 20px;" data-i18n="profiles.newProfileTitle"></h3>
+          <h3 class="mb-20" data-i18n="profiles.newProfileTitle"></h3>
           <input type="text" id="new-profile-name" data-i18n-placeholder="profiles.profileName"
-            style="margin-bottom: 20px;">
+            class="modal-input mb-20">
           <button class="btn-primary" onclick="createProfile()" data-i18n="profiles.create"></button>
           <button class="btn-secondary" onclick="hideNewProfileDialog()" data-i18n="profiles.cancel"></button>
         </div>
@@ -1086,9 +1069,9 @@
       <!-- Modal pour renommer un profil -->
       <div id="renameProfileModal" class="modal">
         <div class="modal-content">
-          <h3 style="margin-bottom: 20px;" data-i18n="profiles.renameProfileTitle"></h3>
+          <h3 class="mb-20" data-i18n="profiles.renameProfileTitle"></h3>
           <input type="text" id="rename-profile-name" data-i18n-placeholder="profiles.profileName"
-            style="margin-bottom: 20px;">
+            class="modal-input mb-20">
           <button class="btn-primary" onclick="renameProfile()" data-i18n="profiles.rename"></button>
           <button class="btn-secondary" onclick="hideRenameProfileDialog()" data-i18n="profiles.cancel"></button>
         </div>

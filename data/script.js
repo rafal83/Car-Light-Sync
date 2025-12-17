@@ -1590,7 +1590,7 @@ function filterEvents(searchText) {
             noResultsMsg.className = 'events-no-results';
             noResultsMsg.style.cssText = 'padding: 20px; text-align: center; color: var(--color-muted);';
             noResultsMsg.setAttribute('data-i18n', 'eventsConfig.noResults');
-            noResultsMsg.textContent = t('eventsConfig.noResults') || 'Aucun événement trouvé';
+            noResultsMsg.textContent = t('eventsConfig.noResults');
             container.appendChild(noResultsMsg);
         }
         noResultsMsg.style.display = 'block';
@@ -1955,12 +1955,12 @@ async function saveEspnowConfigImmediate() {
         refreshEspnowControls(data);
         applyEspnowVisibility();
         showNotification(ESPNOW_NOTIFICATION_CONFIG,
-            t('config.espnowSaved') || 'Config ESP-NOW sauvegardée. Redémarrage requis.',
+            t('config.espnowSaved'),
             'success');
     } catch (e) {
         console.error('Failed to save ESP-NOW config', e);
         showNotification(ESPNOW_NOTIFICATION_CONFIG,
-            t('config.espnowSaveError') || 'Erreur sauvegarde ESP-NOW',
+            t('config.espnowSaveError'),
             'error');
     }
 }
@@ -2014,14 +2014,14 @@ async function disconnectEspnow() {
         const response = await fetch(API_BASE + '/api/espnow/disconnect', { method: 'POST' });
         const result = await response.json();
         if (response.ok && result.st === 'ok') {
-            showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectSuccess') || 'Déconnexion ESP-NOW effectuée', 'success');
+            showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectSuccess'), 'success');
             loadEspnowConfig();
         } else {
-            showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectError') || 'Erreur déconnexion ESP-NOW', 'error');
+            showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectError'), 'error');
         }
     } catch (e) {
         console.error('Erreur:', e);
-        showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectError') || 'Erreur déconnexion ESP-NOW', 'error');
+        showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectError'), 'error');
     }
 }
 
@@ -2063,7 +2063,7 @@ function updateEspnowStatus(cfg) {
     if (!cfg) return;
     const statusEl = $('espnow-status');
     if (statusEl) {
-        const roleLabel = cfg.role === 'master' ? (t('config.espnowRoleMaster') || 'Master') : (t('config.espnowRoleSlave') || 'Slave');
+        const roleLabel = cfg.role === 'master' ? (t('config.espnowRoleMaster')) : (t('config.espnowRoleSlave'));
         const typeLabel = translateSlaveType(cfg.type) || roleLabel;
         statusEl.textContent = cfg.role === 'slave' ? typeLabel : roleLabel;
     }
@@ -2075,15 +2075,15 @@ function updateEspnowStatus(cfg) {
 
     const pairingEl = $('espnow-pairing-state');
     if (pairingEl) {
-        pairingEl.textContent = cfg.pairing ? (t('espnow.pairingActive') || 'Appairage en cours') : (t('espnow.pairingIdle') || 'Appairage inactif');
+        pairingEl.textContent = cfg.pairing ? (t('espnow.pairingActive')) : (t('espnow.pairingIdle'));
     }
 
     const summaryEl = $('espnow-role-summary');
     if (summaryEl) {
         if (cfg.role === 'master') {
-            summaryEl.textContent = t('espnow.roleSummaryMaster') || 'Role master (envoi vers les slaves).';
+            summaryEl.textContent = t('espnow.roleSummaryMaster');
         } else {
-            summaryEl.textContent = (t('espnow.roleSummarySlave') || 'Role slave, type {0}').replace('{0}', cfg.type || 'none');
+            summaryEl.textContent = (t('espnow.roleSummarySlave')).replace('{0}', cfg.type || 'none');
         }
     }
     currentEspnowRole = cfg.role || currentEspnowRole;
@@ -2102,7 +2102,7 @@ function updateEspnowStatus(cfg) {
                     : (master.last_seen_us ? Math.max(0, Math.round((Date.now() * 1000 - master.last_seen_us) / 1000)) : 0);
                 $('espnow-master-last').textContent = lastMs ? `${lastMs} ms` : '--';
             } else {
-                $('espnow-master-mac').textContent = t('espnow.masterMissing') || 'Aucun master connecté';
+                $('espnow-master-mac').textContent = t('espnow.masterMissing');
                 $('espnow-master-id').textContent = '--';
                 $('espnow-master-channel').textContent = '--';
                 $('espnow-master-last').textContent = '--';
@@ -2130,17 +2130,17 @@ function refreshEspnowControls(cfg) {
 
     if (pairing) {
         btn.disabled = true;
-        btn.textContent = t('espnow.pairingInProgress') || 'Appairage en cours...';
+        btn.textContent = t('espnow.pairingInProgress');
         btn.onclick = null;
         return;
     }
 
     btn.disabled = false;
     if (isSlave && connected) {
-        btn.textContent = t('espnow.disconnect') || 'Déconnexion';
+        btn.textContent = t('espnow.disconnect');
         btn.onclick = disconnectEspnow;
     } else {
-        btn.textContent = (t('config.espnowPairing') || "Démarrer l'appairage");
+        btn.textContent = (t('config.espnowPairing'));
         btn.onclick = startEspnowPairing;
     }
 }
@@ -2157,7 +2157,7 @@ async function refreshEspnowPeers() {
         const empty = $('espnow-peers-empty');
         const subtitle = $('espnow-peers-subtitle');
         if (subtitle) {
-            subtitle.textContent = t('espnow.peersSubtitleMaster') || 'Slaves découverts et connectés.';
+            subtitle.textContent = t('espnow.peersSubtitleMaster');
         }
         tbody.innerHTML = '';
         if (peers && peers.length > 0) {
@@ -2169,9 +2169,9 @@ async function refreshEspnowPeers() {
                 const actions = [];
                 const deviceHex = p.device_id ? ('0x' + Number(p.device_id).toString(16).toUpperCase()) : '--';
                 actions.push(`<button class="btn-secondary" onclick="sendEspnowTestFrame('${p.mac || ''}')">Test</button>`);
-                actions.push(`<button class="btn-danger" onclick="disconnectEspnowPeer('${p.mac || ''}')">${t('espnow.disconnect') || 'Déconnexion'}</button>`);
+                actions.push(`<button class="btn-danger" onclick="disconnectEspnowPeer('${p.mac || ''}')">${t('espnow.disconnect')}</button>`);
                 tr.innerHTML = `
-                    <td>${peerRole === 'master' ? (t('config.espnowRoleMaster') || 'Master') : (t('config.espnowRoleSlave') || 'Slave')}</td>
+                    <td>${peerRole === 'master' ? (t('config.espnowRoleMaster')) : (t('config.espnowRoleSlave'))}</td>
                     <td>${p.mac || '--'}</td>
                     <td>${translateSlaveType(p.type) || '--'}</td>
                     <td>${deviceHex}</td>
@@ -2185,12 +2185,12 @@ async function refreshEspnowPeers() {
             empty.style.display = 'none';
         } else {
             table.style.display = 'none';
-            empty.textContent = t('espnow.noPeers') || 'Aucun appareil connecté';
+            empty.textContent = t('espnow.noPeers');
             empty.style.display = '';
         }
     } catch (e) {
         console.error('Cannot load ESP-NOW peers', e);
-        showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.loadPeersError') || 'Erreur chargement appareils ESP-NOW', 'error');
+        showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.loadPeersError'), 'error');
     }
 }
 
@@ -2205,13 +2205,13 @@ async function sendEspnowTestFrame(mac) {
         });
         const result = await resp.json();
         if (resp.ok && result.st === 'ok') {
-            showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameSent') || 'Frame de test envoyée', 'success');
+            showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameSent'), 'success');
         } else {
-            showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameError') || 'Erreur envoi frame de test', 'error');
+            showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameError'), 'error');
         }
     } catch (e) {
         console.error('Cannot send test frame', e);
-        showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameError') || 'Erreur envoi frame de test', 'error');
+        showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameError'), 'error');
     }
 }
 
@@ -2225,14 +2225,14 @@ async function disconnectEspnowPeer(mac) {
         });
         const result = await resp.json();
         if (resp.ok && result.st === 'ok') {
-            showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.peerDisconnected') || 'Appareil déconnecté', 'success');
+            showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.peerDisconnected'), 'success');
             refreshEspnowPeers();
         } else {
-            showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.peerDisconnectError') || 'Erreur déconnexion appareil', 'error');
+            showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.peerDisconnectError'), 'error');
         }
     } catch (e) {
         console.error('Cannot disconnect peer', e);
-        showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.peerDisconnectError') || 'Erreur déconnexion appareil', 'error');
+        showNotification(ESPNOW_NOTIFICATION_PEERS, t('espnow.peerDisconnectError'), 'error');
     }
 }
 
@@ -2619,7 +2619,7 @@ async function updateStatus() {
             if (data.esn.lt_us > 0 && data.esn.lt_us !== lastEspnowTestUs) {
                 const isSlave = (currentEspnowRole === 'slave' || $('espnow-role')?.value === 'slave');
                 if (isSlave) {
-                    showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameReceived') || 'Frame de test reçue', 'success');
+                    showNotification(ESPNOW_NOTIFICATION_TEST, t('espnow.testFrameReceived'), 'success');
                 }
                 const espnowStatusEl = $('espnow-status');
                 if (espnowStatusEl) {
@@ -3979,14 +3979,14 @@ async function updateServerStatus(serverName, serverDisplayName) {
         const autostartCheckbox = $(`${serverName}-autostart`);
 
         if (data.running) {
-            statusDiv.textContent = t(`server.${serverName}Running`) || `Actif (Port ${data.port})`;
+            statusDiv.textContent = t(`server.${serverName}Running`);
             statusDiv.style.color = '#10b981';
-            toggleBtn.textContent = t(`server.${serverName}Stop`) || `Arrêter ${serverDisplayName}`;
+            toggleBtn.textContent = t(`server.${serverName}Stop`);
             toggleBtn.className = 'btn-secondary';
         } else {
-            statusDiv.textContent = t(`server.${serverName}Stopped`) || 'Arrêté';
+            statusDiv.textContent = t(`server.${serverName}Stopped`);
             statusDiv.style.color = 'var(--color-muted)';
-            toggleBtn.textContent = t(`server.${serverName}Start`) || `Activer ${serverDisplayName}`;
+            toggleBtn.textContent = t(`server.${serverName}Start`);
             toggleBtn.className = 'btn-primary';
         }
 
@@ -4070,11 +4070,11 @@ async function toggleServerAutostart(serverName, enabled) {
 
         if (data.status === 'ok') {
             showNotification('diagnostic',
-                t('server.autostartUpdated') || `Démarrage automatique ${enabled ? 'activé' : 'désactivé'} pour ${serverName.toUpperCase()}`,
+                t('server.autostartUpdated'),
                 'success');
         } else {
             showNotification('diagnostic',
-                t('server.autostartError') || `Erreur lors de la mise à jour du démarrage automatique`,
+                t('server.autostartError'),
                 'error');
             // Revert checkbox on error
             const checkbox = $(`${serverName}-autostart`);
@@ -4083,7 +4083,7 @@ async function toggleServerAutostart(serverName, enabled) {
     } catch (error) {
         console.error(`Failed to toggle ${serverName} autostart:`, error);
         showNotification('diagnostic',
-            t('server.autostartError') || 'Erreur lors de la communication avec le serveur',
+            t('server.autostartError'),
             'error');
         // Revert checkbox on error
         const checkbox = $(`${serverName}-autostart`);
@@ -4111,20 +4111,20 @@ function startLiveLogs() {
     const toggleBtn = $('logs-toggle-btn');
     const container = $('logs-container');
 
-    statusDiv.textContent = t('logs.connecting') || 'Connexion...';
+    statusDiv.textContent = t('logs.connecting');
     statusDiv.style.color = '#fbbf24';
-    toggleBtn.textContent = t('logs.stop') || 'Arrêter les logs';
+    toggleBtn.textContent = t('logs.stop');
     toggleBtn.className = 'btn-secondary';
 
     // Clear existing logs
-    container.innerHTML = '<div style="color: #10b981;">Connexion au flux de logs...</div>';
+    container.innerHTML = '<div style="color: #10b981;">' + t('logs.statusClear') + '</div>';
     logLineCount = 0;
 
     // Create EventSource connection
     logsEventSource = new EventSource(API_BASE + '/api/logs/stream');
 
     logsEventSource.onopen = function() {
-        statusDiv.textContent = t('logs.connected') || 'Connecté';
+        statusDiv.textContent = t('logs.connected');
         statusDiv.style.color = '#10b981';
         container.innerHTML = '';
         appendLog('info', 'LOGS', 'Flux de logs connecté');
@@ -4141,7 +4141,7 @@ function startLiveLogs() {
 
     logsEventSource.onerror = function(error) {
         console.error('SSE connection error:', error);
-        statusDiv.textContent = t('logs.error') || 'Erreur de connexion';
+        statusDiv.textContent = t('logs.error');
         statusDiv.style.color = '#ef4444';
 
         if (logsEnabled) {
@@ -4162,9 +4162,9 @@ function stopLiveLogs() {
     const statusDiv = $('logs-status');
     const toggleBtn = $('logs-toggle-btn');
 
-    statusDiv.textContent = t('logs.disconnected') || 'Déconnecté';
+    statusDiv.textContent = t('logs.disconnected');
     statusDiv.style.color = 'var(--color-muted)';
-    toggleBtn.textContent = t('logs.start') || 'Activer les logs';
+    toggleBtn.textContent = t('logs.start');
     toggleBtn.className = 'btn-primary';
 
     if (logsEventSource) {

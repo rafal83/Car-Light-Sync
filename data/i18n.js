@@ -508,7 +508,8 @@ const translations = {
       streamTitle: "Flux de Logs Système",
       description:
         "Affichage des logs système en temps réel via Server-Sent Events (WiFi uniquement)",
-      status: "État :",
+      statusLabel: "État :",
+      statusClear: "Connexion au flux de logs...",
       start: "Activer les logs",
       stop: "Arrêter les logs",
       clear: "Effacer",
@@ -1053,7 +1054,8 @@ const translations = {
       streamTitle: "System Log Stream",
       description:
         "Real-time system logs display via Server-Sent Events (WiFi only)",
-      status: "Status:",
+      statusLabel: "Status:",
+      statusClear: "Connecting to log stream...",
       start: "Enable logs",
       stop: "Stop logs",
       clear: "Clear",
