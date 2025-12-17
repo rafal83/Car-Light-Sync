@@ -74,11 +74,13 @@ static bool has_active_clients     = false; // Cached client status for fast che
  * [4-7]   : f2 (uint32_t LE) - (length & 0x0F) | (busId << 4)
  * [8-15]  : data[8] (uint8_t[8]) - CAN payload (zero-padded if DLC < 8)
  *
+ * IRAM_ATTR: Called for every CAN frame received (~2000 fps), pure encoding logic
+ *
  * @param bus Bus number (0 or 1)
  * @param msg TWAI message
  * @param out_frame Output buffer (must be at least 16 bytes)
  */
-static void encode_panda_frame(int bus, const twai_message_t *msg, uint8_t *out_frame) {
+static void IRAM_ATTR encode_panda_frame(int bus, const twai_message_t *msg, uint8_t *out_frame) {
   // Clear output buffer
   memset(out_frame, 0, PANDA_MSG_SIZE);
 

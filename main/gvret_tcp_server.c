@@ -69,12 +69,14 @@ static bool has_active_clients         = false; // Cached client status for fast
  * GVRET frame format (13-21 bytes):
  * [0xF1] [cmd=0x00] [timestamp:4] [id:4] [dlc+bus] [data:0-8]
  *
+ * IRAM_ATTR: Called for every CAN frame received (~2000 fps), pure encoding logic
+ *
  * @param bus Bus number (0 or 1)
  * @param msg TWAI message
  * @param out_frame Output buffer (must be at least 21 bytes)
  * @return Frame length in bytes
  */
-static int encode_gvret_frame(int bus, const twai_message_t *msg, uint8_t *out_frame) {
+static int IRAM_ATTR encode_gvret_frame(int bus, const twai_message_t *msg, uint8_t *out_frame) {
   int idx            = 0;
 
   // Frame start marker
