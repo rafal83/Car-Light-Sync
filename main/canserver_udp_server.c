@@ -29,7 +29,7 @@ static const char *TAG = "CANSERVER_UDP";
 // - Serveur envoie des paquets UDP contenant des frames (16 bytes chacune)
 // - Client doit renvoyer un ping toutes les 5 secondes pour maintenir la connexion
 //
-// Format d'une frame (16 bytes total) (CANServer / Panda UDP binaire) :
+// Frame format (16 bytes total) (CANServer / Panda binary UDP):
 // [0-3]   : f1 (uint32_t LE) - (CAN ID << 21) | (extended << 31)
 // [4-7]   : f2 (uint32_t LE) - (length & 0x0F) | (busId << 4)
 // [8-15]  : data[8] (uint8_t[8]) - CAN payload (zero-padded if DLC < 8)
@@ -239,7 +239,7 @@ static void canserver_tx_task(void *arg) {
 
   while (server_running) {
     // Wait a bit to accumulate frames (keep small to limit drops)
-    vTaskDelay(pdMS_TO_TICKS(10)); // 10ms batching interval
+    vTaskDelay(pdMS_TO_TICKS(1)); // 10ms batching interval
 
     // Remove stale clients
     remove_stale_clients();
@@ -294,7 +294,7 @@ static void canserver_tx_task(void *arg) {
             // Buffer full, wait and retry
             retry_count++;
             if (retry_count < max_retries) {
-              vTaskDelay(pdMS_TO_TICKS(20)); // Wait 20ms before retry
+              vTaskDelay(pdMS_TO_TICKS(5)); // Wait 20ms before retry
             }
           } else if (sent < 0) {
             // Other error (or ENOMEM after max retries), don't retry

@@ -19,7 +19,7 @@ static size_t rmt_encode_led_strip(rmt_encoder_t *encoder, rmt_channel_handle_t 
   size_t encoded_symbols               = 0;
 
   switch (led_encoder->state) {
-  case 0: // Envoyer les données RGB
+  case 0: // Send RGB data
     encoded_symbols += bytes_encoder->encode(bytes_encoder, channel, primary_data, data_size, &session_state);
     if (session_state & RMT_ENCODING_COMPLETE) {
       led_encoder->state = 1; // passer au reset

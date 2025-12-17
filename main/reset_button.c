@@ -17,7 +17,7 @@ static TaskHandle_t reset_button_task_handle = NULL;
 #define SHORT_PRESS_MAX_MS 2000
 
 /**
- * @brief Tâche de surveillance du bouton reset
+ * @brief Reset button monitoring task
  */
 static void reset_button_task(void *arg) {
   uint32_t press_start_time = 0;
@@ -27,59 +27,59 @@ static void reset_button_task(void *arg) {
   while (1) {
     int level = gpio_get_level(RESET_BUTTON_GPIO);
 
-    if (level == 0) { // Bouton appuyé (pull-up, donc 0 = appuyé)
+    if (level == 0) { // Button pressed (pull-up, so 0 = pressed)
       if (!button_pressed) {
         button_pressed   = true;
         reset_led_shown  = false;
         press_start_time = esp_log_timestamp();
-        ESP_LOGI(TAG, "Bouton reset appuyé");
+        ESP_LOGI(TAG, "Reset button pressed");
       } else {
         uint32_t press_duration = esp_log_timestamp() - press_start_time;
 
-        // Afficher la LED de reset dès 1 seconde d'appui
+        // Show the reset LED after 1 second of press
         if (press_duration >= 1000 && !reset_led_shown) {
-          ESP_LOGI(TAG, "Appui prolongé détecté, LED reset activée");
+          ESP_LOGI(TAG, "Long press detected, reset LED activated");
           status_led_set_state(STATUS_LED_FACTORY_RESET);
           reset_led_shown = true;
         }
 
         if (press_duration >= RESET_BUTTON_HOLD_TIME_MS) {
-          ESP_LOGW(TAG, "Bouton reset maintenu pendant %lu ms, factory reset!", press_duration);
+          ESP_LOGW(TAG, "Reset button held for %lu ms, factory reset!", press_duration);
           reset_button_factory_reset();
-          // Ne devrait jamais arriver ici car factory_reset redémarre
+          // Should never reach here because factory_reset restarts
         }
       }
-    } else { // Bouton relâché
+    } else { // Button released
       if (button_pressed) {
         uint32_t press_duration = esp_log_timestamp() - press_start_time;
-        ESP_LOGI(TAG, "Bouton reset relâché après %lu ms", press_duration);
+        ESP_LOGI(TAG, "Reset button released after %lu ms", press_duration);
         button_pressed  = false;
         reset_led_shown = false;
 
         if (press_duration >= SHORT_PRESS_MIN_MS && press_duration < SHORT_PRESS_MAX_MS) {
-            // Appui court
-            ESP_LOGI(TAG, "Appui court détecté");
+            // Short press
+            ESP_LOGI(TAG, "Short press detected");
             if (espnow_link_get_role() == ESP_NOW_ROLE_SLAVE) {
-                ESP_LOGI(TAG, "Mode esclave, déclenchement de l'appairage ESP-NOW");
+                ESP_LOGI(TAG, "Slave mode, triggering ESP-NOW pairing");
                 espnow_link_trigger_slave_pairing();
             } else {
-                ESP_LOGI(TAG, "Mode master, l'appui court ne fait rien");
+                ESP_LOGI(TAG, "Master mode, short press does nothing");
                 status_manager_update_led_now();
             }
         } else if (press_duration < RESET_BUTTON_HOLD_TIME_MS) {
-            // Appui trop court ou relâché avant le factory reset
-            ESP_LOGI(TAG, "Restauration de l'état LED normal");
+            // Press too short or released before factory reset
+            ESP_LOGI(TAG, "Restoring normal LED state");
             status_manager_update_led_now();
         }
       }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(100)); // Vérifier toutes les 100ms
+    vTaskDelay(pdMS_TO_TICKS(100)); // Check every 100ms
   }
 }
 
 esp_err_t reset_button_init(void) {
-  ESP_LOGI(TAG, "Initialisation bouton reset sur GPIO %d", RESET_BUTTON_GPIO);
+  ESP_LOGI(TAG, "Reset button init on GPIO %d", RESET_BUTTON_GPIO);
 
   gpio_config_t io_conf = {
       .pin_bit_mask = (1ULL << RESET_BUTTON_GPIO),
@@ -91,44 +91,44 @@ esp_err_t reset_button_init(void) {
 
   esp_err_t err = gpio_config(&io_conf);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur configuration GPIO bouton reset: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG, "Reset button GPIO config error: %s", esp_err_to_name(err));
     return err;
   }
 
-  // Créer la tâche de surveillance
+  // Create the monitoring task
   BaseType_t task_created = xTaskCreatePinnedToCore(reset_button_task, "reset_button", 2560, NULL, 5, &reset_button_task_handle, tskNO_AFFINITY);
 
   if (task_created != pdPASS) {
-    ESP_LOGE(TAG, "Erreur création tâche bouton reset");
+    ESP_LOGE(TAG, "Reset button task creation error");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "Bouton reset initialisé (appui court = appairage, appui 5s = factory reset)");
+  ESP_LOGI(TAG, "Reset button initialized (short press = pairing, 5s press = factory reset)");
   return ESP_OK;
 }
 
 void reset_button_factory_reset(void) {
   ESP_LOGW(TAG, "========================================");
-  ESP_LOGW(TAG, "   FACTORY RESET - EFFACEMENT NVS");
+  ESP_LOGW(TAG, "   FACTORY RESET - NVS ERASE");
   ESP_LOGW(TAG, "========================================");
 
-  // Changer la LED en mode reset
+  // Set the LED to reset mode
   status_led_set_state(STATUS_LED_FACTORY_RESET);
 
-  // Effacer tout le NVS
+  // Erase all NVS
   esp_err_t err = nvs_flash_erase();
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur effacement NVS: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG, "NVS erase error: %s", esp_err_to_name(err));
     status_led_set_state(STATUS_LED_ERROR);
   } else {
-    ESP_LOGI(TAG, "NVS effacé avec succès");
+    ESP_LOGI(TAG, "NVS erased successfully");
   }
 
-  // Attendre pour que les logs s'affichent
+  // Wait so logs are printed
   vTaskDelay(pdMS_TO_TICKS(1000));
 
-  // Redémarrer l'ESP32
-  ESP_LOGW(TAG, "Redémarrage dans 2 secondes...");
+  // Restart the ESP32
+  ESP_LOGW(TAG, "Restarting in 2 seconds...");
   vTaskDelay(pdMS_TO_TICKS(2000));
   esp_restart();
 }

@@ -22,7 +22,7 @@ static const char *TAG = "LOG_STREAM";
 static int sse_clients[MAX_SSE_CLIENTS];
 static SemaphoreHandle_t clients_mutex     = NULL;
 
-// Original log handler (pour chaînage)
+// Original log handler (for chaining)
 static vprintf_like_t original_log_handler = NULL;
 
 // Watchdog thread handle
@@ -39,16 +39,16 @@ static int custom_log_handler(const char *fmt, va_list args) {
     va_end(args_copy);
   }
 
-  // Si on a des clients SSE connectés, envoyer le log
+  // If SSE clients are connected, send the log
   int client_count = log_stream_get_client_count();
   if (client_count > 0) {
     // Parser le format ESP-IDF: "X (12345) TAG: message"
-    // où X = E/W/I/D/V pour Error/Warning/Info/Debug/Verbose
+    // where X = E/W/I/D/V for Error/Warning/Info/Debug/Verbose
     char buffer[LOG_BUFFER_SIZE];
     vsnprintf(buffer, sizeof(buffer), fmt, args);
 
     // Extraire niveau, tag et message du format ESP-IDF
-    char level_char = 'I'; // Par défaut INFO
+    char level_char = 'I'; // Default INFO
     char tag[32]    = "APP";
     char *message   = buffer;
 
@@ -92,7 +92,7 @@ static int custom_log_handler(const char *fmt, va_list args) {
       break;
     }
 
-    // Enlever le '\n' final si présent
+    // Remove the trailing '\n' if present
     size_t msg_len = strlen(message);
     if (msg_len > 0 && message[msg_len - 1] == '\n') {
       message[msg_len - 1] = '\0';
@@ -135,7 +135,7 @@ static void sse_watchdog_task(void *pvParameters) {
         continue;
       } else if (peek_result < 0 && errno != EWOULDBLOCK && errno != EAGAIN) {
         // Connection error
-        // EBADF (errno=9) est normal si le socket a été fermé côté httpd
+        // EBADF (errno=9) is normal if the socket was closed by httpd
         if (errno == EBADF) {
           ESP_LOGD(TAG, "SSE client fd=%d socket already closed", fd);
         } else {
@@ -220,7 +220,7 @@ esp_err_t log_stream_send_headers(int fd) {
   send(fd, init_msg, strlen(init_msg), 0);
 
   // Send initial status event
-  const char *status_msg = "data: {\"level\":\"I\",\"tag\":\"LOG_STREAM\",\"message\":\"Streaming démarré\"}\n\n";
+  const char *status_msg = "data: {\"level\":\"I\",\"tag\":\"LOG_STREAM\",\"message\":\"Streaming started\"}\n\n";
   send(fd, status_msg, strlen(status_msg), 0);
 
   return ESP_OK;

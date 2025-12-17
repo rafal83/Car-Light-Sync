@@ -17,7 +17,7 @@
 static const char *TAG = "GVRET_TCP";
 
 // Configuration
-#define GVRET_TCP_PORT 23 // Port standard pour GVRET réseau (hardcodé dans SavvyCAN)
+#define GVRET_TCP_PORT 23 // Standard GVRET network port (hardcoded in SavvyCAN)
 #define MAX_GVRET_CLIENTS 4
 #define GVRET_RX_BUFFER_SIZE 128
 #define GVRET_TX_BUFFER_SIZE 2048
@@ -296,7 +296,7 @@ static void gvret_client_task(void *arg) {
 
     if (len < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(1));
         continue;
       }
       ESP_LOGW(TAG, "recv() error: %d (%s)", errno, strerror(errno));

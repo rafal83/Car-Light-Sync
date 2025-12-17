@@ -9,11 +9,11 @@
 
 #include <math.h>
 
-// GPIO pour la LED de statut (WS2812 intégrée)
+// GPIO for the status LED (integrated WS2812)
 #if CONFIG_IDF_TARGET_ESP32S3
 #define STATUS_LED_GPIO 21
 #elif CONFIG_IDF_TARGET_ESP32C6
-// Désactivé sur C6 pour libérer le RMT au profit du strip LED principal
+// Disabled on C6 to free RMT for the main LED strip
 #define STATUS_LED_GPIO 8 // Pas de LED sur les autres boards
 #else
 #define STATUS_LED_GPIO -1 // Pas de LED sur les autres boards
@@ -30,7 +30,7 @@ static TaskHandle_t status_led_task_handle     = NULL;
 static status_led_state_t current_state        = STATUS_LED_BOOT;
 static bool led_initialized                    = false;
 
-// Structure pour définir une couleur RGB
+// Structure defining an RGB color
 typedef struct {
   uint8_t r;
   uint8_t g;
@@ -38,14 +38,14 @@ typedef struct {
 } rgb_t;
 
 /**
- * @brief Envoie une couleur RGB à la LED
+ * @brief Send an RGB color to the LED
  */
 static esp_err_t status_led_set_color(uint8_t r, uint8_t g, uint8_t b) {
   if (!led_initialized) {
     return ESP_ERR_INVALID_STATE;
   }
 
-  uint8_t led_data[3]             = {g * .1, r * .1, b * .1}; // WS2812 format: GRB 10% de la luminosité
+  uint8_t led_data[3]             = {g * .1, r * .1, b * .1}; // WS2812 format: GRB at 10% brightness
 
   rmt_transmit_config_t tx_config = {
       .loop_count = 0,
@@ -55,7 +55,7 @@ static esp_err_t status_led_set_color(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 /**
- * @brief Tâche d'animation de la LED
+ * @brief LED animation task
  */
 static void status_led_task(void *arg) {
   uint32_t counter = 0;
@@ -180,39 +180,39 @@ esp_err_t status_led_init(void) {
 
   esp_err_t ret = rmt_new_tx_channel(&tx_chan_config, &status_led_chan);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur création canal RMT: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG, "RMT channel creation error: %s", esp_err_to_name(ret));
     return ret;
   }
 
-  // Créer l'encodeur LED
+  // Create the LED encoder
   led_strip_encoder_config_t encoder_config = {
       .resolution = STATUS_LED_RMT_RESOLUTION,
   };
 
   ret = rmt_new_led_strip_encoder(&encoder_config, &status_led_encoder);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur création encodeur: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG, "Encoder creation error: %s", esp_err_to_name(ret));
     rmt_del_channel(status_led_chan);
     return ret;
   }
 
   ret = rmt_enable(status_led_chan);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur activation RMT: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG, "RMT activation error: %s", esp_err_to_name(ret));
     return ret;
   }
 
   led_initialized         = true;
 
-  // Créer la tâche d'animation
+  // Create the animation task
   BaseType_t task_created = xTaskCreatePinnedToCore(status_led_task, "status_led", 2048, NULL, 5, &status_led_task_handle, tskNO_AFFINITY);
 
   if (task_created != pdPASS) {
-    ESP_LOGE(TAG, "Erreur création tâche LED");
+    ESP_LOGE(TAG, "LED task creation error");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG, "LED de statut initialisée");
+  ESP_LOGI(TAG, "Status LED initialized");
   return ESP_OK;
 }
 
@@ -222,7 +222,7 @@ esp_err_t status_led_set_state(status_led_state_t state) {
   }
 
   current_state = state;
-  ESP_LOGD(TAG, "État LED changé: %d", state);
+  ESP_LOGD(TAG, "LED state changed: %d", state);
   return ESP_OK;
 }
 

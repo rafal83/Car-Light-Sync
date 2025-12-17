@@ -1,13 +1,13 @@
 /**
  * @file config_manager.c
- * @brief Gestionnaire de profils et événements CAN
+ * @brief Profile and CAN event manager
  *
- * Gère:
+ * Handles:
  * - LED effect profiles with SPIFFS storage (JSON)
- * - Événements CAN avec priorités et segments
- * - Système multi-pass de rendu: réservation → effet par défaut → événements
+ * - CAN events with priorities and segments
+ * - Multi-pass rendering pipeline: reservation -> default effect -> events
  * - Profile JSON import/export
- * - Activation/désactivation d'événements
+ * - Enable/disable events
  */
 
 #include "config_manager.h"
@@ -27,14 +27,14 @@
 #include <string.h>
 #include <time.h>
 
-// Buffer pour export/import JSON (profil complet avec tous les événements)
+// Buffer for JSON export/import (full profile with all events)
 #define JSON_EXPORT_BUFFER_SIZE 16384 // 16KB buffer pour JSON
 
 // Forward declaration
 static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size);
 
 // ============================================================================
-// Checksum simple pour validation de l'intégrité des profils binaires
+// Simple checksum to validate binary profile integrity
 // ============================================================================
 
 static uint32_t calculate_checksum(const void *data, size_t length) {
@@ -48,7 +48,7 @@ static uint32_t calculate_checksum(const void *data, size_t length) {
   return sum;
 }
 
-// Cache RAM: profil actif (stocké en SPIFFS, ~2KB en RAM)
+// RAM cache: active profile (stored in SPIFFS, ~2KB in RAM)
 static config_profile_t active_profile;
 static int active_profile_id             = -1;
 static bool active_profile_loaded        = false;
@@ -57,7 +57,7 @@ static bool active_profile_loaded        = false;
 static bool wheel_control_enabled        = false;
 static uint8_t wheel_control_speed_limit = 5; // km/h
 
-// Système d'événements multiples
+// Multiple event system
 #define MAX_ACTIVE_EVENTS 5
 typedef struct {
   can_event_type_t event;
@@ -71,7 +71,7 @@ typedef struct {
 static active_event_t active_events[MAX_ACTIVE_EVENTS];
 static bool effect_override_active = false;
 
-// Buffers pour le rendu composé des effets LED
+// Buffers for composed LED rendering
 static led_rgb_t composed_buffer[MAX_LED_COUNT];
 static led_rgb_t temp_buffer[MAX_LED_COUNT];
 static uint8_t priority_buffer[MAX_LED_COUNT];
@@ -89,41 +89,41 @@ static void load_wheel_control_settings(void) {
 }
 
 bool config_manager_init(void) {
-  // Initialiser le profil actif
+  // Initialize the active profile
   memset(&active_profile, 0, sizeof(active_profile));
   active_profile_loaded = false;
 
-  // Réduire la consommation de stack : utiliser un buffer dynamique pour les profils temporaires
+  // Reduce stack usage: use a dynamic buffer for temporary profiles
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur alloc profil temp");
+    ESP_LOGE(TAG_CONFIG, "Temporary profile allocation error");
     return false;
   }
 
-  // Charger les réglages de contrôle volant (opt-in)
+  // Load steering wheel control settings (opt-in)
   load_wheel_control_settings();
 
-  // Charger l'ID du profil actif depuis SPIFFS
+  // Load the active profile ID from SPIFFS
   int32_t saved_active_id = settings_get_i32("active_profile_id", -1);
   if (saved_active_id >= 0) {
     active_profile_id = saved_active_id;
   }
 
-  // Essayer de charger le profil actif
+  // Try to load the active profile
   bool profile_exists = false;
   if (active_profile_id >= 0) {
     profile_exists = config_manager_load_profile(active_profile_id, &active_profile);
     if (profile_exists) {
       active_profile_loaded = true;
-      ESP_LOGI(TAG_CONFIG, "Profil actif %d chargé: %s", active_profile_id, active_profile.name);
+      ESP_LOGI(TAG_CONFIG, "Active profile %d loaded: %s", active_profile_id, active_profile.name);
       led_effects_set_config(&active_profile.default_effect);
       effect_override_active = false;
     }
   }
 
-  // Si aucun profil n'existe, créer un profil par défaut
+  // If no profile exists, create a default profile
   if (!profile_exists) {
-    ESP_LOGI(TAG_CONFIG, "Aucun profil trouvé, création du profil par défaut + profil Eteint");
+    ESP_LOGI(TAG_CONFIG, "No profile found, creating default profile + Eteint profile");
     config_manager_create_default_profile(&active_profile, "Default");
     config_manager_save_profile(1, &active_profile);
     active_profile_id     = 1;
@@ -132,14 +132,14 @@ bool config_manager_init(void) {
     config_manager_create_off_profile(temp_profile, "Eteint");
     config_manager_save_profile(0, temp_profile);
 
-    // Sauvegarder l'ID actif
+    // Save the active ID
     settings_set_i32("active_profile_id", active_profile_id);
 
     led_effects_set_config(&active_profile.default_effect);
     effect_override_active = false;
   }
 
-  // S'assurer qu'un profil "Eteint" existe (ID 0 réservé)
+  // Ensure an "Eteint" profile exists (ID 0 reserved)
   if (!config_manager_load_profile(0, temp_profile)) {
     config_manager_create_off_profile(temp_profile, "Eteint");
     config_manager_save_profile(0, temp_profile);
@@ -150,10 +150,10 @@ bool config_manager_init(void) {
   return true;
 }
 
-// Cette fonction n'est plus nécessaire - on charge uniquement le profil actif à la demande
+// This function is no longer needed - load only the active profile on demand
 
 // ============================================================================
-// Sauvegarde/Chargement binaire des profils (format binaire avec CRC32)
+// Binary save/load of profiles (binary format with CRC32)
 // ============================================================================
 
 bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile) {
@@ -161,43 +161,43 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
     return false;
   }
 
-  // Allouer sur le heap pour éviter stack overflow (~2.5KB)
+  // Allocate on the heap to avoid stack overflow (~2.5KB)
   profile_file_t *file_data = (profile_file_t *)malloc(sizeof(profile_file_t));
   if (file_data == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour sauvegarde profil %d", profile_id);
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error while saving profile %d", profile_id);
     return false;
   }
 
-  // Copier les données et mettre à jour le timestamp
+  // Copy data and update the timestamp
   memcpy(&file_data->data, profile, sizeof(config_profile_t));
   file_data->data.modified_timestamp = (uint32_t)time(NULL);
 
-  // Remplir l'en-tête
+  // Fill the header
   file_data->magic = PROFILE_FILE_MAGIC;
   file_data->version = PROFILE_FILE_VERSION;
   file_data->data_size = sizeof(config_profile_t);
 
-  // Calculer le checksum sur les données du profil
+  // Compute checksum over profile data
   file_data->checksum = calculate_checksum(&file_data->data, sizeof(config_profile_t));
 
-  // Sauvegarder en SPIFFS (binaire)
+  // Save to SPIFFS (binary)
   char filepath[64];
   snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
 
   esp_err_t err = spiffs_save_blob(filepath, file_data, sizeof(profile_file_t));
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
+    ESP_LOGE(TAG_CONFIG, "SPIFFS save error for profile %d: %s", profile_id, esp_err_to_name(err));
     free(file_data);
     return false;
   }
 
-  // Mettre à jour le profil actif en RAM si c'est celui qu'on vient de sauvegarder
+  // Update the active profile in RAM if it is the one we just saved
   if (profile_id == active_profile_id && active_profile_loaded) {
     memcpy(&active_profile, &file_data->data, sizeof(config_profile_t));
   }
 
-  ESP_LOGI(TAG_CONFIG, "Profil %d sauvegardé (binaire, %d bytes): %s", profile_id, sizeof(profile_file_t), profile->name);
+  ESP_LOGI(TAG_CONFIG, "Profile %d saved (binary, %d bytes): %s", profile_id, sizeof(profile_file_t), profile->name);
   free(file_data);
   return true;
 }
@@ -207,19 +207,19 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
     return false;
   }
 
-  // Charger depuis SPIFFS (binaire)
+  // Load from SPIFFS (binary)
   char filepath[64];
   snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
 
-  // Vérifier si le fichier existe
+  // Check if the file exists
   if (!spiffs_file_exists(filepath)) {
     return false;
   }
 
-  // Allouer sur le heap pour éviter stack overflow (~2.5KB)
+  // Allocate on the heap to avoid stack overflow (~2.5KB)
   profile_file_t *file_data = (profile_file_t *)malloc(sizeof(profile_file_t));
   if (file_data == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour chargement profil %d", profile_id);
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error while loading profile %d", profile_id);
     return false;
   }
 
@@ -227,71 +227,71 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
   esp_err_t err = spiffs_load_blob(filepath, file_data, &buffer_size);
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur chargement SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
+    ESP_LOGE(TAG_CONFIG, "SPIFFS load error for profile %d: %s", profile_id, esp_err_to_name(err));
     free(file_data);
     return false;
   }
 
-  // Vérifier la taille lue
+  // Check the size read
   if (buffer_size != sizeof(profile_file_t)) {
-    ESP_LOGE(TAG_CONFIG, "Taille fichier invalide pour profil %d: %d bytes (attendu %d)", profile_id, buffer_size, sizeof(profile_file_t));
+    ESP_LOGE(TAG_CONFIG, "Invalid file size for profile %d: %d bytes (expected %d)", profile_id, buffer_size, sizeof(profile_file_t));
     free(file_data);
     return false;
   }
 
-  // Vérifier le magic number
+  // Check the magic number
   if (file_data->magic != PROFILE_FILE_MAGIC) {
-    ESP_LOGE(TAG_CONFIG, "Magic number invalide pour profil %d: 0x%08X", profile_id, file_data->magic);
+    ESP_LOGE(TAG_CONFIG, "Invalid magic number for profile %d: 0x%08X", profile_id, file_data->magic);
     free(file_data);
     return false;
   }
 
-  // Vérifier la version (pour compatibilité future)
+  // Check the version (for future compatibility)
   if (file_data->version != PROFILE_FILE_VERSION) {
-    ESP_LOGW(TAG_CONFIG, "Version différente pour profil %d: v%d (actuel: v%d)", profile_id, file_data->version, PROFILE_FILE_VERSION);
-    // Continuer quand même pour rétrocompatibilité future
+    ESP_LOGW(TAG_CONFIG, "Different version for profile %d: v%d (current: v%d)", profile_id, file_data->version, PROFILE_FILE_VERSION);
+    // Continue anyway for future backward compatibility
   }
 
-  // Vérifier le checksum
+  // Verify the checksum
   uint32_t calculated_checksum = calculate_checksum(&file_data->data, sizeof(config_profile_t));
   if (calculated_checksum != file_data->checksum) {
-    ESP_LOGE(TAG_CONFIG, "Checksum invalide pour profil %d: 0x%08X (attendu 0x%08X)", profile_id, calculated_checksum, file_data->checksum);
+    ESP_LOGE(TAG_CONFIG, "Invalid checksum for profile %d: 0x%08X (expected 0x%08X)", profile_id, calculated_checksum, file_data->checksum);
     free(file_data);
     return false;
   }
 
-  // Copier les données
+  // Copy the data
   memcpy(profile, &file_data->data, sizeof(config_profile_t));
 
-  ESP_LOGD(TAG_CONFIG, "Profil %d chargé (binaire, %d bytes): %s", profile_id, buffer_size, profile->name);
+  ESP_LOGD(TAG_CONFIG, "Profile %d loaded (binary, %d bytes): %s", profile_id, buffer_size, profile->name);
   free(file_data);
   return true;
 }
 
 bool config_manager_delete_profile(uint16_t profile_id) {
-  // Vérifier que le profil existe
+  // Verify that the profile exists
   char filepath[64];
   snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
 
   if (!spiffs_file_exists(filepath)) {
-    ESP_LOGW(TAG_CONFIG, "Profil %d n'existe pas", profile_id);
+    ESP_LOGW(TAG_CONFIG, "Profile %d does not exist", profile_id);
     return false;
   }
 
-  // Vérifier que le profil n'est pas utilisé dans des événements d'autres profils
+  // Ensure the profile is not used in events from other profiles
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error");
     return false;
   }
 
-  // Scanner tous les profils pour vérifier les dépendances
+  // Scan all profiles to check dependencies
   for (int p = 0; p < MAX_PROFILE_SCAN_LIMIT; p++) {
     if (p == profile_id)
       continue;
 
     if (config_manager_load_profile(p, temp_profile)) {
-      // Vérifier si ce profil référence le profil à supprimer
+      // Check whether this profile references the profile to delete
       for (int e = 0; e < CAN_EVENT_MAX; e++) {
         if (temp_profile->event_effects[e].action_type == EVENT_ACTION_SWITCH_PROFILE && temp_profile->event_effects[e].profile_id == profile_id) {
           ESP_LOGW(TAG_CONFIG, "Cannot delete profile %d: used by event %d in profile %d", profile_id, e, p);
@@ -306,16 +306,16 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   // Supprimer le fichier SPIFFS
   esp_err_t err = spiffs_delete_file(filepath);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur suppression fichier profil %d", profile_id);
+    ESP_LOGE(TAG_CONFIG, "Error deleting profile file %d", profile_id);
     return false;
   }
 
-  // Si le profil actif a été supprimé, chercher un autre profil
+  // If the active profile was deleted, look for another profile
   if (active_profile_id == profile_id) {
     active_profile_id     = -1;
     active_profile_loaded = false;
 
-    // Scanner dynamiquement tous les profils
+    // Dynamically scan all profiles
     config_profile_t *search_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
     if (search_profile != NULL) {
       for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
@@ -324,7 +324,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
           active_profile_id     = i;
           active_profile_loaded = true;
           settings_set_i32("active_profile_id", i);
-          ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, activation du profil %d", i);
+          ESP_LOGI(TAG_CONFIG, "Active profile deleted, activating profile %d", i);
           break;
         }
       }
@@ -334,11 +334,11 @@ bool config_manager_delete_profile(uint16_t profile_id) {
     if (active_profile_id == -1) {
       settings_set_i32("active_profile_id", -1);
       memset(&active_profile, 0, sizeof(active_profile));
-      ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
+      ESP_LOGI(TAG_CONFIG, "No profile available");
     }
   }
 
-  ESP_LOGI(TAG_CONFIG, "Profil %d supprimé avec succès depuis SPIFFS", profile_id);
+  ESP_LOGI(TAG_CONFIG, "Profile %d deleted successfully from SPIFFS", profile_id);
   return true;
 }
 
@@ -352,15 +352,15 @@ bool config_manager_rename_profile(uint16_t profile_id, const char *new_name) {
     return false;
   }
 
-  // Allouer dynamiquement pour éviter le stack overflow
+  // Allocate dynamically to avoid stack overflow
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour renommage");
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error pour renommage");
     return false;
   }
 
   if (!config_manager_load_profile(profile_id, profile)) {
-    ESP_LOGW(TAG_CONFIG, "Profil %d introuvable pour renommage", profile_id);
+    ESP_LOGW(TAG_CONFIG, "Profile %d not found for rename", profile_id);
     free(profile);
     return false;
   }
@@ -374,7 +374,7 @@ bool config_manager_rename_profile(uint16_t profile_id, const char *new_name) {
   free(profile);
 
   if (success && was_active) {
-    // Réappliquer pour conserver l'état actif et l'effet
+    // Reapply to preserve the active state and effect
     config_manager_activate_profile(profile_id);
   }
 
@@ -382,27 +382,27 @@ bool config_manager_rename_profile(uint16_t profile_id, const char *new_name) {
 }
 
 bool config_manager_activate_profile(uint16_t profile_id) {
-  // Charger le nouveau profil depuis SPIFFS
+  // Load the new profile from SPIFFS
   if (!config_manager_load_profile(profile_id, &active_profile)) {
-    ESP_LOGE(TAG_CONFIG, "Profil %d inexistant", profile_id);
+    ESP_LOGE(TAG_CONFIG, "Profile %d does not exist", profile_id);
     return false;
   }
 
-  // Mettre à jour l'ID actif
+  // Update the active ID
   active_profile_id     = profile_id;
   active_profile_loaded = true;
 
-  // Sauvegarder l'ID actif dans SPIFFS
+  // Save the active ID dans SPIFFS
   settings_set_i32("active_profile_id", profile_id);
 
-  // Arrêter tous les événements actifs avant d'appliquer le nouvel effet
+  // Stop all active events before applying the new effect
   config_manager_stop_all_events();
 
-  // Appliquer l'effet par défaut
+  // Apply the default effect
   led_effects_set_config(&active_profile.default_effect);
   effect_override_active = false;
 
-  ESP_LOGI(TAG_CONFIG, "Profil %d activé: %s", profile_id, active_profile.name);
+  ESP_LOGI(TAG_CONFIG, "Profile %d activated: %s", profile_id, active_profile.name);
   return true;
 }
 
@@ -431,7 +431,7 @@ bool config_manager_cycle_active_profile(int direction) {
       break;
     }
 
-    // Vérifier si le profil existe (sans le charger complètement)
+    // Check whether the profile exists (without fully loading it)
     char filepath[64];
     snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", candidate);
     if (spiffs_file_exists(filepath)) {
@@ -484,7 +484,7 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
 
   int count = 0;
 
-  // Scanner dynamiquement tous les profils SPIFFS
+  // Dynamically scan all profiles SPIFFS
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT && count < max_profiles; i++) {
     if (config_manager_load_profile(i, &profile_list[count])) {
       count++;
@@ -494,14 +494,14 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
   return count;
 }
 
-// Fichier JSON embarqué - default.json
+// Embedded JSON file - default.json
 extern const uint8_t default_json_start[] asm("_binary_default_json_start");
 extern const uint8_t default_json_end[] asm("_binary_default_json_end");
 
 void config_manager_create_default_profile(config_profile_t *profile, const char *name) {
   bool success        = false;
 
-  // 1. Charger le fichier JSON embarqué (default.json)
+  // 1. Load the embedded JSON file (default.json)
   size_t json_size    = default_json_end - default_json_start;
 
   // Allouer un buffer pour le JSON (avec null terminator)
@@ -517,7 +517,7 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
     ESP_LOGE(TAG_CONFIG, "Failed to allocate memory for embedded JSON");
   }
 
-  // 2. Si échec, fallback minimal
+  // 2. If it fails, minimal fallback
   if (!success) {
     ESP_LOGE(TAG_CONFIG, "Failed to import embedded preset, using minimal fallback");
     memset(profile, 0, sizeof(config_profile_t));
@@ -537,10 +537,10 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
     strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
   }
 
-  // Note: Les événements manquants sont déjà complétés par la fonction d'import
-  // avec des valeurs disabled par défaut (voir config_manager_import_profile_from_json)
+  // Note: Missing events are already filled by the import function
+  // with disabled default values (see config_manager_import_profile_from_json)
 
-  // Paramètres de timestamps
+  // Timestamp parameters
   profile->active             = false;
   profile->created_timestamp  = (uint32_t)time(NULL);
   profile->modified_timestamp = profile->created_timestamp;
@@ -592,7 +592,7 @@ bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event
     return false;
   }
 
-  // Si c'est le profil actif, modifier directement
+  // If this is the active profile, modify directly
   if (profile_id == active_profile_id && active_profile_loaded) {
     active_profile.event_effects[event].event = event;
     memcpy(&active_profile.event_effects[event].effect_config, effect_config, sizeof(effect_config_t));
@@ -602,10 +602,10 @@ bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event
     return true;
   }
 
-  // Sinon, charger le profil, le modifier et le sauvegarder
+  // Otherwise, load the profile, modify it, and save it
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error");
     return false;
   }
 
@@ -631,16 +631,16 @@ bool config_manager_set_event_enabled(uint16_t profile_id, can_event_type_t even
     return false;
   }
 
-  // Si c'est le profil actif, modifier directement
+  // If this is the active profile, modify directly
   if (profile_id == active_profile_id && active_profile_loaded) {
     active_profile.event_effects[event].enabled = enabled;
     return true;
   }
 
-  // Sinon, charger le profil, le modifier et le sauvegarder
+  // Otherwise, load the profile, modify it, and save it
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error");
     return false;
   }
 
@@ -667,7 +667,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
   uint16_t duration_ms = 0;
   uint8_t priority     = 0;
 
-  // Gérer le changement de profil si configuré (indépendant du flag enabled)
+  // Handle profile changes if configured (independent from the enabled flag)
   if (event_effect->action_type != EVENT_ACTION_APPLY_EFFECT) {
     // EVENT_ACTION_SWITCH_PROFILE
     if (event_effect->profile_id >= 0) {
@@ -694,11 +694,11 @@ bool config_manager_process_can_event(can_event_type_t event) {
              effect_to_apply.segment_length,
              effect_to_apply.reverse);
 
-    // Trouver un slot libre pour l'événement
+    // Find a free slot for the event
     int free_slot     = -1;
     int existing_slot = -1;
 
-    // Chercher si l'événement est déjà actif ou trouver un slot libre
+    // Check if the event is already active or find a free slot
     for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
       if (active_events[i].active && active_events[i].event == event) {
         existing_slot = i;
@@ -709,19 +709,19 @@ bool config_manager_process_can_event(can_event_type_t event) {
       }
     }
 
-    // Si l'événement existe déjà, le mettre à jour
+    // If the event already exists, update it
     int slot = (existing_slot >= 0) ? existing_slot : free_slot;
 
     if (slot < 0) {
-      // Pas de slot libre, vérifier si on peut écraser un événement de priorité
-      // inférieure MAIS seulement si c'est la même zone ou si le nouvel
-      // événement est FULL
+      // No free slot, check if a lower priority event can be overwritten
+      // lower priority BUT only if it is the same zone or if the new
+      // event is FULL
       int lowest_priority_slot = -1;
       uint8_t lowest_priority  = 255;
 
       for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
         if (active_events[i].active && active_events[i].priority < priority && active_events[i].priority < lowest_priority) {
-          // Nouvel événement a priorité supérieure, on peut écraser
+          // New event has higher priority, we can overwrite
           lowest_priority      = active_events[i].priority;
           lowest_priority_slot = i;
         }
@@ -729,14 +729,14 @@ bool config_manager_process_can_event(can_event_type_t event) {
 
       if (lowest_priority_slot >= 0) {
         slot = lowest_priority_slot;
-        ESP_LOGI(TAG_CONFIG, "Écrasement événement priorité %d par priorité %d", lowest_priority, priority);
+        ESP_LOGI(TAG_CONFIG, "Overwriting event priority %d with priority %d", lowest_priority, priority);
       } else {
-        ESP_LOGW(TAG_CONFIG, "Événement '%s' ignoré (pas de slot disponible)", config_manager_enum_to_id(event));
+        ESP_LOGW(TAG_CONFIG, "Event '%s' ignored (no available slot)", config_manager_enum_to_id(event));
         return false;
       }
     }
 
-    // Enregistrer l'événement actif
+    // Save the active event
     active_events[slot].event         = event;
     active_events[slot].effect_config = effect_to_apply;
     active_events[slot].start_time    = xTaskGetTickCount();
@@ -744,18 +744,18 @@ bool config_manager_process_can_event(can_event_type_t event) {
     active_events[slot].priority      = priority;
     active_events[slot].active        = true;
 
-    // NE PAS appliquer immédiatement - laisser config_manager_update() le faire
-    // selon la logique de priorité par zone pour éviter le glitch visuel
+    // DO NOT apply immediately - let config_manager_update() handle it
+    // according to per-zone priority to avoid visual glitches
 
     if (duration_ms > 0) {
-      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé pour %dms (priorité %d)", config_manager_enum_to_id(event), duration_ms, priority);
+      ESP_LOGI(TAG_CONFIG, "Effect '%s' enabled for %dms (priority %d)", config_manager_enum_to_id(event), duration_ms, priority);
     } else {
-      ESP_LOGI(TAG_CONFIG, "Effet '%s' activé (permanent, priorité %d)", config_manager_enum_to_id(event), priority);
+      ESP_LOGI(TAG_CONFIG, "Effect '%s' enabled (permanent, priority %d)", config_manager_enum_to_id(event), priority);
     }
 
     return true;
   } else {
-    // ESP_LOGW(TAG_CONFIG, "Effet par défaut ignoré pour '%s'",
+    // ESP_LOGW(TAG_CONFIG, "Default effect ignored for '%s'",
     //         config_manager_enum_to_id(event));
   }
 
@@ -763,15 +763,15 @@ bool config_manager_process_can_event(can_event_type_t event) {
 }
 
 void config_manager_stop_event(can_event_type_t event) {
-  // Vérifier que l'événement est valide
+  // Verify that the event is valid
   if (event >= CAN_EVENT_MAX) {
     return;
   }
 
-  // Désactiver tous les slots qui correspondent à cet événement
+  // Disable all slots that match this event
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (active_events[i].active && active_events[i].event == event) {
-      ESP_LOGI(TAG_CONFIG, "Arrêt de l'événement '%s'", config_manager_enum_to_id(event));
+      ESP_LOGI(TAG_CONFIG, "Stopping event '%s'", config_manager_enum_to_id(event));
       active_events[i].active = false;
     }
   }
@@ -803,16 +803,16 @@ void config_manager_update(void) {
     total_leds = MAX_LED_COUNT;
   }
 
-  // Vérifier et expirer les événements actifs
+  // Check and expire active events
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (!active_events[i].active)
       continue;
 
-    // Vérifier si l'événement est expiré (si durée > 0)
+    // Check if the event has expired (if duration > 0)
     if (active_events[i].duration_ms > 0) {
       uint32_t elapsed = now - active_events[i].start_time;
       if (elapsed >= pdMS_TO_TICKS(active_events[i].duration_ms)) {
-        ESP_LOGI(TAG_CONFIG, "Événements '%s' terminé", config_manager_enum_to_id(active_events[i].event));
+        ESP_LOGI(TAG_CONFIG, "Event '%s' completed", config_manager_enum_to_id(active_events[i].event));
         active_events[i].active = false;
         continue;
       }
@@ -821,7 +821,7 @@ void config_manager_update(void) {
     any_active = true;
   }
 
-  // Optimisation: si aucun événement actif, laisser l'effet par défaut s'afficher
+  // Optimization: if no active event, let the default effect render
   if (!any_active) {
     effect_override_active = false;
     return;
@@ -834,7 +834,7 @@ void config_manager_update(void) {
   uint32_t frame_counter = led_effects_get_frame_counter();
   bool needs_fft         = false;
 
-  // Première passe : marquer les segments réservés par les événements actifs
+  // First pass: mark segments reserved by active events
   int reserved_count     = 0;
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (!active_events[i].active)
@@ -843,12 +843,12 @@ void config_manager_update(void) {
     uint16_t start  = active_events[i].effect_config.segment_start;
     uint16_t length = active_events[i].effect_config.segment_length;
 
-    // Normaliser length == 0 → full strip
+    // Normalize length == 0 -> full strip
     if (length == 0) {
       length = total_leds;
     }
 
-    // Vérifier validité du segment
+    // Check segment validity
     if (start >= total_leds) {
       ESP_LOGW(TAG_CONFIG, "Event skipped: start >= total_leds (start=%d, total=%d)", start, total_leds);
       continue;
@@ -858,7 +858,7 @@ void config_manager_update(void) {
       length = total_leds - start;
     }
 
-    // Vérifier si tout le segment peut être réservé (priorité par segment)
+    // Check if the entire segment can be reserved (priority per segment)
     bool can_reserve_segment = true;
     for (uint16_t idx = start; idx < (uint16_t)(start + length); idx++) {
       if (active_events[i].priority < priority_buffer[idx]) {
@@ -867,7 +867,7 @@ void config_manager_update(void) {
       }
     }
 
-    // Réserver tout le segment en marquant les priorités
+    // Reserve the entire segment while marking priorities
     if (can_reserve_segment) {
       for (uint16_t idx = start; idx < (uint16_t)(start + length); idx++) {
         priority_buffer[idx] = active_events[i].priority;
@@ -876,18 +876,18 @@ void config_manager_update(void) {
     }
   }
 
-  // Deuxième passe : rendre l'effet par défaut uniquement sur les zones non réservées
+  // Second pass: render the default effect only on unreserved zones
   if (active_profile_loaded) {
     effect_config_t base    = active_profile.default_effect;
 
-    // Utiliser le segment configuré dans le profil (ou toute la strip si non configuré)
+    // Use the segment configured in the profile (or full strip if none)
     uint16_t default_start  = base.segment_start;
     uint16_t default_length = base.segment_length;
 
     // Normaliser le segment
     led_effects_normalize_segment(&default_start, &default_length, total_leds);
 
-    // Modulation par accel_pedal_pos si activé
+    // Modulate by accel_pedal_pos if enabled
     if (base.accel_pedal_pos_enabled) {
       default_length = led_effects_apply_accel_modulation(default_length, led_effects_get_accel_pedal_pos(), base.accel_pedal_offset);
     }
@@ -895,7 +895,7 @@ void config_manager_update(void) {
     memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
     led_effects_render_to_buffer(&base, default_start, default_length, frame_counter, temp_buffer);
 
-    // Copier uniquement les LEDs non réservées (priority == 0)
+    // Copy only LEDs that are not reserved (priority == 0)
     for (uint16_t idx = 0; idx < total_leds; idx++) {
       if (priority_buffer[idx] == 0) {
         composed_buffer[idx] = temp_buffer[idx];
@@ -905,7 +905,7 @@ void config_manager_update(void) {
     needs_fft |= led_effects_requires_fft(active_profile.default_effect.effect);
   }
 
-  // Troisième passe : rendre les événements sur leurs segments réservés
+  // Third pass: render events on their reserved segments
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (!active_events[i].active)
       continue;
@@ -913,12 +913,12 @@ void config_manager_update(void) {
     uint16_t start  = active_events[i].effect_config.segment_start;
     uint16_t length = active_events[i].effect_config.segment_length;
 
-    // Normaliser length == 0 → full strip
+    // Normalize length == 0 -> full strip
     if (length == 0) {
       length = total_leds;
     }
 
-    // Vérifier si ce segment a bien été réservé pour cet événement
+    // Verify that this segment was reserved for this event
     bool segment_reserved = true;
     for (uint16_t idx = start; idx < (uint16_t)(start + length); idx++) {
       if (priority_buffer[idx] != active_events[i].priority) {
@@ -927,7 +927,7 @@ void config_manager_update(void) {
       }
     }
 
-    // Rendre l'effet sur le segment réservé
+    // Render the effect on the reserved segment
     if (segment_reserved) {
       memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
 
@@ -955,7 +955,7 @@ bool config_manager_has_active_events(void) {
   return effect_override_active;
 }
 
-// Table de correspondance enum -> ID alphanumérique
+// Mapping table enum -> alphanumeric ID
 const char *config_manager_enum_to_id(can_event_type_t event) {
   switch (event) {
   case CAN_EVENT_NONE:
@@ -1045,7 +1045,7 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
   }
 }
 
-// Table de correspondance ID alphanumérique -> enum
+// Mapping table alphanumeric ID -> enum
 can_event_type_t config_manager_id_to_enum(const char *id) {
   if (id == NULL)
     return CAN_EVENT_NONE;
@@ -1133,11 +1133,11 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
   if (strcmp(id, EVENT_ID_SENTRY_ALERT) == 0)
     return CAN_EVENT_SENTRY_ALERT;
 
-  ESP_LOGW(TAG_CONFIG, "ID d'événement inconnu: %s", id);
+  ESP_LOGW(TAG_CONFIG, "Unknown event ID: %s", id);
   return CAN_EVENT_NONE;
 }
 
-// Vérifie si un événement peut déclencher un changement de profil
+// Check if an event can trigger a profile change
 bool config_manager_event_can_switch_profile(can_event_type_t event) {
   switch (event) {
   case CAN_EVENT_DOOR_OPEN_LEFT:
@@ -1166,32 +1166,32 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
   }
 }
 
-// Réinitialisation usine complète
+// Full factory reset
 bool config_manager_factory_reset(void) {
   ESP_LOGI(TAG_CONFIG, "Factory reset: Erasing NVS and SPIFFS...");
 
-  // Effacer complètement le NVS (WiFi credentials, etc.)
+  // Completely erase NVS (WiFi credentials, etc.)
   esp_err_t err = nvs_flash_erase();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Failed to erase NVS: %s", esp_err_to_name(err));
     return false;
   }
 
-  // Réinitialiser le NVS
+  // Reset the NVS
   err = nvs_flash_init();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Failed to reinit NVS: %s", esp_err_to_name(err));
     return false;
   }
 
-  // Formater complètement le SPIFFS (efface tout)
+  // Fully format the SPIFFS (erase everything)
   err = spiffs_format();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Failed to format SPIFFS: %s", esp_err_to_name(err));
     return false;
   }
 
-  // Réinitialiser le gestionnaire de paramètres (créera le fichier settings.json)
+  // Reset the settings manager (will create the settings.json file)
   err = settings_manager_init();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Failed to reinit settings manager");
@@ -1203,12 +1203,12 @@ bool config_manager_factory_reset(void) {
 
 
 
-  // Réinitialiser le profil actif en RAM
+  // Reset the active profile in RAM
   memset(&active_profile, 0, sizeof(active_profile));
   active_profile_id                 = -1;
   active_profile_loaded             = false;
 
-  // Créer les profils de base sans utiliser la stack (éviter overflow httpd)
+  // Create base profiles without using the stack (avoid httpd overflow)
   config_profile_t *default_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   config_profile_t *off_profile     = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (off_profile) {
@@ -1252,7 +1252,7 @@ static uint8_t percent_to_value(uint8_t percent) {
   return (percent * 255 + 50) / 100; // Arrondi au plus proche
 }
 
-// Fonction interne pour exporter un profil vers JSON (directement depuis la structure)
+// Internal function to export a profile to JSON (directly from the structure)
 static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size) {
   if (profile == NULL || json_buffer == NULL) {
     return false;
@@ -1260,13 +1260,13 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
 
   cJSON *root = cJSON_CreateObject();
 
-  // Métadonnées
+  // Metadata
   cJSON_AddStringToObject(root, "name", profile->name);
   cJSON_AddNumberToObject(root, "version", 1);
   cJSON_AddNumberToObject(root, "created_timestamp", profile->created_timestamp);
   cJSON_AddNumberToObject(root, "modified_timestamp", profile->modified_timestamp);
 
-  // Effet par défaut - Convertir en pourcentage pour l'export
+  // Default effect - convert to percentage for export
   cJSON *default_effect = cJSON_CreateObject();
   cJSON_AddStringToObject(default_effect, "effect_id", led_effects_enum_to_id(profile->default_effect.effect));
   cJSON_AddNumberToObject(default_effect, "brightness", value_to_percent(profile->default_effect.brightness));
@@ -1282,16 +1282,16 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
   cJSON_AddNumberToObject(default_effect, "accel_pedal_offset", profile->default_effect.accel_pedal_offset);
   cJSON_AddItemToObject(root, "default_effect", default_effect);
 
-  // Paramètres de luminosité dynamique
+  // Dynamic brightness parameters
   cJSON_AddBoolToObject(root, "dynamic_brightness_enabled", profile->dynamic_brightness_enabled);
   cJSON_AddNumberToObject(root, "dynamic_brightness_rate", profile->dynamic_brightness_rate);
 
-  // Événements CAN
+  // CAN events
   cJSON *events = cJSON_CreateArray();
   for (int i = 0; i < CAN_EVENT_MAX; i++) {
     if (profile->event_effects[i].enabled) {
       cJSON *event         = cJSON_CreateObject();
-      // Utiliser l'ID alphanumérique au lieu de l'enum pour compatibilité
+      // Use the alphanumeric ID instead of the enum for compatibility
       const char *event_id = config_manager_enum_to_id(profile->event_effects[i].event);
       cJSON_AddStringToObject(event, "event_id", event_id);
       cJSON_AddBoolToObject(event, "enabled", profile->event_effects[i].enabled);
@@ -1315,7 +1315,7 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
   }
   cJSON_AddItemToObject(root, "event_effects", events);
 
-  // Convertir en chaîne JSON
+  // Convert to JSON string
   char *json_str = cJSON_PrintUnformatted(root);
   bool success   = false;
 
@@ -1323,28 +1323,28 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
     size_t len = strlen(json_str);
     if (len < buffer_size) {
       strcpy(json_buffer, json_str);
-      ESP_LOGD(TAG_CONFIG, "Profil %d exporté avec succès (%d octets)", profile_id, len);
+      ESP_LOGD(TAG_CONFIG, "Profile %d exported successfully (%d bytes)", profile_id, len);
       success = true;
     } else {
-      ESP_LOGE(TAG_CONFIG, "Buffer trop petit pour export profil %d: %d bytes nécessaires, %d disponibles", profile_id, len + 1, buffer_size);
+      ESP_LOGE(TAG_CONFIG, "Buffer too small to export profile %d: %d bytes needed, %d available", profile_id, len + 1, buffer_size);
     }
     free(json_str);
   } else {
     size_t free_heap = esp_get_free_heap_size();
-    ESP_LOGE(TAG_CONFIG, "Erreur cJSON_PrintUnformatted pour profil %d - Heap après échec: %d bytes", profile_id, free_heap);
+    ESP_LOGE(TAG_CONFIG, "cJSON_PrintUnformatted error for profile %d - Heap after failure: %d bytes", profile_id, free_heap);
   }
 
   cJSON_Delete(root);
   return success;
 }
 
-// Fonction publique pour exporter un profil (charge depuis SPIFFS si nécessaire)
+// Public function to export a profile (loads from SPIFFS if needed)
 bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size) {
   if (json_buffer == NULL) {
     return false;
   }
 
-  // Charger le profil (ou utiliser le profil actif si c'est celui-là)
+  // Load the profile (or use the active profile if it matches)
   config_profile_t *profile      = NULL;
   config_profile_t *temp_profile = NULL;
 
@@ -1353,12 +1353,12 @@ bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_
   } else {
     temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
     if (temp_profile == NULL) {
-      ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+      ESP_LOGE(TAG_CONFIG, "Memory allocation error");
       return false;
     }
 
     if (!config_manager_load_profile(profile_id, temp_profile)) {
-      ESP_LOGW(TAG_CONFIG, "Profil %d inexistant, impossible d'exporter", profile_id);
+      ESP_LOGW(TAG_CONFIG, "Profile %d does not exist, cannot export", profile_id);
       free(temp_profile);
       return false;
     }
@@ -1382,13 +1382,13 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
 
   cJSON *root = cJSON_Parse(json_string);
   if (!root) {
-    ESP_LOGE(TAG_CONFIG, "Erreur parsing JSON");
+    ESP_LOGE(TAG_CONFIG, "JSON parsing error");
     return false;
   }
 
   memset(profile, 0, sizeof(config_profile_t));
 
-  // Métadonnées
+  // Metadata
   const cJSON *name = cJSON_GetObjectItem(root, "name");
   if (name && cJSON_IsString(name)) {
     strncpy(profile->name, name->valuestring, PROFILE_NAME_MAX_LEN - 1);
@@ -1416,7 +1416,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   }
   profile->active             = false;
 
-  // Effet par défaut
+  // Default effect
   const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
   if (default_effect && cJSON_IsObject(default_effect)) {
     cJSON *item;
@@ -1447,35 +1447,35 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
       profile->default_effect.accel_pedal_offset = item->valueint;
   }
 
-  // Paramètres de luminosité dynamique
+  // Dynamic brightness parameters
   const cJSON *dyn_bright_enabled = cJSON_GetObjectItem(root, "dynamic_brightness_enabled");
   if (dyn_bright_enabled && cJSON_IsBool(dyn_bright_enabled)) {
     profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled);
   } else {
-    profile->dynamic_brightness_enabled = false; // Défaut
+    profile->dynamic_brightness_enabled = false; // Default
   }
 
   const cJSON *dyn_bright_rate = cJSON_GetObjectItem(root, "dynamic_brightness_rate");
   if (dyn_bright_rate && cJSON_IsNumber(dyn_bright_rate)) {
     profile->dynamic_brightness_rate = dyn_bright_rate->valueint;
   } else {
-    profile->dynamic_brightness_rate = 50; // Défaut
+    profile->dynamic_brightness_rate = 50; // Default
   }
 
-  // Événements CAN
+  // CAN events
   cJSON *events = cJSON_GetObjectItem(root, "event_effects");
   if (events && cJSON_IsArray(events)) {
     const cJSON *event = NULL;
     cJSON_ArrayForEach(event, events) {
-      // Nouveau format : utiliser event_id (string alphanumérique)
+      // New format: use event_id (alphanumeric string)
       const cJSON *event_id_obj = cJSON_GetObjectItem(event, "event_id");
       int evt                   = -1;
 
       if (event_id_obj && cJSON_IsString(event_id_obj)) {
-        // Format nouveau avec ID alphanumérique
+        // New format with alphanumeric ID
         evt = config_manager_id_to_enum(event_id_obj->valuestring);
       } else {
-        // Format ancien avec numéro d'enum (rétrocompatibilité)
+        // Old format with enum number (backward compatibility)
         const cJSON *event_type = cJSON_GetObjectItem(event, "event");
         if (event_type && cJSON_IsNumber(event_type)) {
           evt = event_type->valueint;
@@ -1528,11 +1528,11 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
     }
   }
 
-  // Compléter tous les événements manquants avec des valeurs par défaut (désactivés)
-  // Cela permet de gérer les nouveaux événements ajoutés après la création du preset
+  // Fill any missing events with default disabled values
+  // Allows managing new events added after the preset was created
   for (int evt = CAN_EVENT_NONE; evt < CAN_EVENT_MAX; evt++) {
-    // Si l'événement n'a pas été initialisé (effect_config.effect == 0 et enabled == false)
-    // ET que ce n'est pas NONE, on le complète avec des valeurs par défaut
+    // If the event was not initialized (effect_config.effect == 0 and enabled == false)
+    // AND it is not NONE, complete it with default values
     if (evt != CAN_EVENT_NONE && profile->event_effects[evt].event == 0 && !profile->event_effects[evt].enabled) {
       profile->event_effects[evt].event                = evt;
       profile->event_effects[evt].enabled              = false;
@@ -1545,7 +1545,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   }
 
   cJSON_Delete(root);
-  ESP_LOGD(TAG_CONFIG, "Profil parsé depuis JSON: %s", profile->name);
+  ESP_LOGD(TAG_CONFIG, "Profile parsed from JSON: %s", profile->name);
   return true;
 }
 
@@ -1557,12 +1557,12 @@ bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_
 
   size_t json_len = strlen(json_string);
   size_t free_heap = esp_get_free_heap_size();
-  ESP_LOGI(TAG_CONFIG, "Import direct profil %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
+  ESP_LOGI(TAG_CONFIG, "Direct profile import %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
 
-  // Allouer sur le heap pour éviter stack overflow (~2.2KB)
+  // Allocate on the heap to avoid stack overflow (~2.2KB)
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour import profil %d", profile_id);
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error while importing profile %d", profile_id);
     return false;
   }
 
@@ -1572,13 +1572,13 @@ bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_
     return false;
   }
 
-  // Sauvegarder en binaire (utilise la fonction standard qui gère CRC32, etc.)
+  // Save in binary (uses the standard function that handles CRC32, etc.)
   bool success = config_manager_save_profile(profile_id, temp_profile);
 
   if (success) {
-    ESP_LOGI(TAG_CONFIG, "Profil %d importé et sauvegardé en binaire: %s", profile_id, temp_profile->name);
+    ESP_LOGI(TAG_CONFIG, "Profile %d imported and saved in binary: %s", profile_id, temp_profile->name);
   } else {
-    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde profil %d", profile_id);
+    ESP_LOGE(TAG_CONFIG, "Profile save error for %d", profile_id);
   }
 
   free(temp_profile);
@@ -1607,7 +1607,7 @@ bool config_manager_set_led_count(uint16_t led_count) {
 
   esp_err_t err = settings_set_u16("led_count", led_count);
   if (err == ESP_OK) {
-    ESP_LOGI(TAG_CONFIG, "Configuration LED sauvegardée: %d LEDs", led_count);
+    ESP_LOGI(TAG_CONFIG, "LED configuration saved: %d LEDs", led_count);
     return true;
   }
   return false;
@@ -1615,13 +1615,13 @@ bool config_manager_set_led_count(uint16_t led_count) {
 
 void config_manager_reapply_default_effect(void) {
   if (!active_profile_loaded) {
-    ESP_LOGW(TAG_CONFIG, "Aucun profil actif, impossible de réappliquer l'effet");
+    ESP_LOGW(TAG_CONFIG, "No active profile, cannot reapply effect");
     return;
   }
 
-  // Réappliquer l'effet par défaut du profil actif
+  // Reapply the default effect from the active profile
   led_effects_set_config(&active_profile.default_effect);
-  ESP_LOGI(TAG_CONFIG, "Effet par défaut réappliqué (audio_reactive=%d)", active_profile.default_effect.audio_reactive);
+  ESP_LOGI(TAG_CONFIG, "Default effect re-applied (audio_reactive=%d)", active_profile.default_effect.audio_reactive);
 }
 
 bool config_manager_can_create_profile(void) {
@@ -1629,13 +1629,13 @@ bool config_manager_can_create_profile(void) {
   esp_err_t err = spiffs_get_stats(&spiffs_total, &spiffs_used);
 
   if (err != ESP_OK) {
-    ESP_LOGW(TAG_CONFIG, "Impossible de récupérer les stats SPIFFS");
+    ESP_LOGW(TAG_CONFIG, "Unable to retrieve SPIFFS stats");
     return false;
   }
 
-  // Un profil binaire fait ~2.5 KB + 8KB overhead SPIFFS
-  // On garde une marge de sécurité : vérifier qu'il reste au moins 12 KB libres
-  const size_t BYTES_PER_PROFILE = 12 * 1024; // 12 KB par profil (2.5KB données + 8KB overhead + marge)
+  // A binary profile is ~2.5 KB + 8KB SPIFFS overhead
+  // Keep a safety margin: ensure at least 12 KB free
+  const size_t BYTES_PER_PROFILE = 12 * 1024; // 12 KB per profile (2.5KB data + 8KB overhead + margin)
   size_t spiffs_free = spiffs_total - spiffs_used;
 
   bool can_create = spiffs_free >= BYTES_PER_PROFILE;

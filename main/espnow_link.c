@@ -18,7 +18,7 @@
 
 #define DISCOVERY_TIMEOUT_S 30
 
-// Protocole
+// Protocol
 #define PROTOCOL_VERSION 1
 
 typedef enum {
@@ -78,7 +78,7 @@ static void log_send_error(esp_err_t ret, const char *context) {
   if (ret == ESP_ERR_ESPNOW_NO_MEM) {
     s_send_nomem_drop_count++;
     uint64_t now_us = esp_timer_get_time();
-    if (now_us - s_last_send_nomem_log_us > 1000000) { // log au max 1x/s
+    if (now_us - s_last_send_nomem_log_us > 1000000) { // log at most once per second
       ESP_LOGW(TAG_ESP_NOW, "%s drop (no mem) count=%u", context, (unsigned int)s_send_nomem_drop_count);
       s_last_send_nomem_log_us = now_us;
       s_send_nomem_drop_count = 0;
@@ -492,7 +492,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
   s_slave_type           = slave_type;
   s_device_id            = esp_random();
 
-  // Charger les pairs persistés
+  // Load persisted peers
   load_peers_from_spiffs();
   load_self_mac();
 
@@ -523,7 +523,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     ESP_ERROR_CHECK(esp_timer_create(&pairing_timer_args, &s_pairing_mode_timer));
   }
 
-  // Restaurer les peers enregistrés en SPIFFS (master & slave)
+  // Restore peers saved in SPIFFS (master & slave)
   register_cached_peers();
 
   if (s_role == ESP_NOW_ROLE_SLAVE) {
@@ -538,7 +538,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     }
   }
 
-  // Restaurer les peers enregistrés en SPIFFS (master & slave)
+  // Restore peers saved in SPIFFS (master & slave)
   register_cached_peers();
 
   // Auto-relaunch slave discovery on boot if not connected

@@ -319,7 +319,7 @@ esp_err_t can_bus_send(can_bus_type_t bus_type, const can_frame_t *frame) {
   if (ret != ESP_OK) {
     ctx->errors++;
     const char *bus_name = (bus_type == CAN_BUS_BODY) ? "BODY" : "CHASSIS";
-    ESP_LOGW(TAG_CAN_BUS, "[%s] Erreur twai_transmit: %s", bus_name, esp_err_to_name(ret));
+    ESP_LOGW(TAG_CAN_BUS, "[%s] twai_transmit error: %s", bus_name, esp_err_to_name(ret));
     return ret;
   }
 

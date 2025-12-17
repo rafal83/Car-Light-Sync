@@ -15,7 +15,7 @@ void config_init_device_names(void) {
   // Retrieve base MAC address
   esp_err_t ret = esp_read_mac(mac, ESP_MAC_WIFI_STA);
   if (ret != ESP_OK) {
-    // En cas d'erreur, utiliser l'adresse MAC BT
+    // On error, use the BT MAC address
     ret = esp_read_mac(mac, ESP_MAC_BT);
   }
 

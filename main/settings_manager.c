@@ -1,8 +1,8 @@
 /**
  * @file settings_manager.c
- * @brief Gestionnaire centralisé de configuration système (SPIFFS/JSON)
+ * @brief Centralized system configuration manager (SPIFFS/JSON)
  *
- * Remplace NVS pour tous les paramètres système:
+ * Replaces NVS for all system parameters:
  * - Active profile ID
  * - LED hardware config
  * - Wheel control settings
@@ -18,14 +18,14 @@
 
 #include <string.h>
 
-// Cache RAM des paramètres
+// RAM cache for parameters
 static system_settings_t s_settings;
 static bool s_settings_loaded = false;
 
-// Valeurs par défaut
+// Default values
 static const system_settings_t DEFAULT_SETTINGS = {
     .active_profile_id = -1,
-    .led_count = 122, // NUM_LEDS par défaut
+    .led_count = 122, // NUM_LEDS by default
     .wheel_control_enabled = false,
     .wheel_control_speed_limit = 5,
     .gvret_autostart = false,
@@ -35,22 +35,22 @@ static const system_settings_t DEFAULT_SETTINGS = {
 };
 
 esp_err_t settings_manager_init(void) {
-  // Charger les paramètres depuis SPIFFS
+  // Load parameters from SPIFFS
   esp_err_t err = settings_manager_load(&s_settings);
   if (err != ESP_OK) {
-    ESP_LOGW(TAG_SETTINGS, "Aucun fichier de paramètres, utilisation des valeurs par défaut");
+    ESP_LOGW(TAG_SETTINGS, "No parameters file, using default values");
     memcpy(&s_settings, &DEFAULT_SETTINGS, sizeof(system_settings_t));
 
-    // Sauvegarder les valeurs par défaut
+    // Save default values
     err = settings_manager_save(&s_settings);
     if (err != ESP_OK) {
-      ESP_LOGE(TAG_SETTINGS, "Erreur sauvegarde paramètres par défaut");
+      ESP_LOGE(TAG_SETTINGS, "Error saving default parameters");
       return err;
     }
   }
 
   s_settings_loaded = true;
-  ESP_LOGI(TAG_SETTINGS, "Paramètres système initialisés");
+  ESP_LOGI(TAG_SETTINGS, "System parameters initialized");
   return ESP_OK;
 }
 
@@ -62,7 +62,7 @@ esp_err_t settings_manager_load(system_settings_t *settings) {
   // Charger le JSON depuis SPIFFS
   char *json_buffer = (char *)malloc(2048);
   if (json_buffer == NULL) {
-    ESP_LOGE(TAG_SETTINGS, "Erreur allocation buffer");
+    ESP_LOGE(TAG_SETTINGS, "Buffer allocation error");
     return ESP_ERR_NO_MEM;
   }
 
@@ -77,11 +77,11 @@ esp_err_t settings_manager_load(system_settings_t *settings) {
   free(json_buffer);
 
   if (root == NULL) {
-    ESP_LOGE(TAG_SETTINGS, "Erreur parsing JSON");
+    ESP_LOGE(TAG_SETTINGS, "JSON parsing error");
     return ESP_FAIL;
   }
 
-  // Charger les valeurs (avec fallback sur valeurs par défaut)
+  // Load values (with fallback to defaults)
   cJSON *item;
 
   item = cJSON_GetObjectItem(root, "active_profile_id");
@@ -110,7 +110,7 @@ esp_err_t settings_manager_load(system_settings_t *settings) {
 
   cJSON_Delete(root);
 
-  ESP_LOGI(TAG_SETTINGS, "Paramètres chargés: active_profile=%ld, led_count=%u",
+  ESP_LOGI(TAG_SETTINGS, "Parameters loaded: active_profile=%ld, led_count=%u",
            settings->active_profile_id, settings->led_count);
   return ESP_OK;
 }
@@ -120,7 +120,7 @@ esp_err_t settings_manager_save(const system_settings_t *settings) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  // Créer le JSON
+  // Create the JSON
   cJSON *root = cJSON_CreateObject();
 
   cJSON_AddNumberToObject(root, "active_profile_id", settings->active_profile_id);
@@ -144,12 +144,12 @@ esp_err_t settings_manager_save(const system_settings_t *settings) {
   cJSON_Delete(root);
 
   if (err == ESP_OK) {
-    // Mettre à jour le cache
+    // Update the cache
     memcpy(&s_settings, settings, sizeof(system_settings_t));
     s_settings_loaded = true;
-    ESP_LOGD(TAG_SETTINGS, "Paramètres sauvegardés");
+    ESP_LOGD(TAG_SETTINGS, "Parameters saved");
   } else {
-    ESP_LOGE(TAG_SETTINGS, "Erreur sauvegarde paramètres");
+    ESP_LOGE(TAG_SETTINGS, "Error saving parameters");
   }
 
   return err;
@@ -275,12 +275,12 @@ esp_err_t settings_set_bool(const char *key, bool value) {
 }
 
 esp_err_t settings_manager_clear(void) {
-  // Restaurer les valeurs par défaut
+  // Restore default values
   memcpy(&s_settings, &DEFAULT_SETTINGS, sizeof(system_settings_t));
 
   esp_err_t err = settings_manager_save(&s_settings);
   if (err == ESP_OK) {
-    ESP_LOGI(TAG_SETTINGS, "Paramètres réinitialisés aux valeurs par défaut");
+    ESP_LOGI(TAG_SETTINGS, "Parameters reset to default values");
   }
 
   return err;

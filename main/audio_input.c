@@ -382,7 +382,7 @@ bool audio_input_init(void) {
 
   ret = i2s_channel_init_std_mode(rx_handle, &std_cfg);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_AUDIO, "Erreur init mode standard I2S: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG_AUDIO, "Standard I2S mode init error: %s", esp_err_to_name(ret));
     i2s_del_channel(rx_handle);
     rx_handle = NULL;
     return false;
@@ -442,7 +442,7 @@ bool audio_input_set_enabled(bool enable) {
   if (enable) {
     esp_err_t ret = i2s_channel_enable(rx_handle);
     if (ret != ESP_OK) {
-      ESP_LOGE(TAG_AUDIO, "Erreur activation canal I2S: %s", esp_err_to_name(ret));
+      ESP_LOGE(TAG_AUDIO, "I2S channel activation error: %s", esp_err_to_name(ret));
       return false;
     }
     enabled                = true;

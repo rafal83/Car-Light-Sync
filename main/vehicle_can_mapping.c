@@ -8,13 +8,13 @@
 
 #include <string.h>
 
-// Helper latch -> ouvert/fermé
-// IRAM_ATTR: appelé dans callback CAN temps-réel
+// Helper latch -> open/closed
+// IRAM_ATTR: called in CAN real-time callback
 static inline int IRAM_ATTR is_latch_open(float raw) {
   int v = (int)(raw + 0.5f);
   // DBC mapping (typique Tesla) :
   // 2 = LATCH_CLOSED
-  // 0 = SNA, les autres = ouvert / en mouvement / défaut
+  // 0 = SNA, others = open / moving / fault
   if (v == 2)
     return 0; // closed
   if (v == 0)
@@ -28,7 +28,7 @@ static uint8_t s_door_rear_left_open   = 0;
 static uint8_t s_door_front_right_open = 0;
 static uint8_t s_door_rear_right_open  = 0;
 
-// Helpers pour envoyer l'Ã©tat ESP-NOW uniquement si une valeur a changÃ©
+// Helpers to send the ESP-NOW state only when a value has changed
 #define UPDATE_AND_SEND_U8(field, value, state_ptr)                \
   do {                                                             \
     uint8_t _nv = (uint8_t)(value);                                \
@@ -81,14 +81,14 @@ static void IRAM_ATTR recompute_doors_open(vehicle_state_t *state) {
 // Mapping signaux -> vehicle_state_t
 // ============================================================================
 
-// Callback pour les événements de scroll wheel
+// Callback for scroll wheel events
 static vehicle_wheel_scroll_callback_t s_wheel_scroll_callback = NULL;
 
 void vehicle_can_set_wheel_scroll_callback(vehicle_wheel_scroll_callback_t callback) {
   s_wheel_scroll_callback = callback;
 }
 
-// IRAM_ATTR défini dans le header
+// IRAM_ATTR defined in the header
 void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_def_t *sig, float value, uint8_t bus_id, vehicle_state_t *state) {
   if (!msg || !sig || !state)
     return;
@@ -97,7 +97,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   const char *name = sig->name ? sig->name : "";
 
   // Le bus_id est maintenant disponible pour les logs
-  (void)bus_id; // Éviter warning unused pour l'instant
+  (void)bus_id; // Avoid unused warning for now
 
   if ((id == 0x3C2) && (bus_id == 1)) {
     if (strcmp(name, "VCLEFT_swcLeftScrollTicks") == 0) {
@@ -121,7 +121,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     } else if (strcmp(name, "VCLEFT_swcRightScrollTicks") == 0) {
 
       if (value != 21 && value != 0) {
-        // Appeler le callback immédiatement avec la valeur du scroll
+        // Call the callback immediately with the scroll value
         // value > 0 = scroll up, value < 0 = scroll down
         if (s_wheel_scroll_callback) {
           s_wheel_scroll_callback(value, state);
@@ -144,11 +144,11 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     return;
   }
   // ---------------------------------------------------------------------
-  // Vitesse véhicule : ID257DIspeed / DI_vehicleSpeed (kph)
+  // Vehicle speed: ID257DIspeed / DI_vehicleSpeed (kph)
   // ---------------------------------------------------------------------
   if (id == 0x257) {
     if (strcmp(name, "DI_vehicleSpeed") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->speed_kph, value, state); // déjà en kph
+      UPDATE_AND_SEND_FLOAT(state->speed_kph, value, state); // already in kph
       return;
     }
     return;
@@ -179,7 +179,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // Odomètre
+  // Odometer
   // ---------------------------------------------------------------------
   if (id == 0x3F3) {
     if (strcmp(name, "UI_odometer") == 0) {
@@ -242,11 +242,11 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // Lumières + clignos + fog : ID3F5VCFRONT_lighting
+  // Lights + turn signals + fog: ID3F5VCFRONT_lighting
   // ---------------------------------------------------------------------
   if (id == 0x3F5) {
-    // Clignotants : on stocke seulement l'état binaire, les events
-    // sont gérés plus bas
+    // Turn signals: store only the binary state, events
+    // are handled below
     if (strcmp(name, "VCFRONT_indicatorLeftRequest") == 0) {
       int v            = (int)(value + 0.5f);
       UPDATE_AND_SEND_U8(state->turn_left, (v >= 1) ? 1 : 0, state);
@@ -404,7 +404,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x204) {
     if (strcmp(name, "PCS_hvChargeStatus") == 0) {
-      // 0 = not charging, 2 = charging (d'après le DBC
+      // 0 = not charging, 2 = charging (per the DBC
       // opendbc)
       int v = (int)(value + 0.5f);
       if (v == 2) {
@@ -489,5 +489,5 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     return;
   }
 
-  // Fallback : signaux non mappés -> ignorés au niveau état haut niveau
+  // Fallback: unmapped signals -> ignored at high-level state
 }

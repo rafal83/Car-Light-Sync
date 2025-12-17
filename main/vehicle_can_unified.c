@@ -8,10 +8,10 @@
 #include <string.h>
 
 // ---------------------------------------------------------------------------
-// Historique de signaux (pour gestion d'events type RISING/FALLING EDGE)
+// Signal history (for managing events like RISING/FALLING EDGE)
 // ---------------------------------------------------------------------------
 
-// Simple ring via hash (id & 0xFF, idx & 0x0F) pour éviter d'allouer trop
+// Simple ring via hash (id & 0xFF, idx & 0x0F) to avoid over-allocating
 #define HISTORY_ID_MASK 0xFFu
 #define HISTORY_SIG_MASK 0x0Fu
 
@@ -46,7 +46,7 @@ static const can_message_def_t *find_message_def(uint32_t id) {
 // ---------------------------------------------------------------------------
 
 static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit, uint8_t length) {
-  // little-endian (Intel) : start_bit est le bit LSB indexé à partir de l'octet
+  // little-endian (Intel): start_bit is the LSB bit indexed from the byte
   // 0
   uint64_t raw = 0;
   for (int i = 0; i < 8; i++) {
@@ -57,7 +57,7 @@ static uint64_t extract_bits_le(const uint8_t *data, uint8_t start_bit, uint8_t 
 }
 
 static uint64_t extract_bits_be(const uint8_t *data, uint8_t start_bit, uint8_t length) {
-  // big-endian (Motorola) : on reconstruit en ordre réseau
+  // big-endian (Motorola): rebuild in network order
   uint64_t raw = 0;
   for (int i = 0; i < 8; i++) {
     raw = (raw << 8) | data[i];
@@ -70,7 +70,7 @@ static uint64_t extract_bits_be(const uint8_t *data, uint8_t start_bit, uint8_t 
 }
 
 static float decode_signal_value(const can_signal_def_t *sig, const uint8_t *data, uint8_t dlc) {
-  (void)dlc; // non utilisé ici mais conservé pour extension future
+  (void)dlc; // not used here but kept for future extension
 
   uint64_t raw = 0;
   if (sig->byte_order == BYTE_ORDER_LITTLE_ENDIAN) {
@@ -104,7 +104,7 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
 
   const can_message_def_t *msg = find_message_def(frame->id);
   if (!msg) {
-    // Message non géré par la config générée
+    // Message not handled by the generated config
     return;
   }
 
