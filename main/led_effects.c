@@ -128,7 +128,8 @@ static bool configure_rmt_channel(void);
 static uint16_t sanitize_led_count(uint16_t requested);
 
 // Conversion couleur 0xRRGGBB vers rgb_t
-static rgb_t color_to_rgb(uint32_t color) {
+// IRAM_ATTR: conversion rapide utilisée par tous les effets LED
+static rgb_t IRAM_ATTR color_to_rgb(uint32_t color) {
   rgb_t rgb;
   rgb.r = (color >> 16) & 0xFF;
   rgb.g = (color >> 8) & 0xFF;
@@ -136,7 +137,8 @@ static rgb_t color_to_rgb(uint32_t color) {
   return rgb;
 }
 
-static rgb_t rgb_lerp(rgb_t a, rgb_t b, float t) {
+// IRAM_ATTR: interpolation couleur utilisée dans animations
+static rgb_t IRAM_ATTR rgb_lerp(rgb_t a, rgb_t b, float t) {
   if (t < 0.0f) {
     t = 0.0f;
   } else if (t > 1.0f) {
@@ -150,7 +152,8 @@ static rgb_t rgb_lerp(rgb_t a, rgb_t b, float t) {
   return out;
 }
 
-static rgb_t rgb_max(rgb_t a, rgb_t b) {
+// IRAM_ATTR: fusion couleur pour effets superposés
+static rgb_t IRAM_ATTR rgb_max(rgb_t a, rgb_t b) {
   rgb_t out;
   out.r = (a.r > b.r) ? a.r : b.r;
   out.g = (a.g > b.g) ? a.g : b.g;

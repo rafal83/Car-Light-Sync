@@ -3,7 +3,7 @@
  * @brief Gestionnaire de profils et événements CAN
  *
  * Gère:
- * - Profils d'effets LED (4 profils max) avec sauvegarde NVS
+ * - Profils d'effets LED avec sauvegarde SPIFFS (JSON)
  * - Événements CAN avec priorités et segments
  * - Système multi-pass de rendu: réservation → effet par défaut → événements
  * - Import/export JSON des profils
@@ -21,12 +21,19 @@
 #include "led_effects.h"
 #include "nvs.h"
 #include "nvs_flash.h"
-#include "nvs_manager.h"
+#include "settings_manager.h"
+#include "spiffs_storage.h"
 
 #include <string.h>
 #include <time.h>
 
-// Nouveau: on ne garde que le profil actif en RAM (~17KB au lieu de ~170KB)
+// Buffer pour export/import JSON (profil complet avec tous les événements)
+#define JSON_EXPORT_BUFFER_SIZE 16384 // 16KB buffer pour JSON
+
+// Forward declaration
+static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size);
+
+// Cache RAM: profil actif (stocké en SPIFFS, ~2KB en RAM)
 static config_profile_t active_profile;
 static int active_profile_id             = -1;
 static bool active_profile_loaded        = false;
@@ -55,8 +62,8 @@ static led_rgb_t temp_buffer[MAX_LED_COUNT];
 static uint8_t priority_buffer[MAX_LED_COUNT];
 
 static void load_wheel_control_settings(void) {
-  uint8_t enabled_u8        = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_ctl", 0);
-  uint8_t speed_kph         = nvs_manager_get_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
+  uint8_t enabled_u8        = settings_get_bool("wheel_control_enabled", 0);
+  uint8_t speed_kph         = settings_get_u8("wheel_control_speed_limit", wheel_control_speed_limit);
 
   wheel_control_enabled     = enabled_u8 != 0;
   wheel_control_speed_limit = speed_kph;
@@ -81,8 +88,8 @@ bool config_manager_init(void) {
   // Charger les réglages de contrôle volant (opt-in)
   load_wheel_control_settings();
 
-  // Charger l'ID du profil actif depuis NVS
-  int32_t saved_active_id = nvs_manager_get_i32(NVS_NAMESPACE_PROFILES, "active_id", -1);
+  // Charger l'ID du profil actif depuis SPIFFS
+  int32_t saved_active_id = settings_get_i32("active_profile_id", -1);
   if (saved_active_id >= 0) {
     active_profile_id = saved_active_id;
   }
@@ -111,7 +118,7 @@ bool config_manager_init(void) {
     config_manager_save_profile(0, temp_profile);
 
     // Sauvegarder l'ID actif
-    nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", active_profile_id);
+    settings_set_i32("active_profile_id", active_profile_id);
 
     led_effects_set_config(&active_profile.default_effect);
     effect_override_active = false;
@@ -135,9 +142,6 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
     return false;
   }
 
-  char key[16];
-  snprintf(key, sizeof(key), "profile_%d", profile_id);
-
   // Allouer dynamiquement pour éviter le stack overflow
   config_profile_t *profile_copy = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile_copy == NULL) {
@@ -149,24 +153,44 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
   memcpy(profile_copy, profile, sizeof(config_profile_t));
   profile_copy->modified_timestamp = (uint32_t)time(NULL);
 
-  ESP_LOGI(TAG_CONFIG, "Saving profile %d: size=%d bytes (NVS limit=1984)", profile_id, sizeof(config_profile_t));
+  // Exporter en JSON directement depuis profile_copy
+  char *json_buffer = (char *)malloc(JSON_EXPORT_BUFFER_SIZE);
+  if (json_buffer == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation JSON buffer");
+    free(profile_copy);
+    return false;
+  }
 
-  esp_err_t err = nvs_manager_set_blob(NVS_NAMESPACE_PROFILES, key, profile_copy, sizeof(config_profile_t));
+  bool export_success = export_profile_to_json(profile_copy, profile_id, json_buffer, JSON_EXPORT_BUFFER_SIZE);
+
+  if (!export_success) {
+    ESP_LOGE(TAG_CONFIG, "Erreur export JSON profil %d", profile_id);
+    free(json_buffer);
+    free(profile_copy);
+    return false;
+  }
+
+  // Sauvegarder en SPIFFS
+  char filepath[64];
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
+
+  esp_err_t err = spiffs_save_json(filepath, json_buffer);
+  free(json_buffer);
+
   if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde profil: %s (size=%d bytes)", esp_err_to_name(err), sizeof(config_profile_t));
+    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
     free(profile_copy);
     return false;
   }
 
   // Mettre à jour le profil actif en RAM si c'est celui qu'on vient de sauvegarder
-  if (profile_id == active_profile_id) {
+  if (profile_id == active_profile_id && active_profile_loaded) {
     memcpy(&active_profile, profile_copy, sizeof(config_profile_t));
-    active_profile_loaded = true;
   }
 
   free(profile_copy);
 
-  ESP_LOGI(TAG_CONFIG, "Profil %d sauvegardé: %s", profile_id, profile->name);
+  ESP_LOGI(TAG_CONFIG, "Profil %d sauvegardé en SPIFFS: %s", profile_id, profile->name);
   return true;
 }
 
@@ -175,62 +199,66 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
     return false;
   }
 
-  char key[16];
-  snprintf(key, sizeof(key), "profile_%d", profile_id);
+  // Charger depuis SPIFFS
+  char filepath[64];
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
 
-  // Vérifier d'abord la taille du blob
-  size_t required_size = 0;
-  esp_err_t err        = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
+  // Vérifier si le fichier existe
+  if (!spiffs_file_exists(filepath)) {
+    return false;
+  }
+
+  // Allouer buffer pour JSON
+  char *json_buffer = (char *)malloc(JSON_EXPORT_BUFFER_SIZE);
+  if (json_buffer == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation JSON buffer");
+    return false;
+  }
+
+  // Charger le JSON depuis SPIFFS
+  esp_err_t err = spiffs_load_json(filepath, json_buffer, JSON_EXPORT_BUFFER_SIZE);
   if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Erreur chargement SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
+    free(json_buffer);
     return false;
   }
 
-  // Vérifier que la taille correspond à la structure actuelle
-  if (required_size != sizeof(config_profile_t)) {
-    ESP_LOGW(TAG_CONFIG, "Profile %d a une taille incompatible (%d vs %d) - ignoré", profile_id, required_size, sizeof(config_profile_t));
-    return false;
+  // Importer depuis JSON
+  bool success = config_manager_import_profile_from_json(json_buffer, profile);
+  free(json_buffer);
+
+  if (success) {
+    ESP_LOGD(TAG_CONFIG, "Profil %d chargé depuis SPIFFS: %s", profile_id, profile->name);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Erreur import JSON profil %d", profile_id);
   }
 
-  if (sizeof(config_profile_t) > 1984) {
-    ESP_LOGE(TAG_CONFIG, "CRITICAL: config_profile_t size (%d bytes) exceeds NVS blob limit (1984 bytes)!", sizeof(config_profile_t));
-  }
-
-  // Charger le profil
-  required_size = sizeof(config_profile_t);
-  err           = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, profile, &required_size);
-
-  return (err == ESP_OK);
+  return success;
 }
 
 bool config_manager_delete_profile(uint16_t profile_id) {
   // Vérifier que le profil existe
-  char key[16];
-  snprintf(key, sizeof(key), "profile_%d", profile_id);
-  size_t required_size = 0;
-  esp_err_t err        = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size);
-  if (err != ESP_OK) {
+  char filepath[64];
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
+
+  if (!spiffs_file_exists(filepath)) {
     ESP_LOGW(TAG_CONFIG, "Profil %d n'existe pas", profile_id);
     return false;
   }
 
   // Vérifier que le profil n'est pas utilisé dans des événements d'autres profils
-  // Scanner dynamiquement tous les profils existants
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (temp_profile == NULL) {
     ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
     return false;
   }
 
-  // Scanner tous les IDs possibles
+  // Scanner tous les profils pour vérifier les dépendances
   for (int p = 0; p < MAX_PROFILE_SCAN_LIMIT; p++) {
     if (p == profile_id)
-      continue; // Ignorer le profil qu'on veut supprimer
+      continue;
 
-    snprintf(key, sizeof(key), "profile_%d", p);
-    required_size = sizeof(config_profile_t);
-    err           = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, temp_profile, &required_size);
-
-    if (err == ESP_OK) {
+    if (config_manager_load_profile(p, temp_profile)) {
       // Vérifier si ce profil référence le profil à supprimer
       for (int e = 0; e < CAN_EVENT_MAX; e++) {
         if (temp_profile->event_effects[e].action_type == EVENT_ACTION_SWITCH_PROFILE && temp_profile->event_effects[e].profile_id == profile_id) {
@@ -243,117 +271,42 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   }
   free(temp_profile);
 
-  // Supprimer le profil de la NVS
-  snprintf(key, sizeof(key), "profile_%d", profile_id);
-  err = nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, key);
-
+  // Supprimer le fichier SPIFFS
+  esp_err_t err = spiffs_delete_file(filepath);
   if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Erreur suppression fichier profil %d", profile_id);
     return false;
   }
 
-  // Compresser les IDs : décaler tous les profils suivants
-  config_profile_t *shift_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
-  if (shift_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour compression");
-    return false;
-  }
+  // Si le profil actif a été supprimé, chercher un autre profil
+  if (active_profile_id == profile_id) {
+    active_profile_id     = -1;
+    active_profile_loaded = false;
 
-  bool needs_compression = false;
-  // Scanner dynamiquement les profils suivants
-  for (int i = profile_id + 1; i < MAX_PROFILE_SCAN_LIMIT; i++) {
-    snprintf(key, sizeof(key), "profile_%d", i);
-    required_size = sizeof(config_profile_t);
-    if (nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, NULL, &required_size) == ESP_OK) {
-      needs_compression = true;
-      break;
-    }
-  }
-
-  if (needs_compression) {
-    ESP_LOGI(TAG_CONFIG, "Compression des IDs de profils après suppression du profil %d", profile_id);
-
-    // Scanner et décaler les profils
-    for (int i = profile_id; i < MAX_PROFILE_SCAN_LIMIT - 1; i++) {
-      char next_key[16];
-      snprintf(next_key, sizeof(next_key), "profile_%d", i + 1);
-
-      required_size      = sizeof(config_profile_t);
-      esp_err_t read_err = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, next_key, shift_profile, &required_size);
-
-      if (read_err == ESP_OK) {
-        // Sauvegarder au nouvel emplacement
-        char current_key[16];
-        snprintf(current_key, sizeof(current_key), "profile_%d", i);
-        nvs_manager_set_blob(NVS_NAMESPACE_PROFILES, current_key, shift_profile, sizeof(config_profile_t));
-
-        // Effacer l'ancien emplacement
-        nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, next_key);
-
-        ESP_LOGI(TAG_CONFIG, "Profil %d déplacé vers ID %d", i + 1, i);
-      } else {
-        break;
-      }
-    }
-
-    // Mettre à jour l'ID du profil actif
-    if (active_profile_id > profile_id) {
-      active_profile_id--;
-      memcpy(&active_profile, shift_profile, sizeof(config_profile_t));
-      nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", active_profile_id);
-      ESP_LOGI(TAG_CONFIG, "ID du profil actif mis à jour: %d", active_profile_id);
-    } else if (active_profile_id == profile_id) {
-      // Le profil actif a été supprimé, chercher le premier profil disponible
-      active_profile_id     = -1;
-      active_profile_loaded = false;
-
-      // Scanner dynamiquement tous les profils
+    // Scanner dynamiquement tous les profils
+    config_profile_t *search_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+    if (search_profile != NULL) {
       for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
-        snprintf(key, sizeof(key), "profile_%d", i);
-        required_size = sizeof(config_profile_t);
-        if (nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &active_profile, &required_size) == ESP_OK) {
+        if (config_manager_load_profile(i, search_profile)) {
+          memcpy(&active_profile, search_profile, sizeof(config_profile_t));
           active_profile_id     = i;
           active_profile_loaded = true;
-          nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", i);
+          settings_set_i32("active_profile_id", i);
           ESP_LOGI(TAG_CONFIG, "Profil actif supprimé, activation du profil %d", i);
           break;
         }
       }
-
-      if (active_profile_id == -1) {
-        nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, "active_id");
-        memset(&active_profile, 0, sizeof(active_profile));
-        ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
-      }
+      free(search_profile);
     }
-  } else {
-    // Pas de compression nécessaire
-    if (active_profile_id == profile_id) {
-      // Chercher le premier profil disponible
-      active_profile_id     = -1;
-      active_profile_loaded = false;
 
-      for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
-        snprintf(key, sizeof(key), "profile_%d", i);
-        required_size = sizeof(config_profile_t);
-        if (nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &active_profile, &required_size) == ESP_OK) {
-          active_profile_id     = i;
-          active_profile_loaded = true;
-          nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", i);
-          ESP_LOGI(TAG_CONFIG, "Activation automatique du profil %d", i);
-          break;
-        }
-      }
-
-      if (active_profile_id == -1) {
-        nvs_manager_erase_key(NVS_NAMESPACE_PROFILES, "active_id");
-        memset(&active_profile, 0, sizeof(active_profile));
-        ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
-      }
+    if (active_profile_id == -1) {
+      settings_set_i32("active_profile_id", -1);
+      memset(&active_profile, 0, sizeof(active_profile));
+      ESP_LOGI(TAG_CONFIG, "Aucun profil disponible");
     }
   }
 
-  free(shift_profile);
-  ESP_LOGI(TAG_CONFIG, "Profil %d supprimé avec succès", profile_id);
+  ESP_LOGI(TAG_CONFIG, "Profil %d supprimé avec succès depuis SPIFFS", profile_id);
   return true;
 }
 
@@ -397,7 +350,7 @@ bool config_manager_rename_profile(uint16_t profile_id, const char *new_name) {
 }
 
 bool config_manager_activate_profile(uint16_t profile_id) {
-  // Charger le nouveau profil depuis NVS
+  // Charger le nouveau profil depuis SPIFFS
   if (!config_manager_load_profile(profile_id, &active_profile)) {
     ESP_LOGE(TAG_CONFIG, "Profil %d inexistant", profile_id);
     return false;
@@ -407,8 +360,8 @@ bool config_manager_activate_profile(uint16_t profile_id) {
   active_profile_id     = profile_id;
   active_profile_loaded = true;
 
-  // Sauvegarder l'ID actif dans NVS
-  nvs_manager_set_i32(NVS_NAMESPACE_PROFILES, "active_id", profile_id);
+  // Sauvegarder l'ID actif dans SPIFFS
+  settings_set_i32("active_profile_id", profile_id);
 
   // Arrêter tous les événements actifs avant d'appliquer le nouvel effet
   config_manager_stop_all_events();
@@ -459,7 +412,7 @@ bool config_manager_get_wheel_control_enabled(void) {
 
 bool config_manager_set_wheel_control_enabled(bool enabled) {
   wheel_control_enabled = enabled;
-  esp_err_t err         = nvs_manager_set_bool(NVS_NAMESPACE_SETTINGS, "wheel_ctl", enabled);
+  esp_err_t err         = settings_set_bool("wheel_control_enabled", enabled);
   return err == ESP_OK;
 }
 
@@ -475,7 +428,7 @@ bool config_manager_set_wheel_control_speed_limit(int speed_kph) {
     speed_kph = 100;
   }
   wheel_control_speed_limit = (uint8_t)speed_kph;
-  esp_err_t err             = nvs_manager_set_u8(NVS_NAMESPACE_SETTINGS, "wheel_spd", wheel_control_speed_limit);
+  esp_err_t err             = settings_set_u8("wheel_control_speed_limit", wheel_control_speed_limit);
   return err == ESP_OK;
 }
 
@@ -485,18 +438,14 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
   }
 
   int count = 0;
-  char key[16];
 
-  // Scanner dynamiquement tous les profils
+  // Scanner dynamiquement tous les profils SPIFFS
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT && count < max_profiles; i++) {
-    snprintf(key, sizeof(key), "profile_%d", i);
-
-    size_t required_size = sizeof(config_profile_t);
-    esp_err_t err        = nvs_manager_get_blob(NVS_NAMESPACE_PROFILES, key, &profile_list[count], &required_size);
-    if (err == ESP_OK && required_size == sizeof(config_profile_t)) {
+    if (config_manager_load_profile(i, &profile_list[count])) {
       count++;
     }
   }
+
   return count;
 }
 
@@ -1174,24 +1123,40 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
 
 // Réinitialisation usine complète
 bool config_manager_factory_reset(void) {
-  ESP_LOGI(TAG_CONFIG, "Factory reset: Erasing all profiles and settings...");
+  ESP_LOGI(TAG_CONFIG, "Factory reset: Erasing NVS and SPIFFS...");
 
-  esp_err_t err = nvs_manager_erase_namespace(NVS_NAMESPACE_PROFILES);
+  // Effacer complètement le NVS (WiFi credentials, etc.)
+  esp_err_t err = nvs_flash_erase();
   if (err != ESP_OK) {
-    ESP_LOGE(TAG_CONFIG, "Failed to erase profiles namespace");
+    ESP_LOGE(TAG_CONFIG, "Failed to erase NVS: %s", esp_err_to_name(err));
     return false;
   }
 
-  // Effacer la configuration matérielle LED
-  nvs_manager_erase_namespace(NVS_NAMESPACE_LED_HW);
+  // Réinitialiser le NVS
+  err = nvs_flash_init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to reinit NVS: %s", esp_err_to_name(err));
+    return false;
+  }
+
+  // Formater complètement le SPIFFS (efface tout)
+  err = spiffs_format();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to format SPIFFS: %s", esp_err_to_name(err));
+    return false;
+  }
+
+  // Réinitialiser le gestionnaire de paramètres (créera le fichier settings.json)
+  err = settings_manager_init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to reinit settings manager");
+    return false;
+  }
+
   wheel_control_enabled     = false;
   wheel_control_speed_limit = 5;
 
-  // Effacer les réglages globaux (wheel control, etc.)
-  nvs_manager_erase_namespace(NVS_NAMESPACE_SETTINGS);
 
-  nvs_manager_erase_namespace(NVS_NAMESPACE_AUDIO);
-  nvs_manager_erase_namespace(NVS_NAMESPACE_CAN_SERVERS);
 
   // Réinitialiser le profil actif en RAM
   memset(&active_profile, 0, sizeof(active_profile));
@@ -1242,31 +1207,10 @@ static uint8_t percent_to_value(uint8_t percent) {
   return (percent * 255 + 50) / 100; // Arrondi au plus proche
 }
 
-bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size) {
-  if (json_buffer == NULL) {
+// Fonction interne pour exporter un profil vers JSON (directement depuis la structure)
+static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size) {
+  if (profile == NULL || json_buffer == NULL) {
     return false;
-  }
-
-  // Charger le profil (ou utiliser le profil actif si c'est celui-là)
-  config_profile_t *profile      = NULL;
-  config_profile_t *temp_profile = NULL;
-
-  if (profile_id == active_profile_id && active_profile_loaded) {
-    profile = &active_profile;
-  } else {
-    temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
-    if (temp_profile == NULL) {
-      ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
-      return false;
-    }
-
-    if (!config_manager_load_profile(profile_id, temp_profile)) {
-      ESP_LOGW(TAG_CONFIG, "Profil %d inexistant, impossible d'exporter", profile_id);
-      free(temp_profile);
-      return false;
-    }
-
-    profile = temp_profile;
   }
 
   cJSON *root = cJSON_CreateObject();
@@ -1334,17 +1278,51 @@ bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_
     size_t len = strlen(json_str);
     if (len < buffer_size) {
       strcpy(json_buffer, json_str);
-      ESP_LOGI(TAG_CONFIG, "Profil %d exporté avec succès (%d octets)", profile_id, len);
+      ESP_LOGD(TAG_CONFIG, "Profil %d exporté avec succès (%d octets)", profile_id, len);
       success = true;
     } else {
-      ESP_LOGE(TAG_CONFIG, "Buffer trop petit: %d nécessaires, %d disponibles", len + 1, buffer_size);
+      ESP_LOGE(TAG_CONFIG, "Buffer trop petit pour export profil %d: %d bytes nécessaires, %d disponibles", profile_id, len + 1, buffer_size);
     }
     free(json_str);
+  } else {
+    size_t free_heap = esp_get_free_heap_size();
+    ESP_LOGE(TAG_CONFIG, "Erreur cJSON_PrintUnformatted pour profil %d - Heap après échec: %d bytes", profile_id, free_heap);
   }
 
   cJSON_Delete(root);
+  return success;
+}
 
-  // Libérer le profil temporaire si on l'a alloué
+// Fonction publique pour exporter un profil (charge depuis SPIFFS si nécessaire)
+bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size) {
+  if (json_buffer == NULL) {
+    return false;
+  }
+
+  // Charger le profil (ou utiliser le profil actif si c'est celui-là)
+  config_profile_t *profile      = NULL;
+  config_profile_t *temp_profile = NULL;
+
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    profile = &active_profile;
+  } else {
+    temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+    if (temp_profile == NULL) {
+      ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+      return false;
+    }
+
+    if (!config_manager_load_profile(profile_id, temp_profile)) {
+      ESP_LOGW(TAG_CONFIG, "Profil %d inexistant, impossible d'exporter", profile_id);
+      free(temp_profile);
+      return false;
+    }
+
+    profile = temp_profile;
+  }
+
+  bool success = export_profile_to_json(profile, profile_id, json_buffer, buffer_size);
+
   if (temp_profile != NULL) {
     free(temp_profile);
   }
@@ -1522,7 +1500,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   }
 
   cJSON_Delete(root);
-  ESP_LOGI(TAG_CONFIG, "Profil importé avec succès: %s", profile->name);
+  ESP_LOGD(TAG_CONFIG, "Profil parsé depuis JSON: %s", profile->name);
   return true;
 }
 
@@ -1531,10 +1509,14 @@ bool config_manager_import_profile(uint16_t profile_id, const char *json_string)
     return false;
   }
 
+  size_t json_len = strlen(json_string);
+  size_t free_heap = esp_get_free_heap_size();
+  ESP_LOGI(TAG_CONFIG, "Import profil %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
+
   // Allouer dynamiquement pour éviter stack overflow
   config_profile_t *imported_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (imported_profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire");
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour imported_profile");
     return false;
   }
 
@@ -1543,6 +1525,8 @@ bool config_manager_import_profile(uint16_t profile_id, const char *json_string)
     free(imported_profile);
     return false;
   }
+
+  ESP_LOGI(TAG_CONFIG, "Profil parsé avec succès: name='%s'", imported_profile->name);
 
   // Sauvegarder le profil importé
   bool success = config_manager_save_profile(profile_id, imported_profile);
@@ -1556,6 +1540,49 @@ bool config_manager_import_profile(uint16_t profile_id, const char *json_string)
   return success;
 }
 
+// Import optimisé: sauve le JSON directement sans re-génération
+bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_string) {
+  if (json_string == NULL) {
+    return false;
+  }
+
+  size_t json_len = strlen(json_string);
+  size_t free_heap = esp_get_free_heap_size();
+  ESP_LOGI(TAG_CONFIG, "Import direct profil %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
+
+  // Valider le JSON en le parsant
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Erreur allocation mémoire pour validation");
+    return false;
+  }
+
+  if (!config_manager_import_profile_from_json(json_string, temp_profile)) {
+    free(temp_profile);
+    return false;
+  }
+
+  // Copier le nom avant de libérer
+  char profile_name[PROFILE_NAME_MAX_LEN];
+  strncpy(profile_name, temp_profile->name, PROFILE_NAME_MAX_LEN - 1);
+  profile_name[PROFILE_NAME_MAX_LEN - 1] = '\0';
+  free(temp_profile);
+
+  // Sauvegarder directement le JSON tel quel en SPIFFS (économie mémoire max)
+  char filepath[64];
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", profile_id);
+
+  esp_err_t err = spiffs_save_json(filepath, json_string);
+
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Erreur sauvegarde SPIFFS profil %d: %s", profile_id, esp_err_to_name(err));
+    return false;
+  }
+
+  ESP_LOGI(TAG_CONFIG, "Profil %d importé: %s", profile_id, profile_name);
+  return true;
+}
+
 bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t *event_effect) {
   if (!active_profile_loaded || event >= CAN_EVENT_MAX || event_effect == NULL) {
     return false;
@@ -1566,7 +1593,7 @@ bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effec
 }
 
 uint16_t config_manager_get_led_count(void) {
-  return nvs_manager_get_u16(NVS_NAMESPACE_LED_HW, "led_count", NUM_LEDS);
+  return settings_get_u16("led_count", NUM_LEDS);
 }
 
 bool config_manager_set_led_count(uint16_t led_count) {
@@ -1576,7 +1603,7 @@ bool config_manager_set_led_count(uint16_t led_count) {
     return false;
   }
 
-  esp_err_t err = nvs_manager_set_u16(NVS_NAMESPACE_LED_HW, "led_count", led_count);
+  esp_err_t err = settings_set_u16("led_count", led_count);
   if (err == ESP_OK) {
     ESP_LOGI(TAG_CONFIG, "Configuration LED sauvegardée: %d LEDs", led_count);
     return true;
@@ -1596,29 +1623,27 @@ void config_manager_reapply_default_effect(void) {
 }
 
 bool config_manager_can_create_profile(void) {
-  nvs_stats_t nvs_stats;
-  esp_err_t err = nvs_get_stats(NULL, &nvs_stats);
+  size_t spiffs_total = 0, spiffs_used = 0;
+  esp_err_t err = spiffs_get_stats(&spiffs_total, &spiffs_used);
 
   if (err != ESP_OK) {
-    ESP_LOGW(TAG_CONFIG, "Impossible de récupérer les stats NVS");
+    ESP_LOGW(TAG_CONFIG, "Impossible de récupérer les stats SPIFFS");
     return false;
   }
 
-  // Un profil nécessite environ 1 entry (clé) + entries pour le blob
-  // Taille d'un profil : sizeof(config_profile_t) ≈ 2KB
-  // NVS entry = 32 bytes, donc un profil ≈ 2KB/32 ≈ 64 entries
-  // On garde une marge de sécurité : on vérifie qu'il reste au moins 100 entries libres
-  const size_t ENTRIES_PER_PROFILE = 100;
-  const size_t MIN_FREE_ENTRIES    = ENTRIES_PER_PROFILE;
+  // Un profil en JSON nécessite environ 8-10 KB + 8KB overhead SPIFFS
+  // On garde une marge de sécurité : vérifier qu'il reste au moins 20 KB libres
+  const size_t BYTES_PER_PROFILE = 20 * 1024; // 20 KB par profil (10KB données + 8KB overhead + marge)
+  size_t spiffs_free = spiffs_total - spiffs_used;
 
-  bool can_create                  = nvs_stats.free_entries >= MIN_FREE_ENTRIES;
+  bool can_create = spiffs_free >= BYTES_PER_PROFILE;
 
   ESP_LOGI(TAG_CONFIG,
-           "NVS check: free=%zu, needed=%zu, can_create=%d (usage=%zu%%)",
-           nvs_stats.free_entries,
-           MIN_FREE_ENTRIES,
+           "SPIFFS check: free=%zu bytes, needed=%zu bytes, can_create=%d (usage=%zu%%)",
+           spiffs_free,
+           BYTES_PER_PROFILE,
            can_create,
-           (nvs_stats.total_entries > 0) ? (nvs_stats.used_entries * 100 / nvs_stats.total_entries) : 0);
+           (spiffs_total > 0) ? (spiffs_used * 100 / spiffs_total) : 0);
 
   return can_create;
 }

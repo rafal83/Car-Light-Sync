@@ -35,7 +35,6 @@ idf_component_register(
         "wifi_manager.c"
         "captive_portal.c"
         "can_bus.c"
-        "nvs_manager.c"
         "can_servers_config.c"
         "gvret_tcp_server.c"
         "canserver_udp_server.c"
@@ -53,6 +52,9 @@ idf_component_register(
         "audio_input.c"
         "status_led.c"
         "reset_button.c"
+        "boot_loop_guard.c"
+        "spiffs_storage.c"
+        "settings_manager.c"
     INCLUDE_DIRS
         "."
         "../include"

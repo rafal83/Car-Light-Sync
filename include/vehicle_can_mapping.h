@@ -4,6 +4,7 @@
 #include "can_bus.h"
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
+#include "esp_attr.h"
 
 #include <stdint.h>
 
@@ -17,7 +18,8 @@ extern "C" {
 // Callbacks (overridables) pour mapper signaux -> état / events
 // ---------------------------------------------------------------------------
 
-void vehicle_state_apply_signal(const struct can_message_def_t *msg, const struct can_signal_def_t *sig, float value, uint8_t bus_id, vehicle_state_t *state);
+// IRAM_ATTR: fonction critique appelée à chaque frame CAN reçue
+void IRAM_ATTR vehicle_state_apply_signal(const struct can_message_def_t *msg, const struct can_signal_def_t *sig, float value, uint8_t bus_id, vehicle_state_t *state);
 
 // Callback pour les événements de scroll (appelé immédiatement quand scroll change)
 // scroll_value: >0 pour scroll up, <0 pour scroll down

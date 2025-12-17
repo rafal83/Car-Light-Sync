@@ -144,6 +144,7 @@ typedef struct {
 } can_event_effect_t;
 
 // Profil de configuration complet
+// NOTE: Profils stockés en SPIFFS (176KB) au lieu de NVS (limite 1984 bytes)
 typedef struct {
   char name[PROFILE_NAME_MAX_LEN];
   effect_config_t default_effect; // Effet par défaut
@@ -212,6 +213,12 @@ bool config_manager_rename_profile(uint16_t profile_id, const char *new_name);
 bool config_manager_get_active_profile(config_profile_t *profile);
 
 /**
+ * @brief Obtient le cache d'événements du profil actif
+ * @return Pointeur vers le tableau d'événements (ou NULL si pas de profil actif)
+ */
+can_event_effect_t *config_manager_get_active_events(void);
+
+/**
  * @brief Obtient l'ID du profil actif
  * @return ID du profil actif (-1 si aucun)
  */
@@ -245,6 +252,24 @@ bool config_manager_get_wheel_control_enabled(void);
 bool config_manager_set_wheel_control_enabled(bool enabled);
 int config_manager_get_wheel_control_speed_limit(void);
 bool config_manager_set_wheel_control_speed_limit(int speed_kph);
+
+/**
+ * @brief Charge un événement depuis SPIFFS
+ * @param profile_id ID du profil
+ * @param event Type d'événement
+ * @param event_effect Pointeur vers la structure à remplir
+ * @return true si succès
+ */
+bool config_manager_load_event(uint16_t profile_id, can_event_type_t event, can_event_effect_t *event_effect);
+
+/**
+ * @brief Sauvegarde un événement vers SPIFFS
+ * @param profile_id ID du profil
+ * @param event Type d'événement
+ * @param event_effect Pointeur vers la structure d'événement
+ * @return true si succès
+ */
+bool config_manager_save_event(uint16_t profile_id, can_event_type_t event, const can_event_effect_t *event_effect);
 
 /**
  * @brief Associe un effet à un événement CAN
@@ -308,6 +333,14 @@ bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_
  * @return true si succès
  */
 bool config_manager_import_profile(uint16_t profile_id, const char *json_string);
+
+/**
+ * @brief Importe un profil depuis JSON et sauve directement le JSON en SPIFFS (optimisé)
+ * @param profile_id ID du profil (0-99)
+ * @param json_string JSON du profil
+ * @return true si succès
+ */
+bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_string);
 
 /**
  * @brief Obtient la configuration d'effet pour un événement spécifique

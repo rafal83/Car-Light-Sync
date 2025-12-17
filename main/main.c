@@ -3,15 +3,17 @@
  * @brief Point d'entrée principal du firmware Car Light Sync
  *
  * Gère:
- * - Initialisation de tous les sous-systèmes (NVS, WiFi, CAN, LED, Audio, BLE)
+ * - Initialisation de tous les sous-systèmes (WiFi, SPIFFS, CAN, LED, Audio, BLE)
  * - Tâche principale de rendu LED (60 FPS)
  * - Détection et traitement événements CAN
  * - Mode nuit automatique basé sur l'heure
  * - Gestion du bouton reset pour retour usine
+ * - Protection contre les boot loops (LP SRAM)
  */
 
 #include "audio_input.h"
 #include "ble_api_service.h"
+#include "boot_loop_guard.h"
 #include "can_bus.h"
 #include "canserver_udp_server.h" // Serveur UDP CANServer optionnel
 #include "captive_portal.h"
@@ -26,11 +28,12 @@
 #include "led_effects.h"
 #include "led_strip_encoder.h"
 #include "log_stream.h"
-#include "nvs_manager.h"
 #include "nvs_flash.h"
 #include "ota_update.h"
 #include "reset_button.h"
 #include "sdkconfig.h"
+#include "settings_manager.h"
+#include "spiffs_storage.h"
 #include "status_led.h"
 #include "status_manager.h"
 #include "task_core_utils.h"
@@ -469,9 +472,6 @@ static void monitor_task(void *pvParameters) {
         ESP_LOGI(TAG_MAIN, "WiFi STA: Connecté à %s (IP: %s)", wifi_status.sta_ssid, wifi_status.sta_ip);
       }
       ESP_LOGI(TAG_MAIN, "ESPNow: rôle %s, type %s", espnow_link_role_to_str(role), espnow_link_slave_type_to_str(slave_type));
-      uint64_t last_hb_us = espnow_link_get_last_peer_heartbeat_us();
-      ESP_LOGI(TAG_MAIN, "ESPNow: dernier heartbeat peer = %llu us (alive=%s)", (unsigned long long)last_hb_us,
-               espnow_link_peer_alive(5000) ? "oui" : "non");
       
       if (role == ESP_NOW_ROLE_MASTER) {
         if (can_body_status.running) {
@@ -551,7 +551,7 @@ void app_main(void) {
   cJSON_InitHooks(&hooks);
 #endif
 
-  // Par défaut : master/none. NVS peut surcharger via l'API /api/espnow/config
+  // Par défaut : master/none. SPIFFS peut surcharger via l'API /api/espnow/config
   espnow_role_t default_role = ESP_NOW_ROLE_MASTER;
   espnow_slave_type_t default_type = ESP_NOW_SLAVE_NONE;
 
@@ -579,18 +579,39 @@ void app_main(void) {
   ESP_LOGI(TAG_MAIN, "       Version %s            ", APP_VERSION_STRING);
   ESP_LOGI(TAG_MAIN, "=================================");
 
+  // Initialiser la protection contre les boot loops (LP SRAM)
+  // IMPORTANT: Doit être appelé AVANT toute autre initialisation
+  ESP_ERROR_CHECK(boot_loop_guard_init());
+  uint32_t boot_count = boot_loop_guard_get_count();
+  if (boot_count > 1) {
+    ESP_LOGW(TAG_MAIN, "⚠ Boot count: %lu (protection boot loop active)", boot_count);
+  }
+
   // Initialiser les noms de périphérique avec suffixe MAC
   config_init_device_names();
   ESP_LOGI(TAG_MAIN, "WiFi AP SSID: %s", g_wifi_ssid_with_suffix);
   ESP_LOGI(TAG_MAIN, "BLE Device Name: %s", g_device_name_with_suffix);
 
-  // Initialiser NVS
+  // Initialiser NVS (réduit à 16KB pour WiFi/OTA uniquement)
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
   }
   ESP_ERROR_CHECK(ret);
+  ESP_LOGI(TAG_MAIN, "✓ NVS initialisé (16KB)");
+
+  // Initialiser SPIFFS (176KB pour profiles/config)
+  ESP_ERROR_CHECK(spiffs_storage_init());
+  size_t spiffs_total = 0, spiffs_used = 0;
+  if (spiffs_get_stats(&spiffs_total, &spiffs_used) == ESP_OK) {
+    ESP_LOGI(TAG_MAIN, "✓ SPIFFS initialisé: %d KB total, %d KB utilisés",
+             spiffs_total / 1024, spiffs_used / 1024);
+  }
+
+  // Initialiser le gestionnaire de paramètres système (SPIFFS/JSON)
+  ESP_ERROR_CHECK(settings_manager_init());
+  ESP_LOGI(TAG_MAIN, "✓ Gestionnaire de paramètres initialisé");
 
   // Valider la partition OTA actuelle (après un update)
   ESP_ERROR_CHECK(ota_validate_current_partition());
@@ -602,13 +623,13 @@ void app_main(void) {
   // Initialiser les modules
   ESP_LOGI(TAG_MAIN, "Initialisation des modules...");
 
-  uint8_t saved_role_u8 = nvs_manager_get_u8(NVS_NAMESPACE_ESPNOW, "role", (uint8_t)default_role);
-  uint8_t saved_type_u8 = nvs_manager_get_u8(NVS_NAMESPACE_ESPNOW, "type", (uint8_t)default_type);
+  uint8_t saved_role_u8 = settings_get_u8("espnow_role", (uint8_t)default_role);
+  uint8_t saved_type_u8 = settings_get_u8("espnow_type", (uint8_t)default_type);
 
   espnow_role_t espnow_role = (saved_role_u8 <= ESP_NOW_ROLE_SLAVE) ? (espnow_role_t)saved_role_u8 : default_role;
   espnow_slave_type_t espnow_type = (saved_type_u8 < ESP_NOW_SLAVE_MAX) ? (espnow_slave_type_t)saved_type_u8 : default_type;
 
-  ESP_LOGI(TAG_MAIN, "ESPNow config: nvs_role=%s nvs_type=%s",
+  ESP_LOGI(TAG_MAIN, "ESPNow config: saved_role=%s saved_type=%s",
            espnow_link_role_to_str(espnow_role),
            espnow_link_slave_type_to_str(espnow_type));
   uint64_t hb = espnow_link_get_last_peer_heartbeat_us();
@@ -766,6 +787,11 @@ void app_main(void) {
 
   // Animation de démarrage désactivée pour éviter les conflits RMT
   // L'animation sera gérée par la tâche LED
+
+  // Marquer le démarrage comme réussi (réinitialise le compteur boot loop)
+  // Note: le watchdog interne le fera aussi après 30s, mais on le fait maintenant
+  // car tous les composants critiques sont initialisés
+  boot_loop_guard_mark_success();
 
   // La boucle principale se termine, les tâches FreeRTOS continuent
   ESP_LOGI(TAG_MAIN, "app_main terminé, tâches en cours d'exécution");

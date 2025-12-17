@@ -5,8 +5,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "nvs_flash.h"
-#include "nvs_manager.h"
+#include "spiffs_storage.h"
 
 #include <float.h>
 #include <math.h>
@@ -65,7 +64,8 @@ static bool audio_input_save_calibration(void);
 static bool audio_input_load_calibration(void);
 
 // Fonction pour calculer l'amplitude RMS
-static float calculate_rms(int32_t *buffer, size_t size) {
+// IRAM_ATTR: fonction appelée fréquemment dans le traitement audio temps-réel
+static float IRAM_ATTR calculate_rms(int32_t *buffer, size_t size) {
   float sum = 0.0f;
   for (size_t i = 0; i < size; i++) {
     float sample = (float)buffer[i] / 2147483648.0f; // Normaliser 32-bit
@@ -75,7 +75,8 @@ static float calculate_rms(int32_t *buffer, size_t size) {
 }
 
 // Fonction simplifiée pour calculer l'énergie par bande de fréquence
-static void calculate_frequency_bands(int32_t *buffer, size_t size, float *bass, float *mid, float *treble) {
+// IRAM_ATTR: calcul temps-réel pour l'analyse audio
+static void IRAM_ATTR calculate_frequency_bands(int32_t *buffer, size_t size, float *bass, float *mid, float *treble) {
   // Calculer l'énergie dans différentes plages du signal temporel
   float low_energy    = 0.0f;
   float mid_energy    = 0.0f;
@@ -181,7 +182,8 @@ static float apply_calibration(float amplitude) {
 }
 
 // Détection de battement simple basée sur l'énergie
-static bool detect_beat(float amplitude) {
+// IRAM_ATTR: détection de beat en temps-réel
+static bool IRAM_ATTR detect_beat(float amplitude) {
   // Calculer l'énergie actuelle
   float current_energy = amplitude * amplitude;
 
@@ -503,7 +505,7 @@ void audio_input_set_auto_gain(bool enable) {
 }
 
 bool audio_input_save_config(void) {
-  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "config", &current_config, sizeof(audio_config_t));
+  esp_err_t ret = spiffs_save_blob("/spiffs/audio/config.bin", &current_config, sizeof(audio_config_t));
 
   if (ret == ESP_OK) {
     ESP_LOGI(TAG_AUDIO, "Configuration sauvegardée");
@@ -514,7 +516,7 @@ bool audio_input_save_config(void) {
 }
 
 static bool audio_input_save_calibration(void) {
-  esp_err_t ret = nvs_manager_set_blob(NVS_NAMESPACE_AUDIO, "calib", &calibration, sizeof(audio_calibration_t));
+  esp_err_t ret = spiffs_save_blob("/spiffs/audio/calibration.bin", &calibration, sizeof(audio_calibration_t));
 
   if (ret == ESP_OK) {
     ESP_LOGI(TAG_AUDIO, "Calibration sauvegardée (noise=%.3f, peak=%.3f)", calibration.noise_floor, calibration.peak_level);
@@ -526,14 +528,14 @@ static bool audio_input_save_calibration(void) {
 
 bool audio_input_load_config(void) {
   size_t required_size = sizeof(audio_config_t);
-  esp_err_t ret        = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "config", &current_config, &required_size);
+  esp_err_t ret        = spiffs_load_blob("/spiffs/audio/config.bin", &current_config, &required_size);
 
   if (ret == ESP_OK) {
     ESP_LOGI(TAG_AUDIO, "Configuration chargée");
     return true;
   }
 
-  if (ret == ESP_ERR_NVS_NOT_FOUND) {
+  if (ret == ESP_ERR_NOT_FOUND) {
     ESP_LOGW(TAG_AUDIO, "Pas de config audio sauvegardée");
   }
   return false;
@@ -541,10 +543,10 @@ bool audio_input_load_config(void) {
 
 static bool audio_input_load_calibration(void) {
   size_t required_size = sizeof(audio_calibration_t);
-  esp_err_t ret        = nvs_manager_get_blob(NVS_NAMESPACE_AUDIO, "calib", &calibration, &required_size);
+  esp_err_t ret        = spiffs_load_blob("/spiffs/audio/calibration.bin", &calibration, &required_size);
 
   if (ret != ESP_OK) {
-    if (ret == ESP_ERR_NVS_NOT_FOUND) {
+    if (ret == ESP_ERR_NOT_FOUND) {
       ESP_LOGW(TAG_AUDIO, "Pas de calibration sauvegardée");
     } else {
       ESP_LOGW(TAG_AUDIO, "Calibration absente ou invalide (%s)", esp_err_to_name(ret));

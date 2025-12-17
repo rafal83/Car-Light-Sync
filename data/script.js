@@ -2252,11 +2252,15 @@ async function loadProfiles() {
             const storageBar = $('storage-bar');
 
             const usagePct = data.storage.usage_pct || 0;
-            const used = data.storage.used || 0;
-            const total = data.storage.total || 0;
-            const free = data.storage.free || 0;
+            const usedBytes = data.storage.used || 0;
+            const totalBytes = data.storage.total || 0;
+            const freeBytes = data.storage.free || 0;
 
-            storageText.textContent = t('profiles.storageUsage', usagePct, used, total);
+            // Convertir bytes en KB pour affichage
+            const usedKB = Math.round(usedBytes / 1024);
+            const totalKB = Math.round(totalBytes / 1024);
+
+            storageText.textContent = t('profiles.storageUsage', usagePct, usedKB, totalKB);
             storageBar.style.width = usagePct + '%';
 
             // Changer la couleur selon l'utilisation
@@ -2268,8 +2272,8 @@ async function loadProfiles() {
                 storageBar.style.background = '#F44336';
             }
 
-            // Désactiver les boutons de création si espace insuffisant (< 200 entries libres)
-            const canCreate = free >= 200;
+            // Désactiver les boutons si espace insuffisant (< 20KB pour un profil)
+            const canCreate = freeBytes >= 20480; // 20KB minimum (10KB données + 8KB overhead SPIFFS)
             const newButton = $('profile-new-button');
             const importButton = $('profile-import-button');
             if (newButton) {

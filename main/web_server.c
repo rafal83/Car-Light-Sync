@@ -27,7 +27,8 @@
 #include "led_effects.h"
 #include "log_stream.h" // Pour le streaming de logs en temps réel
 #include "nvs_flash.h"
-#include "nvs_manager.h"
+#include "settings_manager.h"
+#include "spiffs_storage.h"
 #include "ota_update.h"
 #include "vehicle_can_unified.h"
 #include "wifi_manager.h"
@@ -642,8 +643,8 @@ static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  esp_err_t err1 = nvs_manager_set_u8(NVS_NAMESPACE_ESPNOW, "role", (uint8_t)new_role);
-  esp_err_t err2 = nvs_manager_set_u8(NVS_NAMESPACE_ESPNOW, "type", (uint8_t)new_slave_type);
+  esp_err_t err1 = settings_set_u8("espnow_role", (uint8_t)new_role);
+  esp_err_t err2 = settings_set_u8("espnow_type", (uint8_t)new_slave_type);
 
   // Mettre à jour l'état courant (pour que la réponse et les futures requêtes reflètent immédiatement les nouveaux choix)
   espnow_link_set_role_type(new_role, new_slave_type);
@@ -651,11 +652,11 @@ static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
   cJSON_Delete(root);
 
   if (err1 != ESP_OK || err2 != ESP_OK) {
-    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save NVS");
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save SPIFFS");
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG_WEBSERVER, "ESP-NOW config saved: role=%s type=%s (NVS)",
+  ESP_LOGI(TAG_WEBSERVER, "ESP-NOW config saved: role=%s type=%s (SPIFFS)",
            espnow_link_role_to_str(new_role),
            espnow_link_slave_type_to_str(new_slave_type));
 
@@ -894,7 +895,7 @@ static esp_err_t config_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Sauvegarder en NVS (seulement le nombre de LEDs)
+  // Sauvegarder en SPIFFS (seulement le nombre de LEDs)
   bool success = config_manager_set_led_count(led_count);
 
   cJSON_Delete(root);
@@ -980,19 +981,17 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(root, "an", "None");
   }
 
-  // Ajouter les statistiques NVS
-  nvs_stats_t nvs_stats;
-  esp_err_t err = nvs_get_stats(NULL, &nvs_stats);
+  // Ajouter les statistiques SPIFFS
+  size_t spiffs_total = 0, spiffs_used = 0;
+  esp_err_t err = spiffs_get_stats(&spiffs_total, &spiffs_used);
   if (err == ESP_OK) {
-    size_t used_entries  = nvs_stats.used_entries;
-    size_t free_entries  = nvs_stats.free_entries;
-    size_t total_entries = nvs_stats.total_entries;
+    size_t spiffs_free = spiffs_total - spiffs_used;
 
-    cJSON *storage       = cJSON_CreateObject();
-    cJSON_AddNumberToObject(storage, "used", used_entries);
-    cJSON_AddNumberToObject(storage, "free", free_entries);
-    cJSON_AddNumberToObject(storage, "total", total_entries);
-    cJSON_AddNumberToObject(storage, "usage_pct", (total_entries > 0) ? (used_entries * 100 / total_entries) : 0);
+    cJSON *storage = cJSON_CreateObject();
+    cJSON_AddNumberToObject(storage, "used", spiffs_used);
+    cJSON_AddNumberToObject(storage, "free", spiffs_free);
+    cJSON_AddNumberToObject(storage, "total", spiffs_total);
+    cJSON_AddNumberToObject(storage, "usage_pct", (spiffs_total > 0) ? (spiffs_used * 100 / spiffs_total) : 0);
     cJSON_AddItemToObject(root, "storage", storage);
   }
 
@@ -1045,7 +1044,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  // Vérifier d'abord s'il reste assez d'espace NVS
+  // Vérifier d'abord s'il reste assez d'espace SPIFFS
   if (!config_manager_can_create_profile()) {
     cJSON_Delete(root);
     httpd_resp_set_type(req, "application/json");
@@ -1345,36 +1344,43 @@ static esp_err_t profile_export_handler(httpd_req_t *req) {
 }
 
 static int find_free_profile_slot(int preferred_id) {
-  // Vérifier d'abord s'il reste assez d'espace NVS
+  // Vérifier d'abord s'il reste assez d'espace SPIFFS
   if (!config_manager_can_create_profile()) {
-    ESP_LOGW(TAG_WEBSERVER, "Espace NVS insuffisant pour créer un nouveau profil");
-    return -1;
-  }
-
-  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
-  if (profile == NULL) {
-    ESP_LOGE(TAG_WEBSERVER, "Erreur allocation mémoire pour recherche de slot");
+    ESP_LOGW(TAG_WEBSERVER, "Espace SPIFFS insuffisant pour créer un nouveau profil");
     return -1;
   }
 
   int target_id = -1;
 
-  if (preferred_id >= 0) {
-    if (!config_manager_load_profile((uint16_t)preferred_id, profile)) {
+  // Si un ID préféré est fourni, vérifier s'il est libre
+  if (preferred_id >= 0 && preferred_id < MAX_PROFILE_SCAN_LIMIT) {
+    char filepath[64];
+    snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", preferred_id);
+    if (!spiffs_file_exists(filepath)) {
       target_id = preferred_id;
+      ESP_LOGI(TAG_WEBSERVER, "Slot %d libre (preferred)", preferred_id);
+    } else {
+      ESP_LOGW(TAG_WEBSERVER, "Slot préféré %d déjà occupé", preferred_id);
     }
   }
 
+  // Sinon, chercher le premier slot libre
   if (target_id < 0) {
     for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
-      if (!config_manager_load_profile(i, profile)) {
+      char filepath[64];
+      snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.json", i);
+      if (!spiffs_file_exists(filepath)) {
         target_id = i;
+        ESP_LOGI(TAG_WEBSERVER, "Slot %d libre (scan)", i);
         break;
       }
     }
   }
 
-  free(profile);
+  if (target_id < 0) {
+    ESP_LOGE(TAG_WEBSERVER, "Aucun slot libre trouvé");
+  }
+
   return target_id;
 }
 
@@ -1419,6 +1425,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
 
   int target_id = find_free_profile_slot(preferred_id);
   if (target_id < 0) {
+    ESP_LOGE(TAG_WEBSERVER, "Import failed: no free profile slot (preferred_id=%d)", preferred_id);
     free(profile_json);
     cJSON_Delete(root);
     free(content);
@@ -1427,7 +1434,15 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  bool success = config_manager_import_profile((uint16_t)target_id, profile_json);
+  ESP_LOGI(TAG_WEBSERVER, "Importing profile to slot %d (preferred=%d)", target_id, preferred_id);
+  // Utiliser l'import direct pour éviter la re-génération JSON (économie mémoire)
+  bool success = config_manager_import_profile_direct((uint16_t)target_id, profile_json);
+
+  if (!success) {
+    ESP_LOGE(TAG_WEBSERVER, "Import failed: config_manager_import_profile_direct returned false");
+  } else {
+    ESP_LOGI(TAG_WEBSERVER, "Profile %d imported successfully, activating...", target_id);
+  }
 
   free(profile_json);
   cJSON_Delete(root);
@@ -1436,7 +1451,12 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "application/json");
   if (success) {
     // Activer le profil importé
-    config_manager_activate_profile((uint16_t)target_id);
+    bool activated = config_manager_activate_profile((uint16_t)target_id);
+    if (!activated) {
+      ESP_LOGE(TAG_WEBSERVER, "Profile imported but activation failed!");
+    } else {
+      ESP_LOGI(TAG_WEBSERVER, "Profile %d activated successfully", target_id);
+    }
 
     char response[64];
     snprintf(response, sizeof(response), "{\"st\":\"ok\",\"pid\":%d}", target_id);

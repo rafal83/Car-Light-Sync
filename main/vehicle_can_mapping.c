@@ -9,7 +9,8 @@
 #include <string.h>
 
 // Helper latch -> ouvert/fermé
-static inline int is_latch_open(float raw) {
+// IRAM_ATTR: appelé dans callback CAN temps-réel
+static inline int IRAM_ATTR is_latch_open(float raw) {
   int v = (int)(raw + 0.5f);
   // DBC mapping (typique Tesla) :
   // 2 = LATCH_CLOSED
@@ -61,7 +62,8 @@ static uint8_t s_door_rear_right_open  = 0;
     }                                                              \
   } while (0)
 
-static void recompute_doors_open(vehicle_state_t *state) {
+// IRAM_ATTR: recalcul rapide dans callback CAN
+static void IRAM_ATTR recompute_doors_open(vehicle_state_t *state) {
   if (!state)
     return;
   uint8_t c = 0;
@@ -86,6 +88,7 @@ void vehicle_can_set_wheel_scroll_callback(vehicle_wheel_scroll_callback_t callb
   s_wheel_scroll_callback = callback;
 }
 
+// IRAM_ATTR défini dans le header
 void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_def_t *sig, float value, uint8_t bus_id, vehicle_state_t *state) {
   if (!msg || !sig || !state)
     return;

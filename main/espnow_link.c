@@ -6,9 +6,9 @@
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "config.h"
-#include "nvs_manager.h"
 #include "status_led.h"
 #include "status_manager.h"
+#include "spiffs_storage.h"
 #include "wifi_manager.h"
 #include "vehicle_can_unified.h"
 
@@ -92,7 +92,7 @@ static void log_send_error(esp_err_t ret, const char *context) {
 static espnow_peer_info_t s_peers[ESPNOW_MAX_PEERS];
 static size_t s_peer_count = 0;
 
-static void persist_peers_to_nvs(void) {
+static void persist_peers_to_spiffs(void) {
   struct {
     uint8_t count;
     espnow_peer_info_t peers[ESPNOW_MAX_PEERS];
@@ -101,38 +101,33 @@ static void persist_peers_to_nvs(void) {
   if (blob.count) {
     memcpy(blob.peers, s_peers, blob.count * sizeof(espnow_peer_info_t));
   }
-  esp_err_t err = nvs_manager_set_blob(NVS_NAMESPACE_ESPNOW, "peers", &blob, sizeof(blob));
+  esp_err_t err = spiffs_save_blob("/spiffs/ble/espnow_peers.bin", &blob, sizeof(blob));
   if (err != ESP_OK) {
-    ESP_LOGW(TAG_ESP_NOW, "Failed to persist peers to NVS: %s", esp_err_to_name(err));
+    ESP_LOGW(TAG_ESP_NOW, "Failed to persist peers to SPIFFS: %s", esp_err_to_name(err));
   }
 }
 
-static void load_peers_from_nvs(void) {
-  size_t required = 0;
-  esp_err_t err = nvs_manager_get_blob(NVS_NAMESPACE_ESPNOW, "peers", NULL, &required);
+static void load_peers_from_spiffs(void) {
   struct {
     uint8_t count;
     espnow_peer_info_t peers[ESPNOW_MAX_PEERS];
   } blob = {0};
-  size_t max_expected = sizeof(blob);
-  if (err != ESP_OK || required == 0 || required > max_expected) {
+  size_t required = sizeof(blob);
+
+  esp_err_t err = spiffs_load_blob("/spiffs/ble/espnow_peers.bin", &blob, &required);
+  if (err != ESP_OK) {
     s_peer_count = 0;
     return;
   }
-  err = nvs_manager_get_blob(NVS_NAMESPACE_ESPNOW, "peers", &blob, &required);
-  if (err == ESP_OK) {
-    s_peer_count = (blob.count > ESPNOW_MAX_PEERS) ? ESPNOW_MAX_PEERS : blob.count;
-    if (s_peer_count) {
-      memcpy(s_peers, blob.peers, s_peer_count * sizeof(espnow_peer_info_t));
-      for (size_t i = 0; i < s_peer_count; i++) {
-        if (s_peers[i].role != ESP_NOW_ROLE_MASTER && s_peers[i].role != ESP_NOW_ROLE_SLAVE) {
-          s_peers[i].role = (s_role == ESP_NOW_ROLE_MASTER) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
-        }
+
+  s_peer_count = (blob.count > ESPNOW_MAX_PEERS) ? ESPNOW_MAX_PEERS : blob.count;
+  if (s_peer_count) {
+    memcpy(s_peers, blob.peers, s_peer_count * sizeof(espnow_peer_info_t));
+    for (size_t i = 0; i < s_peer_count; i++) {
+      if (s_peers[i].role != ESP_NOW_ROLE_MASTER && s_peers[i].role != ESP_NOW_ROLE_SLAVE) {
+        s_peers[i].role = (s_role == ESP_NOW_ROLE_MASTER) ? ESP_NOW_ROLE_SLAVE : ESP_NOW_ROLE_MASTER;
       }
     }
-  } else {
-    s_peer_count = 0;
-    ESP_LOGW(TAG_ESP_NOW, "Failed to load peers from NVS: %s", esp_err_to_name(err));
   }
 }
 
@@ -233,7 +228,7 @@ static esp_err_t load_self_mac(void) {
   return err;
 }
 
-// Re-register peers stored in NVS into esp_now peer table
+// Re-register peers stored in SPIFFS into esp_now peer table
 static void register_cached_peers(void) {
   if (s_peer_count == 0) return;
 
@@ -318,7 +313,7 @@ static void update_peer_info(const uint8_t mac[6], espnow_role_t role, espnow_sl
       }
       s_peers[i].last_seen_us = esp_timer_get_time();
       if (changed) {
-        persist_peers_to_nvs();
+        persist_peers_to_spiffs();
       }
       return;
     }
@@ -346,7 +341,7 @@ static void update_peer_info(const uint8_t mac[6], espnow_role_t role, espnow_sl
   s_peers[s_peer_count].last_seen_us = esp_timer_get_time();
   s_peers[s_peer_count].channel = channel;
   s_peer_count++;
-  persist_peers_to_nvs();
+  persist_peers_to_spiffs();
 }
 
 static void remove_peer_from_cache(const uint8_t mac[6]) {
@@ -357,7 +352,7 @@ static void remove_peer_from_cache(const uint8_t mac[6]) {
         s_peers[i] = s_peers[s_peer_count - 1];
       }
       s_peer_count--;
-      persist_peers_to_nvs();
+      persist_peers_to_spiffs();
       break;
     }
   }
@@ -498,7 +493,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
   s_device_id            = esp_random();
 
   // Charger les pairs persistés
-  load_peers_from_nvs();
+  load_peers_from_spiffs();
   load_self_mac();
 
   ESP_ERROR_CHECK(esp_now_init());
@@ -528,7 +523,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     ESP_ERROR_CHECK(esp_timer_create(&pairing_timer_args, &s_pairing_mode_timer));
   }
 
-  // Restaurer les peers enregistrés en NVS (master & slave)
+  // Restaurer les peers enregistrés en SPIFFS (master & slave)
   register_cached_peers();
 
   if (s_role == ESP_NOW_ROLE_SLAVE) {
@@ -543,7 +538,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type) {
     }
   }
 
-  // Restaurer les peers enregistrés en NVS (master & slave)
+  // Restaurer les peers enregistrés en SPIFFS (master & slave)
   register_cached_peers();
 
   // Auto-relaunch slave discovery on boot if not connected
@@ -739,14 +734,14 @@ esp_err_t espnow_link_disconnect(void) {
   if (s_role != ESP_NOW_ROLE_SLAVE) {
     return ESP_ERR_NOT_SUPPORTED;
   }
-  // Clear peer list and NVS
+  // Clear peer list and SPIFFS
   esp_now_peer_info_t peer = {0};
   for (esp_err_t ret = esp_now_fetch_peer(true, &peer); ret == ESP_OK; ret = esp_now_fetch_peer(false, &peer)) {
     esp_now_del_peer(peer.peer_addr);
     remove_peer_from_cache(peer.peer_addr);
   }
   s_peer_count = 0;
-  persist_peers_to_nvs();
+  persist_peers_to_spiffs();
   s_last_peer_hb_us = 0;
   if (s_discovery_timer && esp_timer_is_active(s_discovery_timer)) {
     esp_timer_stop(s_discovery_timer);
@@ -764,7 +759,7 @@ esp_err_t espnow_link_disconnect_peer(const uint8_t mac[6]) {
     esp_now_del_peer(mac);
   }
   remove_peer_from_cache(mac);
-  persist_peers_to_nvs();
+  persist_peers_to_spiffs();
   return ESP_OK;
 }
 
