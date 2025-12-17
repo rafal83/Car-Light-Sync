@@ -60,6 +60,7 @@ static canserver_client_t clients[MAX_CANSERVER_CLIENTS];
 static SemaphoreHandle_t clients_mutex = NULL;
 static frame_buffer_t frame_buffer;
 static SemaphoreHandle_t buffer_mutex = NULL;
+static bool has_active_clients     = false; // Cached client status for fast check
 
 // ============================================================================
 // Panda Protocol Frame Encoding
@@ -135,6 +136,7 @@ static void remove_stale_clients(void) {
   uint64_t timeout_us = CANSERVER_KEEPALIVE_TIMEOUT_MS * 1000ULL;
 
   xSemaphoreTake(clients_mutex, portMAX_DELAY);
+  bool clients_changed = false;
   for (int i = 0; i < MAX_CANSERVER_CLIENTS; i++) {
     if (clients[i].active) {
       if ((now - clients[i].last_ping_time) > timeout_us) {
@@ -142,6 +144,18 @@ static void remove_stale_clients(void) {
         inet_ntop(AF_INET, &clients[i].addr.sin_addr, ip_str, sizeof(ip_str));
         ESP_LOGI(TAG, "Client %s:%d timed out (no ping for >5s), removing", ip_str, ntohs(clients[i].addr.sin_port));
         clients[i].active = false;
+        clients_changed = true;
+      }
+    }
+  }
+
+  // Update cached status if clients changed
+  if (clients_changed) {
+    has_active_clients = false;
+    for (int i = 0; i < MAX_CANSERVER_CLIENTS; i++) {
+      if (clients[i].active) {
+        has_active_clients = true;
+        break;
       }
     }
   }
@@ -202,6 +216,7 @@ static void canserver_rx_task(void *arg) {
           client->active         = true;
           client->last_ping_time = esp_timer_get_time();
           client->frames_sent    = 0;
+          has_active_clients     = true; // Update cached status
           ESP_LOGI(TAG, "New client registered: %s:%d (received %d bytes)", client_ip, ntohs(client_addr.sin_port), len);
         } else {
           ESP_LOGW(TAG, "Max clients reached, ignoring hello from %s:%d", client_ip, ntohs(client_addr.sin_port));
@@ -473,6 +488,11 @@ int canserver_udp_server_get_client_count(void) {
 void canserver_udp_broadcast_can_frame(int bus, const twai_message_t *msg) {
   if (!server_running) {
     return;
+  }
+
+  // Fast check: if no clients, don't process frames at all (no mutex needed)
+  if (!has_active_clients) {
+    return; // No clients connected, skip processing
   }
 
   static uint32_t frame_rx_count = 0;

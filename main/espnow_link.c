@@ -690,6 +690,11 @@ esp_err_t espnow_link_send_vehicle_state(const vehicle_state_t *state) {
     return ESP_ERR_INVALID_STATE;
   }
 
+  // Quick check: if no peers, don't send anything
+  if (s_peer_count == 0) {
+    return ESP_OK; // No peers connected, skip sending
+  }
+
   msg_vehicle_state_t msg = {.type = MSG_VEHICLE_STATE};
   memcpy(&msg.state, state, sizeof(vehicle_state_t));
 

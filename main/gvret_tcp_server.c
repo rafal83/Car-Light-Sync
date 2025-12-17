@@ -57,6 +57,7 @@ static int listen_socket               = -1;
 static TaskHandle_t accept_task_handle = NULL;
 static gvret_client_t clients[MAX_GVRET_CLIENTS];
 static SemaphoreHandle_t clients_mutex = NULL;
+static bool has_active_clients         = false; // Cached client status for fast check
 
 // ============================================================================
 // GVRET Protocol Frame Encoding
@@ -135,6 +136,15 @@ static void mark_client_inactive(gvret_client_t *client) {
   client->active      = false;
   client->socket      = -1;
   client->task_handle = NULL;
+
+  // Update cached status
+  has_active_clients = false;
+  for (int i = 0; i < MAX_GVRET_CLIENTS; i++) {
+    if (clients[i].active) {
+      has_active_clients = true;
+      break;
+    }
+  }
   xSemaphoreGive(clients_mutex);
 }
 
@@ -383,6 +393,7 @@ static void gvret_accept_task(void *arg) {
     client->socket      = client_socket;
     client->active      = true;
     client->frames_sent = 0;
+    has_active_clients  = true; // Update cached status
 
     // Set socket to non-blocking
     int flags           = fcntl(client_socket, F_GETFL, 0);
@@ -551,6 +562,11 @@ int gvret_tcp_server_get_client_count(void) {
 void gvret_tcp_broadcast_can_frame(int bus, const twai_message_t *msg) {
   if (!server_running) {
     return;
+  }
+
+  // Fast check: if no clients, don't process frames at all (no mutex needed)
+  if (!has_active_clients) {
+    return; // No clients connected, skip processing
   }
 
   // Encode frame in GVRET format
