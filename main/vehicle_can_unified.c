@@ -201,3 +201,111 @@ void vehicle_state_to_ble(const vehicle_state_t *src, vehicle_state_ble_t *dst) 
   // Meta
   dst->last_update_ms = src->last_update_ms;
 }
+
+// ---------------------------------------------------------------------------
+// Conversion vers format BLE DRIVE (conduite)
+// ---------------------------------------------------------------------------
+
+void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_drive_t *dst) {
+  if (!src || !dst) return;
+
+  // Dynamique de conduite (int16_t pour supporter valeurs négatives en régénération)
+  dst->speed_kph_x10 = (int16_t)(src->speed_kph * 10.0f);
+  dst->rear_power_kw_x10 = (int16_t)(src->rearPower * 10.0f);  // Peut être négatif (régén)
+  dst->front_power_kw_x10 = (int16_t)(src->frontPower * 10.0f); // Peut être négatif (régén)
+  dst->soc_percent_x10 = (int16_t)(src->soc_percent * 10.0f);
+  dst->odometer_km = (uint32_t)src->odometer_km;
+
+  // Valeurs uint8
+  dst->gear = src->gear;
+  dst->pedal_map = src->pedal_map;
+  dst->accel_pedal_pos = src->accel_pedal_pos;
+  dst->brightness = (uint8_t)(src->brightness * 100.0f);
+  dst->autopilot = src->autopilot;
+
+  // Byte 0: turn signals & brake
+  dst->flags0 =
+    (src->turn_left    ? (1<<0) : 0) |
+    (src->turn_right   ? (1<<1) : 0) |
+    (src->hazard       ? (1<<2) : 0) |
+    (src->brake_pressed ? (1<<3) : 0) |
+    (src->high_beams   ? (1<<4) : 0) |
+    (src->headlights   ? (1<<5) : 0) |
+    (src->fog_lights   ? (1<<6) : 0);
+
+  // Byte 1: blindspots & collisions
+  dst->flags1 =
+    (src->blindspot_left        ? (1<<0) : 0) |
+    (src->blindspot_right       ? (1<<1) : 0) |
+    (src->blindspot_left_alert  ? (1<<2) : 0) |
+    (src->blindspot_right_alert ? (1<<3) : 0) |
+    (src->side_collision_left   ? (1<<4) : 0) |
+    (src->side_collision_right  ? (1<<5) : 0) |
+    (src->forward_collision     ? (1<<6) : 0) |
+    (src->night_mode            ? (1<<7) : 0);
+
+  // Byte 2: autopilot alerts & lane departure
+  dst->flags2 =
+    (src->lane_departure_left_lv1  ? (1<<0) : 0) |
+    (src->lane_departure_left_lv2  ? (1<<1) : 0) |
+    (src->lane_departure_right_lv1 ? (1<<2) : 0) |
+    (src->lane_departure_right_lv2 ? (1<<3) : 0) |
+    (src->autopilot_alert_lv1      ? (1<<4) : 0) |
+    (src->autopilot_alert_lv2      ? (1<<5) : 0) |
+    (src->autopilot_alert_lv3      ? (1<<6) : 0);
+
+  // Meta
+  dst->last_update_ms = src->last_update_ms;
+}
+
+// ---------------------------------------------------------------------------
+// Conversion vers format BLE PARK (stationnement)
+// ---------------------------------------------------------------------------
+
+void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_park_t *dst) {
+  if (!src || !dst) return;
+
+  // Energie
+  dst->soc_percent_x10 = (int16_t)(src->soc_percent * 10.0f);
+  dst->charge_power_kw_x10 = (int16_t)(src->charge_power_kw * 10.0f);
+  dst->battery_voltage_LV_x10 = (int16_t)(src->battery_voltage_LV * 10.0f);
+  dst->battery_voltage_HV_x10 = (int16_t)(src->battery_voltage_HV * 10.0f);
+  dst->odometer_km = (uint32_t)src->odometer_km;
+
+  // Valeurs uint8
+  dst->charge_status = src->charge_status;
+  dst->brightness = (uint8_t)(src->brightness * 100.0f);
+  dst->doors_open_count = src->doors_open_count;
+
+  // Byte 0: doors & locks
+  dst->flags0 =
+    (src->locked                ? (1<<0) : 0) |
+    (src->door_front_left_open  ? (1<<1) : 0) |
+    (src->door_rear_left_open   ? (1<<2) : 0) |
+    (src->door_front_right_open ? (1<<3) : 0) |
+    (src->door_rear_right_open  ? (1<<4) : 0) |
+    (src->frunk_open            ? (1<<5) : 0) |
+    (src->trunk_open            ? (1<<6) : 0) |
+    (src->brake_pressed         ? (1<<7) : 0);
+
+  // Byte 1: lights
+  dst->flags1 =
+    (src->turn_left    ? (1<<0) : 0) |
+    (src->turn_right   ? (1<<1) : 0) |
+    (src->hazard       ? (1<<2) : 0) |
+    (src->headlights   ? (1<<3) : 0) |
+    (src->high_beams   ? (1<<4) : 0) |
+    (src->fog_lights   ? (1<<5) : 0);
+
+  // Byte 2: charging & sentry
+  dst->flags2 =
+    (src->charging_cable ? (1<<0) : 0) |
+    (src->charging       ? (1<<1) : 0) |
+    (src->charging_port  ? (1<<2) : 0) |
+    (src->sentry_mode    ? (1<<3) : 0) |
+    (src->sentry_alert   ? (1<<4) : 0) |
+    (src->night_mode     ? (1<<5) : 0);
+
+  // Meta
+  dst->last_update_ms = src->last_update_ms;
+}

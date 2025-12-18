@@ -14,12 +14,13 @@ Merci ! Ton soutien garde le projet libre et accessible.
 - LEDs WS2812/WS2812B avec effets audio-réactifs
 - Intégration CAN multi-véhicules (architecture unifiée, double TWAI requis → ESP32-C6 + ESP-IDF ≥ 5.2)
 - Interface web responsive + app mobile (BLE)
+- Dashboard automobile avec modes Park/Drive (affichage vitesse, arc pédale, indicateurs WiFi-wave blindspot)
 - OTA intégrée et profilage d'effets événementiels
 - Passerelles CAN intégrées : GVRET TCP (SavvyCAN) + CANServer UDP
 - ESP-NOW : rôle maître par défaut, profils satellites disponibles (blindspot, speedometer)
 
 ## ⚡ Démarrer vite
-1. Cloner : `git clone https://github.com/raphaelgiga/car-light-sync.git`
+1. Cloner : `git clone https://github.com/rafal83/car-light-sync.git`
 2. Ouvrir le repo et installer **PlatformIO**.
 3. Flasher : `pio run -e esp32c6 -t upload` puis `pio device monitor`.
 4. Se connecter au WiFi `CarLightSync` et ouvrir `http://192.168.4.1`.

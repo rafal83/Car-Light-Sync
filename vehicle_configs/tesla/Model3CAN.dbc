@@ -2525,7 +2525,6 @@ BO_ 609 ID261_12vBattStatus: 8 VehicleBus
  SG_ VCFRONT_firstChargeOTA m0 : 44|1@1+ (1,0) [0|0] ""  Receiver
  SG_ VCFRONT_PCSMia m1 : 44|1@1+ (1,0) [0|0] ""  Receiver
  SG_ VCFRONT_silentWakeIBSCurrent m0 : 32|12@1- (0.1,-204.7) [-409.5|2.8421709430404E-014] "mA"  Receiver
- SG_ v12vBattVoltage261 m1 : 32|12@1+ (0.00544368,0) [0|22.2918696] "V"  Receiver
  SG_ VCFRONT_12VBatteryTargetVoltage m2 : 32|10@1+ (0.01,9) [9|19.23] "V"  Receiver
  SG_ v12vBattCurrent261 m0 : 16|16@1- (0.005,0) [-163.84|163.835] "A"  Receiver
  SG_ VCFRONT_IBSCurrent m1 : 16|16@1- (0.005,0) [-163.84|163.835] "A"  Receiver
@@ -2535,6 +2534,7 @@ BO_ 609 ID261_12vBattStatus: 8 VehicleBus
  SG_ VCFRONT_targetCurrent m1 : 8|8@1+ (0.125,0) [0|31.875] "A"  Receiver
  SG_ VCFRONT_voltageDropCounter m0 : 8|4@1+ (1,0) [0|0] ""  Receiver
  SG_ VCFRONT_batterySMState m1 : 4|4@1+ (1,0) [0|0] ""  Receiver
+ SG_ v12vBattVoltage261 m1 : 32|12@1+ (0.00544368,0) [0|22.2918696] "V"  Receiver
  SG_ VCFRONT_12VOverchargeCounter m0 : 4|4@1+ (1,0) [0|0] ""  Receiver
  SG_ VCFRONT_batterySupportRequest m1 : 3|1@1+ (1,0) [0|0] ""  Receiver
  SG_ v12vBattAH261 m2 : 2|14@1- (0.005,0) [-40.96|40.955] "Ah"  Receiver

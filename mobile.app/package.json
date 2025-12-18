@@ -17,7 +17,7 @@
     "build:apk": "npm run sync:android && cd android && gradlew assembleDebug",
     "build:apk:release": "npm run sync:android && cd android && gradlew assembleRelease",
     "build:aab": "npm run sync:android && cd android && gradlew bundleRelease",
-    "install:android": "npm run sync:android && cd android && gradlew installDebug",
+    "install:android": "npm run sync:android && npx cap run android",
     "run:android": "npm run install:android",
     "run:ios": "npm run sync:ios && cap run ios",
     "clean:android": "cd android && gradlew clean",
@@ -31,7 +31,9 @@
     "@capacitor-community/bluetooth-le": "^6.0.1",
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
-    "@capacitor/ios": "^6.0.0"
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "@capawesome/capacitor-screen-orientation": "^6.0.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",

@@ -1,4 +1,4 @@
-/* Dashboard - Style automobile Tesla-inspired */
+/* Dashboard - Style automobile Tesla-inspired - Landscape Mode */
 
 * {
     margin: 0;
@@ -6,46 +6,91 @@
     box-sizing: border-box;
 }
 
+:root {
+    /* Dark theme (default) */
+    --bg-gradient-start: #0a0a0a;
+    --bg-gradient-end: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+    --text-tertiary: #888888;
+    --text-quaternary: #666666;
+    --surface-primary: rgba(255, 255, 255, 0.05);
+    --surface-secondary: rgba(255, 255, 255, 0.1);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --border-color-strong: rgba(255, 255, 255, 0.2);
+    --gauge-bg-start: rgba(30, 30, 30, 0.8);
+    --gauge-bg-end: rgba(50, 50, 50, 0.8);
+}
+
+body.light-theme {
+    /* Light theme */
+    --bg-gradient-start: #f5f5f5;
+    --bg-gradient-end: #e0e0e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-tertiary: #666666;
+    --text-quaternary: #888888;
+    --surface-primary: rgba(0, 0, 0, 0.05);
+    --surface-secondary: rgba(0, 0, 0, 0.1);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --border-color-strong: rgba(0, 0, 0, 0.2);
+    --gauge-bg-start: rgba(230, 230, 230, 0.8);
+    --gauge-bg-end: rgba(240, 240, 240, 0.8);
+}
+
 body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-    color: #ffffff;
-    overflow-x: hidden;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    color: var(--text-primary);
+    overflow: hidden;
     -webkit-user-select: none;
     user-select: none;
+    width: 100vw;
+    height: 100vh;
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 #dashboard-container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-    min-height: 100vh;
+    width: 100%;
+    height: 100%;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Header */
+/* Header - Compact for landscape */
 .dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
-    padding: 15px 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
+    margin-bottom: 8px;
+    padding: 5px 12px;
+    background: var(--surface-primary);
+    border-radius: 8px;
     backdrop-filter: blur(10px);
+    flex-shrink: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Hide header in drive mode */
+.dashboard-header.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
 }
 
 .connection-status {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .status-dot {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: #ff4444;
-    box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
     animation: pulse-red 2s infinite;
 }
 
@@ -66,53 +111,428 @@ body {
 }
 
 .status-text {
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 500;
-    color: #aaaaaa;
+    color: var(--text-secondary);
+}
+
+/* Connection progress indicator */
+.connection-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-left: 8px;
+}
+
+.progress-bar {
+    width: 150px;
+    height: 3px;
+    background: var(--surface-secondary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4299e1, #3182ce);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    font-weight: 500;
 }
 
 .config-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .config-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
+    background: var(--surface-primary);
+    color: var(--text-primary);
+    border-color: var(--border-color-strong);
+}
+
+body.light-theme .config-btn:hover {
+    background: var(--surface-primary);
+    opacity: 1;
 }
 
 .config-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
+}
+
+/* Main content wrapper - will switch between layouts */
+.dashboard-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* Park Mode Layout */
+.park-mode {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    width: 100%;
+}
+
+.park-mode .left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.park-mode .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+/* Drive Mode Layout - Automotive Style */
+.drive-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.drive-mode .left-indicators,
+.drive-mode .right-indicators {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.drive-mode .left-indicators {
+    left: 8%;
+}
+
+.drive-mode .right-indicators {
+    right: 8%;
+}
+
+/* Individual positioned indicators */
+#ind-turn-left-drive {
+    position: absolute;
+    top: -80px;
+    left: 0;
+}
+
+#ind-blindspot-left-drive {
+    position: absolute;
+    top: 20px;
+    left: 0;
+}
+
+#ind-turn-right-drive {
+    position: absolute;
+    top: -80px;
+    right: 0;
+}
+
+#ind-blindspot-right-drive {
+    position: absolute;
+    top: 20px;
+    right: 0;
+}
+
+.drive-indicator {
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
+    background: rgba(72, 187, 120, 0.15);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(72, 187, 120, 0.7);
+    animation: pulse-blink 0.6s infinite;
+    box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+}
+
+.drive-indicator.warning-indicator {
+    width: auto;
+    height: auto;
+    border-radius: 20px;
+    padding: 12px 20px;
+    background: rgba(245, 101, 101, 0.2);
+    border: 3px solid rgba(245, 101, 101, 0.6);
+    box-shadow: 0 4px 20px rgba(245, 101, 101, 0.4);
+}
+
+.drive-indicator.autopilot-indicator {
+    width: auto;
+    height: auto;
+    border-radius: 20px;
+    padding: 12px 20px;
+    background: rgba(66, 153, 225, 0.2);
+    border: 3px solid rgba(66, 153, 225, 0.6);
+    box-shadow: 0 4px 20px rgba(66, 153, 225, 0.4);
+}
+
+.drive-indicator-icon {
+    font-size: 40px;
+    display: block;
+}
+
+.drive-indicator svg {
+    color: #48bb78;
+}
+
+.drive-indicator-label {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--text-primary);
+    margin-left: 8px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+@keyframes pulse-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+@keyframes pulse-alert {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.bottom-warnings {
+    position: absolute;
+    bottom: 20px;
+    display: flex;
+    gap: 20px;
+}
+
+/* Speedometer container */
+.speedometer-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Power arcs (SVG path) - 180° arcs on left and right sides */
+.power-arc {
+    width: 400px;
+    height: 400px;
+    position: absolute;
+    pointer-events: none;
+}
+
+.power-arc-bg {
+    fill: none;
+    stroke: var(--surface-secondary);
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+
+.power-arc-fill {
+    fill: none;
+    stroke: var(--surface-secondary); /* Gris par défaut */
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 159; /* 110° arc = (110/360) × 2π × 83 ≈ 159 */
+    stroke-dashoffset: 159;
+    transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease, filter 0.3s ease;
+}
+
+/* Arc actif (quand il y a de la puissance) */
+.power-arc-fill.active {
+    stroke: #48bb78 !important; /* Vert quand actif */
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.8)) !important;
+}
+
+/* Pedal arc (SVG path) - 240° arc from bottom-left to bottom-right */
+.pedal-arc {
+    width: 400px;
+    height: 400px;
+    position: absolute;
+    pointer-events: none;
+}
+
+.pedal-arc-bg {
+    fill: none;
+    stroke: var(--surface-secondary);
+    stroke-width: 10;
+    stroke-linecap: round;
+}
+
+.pedal-arc-fill {
+    fill: none;
+    stroke: #4299e1;
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 341; /* 280° arc = (280/360) × 2π × 70 ≈ 341 */
+    stroke-dashoffset: 341;
+    transition: stroke-dashoffset 0.3s ease;
+    filter: drop-shadow(0 0 10px rgba(66, 153, 225, 0.6));
+}
+
+/* Blindspot arcs - WiFi-wave style on edges */
+.blindspot-arcs-left,
+.blindspot-arcs-right {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    pointer-events: none;
+    animation: pulse-blink 0.6s infinite;
+}
+
+/* Speed display */
+.speed-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+/* Power & pedal map indicators around speedometer */
+.power-pedal-indicators {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Pedal map indicator (top center) */
+.pedal-map-indicator {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-blue);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pedal-map-label {
+    padding: 4px 12px;
+    background: var(--accent-blue);
+    color: var(--background-primary);
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+/* Power indicators (bottom corners) */
+.power-indicator {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+    gap: 2px;
+}
+
+.power-rear {
+    bottom: 45px;
+    left: 45px;
+}
+
+.power-front {
+    bottom: 45px;
+    right: 45px;
+}
+
+.power-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.power-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Color coding for power (positive = acceleration, negative = regen) */
+.power-value.positive {
+    color: var(--status-success);
+}
+
+.power-value.negative {
+    color: var(--accent-blue);
+}
+
+.power-value.zero {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.power-unit {
+    font-size: 9px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    font-weight: 500;
+}
+
+/* Hide modes by default */
+.park-mode,
+.drive-mode {
+    display: none;
+}
+
+.park-mode.active,
+.drive-mode.active {
+    display: flex;
 }
 
 /* Jauges principales */
 .main-gauges {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
 }
 
 .gauge-container {
     display: flex;
     justify-content: center;
+    flex: 1;
 }
 
 .gauge {
-    background: linear-gradient(135deg, rgba(30, 30, 30, 0.8) 0%, rgba(50, 50, 50, 0.8) 100%);
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, var(--gauge-bg-start) 0%, var(--gauge-bg-end) 100%);
+    border: 2px solid var(--border-color);
     border-radius: 20px;
-    padding: 30px;
+    padding: 20px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    min-width: 150px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    width: 100%;
+}
+
+body.light-theme .gauge {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .speed-gauge {
@@ -124,7 +544,7 @@ body {
 }
 
 .gauge-value {
-    font-size: 48px;
+    font-size: 42px;
     font-weight: 700;
     line-height: 1;
     margin-bottom: 5px;
@@ -134,9 +554,73 @@ body {
     background-clip: text;
 }
 
+/* Large speed display for drive mode */
+.speed-large {
+    font-size: 120px;
+    font-weight: 700;
+    line-height: 1;
+    color: #ffffff;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+.speed-unit-large {
+    font-size: 24px;
+    color: #888888;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 10px;
+}
+
+.gear-display-large {
+    font-size: 48px;
+    font-weight: 700;
+    color: #ffffff;
+    padding: 20px 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    margin-top: 20px;
+}
+
+/* Gear display in drive mode */
+.gear-display-drive {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 10px;
+    padding: 8px 20px;
+    background: var(--surface-primary);
+    border-radius: 10px;
+    border: 2px solid var(--border-color-strong);
+}
+
+/* Compact info display below speedometer */
+.drive-info-compact {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.drive-info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drive-info-icon {
+    font-size: 20px;
+}
+
+.drive-info-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .gauge-unit {
     font-size: 14px;
-    color: #888888;
+    color: var(--text-tertiary);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -144,25 +628,25 @@ body {
 
 .gauge-subtext {
     font-size: 12px;
-    color: #666666;
+    color: var(--text-quaternary);
     margin-top: 8px;
 }
 
 /* Informations véhicule */
 .vehicle-info {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 30px;
+    background: var(--surface-primary);
+    border-radius: 12px;
+    padding: 15px;
     backdrop-filter: blur(10px);
+    flex-shrink: 0;
 }
 
 .info-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .info-row:last-child {
@@ -170,21 +654,21 @@ body {
 }
 
 .info-label {
-    font-size: 14px;
-    color: #aaaaaa;
+    font-size: 13px;
+    color: var(--text-secondary);
     font-weight: 500;
 }
 
 .info-value {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .charging-row {
     background: rgba(72, 187, 120, 0.1);
     border-radius: 8px;
-    padding: 12px 15px;
+    padding: 10px 12px;
     border: 1px solid rgba(72, 187, 120, 0.3);
 }
 
@@ -192,21 +676,24 @@ body {
 .status-indicators {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .indicator-group {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    padding: 20px;
+    background: var(--surface-primary);
+    border-radius: 12px;
+    padding: 12px;
     backdrop-filter: blur(10px);
+    flex-shrink: 0;
 }
 
 .group-title {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 15px;
+    color: var(--text-primary);
+    margin-bottom: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -214,14 +701,19 @@ body {
 .indicators-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
+}
+
+/* Compact indicators for landscape */
+.indicators-grid.compact {
+    grid-template-columns: repeat(2, 1fr);
 }
 
 .indicator {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 15px 10px;
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 8px;
     text-align: center;
     transition: all 0.3s ease;
     opacity: 0.4;
@@ -254,35 +746,50 @@ body {
 
 .indicator-icon {
     display: block;
-    font-size: 24px;
-    margin-bottom: 5px;
+    font-size: 20px;
+    margin-bottom: 4px;
 }
 
 .indicator-label {
     display: block;
-    font-size: 10px;
-    color: #aaaaaa;
+    font-size: 9px;
+    color: var(--text-secondary);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-/* Responsive */
-@media (max-width: 500px) {
-    .main-gauges {
-        grid-template-columns: 1fr;
+/* Mode selector visual hint */
+.mode-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Responsive - maintain landscape */
+@media (max-width: 800px) {
+    .speed-large {
+        font-size: 80px;
+    }
+
+    .gear-display-large {
+        font-size: 36px;
+        padding: 15px 30px;
+    }
+
+    .gauge-value {
+        font-size: 32px;
     }
 
     .indicators-grid {
         grid-template-columns: repeat(2, 1fr);
-    }
-
-    .gauge {
-        min-width: 120px;
-        padding: 20px;
-    }
-
-    .gauge-value {
-        font-size: 36px;
     }
 }

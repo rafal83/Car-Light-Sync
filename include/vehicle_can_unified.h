@@ -24,8 +24,9 @@ typedef struct {
 typedef struct {
   // Dynamique de base
   float speed_kph;
-  float speed_threshold;
-  int8_t gear; // P=0, D=1, R=2... (à mapper selon Tesla)
+  float speed_limit;
+  int8_t pedal_map;
+  int8_t gear; 
   uint8_t accel_pedal_pos;
   uint8_t brake_pressed; // 0/1
 
@@ -70,6 +71,8 @@ typedef struct {
   uint8_t charge_status;
   float charge_power_kw;
   uint8_t charging_port;
+  float rearPower;
+  float frontPower;
 
   // Divers
   uint8_t sentry_mode;  // 0/1
@@ -102,25 +105,55 @@ typedef struct {
   uint32_t last_update_ms;
 } vehicle_state_t;
 
-// Structure compacte pour BLE dashboard (bit-packed pour réduire la taille)
-// Total: 28 bytes (vs 86 bytes pour vehicle_state_t) - tient dans un seul paquet BLE !
+// Structure compacte BLE pour mode DRIVE (conduite)
+// Focus: vitesse, puissance, assistance conduite, sécurité
+// Total: ~24 bytes
 typedef struct __attribute__((packed)) {
-  // Floats convertis en int16 (résolution réduite mais suffisante pour affichage)
+  // Dynamique de conduite
   int16_t speed_kph_x10;           // vitesse * 10 (ex: 1234 = 123.4 km/h)
+  int16_t rear_power_kw_x10;       // puissance moteur arrière * 10
+  int16_t front_power_kw_x10;      // puissance moteur avant * 10
+  int16_t soc_percent_x10;         // batterie % * 10
+  uint32_t odometer_km;            // odomètre (uint32 = max 4 294 967 km)
+
+  // Valeurs uint8
+  int8_t gear;                     // P=1, R=2, N=3, D=4
+  int8_t pedal_map;                // mode de conduite (Chill/Standard/Sport)
+  uint8_t accel_pedal_pos;         // 0-100%
+  uint8_t brightness;              // 0-100%
+  uint8_t autopilot;               // état autopilot
+
+  // Bit-packed flags pour sécurité et indicateurs
+  // Byte 0 (8 bits): turn signals & brake
+  uint8_t flags0;  // bits: turn_left, turn_right, hazard, brake_pressed, high_beams, headlights, fog_lights, unused
+
+  // Byte 1 (8 bits): blindspots & collisions
+  uint8_t flags1;  // bits: blindspot_L, blindspot_R, blindspot_L_alert, blindspot_R_alert, side_collision_L, side_collision_R, forward_collision, night_mode
+
+  // Byte 2 (8 bits): autopilot alerts & lane departure
+  uint8_t flags2;  // bits: lane_dep_L_lv1, lane_dep_L_lv2, lane_dep_R_lv1, lane_dep_R_lv2, autopilot_alert_lv1, autopilot_alert_lv2, autopilot_alert_lv3, unused
+
+  // Meta
+  uint32_t last_update_ms;
+} vehicle_state_ble_drive_t;
+
+// Structure compacte BLE pour mode PARK (stationnement)
+// Focus: batterie, charge, portes, sécurité statique
+// Total: ~24 bytes
+typedef struct __attribute__((packed)) {
+  // Energie
   int16_t soc_percent_x10;         // batterie % * 10
   int16_t charge_power_kw_x10;     // puissance charge * 10
   int16_t battery_voltage_LV_x10;  // tension 12V * 10
   int16_t battery_voltage_HV_x10;  // tension HV * 10
-  uint32_t odometer_km;            // odomètre (uint32 = max 4 294 967 km)
-  uint8_t brightness;              // 0-100%
+  uint32_t odometer_km;            // odomètre
 
-  // Valeurs uint8 non-booléennes
-  int8_t gear;                     // P=0, D=1, R=2...
-  uint8_t accel_pedal_pos;         // 0-100%
+  // Valeurs uint8
   uint8_t charge_status;           // statut charge
-  uint8_t autopilot;               // état autopilot
+  uint8_t brightness;              // 0-100%
+  uint8_t doors_open_count;        // nombre de portes ouvertes
 
-  // Bit-packed booleans (27 bits = 4 bytes) - boutons volant et doors_open_count retirés
+  // Bit-packed flags
   // Byte 0 (8 bits): doors & locks
   uint8_t flags0;  // bits: locked, door_FL, door_RL, door_FR, door_RR, frunk, trunk, brake_pressed
 
@@ -128,17 +161,40 @@ typedef struct __attribute__((packed)) {
   uint8_t flags1;  // bits: turn_left, turn_right, hazard, headlights, high_beams, fog_lights, unused, unused
 
   // Byte 2 (8 bits): charging & sentry
-  uint8_t flags2;  // bits: charging_cable, charging, charging_port, sentry_mode, sentry_alert, unused, unused, unused
-
-  // Byte 3 (11 bits): safety & autopilot
-  uint8_t flags3;  // bits: blindspot_L, blindspot_R, blindspot_L_alert, blindspot_R_alert, side_collision_L, side_collision_R, forward_collision, night_mode
-  uint8_t flags4;  // bits: lane_dep_L_lv1, lane_dep_L_lv2, lane_dep_R_lv1, lane_dep_R_lv2, autopilot_alert_lv1, autopilot_alert_lv2, autopilot_alert_lv3, unused
+  uint8_t flags2;  // bits: charging_cable, charging, charging_port, sentry_mode, sentry_alert, night_mode, unused, unused
 
   // Meta
   uint32_t last_update_ms;
+} vehicle_state_ble_park_t;
+
+// Ancienne structure BLE unifiée (deprecated, garder pour compatibilité)
+typedef struct __attribute__((packed)) {
+  int16_t speed_kph_x10;
+  int16_t soc_percent_x10;
+  int16_t charge_power_kw_x10;
+  int16_t battery_voltage_LV_x10;
+  int16_t battery_voltage_HV_x10;
+  uint32_t odometer_km;
+  uint8_t brightness;
+  int8_t gear;
+  uint8_t accel_pedal_pos;
+  uint8_t charge_status;
+  uint8_t autopilot;
+  uint8_t flags0;
+  uint8_t flags1;
+  uint8_t flags2;
+  uint8_t flags3;
+  uint8_t flags4;
+  uint32_t last_update_ms;
 } vehicle_state_ble_t;
 
-// Convertit vehicle_state_t en format compact BLE
+// Convertit vehicle_state_t en format compact BLE Drive
+void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_drive_t *dst);
+
+// Convertit vehicle_state_t en format compact BLE Park
+void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_park_t *dst);
+
+// Ancienne fonction (deprecated)
 void vehicle_state_to_ble(const vehicle_state_t *src, vehicle_state_ble_t *dst);
 
 // Initialise l'historique interne des signaux

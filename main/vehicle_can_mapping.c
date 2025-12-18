@@ -28,6 +28,13 @@ static uint8_t s_door_rear_left_open   = 0;
 static uint8_t s_door_front_right_open = 0;
 static uint8_t s_door_rear_right_open  = 0;
 
+static uint8_t s_batterySMState = 0;
+static float s_rearMotorCurrent126 = 0;
+static float s_rearHighVoltage126 = 0;
+static float s_frontMotorCurrent1A5 = 0;
+static float s_frontHighVoltage1A5 = 0;
+static int maxL=0, maxR=0;
+
 // Helpers to send the ESP-NOW state only when a value has changed
 #define UPDATE_AND_SEND_U8(field, value, state_ptr)                \
   do {                                                             \
@@ -77,6 +84,13 @@ static void IRAM_ATTR recompute_doors_open(vehicle_state_t *state) {
   }
 }
 
+static void IRAM_ATTR recompute_power(vehicle_state_t *state) {
+  if (!state)
+    return;
+  UPDATE_AND_SEND_FLOAT(state->rearPower, (s_rearMotorCurrent126 * s_rearHighVoltage126) / 1000.0f, state);
+  UPDATE_AND_SEND_FLOAT(state->frontPower, (s_frontMotorCurrent1A5 * s_frontHighVoltage1A5) / 1000.0f, state);
+}
+
 // ============================================================================
 // Mapping signaux -> vehicle_state_t
 // ============================================================================
@@ -96,10 +110,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   uint32_t id      = msg->id;
   const char *name = sig->name ? sig->name : "";
 
-  // Le bus_id est maintenant disponible pour les logs
-  (void)bus_id; // Avoid unused warning for now
-
-  if ((id == 0x3C2) && (bus_id == 1)) {
+  if ((id == 0x3C2) && (bus_id == CAN_BUS_BODY)) {
     if (strcmp(name, "VCLEFT_swcLeftScrollTicks") == 0) {
       if (value != 21 && value != 0) {
         UPDATE_AND_SEND_U8(state->left_btn_scroll_up, value > 0 ? 1 : 0, state);
@@ -301,8 +312,10 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x399) {
     if (strcmp(name, "DAS_autopilotState") == 0) {
+      int v                       = (int)(value + 0.5f);
       // ESP_LOGI(TAG_CAN, "%s %f", name, value); // 2 nada, 3 // FSD,
-      UPDATE_AND_SEND_U8(state->autopilot, value, state);
+      v = (v > 1) && (v < 14) ? v : 0;
+      UPDATE_AND_SEND_U8(state->autopilot, v, state);
       return;
     }
     if (strcmp(name, "DAS_autopilotHandsOnState") == 0) {
@@ -320,47 +333,57 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
         10 "LC_HANDS_ON_REQD_ESCALATED_CHIME_2"
         15 "LC_HANDS_ON_SNA"
       */
-      UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, value == 1 ? 1 : 0, state);
-      // state->autopilot_alert_lv2 = value >= 2 && value <= 5 ? 1 : 0;
-      UPDATE_AND_SEND_U8(state->autopilot_alert_lv3, value >= 6 && value <= 10 ? 1 : 0, state);
+      int v                       = (int)(value + 0.5f);
+      UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v == 1 ? 1 : 0, state);
+      // state->autopilot_alert_lv2 = v >= 2 && v <= 5 ? 1 : 0;
+      UPDATE_AND_SEND_U8(state->autopilot_alert_lv3, v >= 6 && v <= 10 ? 1 : 0, state);
       return;
     }
     if (strcmp(name, "DAS_laneDepartureWarning") == 0) {
       // 1 "LEFT_WARNING" 3 "LEFT_WARNING_SEVERE" 0 "NONE" 2 "RIGHT_WARNING" 4
       // "RIGHT_WARNING_SEVERE"
-      UPDATE_AND_SEND_U8(state->lane_departure_left_lv1, value == 1 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->lane_departure_left_lv2, value == 3 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->lane_departure_right_lv1, value == 2 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->lane_departure_right_lv2, value == 4 ? 1 : 0, state);
+      int v                       = (int)(value + 0.5f);
+      UPDATE_AND_SEND_U8(state->lane_departure_left_lv1, v == 1 ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->lane_departure_left_lv2, v == 3 ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->lane_departure_right_lv1, v == 2 ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->lane_departure_right_lv2, v == 4 ? 1 : 0, state);
       return;
     }
     if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
       // ESP_LOGI(TAG_CAN, "%s %f", name, value);
-      UPDATE_AND_SEND_U8(state->side_collision_left, value == 1 || value == 3 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->side_collision_right, value == 2 || value == 3 ? 1 : 0, state);
+      int v                       = (int)(value + 0.5f);
+      UPDATE_AND_SEND_U8(state->side_collision_left, v == 1 || v == 3 ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->side_collision_right, v == 2 || v == 3 ? 1 : 0, state);
       return;
     }
     if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
-      UPDATE_AND_SEND_U8(state->forward_collision, value == 1 ? 1 : 0, state);
+      int v                       = (int)(value + 0.5f);
+      UPDATE_AND_SEND_U8(state->forward_collision, v == 1 ? 1 : 0, state);
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
       int v                       = (int)(value + 0.5f);
+      if (v>maxL){maxL=v; ESP_LOGI(TAG_CAN,"maxL=%d",maxL);}
       UPDATE_AND_SEND_U8(state->blindspot_left, (v > 0) ? 1 : 0, state);
       UPDATE_AND_SEND_U8(state->blindspot_left_alert, (v > 1) ? 1 : 0, state);
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
       int v                        = (int)(value + 0.5f);
+      if (v>maxR){maxR=v; ESP_LOGI(TAG_CAN,"maxR=%d",maxR);}
       UPDATE_AND_SEND_U8(state->blindspot_right, (v > 0) ? 1 : 0, state);
       UPDATE_AND_SEND_U8(state->blindspot_right_alert, (v > 1) ? 1 : 0, state);
       return;
     }
     return;
   }
-  if (id == 0x313) {
+  if (id == 0x334 && bus_id == CAN_BUS_CHASSIS) {
+    if (strcmp(name, "UI_pedalMap") == 0) {
+      UPDATE_AND_SEND_U8(state->pedal_map, (int)(value + 0.5f), state);
+      return;
+    }
     if (strcmp(name, "UI_speedLimit") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->speed_threshold, value, state);
+      UPDATE_AND_SEND_FLOAT(state->speed_limit, (int)(value + 0.5f), state);
       return;
     }
     return;
@@ -388,11 +411,41 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     return;
   }
 
+  if (id == 0x126) {
+    if (strcmp(name, "RearHighVoltage126") == 0) {
+      s_rearHighVoltage126 = value;
+      recompute_power(state);
+      return;
+    }
+    if (strcmp(name, "RearMotorCurrent126") == 0) {
+      s_rearMotorCurrent126 = value;
+      recompute_power(state);
+      return;
+    }
+    return;
+  }
+  if (id == 0x126) {
+    if (strcmp(name, "FrontHighVoltage1A5") == 0) {
+      s_frontHighVoltage1A5 = value;
+      recompute_power(state);
+      return;
+    }
+    if (strcmp(name, "FrontMotorCurrent1A5") == 0) {
+      s_frontMotorCurrent1A5 = value;
+      recompute_power(state);
+      return;
+    }
+    return;
+  }
+
   // ---------------------------------------------------------------------
   // Batterie HV : ID261_12vBattStatus / v12vBattVoltage261
   // ---------------------------------------------------------------------
   if (id == 0x261) {
-    if (strcmp(name, "v12vBattVoltage261") == 0) {
+    if (strcmp(name, "VCFRONT_batterySMState") == 0) {
+      s_batterySMState = (int)(value + 0.5f);; // 3 Standby
+    }
+    if ((strcmp(name, "v12vBattVoltage261") == 0) && (s_batterySMState == 3)) {
       UPDATE_AND_SEND_FLOAT(state->battery_voltage_LV, value, state);
       return;
     }

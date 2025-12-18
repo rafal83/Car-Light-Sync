@@ -1028,11 +1028,28 @@ function updateLanguageIcon() {
     }
 }
 
-function switchToDashboard() {
+async function switchToDashboard() {
+    console.log('[Config] Switching to dashboard mode...');
+
+    // Disconnect BLE cleanly before switching
+    try {
+        if (bleManager && bleManager.device && bleManager.device.gatt && bleManager.device.gatt.connected) {
+            console.log('[Config] Disconnecting BLE before switching to dashboard...');
+            bleManager.bleManualDisconnect = true; // Prevent auto-reconnect
+            await bleManager.bleDisconnect(false); // Don't clear history
+
+            // Wait a bit to ensure disconnection is processed
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+    } catch (error) {
+        console.error('[Config] Error during BLE cleanup:', error);
+    }
+
     // Clear the flag to allow redirect back to dashboard on next app open
     sessionStorage.removeItem('from-dashboard');
 
     // Navigate to dashboard page (mobile only)
+    console.log('[Config] Navigating to dashboard...');
     window.location.href = '/dashboard/dashboard.html';
 }
 

@@ -390,8 +390,8 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Speed threshold
-    if (current_state.speed_kph != previous_state.speed_kph) {
-      if (current_state.speed_kph > current_state.speed_threshold) {
+    if (current_state.speed_kph != previous_state.speed_kph || current_state.speed_limit != previous_state.speed_limit) {
+      if (current_state.speed_kph > current_state.speed_limit) {
         config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
       } else {
         config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
@@ -406,13 +406,28 @@ static void can_event_task(void *pvParameters) {
     if (ble_send_counter >= 4) {  // 4 iterations * 50ms = 200ms
       ble_send_counter = 0;
 
-      // Send current vehicle state to BLE dashboard if connected (using compact format)
+      // Send current vehicle state to BLE dashboard if connected
+      // Use mode-specific packet format based on gear (Drive vs Park)
       if (ble_api_service_is_connected()) {
-        static vehicle_state_ble_t ble_state;
-        vehicle_state_to_ble(&current_state, &ble_state);
-        esp_err_t ret = ble_api_service_send_vehicle_state(&ble_state, sizeof(vehicle_state_ble_t));
-        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-          ESP_LOGD(TAG_MAIN, "BLE dashboard periodic send failed: %s", esp_err_to_name(ret));
+        // Determine mode based on gear: P=1, R=2, N=3, D=4
+        bool is_drive_mode = (current_state.gear == 2 || current_state.gear == 3 || current_state.gear == 4);
+
+        if (is_drive_mode) {
+          // Send DRIVE mode packet (smaller, focused on driving metrics)
+          static vehicle_state_ble_drive_t ble_drive_state;
+          vehicle_state_to_ble_drive(&current_state, &ble_drive_state);
+          esp_err_t ret = ble_api_service_send_vehicle_state(&ble_drive_state, sizeof(vehicle_state_ble_drive_t));
+          if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+            ESP_LOGD(TAG_MAIN, "BLE drive mode send failed: %s", esp_err_to_name(ret));
+          }
+        } else {
+          // Send PARK mode packet (focused on battery, charging, doors)
+          static vehicle_state_ble_park_t ble_park_state;
+          vehicle_state_to_ble_park(&current_state, &ble_park_state);
+          esp_err_t ret = ble_api_service_send_vehicle_state(&ble_park_state, sizeof(vehicle_state_ble_park_t));
+          if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+            ESP_LOGD(TAG_MAIN, "BLE park mode send failed: %s", esp_err_to_name(ret));
+          }
         }
       }
     }

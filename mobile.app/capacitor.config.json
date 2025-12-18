@@ -10,6 +10,13 @@
         "availableDevices": "Available devices",
         "noDeviceFound": "No device found"
       }
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#000000"
+    },
+    "ScreenOrientation": {
+      "orientation": "landscape"
     }
   }
 }

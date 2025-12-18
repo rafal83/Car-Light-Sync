@@ -14,8 +14,8 @@ extern "C" {
 
 // Type de bus CAN
 typedef enum {
-  CAN_BUS_BODY    = 0,
-  CAN_BUS_CHASSIS = 1,
+  CAN_BUS_CHASSIS = 0,
+  CAN_BUS_BODY    = 1,
   CAN_BUS_COUNT   = 2
 } can_bus_type_t;
 
