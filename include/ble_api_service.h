@@ -39,6 +39,13 @@ esp_err_t ble_api_service_stop(void);
  */
 bool ble_api_service_is_connected(void);
 
+/**
+ * @brief Envoie l'état du véhicule via BLE (pour le mode dashboard).
+ * @param state Pointeur vers la structure vehicle_state_t.
+ * @return ESP_OK en cas de succès, code d'erreur sinon.
+ */
+esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

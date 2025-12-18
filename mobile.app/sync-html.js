@@ -6,6 +6,8 @@ const DEST_DIR = path.join(__dirname, 'www');
 const HTML_FILENAME = 'index.html';
 const REQUIRED_ASSETS = ['i18n.js', 'script.js', 'style.css', 'carlightsync.png', 'carlightsync64.png'];
 const OPTIONAL_ASSETS = [];
+const DASHBOARD_DIR = 'dashboard';
+const DASHBOARD_FILES = ['dashboard.html', 'dashboard.css', 'dashboard.js'];
 
 function ensureFileExists(filePath, label) {
   if (!fs.existsSync(filePath)) {
@@ -53,6 +55,52 @@ console.log('index.html synchronized with Capacitor injection.');
 
 for (const asset of REQUIRED_ASSETS) {
   copyAsset(asset);
+}
+
+// Copy dashboard files
+const dashboardSourceDir = path.join(SOURCE_DIR, DASHBOARD_DIR);
+const dashboardDestDir = path.join(DEST_DIR, DASHBOARD_DIR);
+
+if (fs.existsSync(dashboardSourceDir)) {
+  if (!fs.existsSync(dashboardDestDir)) {
+    fs.mkdirSync(dashboardDestDir, { recursive: true });
+  }
+
+  for (const file of DASHBOARD_FILES) {
+    const sourcePath = path.join(dashboardSourceDir, file);
+    const destPath = path.join(dashboardDestDir, file);
+
+    if (fs.existsSync(sourcePath)) {
+      // Special handling for dashboard.html to inject Capacitor scripts
+      if (file === 'dashboard.html') {
+        let dashboardHtml = fs.readFileSync(sourcePath, 'utf8');
+
+        const dashboardCapacitorInjection = [
+          '    <script src="../capacitor.js"></script>',
+          '    <script src="../ble-client-loader.js"></script>',
+          '    <script src="../capacitor-bluetooth-adapter.js"></script>',
+        ].join('\n');
+
+        if (!dashboardHtml.includes('ble-client-loader.js')) {
+          if (!dashboardHtml.includes('</head>')) {
+            console.error('dashboard.html does not contain </head>.');
+            process.exit(1);
+          }
+          dashboardHtml = dashboardHtml.replace('</head>', `${dashboardCapacitorInjection}\n</head>`);
+        }
+
+        fs.writeFileSync(destPath, dashboardHtml, 'utf8');
+        console.log(`${DASHBOARD_DIR}/${file} synchronized with Capacitor injection.`);
+      } else {
+        fs.copyFileSync(sourcePath, destPath);
+        console.log(`${DASHBOARD_DIR}/${file} copied.`);
+      }
+    } else {
+      console.warn(`Warning: ${DASHBOARD_DIR}/${file} not found, skipping.`);
+    }
+  }
+} else {
+  console.warn(`Warning: ${DASHBOARD_DIR} directory not found, skipping dashboard sync.`);
 }
 
 console.log('Web assets ready for Capacitor sync.');

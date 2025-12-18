@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Car Light Sync - Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div id="dashboard-container">
+        <!-- Header avec contrôles -->
+        <div class="dashboard-header">
+            <div class="connection-status" id="connection-status">
+                <span class="status-dot" id="status-dot"></span>
+                <span class="status-text" id="status-text">Déconnecté</span>
+            </div>
+            <button class="config-btn" id="config-btn">⚙️ Config</button>
+        </div>
+
+        <!-- Indicateurs principaux -->
+        <div class="main-gauges">
+            <!-- Vitesse -->
+            <div class="gauge-container">
+                <div class="gauge speed-gauge">
+                    <div class="gauge-value" id="speed-value">0</div>
+                    <div class="gauge-unit">km/h</div>
+                </div>
+            </div>
+
+            <!-- Batterie HV -->
+            <div class="gauge-container">
+                <div class="gauge battery-gauge">
+                    <div class="gauge-value" id="battery-value">0</div>
+                    <div class="gauge-unit">%</div>
+                    <div class="gauge-subtext" id="battery-voltage">0.0V</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations véhicule -->
+        <div class="vehicle-info">
+            <!-- Transmission -->
+            <div class="info-row">
+                <span class="info-label">Vitesse</span>
+                <span class="info-value" id="gear-display">P</span>
+            </div>
+
+            <!-- Odomètre -->
+            <div class="info-row">
+                <span class="info-label">Odomètre</span>
+                <span class="info-value" id="odometer-value">0 km</span>
+            </div>
+
+            <!-- Charge -->
+            <div class="info-row charging-row" id="charging-row" style="display: none;">
+                <span class="info-label">Charge</span>
+                <span class="info-value" id="charge-power">0.0 kW</span>
+            </div>
+        </div>
+
+        <!-- Indicateurs d'état (portes, lumières, etc.) -->
+        <div class="status-indicators">
+            <!-- Portes -->
+            <div class="indicator-group">
+                <div class="group-title">Portes</div>
+                <div class="indicators-grid">
+                    <div class="indicator" id="ind-door-fl">
+                        <span class="indicator-icon">🚪</span>
+                        <span class="indicator-label">AV-G</span>
+                    </div>
+                    <div class="indicator" id="ind-door-fr">
+                        <span class="indicator-icon">🚪</span>
+                        <span class="indicator-label">AV-D</span>
+                    </div>
+                    <div class="indicator" id="ind-door-rl">
+                        <span class="indicator-icon">🚪</span>
+                        <span class="indicator-label">AR-G</span>
+                    </div>
+                    <div class="indicator" id="ind-door-rr">
+                        <span class="indicator-icon">🚪</span>
+                        <span class="indicator-label">AR-D</span>
+                    </div>
+                    <div class="indicator" id="ind-frunk">
+                        <span class="indicator-icon">📦</span>
+                        <span class="indicator-label">Frunk</span>
+                    </div>
+                    <div class="indicator" id="ind-trunk">
+                        <span class="indicator-icon">📦</span>
+                        <span class="indicator-label">Coffre</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lumières -->
+            <div class="indicator-group">
+                <div class="group-title">Lumières</div>
+                <div class="indicators-grid">
+                    <div class="indicator" id="ind-headlights">
+                        <span class="indicator-icon">💡</span>
+                        <span class="indicator-label">Phares</span>
+                    </div>
+                    <div class="indicator" id="ind-high-beams">
+                        <span class="indicator-icon">🔆</span>
+                        <span class="indicator-label">Pleins feux</span>
+                    </div>
+                    <div class="indicator" id="ind-fog">
+                        <span class="indicator-icon">🌫️</span>
+                        <span class="indicator-label">Antibrouillard</span>
+                    </div>
+                    <div class="indicator" id="ind-turn-left">
+                        <span class="indicator-icon">⬅️</span>
+                        <span class="indicator-label">Gauche</span>
+                    </div>
+                    <div class="indicator" id="ind-turn-right">
+                        <span class="indicator-icon">➡️</span>
+                        <span class="indicator-label">Droite</span>
+                    </div>
+                    <div class="indicator" id="ind-hazard">
+                        <span class="indicator-icon">⚠️</span>
+                        <span class="indicator-label">Warnings</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sécurité / Autopilot -->
+            <div class="indicator-group">
+                <div class="group-title">Sécurité</div>
+                <div class="indicators-grid">
+                    <div class="indicator" id="ind-locked">
+                        <span class="indicator-icon">🔒</span>
+                        <span class="indicator-label">Verrouillé</span>
+                    </div>
+                    <div class="indicator" id="ind-sentry">
+                        <span class="indicator-icon">🛡️</span>
+                        <span class="indicator-label">Sentry</span>
+                    </div>
+                    <div class="indicator" id="ind-autopilot">
+                        <span class="indicator-icon">🤖</span>
+                        <span class="indicator-label">Autopilot</span>
+                    </div>
+                    <div class="indicator" id="ind-blindspot-left">
+                        <span class="indicator-icon">◀️</span>
+                        <span class="indicator-label">Angle mort G</span>
+                    </div>
+                    <div class="indicator" id="ind-blindspot-right">
+                        <span class="indicator-icon">▶️</span>
+                        <span class="indicator-label">Angle mort D</span>
+                    </div>
+                    <div class="indicator" id="ind-forward-collision">
+                        <span class="indicator-icon">⚠️</span>
+                        <span class="indicator-label">Collision</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -7,6 +7,12 @@
   <title>Car Light Sync</title>
   <link rel="icon" type="image/png" href="carlightsync64.png">
   <link href="style.css" rel="stylesheet" />
+  <!-- Redirect to dashboard on mobile (Capacitor) unless coming from dashboard -->
+  <script>
+    if (window.Capacitor && !sessionStorage.getItem('from-dashboard')) {
+      window.location.href = '/dashboard/dashboard.html';
+    }
+  </script>
 </head>
 
 <body>
@@ -43,6 +49,9 @@
         <p data-i18n="app.subtitle"></p>
       </div>
       <div class="header-controls">
+        <button id="dashboard-toggle" class="icon-toggle-btn" onclick="switchToDashboard()" title="Dashboard" style="display: none;">
+          <span id="dashboard-icon">📊</span>
+        </button>
         <button id="language-toggle" class="icon-toggle-btn" onclick="toggleLanguage()" title="Language / Langue">
           <span id="language-icon">FR</span>
         </button>

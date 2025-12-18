@@ -127,6 +127,9 @@ static void can_event_task(void *pvParameters) {
   static vehicle_state_t current_state;
   static vehicle_state_t previous_state = {0};
 
+  // Counter for periodic BLE dashboard updates (send every 200ms = 4 iterations)
+  uint8_t ble_send_counter = 0;
+
   while (1) {
     // Copy current state
     memcpy(&current_state, &last_vehicle_state, sizeof(vehicle_state_t));
@@ -397,6 +400,22 @@ static void can_event_task(void *pvParameters) {
 
     // Save previous state
     memcpy(&previous_state, &current_state, sizeof(vehicle_state_t));
+
+    // Periodic BLE dashboard updates (every 200ms)
+    ble_send_counter++;
+    if (ble_send_counter >= 4) {  // 4 iterations * 50ms = 200ms
+      ble_send_counter = 0;
+
+      // Send current vehicle state to BLE dashboard if connected (using compact format)
+      if (ble_api_service_is_connected()) {
+        static vehicle_state_ble_t ble_state;
+        vehicle_state_to_ble(&current_state, &ble_state);
+        esp_err_t ret = ble_api_service_send_vehicle_state(&ble_state, sizeof(vehicle_state_ble_t));
+        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+          ESP_LOGD(TAG_MAIN, "BLE dashboard periodic send failed: %s", esp_err_to_name(ret));
+        }
+      }
+    }
 
     vTaskDelay(pdMS_TO_TICKS(50)); // Check every 50 ms
   }

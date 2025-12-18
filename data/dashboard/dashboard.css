@@ -1,0 +1,288 @@
+/* Dashboard - Style automobile Tesla-inspired */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    color: #ffffff;
+    overflow-x: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#dashboard-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ff4444;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    animation: pulse-red 2s infinite;
+}
+
+.status-dot.connected {
+    background: #44ff44;
+    box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.status-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #aaaaaa;
+}
+
+.config-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.config-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.config-btn:active {
+    transform: scale(0.95);
+}
+
+/* Jauges principales */
+.main-gauges {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.gauge-container {
+    display: flex;
+    justify-content: center;
+}
+
+.gauge {
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.8) 0%, rgba(50, 50, 50, 0.8) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    min-width: 150px;
+}
+
+.speed-gauge {
+    border-color: rgba(66, 153, 225, 0.5);
+}
+
+.battery-gauge {
+    border-color: rgba(72, 187, 120, 0.5);
+}
+
+.gauge-value {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 5px;
+    background: linear-gradient(135deg, #ffffff 0%, #aaaaaa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.gauge-unit {
+    font-size: 14px;
+    color: #888888;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.gauge-subtext {
+    font-size: 12px;
+    color: #666666;
+    margin-top: 8px;
+}
+
+/* Informations véhicule */
+.vehicle-info {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    backdrop-filter: blur(10px);
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: 14px;
+    color: #aaaaaa;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.charging-row {
+    background: rgba(72, 187, 120, 0.1);
+    border-radius: 8px;
+    padding: 12px 15px;
+    border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+/* Indicateurs d'état */
+.status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.indicator-group {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.group-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.indicators-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.indicator {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 15px 10px;
+    text-align: center;
+    transition: all 0.3s ease;
+    opacity: 0.4;
+}
+
+.indicator.active {
+    opacity: 1;
+    background: rgba(66, 153, 225, 0.2);
+    border-color: rgba(66, 153, 225, 0.5);
+    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3);
+}
+
+.indicator.warning {
+    background: rgba(237, 137, 54, 0.2);
+    border-color: rgba(237, 137, 54, 0.5);
+    box-shadow: 0 0 20px rgba(237, 137, 54, 0.3);
+}
+
+.indicator.alert {
+    background: rgba(245, 101, 101, 0.2);
+    border-color: rgba(245, 101, 101, 0.5);
+    box-shadow: 0 0 20px rgba(245, 101, 101, 0.3);
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.indicator-icon {
+    display: block;
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.indicator-label {
+    display: block;
+    font-size: 10px;
+    color: #aaaaaa;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+    .main-gauges {
+        grid-template-columns: 1fr;
+    }
+
+    .indicators-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .gauge {
+        min-width: 120px;
+        padding: 20px;
+    }
+
+    .gauge-value {
+        font-size: 36px;
+    }
+}

@@ -37,6 +37,9 @@ static const ble_uuid128_t ble_command_uuid  = BLE_UUID128_INIT(0xa8, 0x26, 0x1b
 // Response: 64a0990c-52eb-4c1b-aa30-ea826f4ba9dc
 static const ble_uuid128_t ble_response_uuid = BLE_UUID128_INIT(0xdc, 0xa9, 0x4b, 0x6f, 0x82, 0xea, 0x30, 0xaa, 0x1b, 0x4c, 0xeb, 0x52, 0x0c, 0x99, 0xa0, 0x64);
 
+// Vehicle State: c5c9c331-914b-459e-8fcc-c5c91fb54fad
+static const ble_uuid128_t ble_vehicle_state_uuid = BLE_UUID128_INIT(0xad, 0x4f, 0xb5, 0x1f, 0xc9, 0xc5, 0xcc, 0x8f, 0x9e, 0x45, 0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5);
+
 typedef struct {
   size_t length;
   char *payload;
@@ -54,8 +57,10 @@ typedef struct {
 static uint16_t ble_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t ble_command_val_handle;
 static uint16_t ble_response_val_handle;
+static uint16_t ble_vehicle_state_val_handle;
 static bool ble_connected               = false;
 static bool notifications_enabled       = false;
+static bool vehicle_state_notifications_enabled = false;
 static uint16_t negotiated_mtu          = 23;
 static bool ble_started                 = false;
 static QueueHandle_t request_queue      = NULL;
@@ -113,6 +118,12 @@ static const struct ble_gatt_svc_def ble_gatt_svcs[] = {{.type            = BLE_
                                                                                                             .flags      = BLE_GATT_CHR_F_NOTIFY,
                                                                                                             .val_handle = &ble_response_val_handle,
                                                                                                         },
+                                                                                                        {
+                                                                                                            .uuid       = &ble_vehicle_state_uuid.u,
+                                                                                                            .access_cb  = ble_gatt_access_cb,
+                                                                                                            .flags      = BLE_GATT_CHR_F_NOTIFY,
+                                                                                                            .val_handle = &ble_vehicle_state_val_handle,
+                                                                                                        },
                                                                                                         {0}}},
                                                         {0}};
 
@@ -142,6 +153,7 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
       ble_conn_handle       = event->connect.conn_handle;
       ble_connected         = true;
       notifications_enabled = false;
+      vehicle_state_notifications_enabled = false;
       negotiated_mtu        = 23;
       incoming_length       = 0;
       ESP_LOGI(TAG_BLE_API, "Client BLE connecte");
@@ -174,6 +186,7 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     ble_conn_handle       = BLE_HS_CONN_HANDLE_NONE;
     ble_connected         = false;
     notifications_enabled = false;
+    vehicle_state_notifications_enabled = false;
     incoming_length       = 0;
     ESP_LOGI(TAG_BLE_API, "Client BLE deconnecte, raison=%d", event->disconnect.reason);
     {
@@ -206,8 +219,13 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     break;
 
   case BLE_GAP_EVENT_SUBSCRIBE:
-    notifications_enabled = event->subscribe.cur_notify;
-    ESP_LOGI(TAG_BLE_API, "Notifications BLE %s", notifications_enabled ? "activees" : "desactivees");
+    if (event->subscribe.attr_handle == ble_response_val_handle) {
+      notifications_enabled = event->subscribe.cur_notify;
+      ESP_LOGI(TAG_BLE_API, "Notifications BLE response %s", notifications_enabled ? "activees" : "desactivees");
+    } else if (event->subscribe.attr_handle == ble_vehicle_state_val_handle) {
+      vehicle_state_notifications_enabled = event->subscribe.cur_notify;
+      ESP_LOGI(TAG_BLE_API, "Notifications BLE vehicle_state %s", vehicle_state_notifications_enabled ? "activees" : "desactivees");
+    }
     break;
   }
   return 0;
@@ -659,6 +677,60 @@ bool ble_api_service_is_connected(void) {
   return ble_connected;
 }
 
+esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size) {
+  if (!ble_connected || !vehicle_state_notifications_enabled || ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
+    return ESP_ERR_INVALID_STATE;
+  }
+  if (!state || size == 0) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  // Send vehicle state via BLE notification
+  // Use same chunking as response notifications
+  size_t max_payload = negotiated_mtu > 3 ? (negotiated_mtu - 3) : 20;
+  if (max_payload > 244) {
+    max_payload = 244;
+  }
+
+  struct os_mbuf *om;
+  size_t offset = 0;
+
+  while (offset < size) {
+    size_t chunk = (size - offset) > max_payload ? max_payload : (size - offset);
+
+    om = ble_hs_mbuf_from_flat((const uint8_t *)state + offset, chunk);
+    if (!om) {
+      ESP_LOGE(TAG_BLE_API, "mbuf allocation error for vehicle state");
+      vTaskDelay(pdMS_TO_TICKS(10));
+      om = ble_hs_mbuf_from_flat((const uint8_t *)state + offset, chunk);
+      if (!om) {
+        return ESP_ERR_NO_MEM;
+      }
+    }
+
+    // Re-check state before each send
+    if (!ble_connected || !vehicle_state_notifications_enabled || ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
+      os_mbuf_free_chain(om);
+      return ESP_ERR_INVALID_STATE;
+    }
+
+    int rc = ble_gattc_notify_custom(ble_conn_handle, ble_vehicle_state_val_handle, om);
+    if (rc != 0) {
+      ESP_LOGE(TAG_BLE_API, "BLE vehicle state notification error: %d", rc);
+      return ESP_FAIL;
+    }
+
+    offset += chunk;
+
+    // Small delay between chunks if needed
+    if (offset < size) {
+      vTaskDelay(pdMS_TO_TICKS(5));
+    }
+  }
+
+  return ESP_OK;
+}
+
 #else
 
 esp_err_t ble_api_service_init(void) {
@@ -675,6 +747,10 @@ esp_err_t ble_api_service_stop(void) {
 
 bool ble_api_service_is_connected(void) {
   return false;
+}
+
+esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size) {
+  return ESP_ERR_NOT_SUPPORTED;
 }
 
 #endif

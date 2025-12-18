@@ -1027,6 +1027,15 @@ function updateLanguageIcon() {
         icon.textContent = currentLang === 'fr' ? 'FR' : 'EN';
     }
 }
+
+function switchToDashboard() {
+    // Clear the flag to allow redirect back to dashboard on next app open
+    sessionStorage.removeItem('from-dashboard');
+
+    // Navigate to dashboard page (mobile only)
+    window.location.href = '/dashboard/dashboard.html';
+}
+
 function applyTranslations() {
     doc.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
@@ -4530,6 +4539,14 @@ updateLanguageSelector();
 updateBleUiState();
 updateApiConnectionState();
 scheduleInitialDataLoad();
+
+// Show dashboard button on mobile only
+if (usingCapacitor) {
+    const dashboardBtn = $('dashboard-toggle');
+    if (dashboardBtn) {
+        dashboardBtn.style.display = 'inline-block';
+    }
+}
 function translateSlaveType(id) {
     const map = {
         'none': t('config.espnowTypeNone'),
