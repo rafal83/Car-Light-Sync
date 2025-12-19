@@ -51,9 +51,26 @@ body {
     height: 100vh;
 }
 
+body.hud-mode {
+    background: #000000;
+    --bg-gradient-start: #000000;
+    --bg-gradient-end: #000000;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    --text-tertiary: #8a8a8a;
+    --text-quaternary: #666666;
+    --surface-primary: rgba(255, 255, 255, 0.06);
+    --surface-secondary: rgba(255, 255, 255, 0.12);
+    --surface-tertiary: rgba(255, 255, 255, 0.18);
+    --border-color: rgba(255, 255, 255, 0.12);
+    --border-color-strong: rgba(255, 255, 255, 0.24);
+    --gauge-bg-start: rgba(20, 20, 20, 0.9);
+    --gauge-bg-end: rgba(35, 35, 35, 0.9);
+}
+
 /* HUD Mode - Horizontal mirror for windshield projection */
 .dashboard-content.hud-mode {
-    transform: matrix(-1, 0, 0, 1, 0, 0);
+    transform: matrix(-1, 0, 0, 1, 0, 0) translateY(-15px) scale(1.35)
 }
 
 #dashboard-container {
@@ -646,6 +663,11 @@ body.light-theme .gauge {
     text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
 }
 
+body.light-theme .speed-large {
+    color: #111111;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
 .speed-unit-large {
     font-size: 24px;
     color: #888888;
@@ -653,6 +675,10 @@ body.light-theme .gauge {
     text-transform: uppercase;
     letter-spacing: 2px;
     margin-top: 10px;
+}
+
+body.light-theme .speed-unit-large {
+    color: #444444;
 }
 
 .gear-display-large {

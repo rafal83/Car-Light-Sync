@@ -1245,6 +1245,7 @@ let isHUDMode = false;
 // Auto brightness sync state
 let autoBrightnessEnabled = true;
 let lastSyncedBrightnessPercent = null;
+let lastBrightnessBeforeHud = null;
 
 // Flag to stop all BLE operations when switching to config
 let stoppingBLE = false;
@@ -1301,7 +1302,8 @@ async function syncBrightness(carBrightnessPercent) {
         return;
     }
 
-    const normalizedPercent = Math.round(Math.max(0, Math.min(100, carBrightnessPercent)));
+    const targetPercent = isHUDMode ? 100 : carBrightnessPercent;
+    const normalizedPercent = Math.round(Math.max(0, Math.min(100, targetPercent)));
     if (lastSyncedBrightnessPercent === normalizedPercent) {
         return;
     }
@@ -1396,6 +1398,20 @@ function applyHUDMode() {
     if (header) {
         header.classList.add('hidden');
     }
+    document.body.classList.remove('light-theme');
+    document.body.classList.add('hud-mode');
+    if (usingCapacitor && window.Capacitor?.Plugins?.ScreenBrightness) {
+        const screenBrightness = window.Capacitor.Plugins.ScreenBrightness;
+        screenBrightness.getBrightness()
+            .then(result => {
+                if (lastBrightnessBeforeHud === null && typeof result?.brightness === 'number') {
+                    lastBrightnessBeforeHud = result.brightness;
+                }
+            })
+            .catch(() => {});
+        screenBrightness.setBrightness({ brightness: 1 });
+        lastSyncedBrightnessPercent = 100;
+    }
     // Force dark theme in HUD mode
     document.documentElement.setAttribute('data-theme', 'dark');
     console.log('[Dashboard] HUD mode activated');
@@ -1412,6 +1428,17 @@ function removeHUDMode() {
     const header = document.querySelector('.dashboard-header');
     if (header) {
         header.classList.remove('hidden');
+    }
+    document.body.classList.remove('hud-mode');
+    if (usingCapacitor && window.Capacitor?.Plugins?.ScreenBrightness) {
+        const screenBrightness = window.Capacitor.Plugins.ScreenBrightness;
+        if (lastBrightnessBeforeHud !== null) {
+            screenBrightness.setBrightness({ brightness: lastBrightnessBeforeHud });
+        } else {
+            screenBrightness.setBrightness({ brightness: -1 });
+        }
+        lastBrightnessBeforeHud = null;
+        lastSyncedBrightnessPercent = null;
     }
     // Restore user's preferred theme
     applyTheme();
