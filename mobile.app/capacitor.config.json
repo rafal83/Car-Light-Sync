@@ -2,6 +2,10 @@
   "appId": "com.carlightsync.controller",
   "appName": "Car Light Sync",
   "webDir": "www",
+  "loggingBehavior": "none",
+  "android": {
+    "loggingBehavior": "none"
+  },
   "plugins": {
     "BluetoothLe": {
       "displayStrings": {
