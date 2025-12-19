@@ -416,8 +416,31 @@ function updateDashboard(state) {
     // Update PARK MODE elements
     if (currentMode === 'park') {
         // Battery
-        document.getElementById('battery-value-park').textContent = Math.round(state.soc_percent);
+        const batteryPercent = Math.round(state.soc_percent);
+        document.getElementById('battery-value-park').textContent = batteryPercent;
         document.getElementById('battery-voltage-park').textContent = state.battery_voltage_HV.toFixed(1) + 'V';
+
+        // Update battery progress bar
+        const batteryFill = document.getElementById('battery-fill-park');
+        if (batteryFill) {
+            // Calculate width (max 74px as per SVG)
+            const maxWidth = 74;
+            const fillWidth = (batteryPercent / 100) * maxWidth;
+            batteryFill.setAttribute('width', fillWidth);
+
+            // Update color based on battery level
+            batteryFill.classList.remove('low', 'medium', 'high', 'charging');
+            if (state.charging) {
+                batteryFill.classList.add('charging');
+            }
+            if (batteryPercent <= 20) {
+                batteryFill.classList.add('low');
+            } else if (batteryPercent <= 50) {
+                batteryFill.classList.add('medium');
+            } else {
+                batteryFill.classList.add('high');
+            }
+        }
 
         // Charging gauge
         const chargingGauge = document.getElementById('charging-gauge-park');
@@ -433,33 +456,8 @@ function updateDashboard(state) {
         document.getElementById('battery-lv-park').textContent = state.battery_voltage_LV.toFixed(1) + 'V';
         document.getElementById('gear-display-park').textContent = gearText;
 
-        // Doors
-        updateIndicator('ind-door-fl', state.door_front_left_open);
-        updateIndicator('ind-door-fr', state.door_front_right_open);
-        updateIndicator('ind-door-rl', state.door_rear_left_open);
-        updateIndicator('ind-door-rr', state.door_rear_right_open);
-        updateIndicator('ind-frunk', state.frunk_open);
-        updateIndicator('ind-trunk', state.trunk_open);
-
-        // Lights
-        updateIndicator('ind-headlights', state.headlights);
-        updateIndicator('ind-high-beams', state.high_beams);
-        updateIndicator('ind-fog', state.fog_lights);
-        updateIndicator('ind-turn-left', state.turn_left, state.turn_left ? 'warning' : null);
-        updateIndicator('ind-turn-right', state.turn_right, state.turn_right ? 'warning' : null);
-        updateIndicator('ind-hazard', state.hazard, state.hazard ? 'alert' : null);
-
-        // Security
-        updateIndicator('ind-locked', state.locked);
-        updateIndicator('ind-sentry', state.sentry_mode);
-        updateIndicator('ind-autopilot', state.autopilot);
-
-        // Safety alerts
-        const blindspotLeft = state.blindspot_left || state.blindspot_left_alert;
-        const blindspotRight = state.blindspot_right || state.blindspot_right_alert;
-        updateIndicator('ind-blindspot-left', blindspotLeft, blindspotLeft ? 'warning' : null);
-        updateIndicator('ind-blindspot-right', blindspotRight, blindspotRight ? 'warning' : null);
-        updateIndicator('ind-forward-collision', state.forward_collision, state.forward_collision ? 'alert' : null);
+        // Update vehicle top view visualization
+        updateVehicleView(state);
     }
 
     // Update DRIVE MODE elements
@@ -618,6 +616,116 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap) {
                             pedalMap === 1 ? 'Sport' :
                             'Standard';
         pedalMapLabel.textContent = pedalMapText;
+    }
+}
+
+/**
+ * Update vehicle top view visualization (Park mode only)
+ */
+function updateVehicleView(state) {
+    // Doors
+    const doorFL = document.querySelector('.door-fl');
+    const doorFR = document.querySelector('.door-fr');
+    const doorRL = document.querySelector('.door-rl');
+    const doorRR = document.querySelector('.door-rr');
+    const frunkDoor = document.querySelector('.frunk-door');
+    const trunkDoor = document.querySelector('.trunk-door');
+
+    if (doorFL) doorFL.classList.toggle('open', state.door_front_left_open);
+    if (doorFR) doorFR.classList.toggle('open', state.door_front_right_open);
+    if (doorRL) doorRL.classList.toggle('open', state.door_rear_left_open);
+    if (doorRR) doorRR.classList.toggle('open', state.door_rear_right_open);
+    if (frunkDoor) frunkDoor.classList.toggle('open', state.frunk_open);
+    if (trunkDoor) trunkDoor.classList.toggle('open', state.trunk_open);
+
+    // Headlights
+    const headlightLeft = document.querySelector('.headlight-left');
+    const headlightRight = document.querySelector('.headlight-right');
+    if (headlightLeft && headlightRight) {
+        headlightLeft.classList.toggle('active', state.headlights);
+        headlightRight.classList.toggle('active', state.headlights);
+        headlightLeft.classList.toggle('high-beam', state.high_beams);
+        headlightRight.classList.toggle('high-beam', state.high_beams);
+        headlightLeft.classList.toggle('fog', state.fog_lights);
+        headlightRight.classList.toggle('fog', state.fog_lights);
+    }
+
+    // Tail lights (brake)
+    const taillightLeft = document.querySelector('.taillight-left');
+    const taillightRight = document.querySelector('.taillight-right');
+    if (taillightLeft && taillightRight) {
+        taillightLeft.classList.toggle('active', state.brake_pressed);
+        taillightRight.classList.toggle('active', state.brake_pressed);
+    }
+
+    // Turn signals
+    const turnSignalFL = document.querySelector('.turn-signal-fl');
+    const turnSignalFR = document.querySelector('.turn-signal-fr');
+    const turnSignalRL = document.querySelector('.turn-signal-rl');
+    const turnSignalRR = document.querySelector('.turn-signal-rr');
+
+    if (state.hazard) {
+        // Hazard lights - all turn signals blink
+        if (turnSignalFL) turnSignalFL.classList.add('hazard');
+        if (turnSignalFR) turnSignalFR.classList.add('hazard');
+        if (turnSignalRL) turnSignalRL.classList.add('hazard');
+        if (turnSignalRR) turnSignalRR.classList.add('hazard');
+    } else {
+        // Individual turn signals
+        if (turnSignalFL) {
+            turnSignalFL.classList.remove('hazard');
+            turnSignalFL.classList.toggle('active', state.turn_left);
+        }
+        if (turnSignalFR) {
+            turnSignalFR.classList.remove('hazard');
+            turnSignalFR.classList.toggle('active', state.turn_right);
+        }
+        if (turnSignalRL) {
+            turnSignalRL.classList.remove('hazard');
+            turnSignalRL.classList.toggle('active', state.turn_left);
+        }
+        if (turnSignalRR) {
+            turnSignalRR.classList.remove('hazard');
+            turnSignalRR.classList.toggle('active', state.turn_right);
+        }
+    }
+
+    // Charging port
+    const chargePort = document.querySelector('.charge-port');
+    const chargeIcon = document.querySelector('.charge-icon');
+    if (chargePort && chargeIcon) {
+        const isCharging = state.charging || state.charging_port;
+        chargePort.classList.toggle('active', isCharging);
+        chargeIcon.classList.toggle('active', isCharging);
+    }
+
+    // Lock indicator
+    const lockBg = document.querySelector('.lock-bg');
+    const lockIcon = document.querySelector('.lock-icon');
+    if (lockBg && lockIcon) {
+        lockBg.classList.toggle('locked', state.locked);
+        lockBg.classList.toggle('unlocked', !state.locked);
+        lockIcon.classList.toggle('locked', state.locked);
+        lockIcon.classList.toggle('unlocked', !state.locked);
+    }
+
+    // Sentry mode
+    const sentryBg = document.querySelector('.sentry-bg');
+    const sentryEye = document.querySelector('.sentry-eye');
+    const sentryPupil = document.querySelector('.sentry-pupil');
+    if (sentryBg && sentryEye && sentryPupil) {
+        const sentryActive = state.sentry_mode || state.sentry_alert;
+        sentryBg.classList.toggle('active', sentryActive);
+        sentryEye.classList.toggle('active', sentryActive);
+        sentryPupil.classList.toggle('active', sentryActive);
+    }
+
+    // Night mode
+    const nightModeBg = document.querySelector('.night-mode-bg');
+    const nightModeMoon = document.querySelector('.night-mode-moon');
+    if (nightModeBg && nightModeMoon) {
+        nightModeBg.classList.toggle('active', state.night_mode);
+        nightModeMoon.classList.toggle('active', state.night_mode);
     }
 }
 
@@ -1008,6 +1116,30 @@ function updateConnectionStatusText(connected) {
 }
 
 /**
+ * Configure StatusBar for mobile app
+ */
+async function configureStatusBar() {
+    if (usingCapacitor && window.Capacitor?.Plugins?.StatusBar) {
+        try {
+            const StatusBar = window.Capacitor.Plugins.StatusBar;
+
+            // Set dark theme (light text on dark background)
+            await StatusBar.setStyle({ style: 'DARK' });
+
+            // Set background color to match app theme (black)
+            await StatusBar.setBackgroundColor({ color: '#0a0a0a' });
+
+            // Make status bar overlay the content (immersive mode)
+            await StatusBar.setOverlaysWebView({ overlay: true });
+
+            console.log('[Dashboard] StatusBar configured with dark theme');
+        } catch (error) {
+            console.log('[Dashboard] Could not configure StatusBar:', error.message);
+        }
+    }
+}
+
+/**
  * Force landscape orientation
  */
 async function forceLandscapeOrientation() {
@@ -1252,9 +1384,109 @@ window.simulateDriveMode = function() {
         updateDriveIndicator('ind-brake-drive', simulatedState.brake_pressed);
         updateDriveIndicator('ind-autopilot-drive', simulatedState.autopilot);
 
-    }, 100); // Update every 100ms
+    }, 500); // Update every 500ms (2 Hz for smoother, less intensive simulation)
 
-    console.log('[Dashboard] Simulation running. To stop: stopSimulation()');
+    console.log('[Dashboard] Drive simulation running. To stop: stopSimulation()');
+    window.stopSimulation = () => {
+        clearInterval(simulationInterval);
+        console.log('[Dashboard] Simulation stopped');
+    };
+};
+
+/**
+ * Simulate vehicle data in Park mode for testing (DEV ONLY)
+ * Call this function from browser console: simulateParkMode()
+ */
+window.simulateParkMode = function() {
+    console.log('[Dashboard] Starting park mode simulation...');
+
+    // Force park mode
+    currentMode = 'park';
+    document.getElementById('drive-mode').classList.remove('active');
+    document.getElementById('park-mode').classList.add('active');
+
+    // Show header in park mode
+    const header = document.querySelector('.dashboard-header');
+    if (header) {
+        header.classList.remove('hidden');
+    }
+
+    let battery = 75;
+    let batteryHV = 385.0;
+    let batteryLV = 12.5;
+    let odometer = 12345;
+    let chargePower = 0;
+    let cycleStep = 0;
+
+    const simulationInterval = setInterval(() => {
+        // Cycle through different states every 3 seconds
+        const currentTime = Date.now();
+        cycleStep = Math.floor(currentTime / 3000) % 8;
+
+        // Simulate charging (slowly increase battery)
+        if (cycleStep >= 4) {
+            chargePower = 11.0;
+            battery = Math.min(100, 75 + (currentTime % 10000) / 1000);
+            batteryHV = 385.0 + Math.sin(currentTime / 1000) * 2;
+        } else {
+            chargePower = 0;
+            battery = 75;
+            batteryHV = 385.0;
+        }
+
+        // Create simulated state based on cycle step
+        const simulatedState = {
+            soc_percent: battery,
+            battery_voltage_HV: batteryHV,
+            battery_voltage_LV: batteryLV,
+            charge_power_kw: chargePower,
+            odometer_km: odometer,
+            gear: 1, // P
+
+            // Doors - open one at a time in sequence
+            door_front_left_open: cycleStep === 0,
+            door_front_right_open: cycleStep === 1,
+            door_rear_left_open: cycleStep === 2,
+            door_rear_right_open: cycleStep === 3,
+            frunk_open: cycleStep === 4,
+            trunk_open: cycleStep === 5,
+
+            // Lights - cycle through different combinations
+            headlights: cycleStep >= 2 && cycleStep <= 4,
+            high_beams: cycleStep === 3,
+            fog_lights: cycleStep === 4,
+            turn_left: cycleStep === 1 || cycleStep === 5,
+            turn_right: cycleStep === 2 || cycleStep === 6,
+            hazard: cycleStep === 7,
+            brake_pressed: cycleStep % 2 === 0,
+
+            // Security
+            locked: cycleStep < 4,
+            sentry_mode: cycleStep === 6,
+            sentry_alert: cycleStep === 7,
+
+            // Charging
+            charging_cable: cycleStep >= 4,
+            charging: cycleStep >= 5,
+            charging_port: cycleStep >= 4,
+
+            // Night mode
+            night_mode: cycleStep >= 4,
+
+            // Other
+            charge_status: cycleStep >= 4 ? 1 : 0,
+            doors_open_count: cycleStep < 6 ? 1 : 0,
+            brightness: 0.5,
+            autopilot: false,
+            last_update_ms: currentTime
+        };
+
+        // Update dashboard using the main updateDashboard function
+        updateDashboard(simulatedState);
+
+    }, 500); // Update every 500ms (2 Hz for smoother, less intensive simulation)
+
+    console.log('[Dashboard] Park mode simulation running. To stop: stopSimulation()');
     window.stopSimulation = () => {
         clearInterval(simulationInterval);
         console.log('[Dashboard] Simulation stopped');
@@ -1273,6 +1505,11 @@ async function init() {
 
     // Apply theme
     applyTheme();
+
+    // Configure StatusBar for mobile (must be done early)
+    if (usingCapacitor) {
+        await configureStatusBar();
+    }
 
     // Force landscape orientation
     await forceLandscapeOrientation();

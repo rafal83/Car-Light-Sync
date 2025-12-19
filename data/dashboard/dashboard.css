@@ -16,6 +16,7 @@
     --text-quaternary: #666666;
     --surface-primary: rgba(255, 255, 255, 0.05);
     --surface-secondary: rgba(255, 255, 255, 0.1);
+    --surface-tertiary: rgba(255, 255, 255, 0.15);
     --border-color: rgba(255, 255, 255, 0.1);
     --border-color-strong: rgba(255, 255, 255, 0.2);
     --gauge-bg-start: rgba(30, 30, 30, 0.8);
@@ -32,6 +33,7 @@ body.light-theme {
     --text-quaternary: #888888;
     --surface-primary: rgba(0, 0, 0, 0.05);
     --surface-secondary: rgba(0, 0, 0, 0.1);
+    --surface-tertiary: rgba(0, 0, 0, 0.15);
     --border-color: rgba(0, 0, 0, 0.1);
     --border-color-strong: rgba(0, 0, 0, 0.2);
     --gauge-bg-start: rgba(230, 230, 230, 0.8);
@@ -186,17 +188,19 @@ body.light-theme .config-btn:hover {
     flex-direction: row;
     gap: 15px;
     width: 100%;
+    padding-top: 30px; /* Space for camera notch/cutout */
 }
 
 .park-mode .left-panel {
-    flex: 1;
+    flex: 0 0 280px; /* Fixed width instead of flex: 1 to make it smaller */
     display: flex;
     flex-direction: column;
     gap: 15px;
+    margin-left: 50px; /* Increased margin to avoid camera area (was 10px) */
 }
 
 .park-mode .right-panel {
-    flex: 1;
+    flex: 1; /* Takes remaining space */
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -510,22 +514,23 @@ body.light-theme .config-btn:hover {
 /* Jauges principales */
 .main-gauges {
     display: flex;
-    gap: 15px;
+    flex-direction: column; /* Stack vertically instead of horizontally */
+    gap: 10px;
     justify-content: center;
-    align-items: center;
+    align-items: stretch;
 }
 
 .gauge-container {
     display: flex;
     justify-content: center;
-    flex: 1;
+    width: 100%;
 }
 
 .gauge {
     background: linear-gradient(135deg, var(--gauge-bg-start) 0%, var(--gauge-bg-end) 100%);
     border: 2px solid var(--border-color);
-    border-radius: 20px;
-    padding: 20px;
+    border-radius: 15px;
+    padding: 12px; /* Reduced from 20px */
     text-align: center;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     width: 100%;
@@ -543,11 +548,57 @@ body.light-theme .gauge {
     border-color: rgba(72, 187, 120, 0.5);
 }
 
+/* Battery icon with progress bar */
+.battery-icon-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px; /* Reduced from 15px */
+}
+
+.battery-icon {
+    width: 80px; /* Reduced from 120px */
+    height: 40px; /* Reduced from 60px */
+}
+
+.battery-fill {
+    transition: width 0.5s ease, fill 0.3s ease;
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.6));
+}
+
+/* Battery color based on level */
+.battery-fill.low {
+    fill: #f56565 !important;
+    filter: drop-shadow(0 0 8px rgba(245, 101, 101, 0.6)) !important;
+}
+
+.battery-fill.medium {
+    fill: #ed8936 !important;
+    filter: drop-shadow(0 0 8px rgba(237, 137, 54, 0.6)) !important;
+}
+
+.battery-fill.high {
+    fill: #48bb78 !important;
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.6)) !important;
+}
+
+.battery-fill.charging {
+    animation: pulse-charge 2s infinite;
+}
+
+@keyframes pulse-charge {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
 .gauge-value {
-    font-size: 42px;
+    font-size: 32px; /* Reduced from 42px */
     font-weight: 700;
     line-height: 1;
-    margin-bottom: 5px;
+    margin-bottom: 3px; /* Reduced from 5px */
     background: linear-gradient(135deg, #ffffff 0%, #aaaaaa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -619,7 +670,7 @@ body.light-theme .gauge {
 }
 
 .gauge-unit {
-    font-size: 14px;
+    font-size: 11px; /* Reduced from 14px */
     color: var(--text-tertiary);
     font-weight: 500;
     text-transform: uppercase;
@@ -627,16 +678,16 @@ body.light-theme .gauge {
 }
 
 .gauge-subtext {
-    font-size: 12px;
+    font-size: 10px; /* Reduced from 12px */
     color: var(--text-quaternary);
-    margin-top: 8px;
+    margin-top: 4px; /* Reduced from 8px */
 }
 
 /* Informations véhicule */
 .vehicle-info {
     background: var(--surface-primary);
-    border-radius: 12px;
-    padding: 15px;
+    border-radius: 10px;
+    padding: 10px; /* Reduced from 15px */
     backdrop-filter: blur(10px);
     flex-shrink: 0;
 }
@@ -645,7 +696,7 @@ body.light-theme .gauge {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 6px 0; /* Reduced from 8px */
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -654,13 +705,13 @@ body.light-theme .gauge {
 }
 
 .info-label {
-    font-size: 13px;
+    font-size: 11px; /* Reduced from 13px */
     color: var(--text-secondary);
     font-weight: 500;
 }
 
 .info-value {
-    font-size: 16px;
+    font-size: 13px; /* Reduced from 16px */
     font-weight: 700;
     color: var(--text-primary);
 }
@@ -772,6 +823,184 @@ body.light-theme .gauge {
     letter-spacing: 2px;
     pointer-events: none;
     z-index: 0;
+}
+
+/* Vehicle Top View - Park Mode */
+.vehicle-top-view {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+}
+
+.vehicle-svg {
+    max-width: 100%;
+    max-height: 100%;
+    filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+}
+
+/* Vehicle parts - default closed state */
+.vehicle-part {
+    transition: all 0.3s ease;
+}
+
+/* Doors open animation */
+.door-fl.open {
+    transform: translate(-15px, 0);
+}
+
+.door-fr.open {
+    transform: translate(15px, 0);
+}
+
+.door-rl.open {
+    transform: translate(-15px, 0);
+}
+
+.door-rr.open {
+    transform: translate(15px, 0);
+}
+
+.frunk-door.open {
+    transform: translateY(-10px);
+}
+
+.trunk-door.open {
+    transform: translateY(10px);
+}
+
+/* Headlights active */
+.headlight-left.active,
+.headlight-right.active {
+    fill: #ffeb3b !important;
+    filter: drop-shadow(0 0 12px rgba(255, 235, 59, 0.9));
+}
+
+/* High beams active */
+.headlight-left.high-beam,
+.headlight-right.high-beam {
+    fill: #ffffff !important;
+    filter: drop-shadow(0 0 18px rgba(255, 255, 255, 1));
+}
+
+/* Tail lights active (brake) */
+.taillight-left.active,
+.taillight-right.active {
+    fill: #ff4444 !important;
+    filter: drop-shadow(0 0 12px rgba(255, 68, 68, 0.9));
+}
+
+/* Turn signals - blink animation */
+.turn-signal-fl.active,
+.turn-signal-rl.active {
+    fill: #ff9800;
+    animation: blink-turn 0.6s infinite;
+}
+
+.turn-signal-fr.active,
+.turn-signal-rr.active {
+    fill: #ff9800;
+    animation: blink-turn 0.6s infinite;
+}
+
+@keyframes blink-turn {
+    0%, 100% {
+        opacity: 1;
+        filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.9));
+    }
+    50% {
+        opacity: 0.2;
+        filter: drop-shadow(0 0 2px rgba(255, 152, 0, 0.3));
+    }
+}
+
+/* Hazard lights - all turn signals blink */
+.turn-signal-fl.hazard,
+.turn-signal-fr.hazard,
+.turn-signal-rl.hazard,
+.turn-signal-rr.hazard {
+    fill: #ff9800;
+    animation: blink-turn 0.6s infinite;
+}
+
+/* Fog lights glow */
+.headlight-left.fog,
+.headlight-right.fog {
+    fill: #ffd54f !important;
+    filter: drop-shadow(0 0 20px rgba(255, 213, 79, 0.6));
+}
+
+/* Charging port active */
+.charge-port.active {
+    fill: #48bb78 !important;
+    stroke: #48bb78 !important;
+    filter: drop-shadow(0 0 10px rgba(72, 187, 120, 0.8));
+}
+
+.charge-icon.active {
+    stroke: #48bb78 !important;
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.9));
+}
+
+/* Lock indicator */
+.lock-bg.locked {
+    fill: #48bb78 !important;
+    stroke: #48bb78 !important;
+    filter: drop-shadow(0 0 12px rgba(72, 187, 120, 0.7));
+}
+
+.lock-icon.locked {
+    stroke: #ffffff !important;
+}
+
+.lock-bg.unlocked {
+    fill: #f56565 !important;
+    stroke: #f56565 !important;
+    filter: drop-shadow(0 0 12px rgba(245, 101, 101, 0.7));
+}
+
+.lock-icon.unlocked {
+    stroke: #ffffff !important;
+}
+
+/* Sentry mode active */
+.sentry-bg.active {
+    fill: #f56565 !important;
+    stroke: #f56565 !important;
+    filter: drop-shadow(0 0 15px rgba(245, 101, 101, 0.8));
+    animation: pulse-sentry 2s infinite;
+}
+
+.sentry-eye.active {
+    stroke: #ffffff !important;
+}
+
+.sentry-pupil.active {
+    fill: #ffffff !important;
+}
+
+@keyframes pulse-sentry {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* Night mode active */
+.night-mode-bg.active {
+    fill: rgba(100, 150, 200, 0.3) !important;
+    stroke: #64b5f6 !important;
+}
+
+.night-mode-moon.active {
+    fill: #64b5f6 !important;
+    filter: drop-shadow(0 0 8px rgba(100, 181, 246, 0.6));
 }
 
 /* Responsive - maintain landscape */

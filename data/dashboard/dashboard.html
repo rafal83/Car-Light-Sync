@@ -58,13 +58,24 @@
         <!-- Main content wrapper -->
         <div class="dashboard-content">
             <!-- PARK MODE -->
-            <div class="park-mode" id="park-mode">
+            <div class="park-mode active" id="park-mode">
                 <!-- Left panel - Main info -->
                 <div class="left-panel">
                     <!-- Battery & Charging -->
                     <div class="main-gauges">
                         <div class="gauge-container">
                             <div class="gauge battery-gauge">
+                                <!-- Battery icon with progress bar -->
+                                <div class="battery-icon-container">
+                                    <svg class="battery-icon" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                                        <!-- Battery outline -->
+                                        <rect x="5" y="10" width="80" height="30" rx="3" fill="none" stroke="var(--text-tertiary)" stroke-width="2"/>
+                                        <!-- Battery terminal (positive) -->
+                                        <rect x="85" y="18" width="5" height="14" rx="1" fill="var(--text-tertiary)"/>
+                                        <!-- Battery fill (progress bar) -->
+                                        <rect id="battery-fill-park" x="8" y="13" width="74" height="24" rx="2" fill="#48bb78" class="battery-fill"/>
+                                    </svg>
+                                </div>
                                 <div class="gauge-value" id="battery-value-park">0</div>
                                 <div class="gauge-unit">%</div>
                                 <div class="gauge-subtext" id="battery-voltage-park">0.0V</div>
@@ -96,107 +107,121 @@
                     </div>
                 </div>
 
-                <!-- Right panel - Status indicators -->
+                <!-- Right panel - Vehicle Top View -->
                 <div class="right-panel">
-                    <div class="status-indicators">
-            <!-- Portes -->
-            <div class="indicator-group">
-                <div class="group-title" data-i18n="dashboard.doors">Portes</div>
-                <div class="indicators-grid">
-                    <div class="indicator" id="ind-door-fl">
-                        <span class="indicator-icon">🚪</span>
-                        <span class="indicator-label" data-i18n="dashboard.doorFL">AV-G</span>
-                    </div>
-                    <div class="indicator" id="ind-door-fr">
-                        <span class="indicator-icon">🚪</span>
-                        <span class="indicator-label" data-i18n="dashboard.doorFR">AV-D</span>
-                    </div>
-                    <div class="indicator" id="ind-door-rl">
-                        <span class="indicator-icon">🚪</span>
-                        <span class="indicator-label" data-i18n="dashboard.doorRL">AR-G</span>
-                    </div>
-                    <div class="indicator" id="ind-door-rr">
-                        <span class="indicator-icon">🚪</span>
-                        <span class="indicator-label" data-i18n="dashboard.doorRR">AR-D</span>
-                    </div>
-                    <div class="indicator" id="ind-frunk">
-                        <span class="indicator-icon">📦</span>
-                        <span class="indicator-label" data-i18n="dashboard.frunk">Frunk</span>
-                    </div>
-                    <div class="indicator" id="ind-trunk">
-                        <span class="indicator-icon">📦</span>
-                        <span class="indicator-label" data-i18n="dashboard.trunk">Coffre</span>
-                    </div>
-                </div>
-            </div>
+                    <div class="vehicle-top-view">
+                        <svg class="vehicle-svg" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Vehicle body outline -->
+                            <g id="vehicle-body">
+                                <!-- Main body -->
+                                <rect x="80" y="120" width="140" height="260" rx="15" fill="var(--surface-secondary)" stroke="var(--surface-tertiary)" stroke-width="2"/>
 
-            <!-- Lumières -->
-            <div class="indicator-group">
-                <div class="group-title" data-i18n="dashboard.lights">Lumières</div>
-                <div class="indicators-grid">
-                    <div class="indicator" id="ind-headlights">
-                        <span class="indicator-icon">💡</span>
-                        <span class="indicator-label" data-i18n="dashboard.headlights">Phares</span>
-                    </div>
-                    <div class="indicator" id="ind-high-beams">
-                        <span class="indicator-icon">🔆</span>
-                        <span class="indicator-label" data-i18n="dashboard.highBeams">Pleins feux</span>
-                    </div>
-                    <div class="indicator" id="ind-fog">
-                        <span class="indicator-icon">🌫️</span>
-                        <span class="indicator-label" data-i18n="dashboard.fog">Antibrouillard</span>
-                    </div>
-                    <div class="indicator" id="ind-turn-left">
-                        <span class="indicator-icon">⬅️</span>
-                        <span class="indicator-label" data-i18n="dashboard.turnLeft">Gauche</span>
-                    </div>
-                    <div class="indicator" id="ind-turn-right">
-                        <span class="indicator-icon">➡️</span>
-                        <span class="indicator-label" data-i18n="dashboard.turnRight">Droite</span>
-                    </div>
-                    <div class="indicator" id="ind-hazard">
-                        <span class="indicator-icon">⚠️</span>
-                        <span class="indicator-label" data-i18n="dashboard.hazard">Warnings</span>
-                    </div>
-                </div>
-            </div>
+                                <!-- Windshield (front) -->
+                                <path d="M 90 120 L 90 140 L 210 140 L 210 120" fill="rgba(100, 150, 200, 0.3)" stroke="var(--surface-tertiary)" stroke-width="1"/>
 
-            <!-- Sécurité / Autopilot -->
-            <div class="indicator-group">
-                <div class="group-title" data-i18n="dashboard.security">Sécurité</div>
-                <div class="indicators-grid">
-                    <div class="indicator" id="ind-locked">
-                        <span class="indicator-icon">🔒</span>
-                        <span class="indicator-label" data-i18n="dashboard.locked">Verrouillé</span>
-                    </div>
-                    <div class="indicator" id="ind-sentry">
-                        <span class="indicator-icon">🛡️</span>
-                        <span class="indicator-label" data-i18n="dashboard.sentry">Sentry</span>
-                    </div>
-                    <div class="indicator" id="ind-autopilot">
-                        <span class="indicator-icon">🤖</span>
-                        <span class="indicator-label" data-i18n="dashboard.autopilot">Autopilot</span>
-                    </div>
-                    <div class="indicator" id="ind-blindspot-left">
-                        <span class="indicator-icon">◀️</span>
-                        <span class="indicator-label" data-i18n="dashboard.blindspotLeft">Angle mort G</span>
-                    </div>
-                    <div class="indicator" id="ind-blindspot-right">
-                        <span class="indicator-icon">▶️</span>
-                        <span class="indicator-label" data-i18n="dashboard.blindspotRight">Angle mort D</span>
-                    </div>
-                    <div class="indicator" id="ind-forward-collision">
-                        <span class="indicator-icon">⚠️</span>
-                        <span class="indicator-label" data-i18n="dashboard.collision">Collision</span>
-                    </div>
-                </div>
-            </div>
+                                <!-- Rear window -->
+                                <path d="M 90 360 L 90 340 L 210 340 L 210 360" fill="rgba(100, 150, 200, 0.3)" stroke="var(--surface-tertiary)" stroke-width="1"/>
+
+                                <!-- Hood lines -->
+                                <line x1="100" y1="100" x2="100" y2="120" stroke="var(--surface-tertiary)" stroke-width="1"/>
+                                <line x1="200" y1="100" x2="200" y2="120" stroke="var(--surface-tertiary)" stroke-width="1"/>
+
+                                <!-- Trunk lines -->
+                                <line x1="100" y1="380" x2="100" y2="400" stroke="var(--surface-tertiary)" stroke-width="1"/>
+                                <line x1="200" y1="380" x2="200" y2="400" stroke="var(--surface-tertiary)" stroke-width="1"/>
+                            </g>
+
+                            <!-- FRUNK (front trunk) -->
+                            <g id="frunk" class="vehicle-part">
+                                <rect x="90" y="80" width="120" height="35" rx="8" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="frunk-door"/>
+                                <circle cx="150" cy="97" r="8" fill="var(--surface-tertiary)" class="frunk-handle"/>
+                            </g>
+
+                            <!-- TRUNK (rear) -->
+                            <g id="trunk" class="vehicle-part">
+                                <rect x="90" y="385" width="120" height="35" rx="8" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="trunk-door"/>
+                                <circle cx="150" cy="402" r="8" fill="var(--surface-tertiary)" class="trunk-handle"/>
+                            </g>
+
+                            <!-- DOOR FRONT LEFT -->
+                            <g id="door-fl" class="vehicle-part">
+                                <rect x="40" y="140" width="35" height="80" rx="5" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="door-fl"/>
+                                <circle cx="70" cy="180" r="4" fill="var(--surface-tertiary)" class="door-handle"/>
+                            </g>
+
+                            <!-- DOOR FRONT RIGHT -->
+                            <g id="door-fr" class="vehicle-part">
+                                <rect x="225" y="140" width="35" height="80" rx="5" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="door-fr"/>
+                                <circle cx="230" cy="180" r="4" fill="var(--surface-tertiary)" class="door-handle"/>
+                            </g>
+
+                            <!-- DOOR REAR LEFT -->
+                            <g id="door-rl" class="vehicle-part">
+                                <rect x="40" y="280" width="35" height="80" rx="5" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="door-rl"/>
+                                <circle cx="70" cy="320" r="4" fill="var(--surface-tertiary)" class="door-handle"/>
+                            </g>
+
+                            <!-- DOOR REAR RIGHT -->
+                            <g id="door-rr" class="vehicle-part">
+                                <rect x="225" y="280" width="35" height="80" rx="5" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="door-rr"/>
+                                <circle cx="230" cy="320" r="4" fill="var(--surface-tertiary)" class="door-handle"/>
+                            </g>
+
+                            <!-- HEADLIGHTS (front) -->
+                            <g id="headlights">
+                                <ellipse cx="105" cy="95" rx="12" ry="8" fill="var(--surface-tertiary)" class="headlight-left"/>
+                                <ellipse cx="195" cy="95" rx="12" ry="8" fill="var(--surface-tertiary)" class="headlight-right"/>
+                            </g>
+
+                            <!-- TAIL LIGHTS (rear) -->
+                            <g id="taillights">
+                                <ellipse cx="105" cy="405" rx="10" ry="6" fill="var(--surface-tertiary)" class="taillight-left"/>
+                                <ellipse cx="195" cy="405" rx="10" ry="6" fill="var(--surface-tertiary)" class="taillight-right"/>
+                            </g>
+
+                            <!-- TURN SIGNALS -->
+                            <g id="turn-signals">
+                                <!-- Front left -->
+                                <circle cx="85" cy="115" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-fl"/>
+                                <!-- Front right -->
+                                <circle cx="215" cy="115" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-fr"/>
+                                <!-- Rear left -->
+                                <circle cx="85" cy="385" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-rl"/>
+                                <!-- Rear right -->
+                                <circle cx="215" cy="385" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-rr"/>
+                            </g>
+
+                            <!-- CHARGING PORT (left side, front) -->
+                            <g id="charging-port">
+                                <circle cx="75" cy="160" r="8" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="charge-port"/>
+                                <path d="M 72 157 L 75 162 L 78 157" stroke="var(--surface-tertiary)" stroke-width="1.5" fill="none" class="charge-icon"/>
+                            </g>
+
+                            <!-- LOCK INDICATOR (center top) -->
+                            <g id="lock-indicator">
+                                <circle cx="150" cy="60" r="15" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="lock-bg"/>
+                                <path d="M 145 63 L 145 68 L 155 68 L 155 63 M 147 63 L 147 60 Q 147 56, 150 56 Q 153 56, 153 60 L 153 63" stroke="var(--surface-tertiary)" stroke-width="2" fill="none" class="lock-icon"/>
+                            </g>
+
+                            <!-- SENTRY MODE INDICATOR (center bottom) -->
+                            <g id="sentry-indicator">
+                                <circle cx="150" cy="440" r="15" fill="var(--surface-primary)" stroke="var(--surface-tertiary)" stroke-width="2" class="sentry-bg"/>
+                                <circle cx="150" cy="437" r="7" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="2" class="sentry-eye"/>
+                                <circle cx="150" cy="437" r="3" fill="var(--surface-tertiary)" class="sentry-pupil"/>
+                            </g>
+
+                            <!-- NIGHT MODE INDICATOR (top right corner) -->
+                            <g id="night-mode-indicator">
+                                <circle cx="260" cy="60" r="12" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="2" class="night-mode-bg"/>
+                                <path d="M 260 54 Q 265 60, 260 66 Q 252 60, 260 54" fill="var(--surface-tertiary)" class="night-mode-moon"/>
+                            </g>
+                        </svg>
                     </div>
                 </div>
             </div>
 
             <!-- DRIVE MODE (D/R/N) -->
-            <div class="drive-mode active" id="drive-mode">
+            <div class="drive-mode" id="drive-mode">
                 <!-- Left indicators -->
                 <div class="left-indicators">
                     <div class="drive-indicator" id="ind-turn-left-drive" style="display: none;">
