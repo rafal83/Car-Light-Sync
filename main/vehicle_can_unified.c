@@ -146,7 +146,7 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
   dst->gear = src->gear;
   dst->pedal_map = src->pedal_map;
   dst->accel_pedal_pos = src->accel_pedal_pos;
-  dst->brightness = (uint8_t)(src->brightness * 100.0f);
+  dst->brightness = (uint8_t)(src->brightness);
   dst->autopilot = src->autopilot;
 
   // Byte 0: turn signals & brake
@@ -200,7 +200,7 @@ void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_par
 
   // Valeurs uint8
   dst->charge_status = src->charge_status;
-  dst->brightness = (uint8_t)(src->brightness * 100.0f);
+  dst->brightness = (uint8_t)(src->brightness);
   dst->doors_open_count = src->doors_open_count;
 
   // Byte 0: doors & locks

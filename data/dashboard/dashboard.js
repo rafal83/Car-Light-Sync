@@ -62,7 +62,7 @@ function decodeVehicleStateDrive(dataView) {
     const gear = readInt8();
     const pedal_map = readInt8();
     const accel_pedal_pos = readUint8();
-    const brightness = readUint8() / 100.0;
+    const brightness = readUint8();
     const autopilot = readUint8();
 
     // Bit-packed flags
@@ -160,7 +160,7 @@ function decodeVehicleStatePark(dataView) {
     const odometer_km = readUint32(); 
     // Valeurs uint8
     const charge_status = readUint8();
-    const brightness = readUint8() / 100.0;
+    const brightness = readUint8();
     const doors_open_count = readUint8();
 
     // Bit-packed flags
@@ -282,7 +282,7 @@ function updateDashboard(state) {
 
     // Sync phone brightness with car brightness
     if (state.brightness !== undefined) {
-        syncBrightness(state.brightness * 100); // Convert 0-1 to 0-100
+        syncBrightness(state.brightness); // Convert 0-1 to 0-100
     }
 
     // Update PARK MODE elements
