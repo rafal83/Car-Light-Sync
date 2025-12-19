@@ -29,10 +29,10 @@ static uint8_t s_door_front_right_open = 0;
 static uint8_t s_door_rear_right_open  = 0;
 
 static uint8_t s_batterySMState = 0;
-static float s_rearMotorCurrent126 = 0;
-static float s_rearHighVoltage126 = 0;
-static float s_frontMotorCurrent1A5 = 0;
-static float s_frontHighVoltage1A5 = 0;
+// static float s_rearMotorCurrent126 = 0;
+// static float s_rearHighVoltage126 = 0;
+// static float s_frontMotorCurrent1A5 = 0;
+// static float s_frontHighVoltage1A5 = 0;
 static int maxL=0, maxR=0;
 
 // Helpers to send the ESP-NOW state only when a value has changed
@@ -84,12 +84,12 @@ static void IRAM_ATTR recompute_doors_open(vehicle_state_t *state) {
   }
 }
 
-static void IRAM_ATTR recompute_power(vehicle_state_t *state) {
-  if (!state)
-    return;
-  UPDATE_AND_SEND_FLOAT(state->rearPower, (s_rearMotorCurrent126 * s_rearHighVoltage126) / 1000.0f, state);
-  UPDATE_AND_SEND_FLOAT(state->frontPower, (s_frontMotorCurrent1A5 * s_frontHighVoltage1A5) / 1000.0f, state);
-}
+// static void IRAM_ATTR recompute_power(vehicle_state_t *state) {
+//   if (!state)
+//     return;
+//   UPDATE_AND_SEND_FLOAT(state->rear_power, (s_rearMotorCurrent126 * s_rearHighVoltage126) / 1000.0f, state);
+//   UPDATE_AND_SEND_FLOAT(state->front_power, (s_frontMotorCurrent1A5 * s_frontHighVoltage1A5) / 1000.0f, state);
+// }
 
 // ============================================================================
 // Mapping signaux -> vehicle_state_t
@@ -411,32 +411,47 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     return;
   }
 
-  if (id == 0x126) {
-    if (strcmp(name, "RearHighVoltage126") == 0) {
-      s_rearHighVoltage126 = value;
-      recompute_power(state);
-      return;
-    }
-    if (strcmp(name, "RearMotorCurrent126") == 0) {
-      s_rearMotorCurrent126 = value;
-      recompute_power(state);
+  if (id == 0x2e5) {
+    if (strcmp(name, "FrontPower2E5") == 0) {
+      UPDATE_AND_SEND_FLOAT(state->front_power, value, state);
       return;
     }
     return;
   }
-  if (id == 0x126) {
-    if (strcmp(name, "FrontHighVoltage1A5") == 0) {
-      s_frontHighVoltage1A5 = value;
-      recompute_power(state);
-      return;
-    }
-    if (strcmp(name, "FrontMotorCurrent1A5") == 0) {
-      s_frontMotorCurrent1A5 = value;
-      recompute_power(state);
+  if (id == 0x266) {
+    if (strcmp(name, "RearPower266") == 0) {
+      UPDATE_AND_SEND_FLOAT(state->rear_power, value, state);
       return;
     }
     return;
   }
+
+  // if (id == 0x126) {
+  //   if (strcmp(name, "RearHighVoltage126") == 0) {
+  //     s_rearHighVoltage126 = value;
+  //     recompute_power(state);
+  //     return;
+  //   }
+  //   if (strcmp(name, "RearMotorCurrent126") == 0) {
+  //     s_rearMotorCurrent126 = value;
+  //     recompute_power(state);
+  //     return;
+  //   }
+  //   return;
+  // }
+  // if (id == 0x126) {
+  //   if (strcmp(name, "FrontHighVoltage1A5") == 0) {
+  //     s_frontHighVoltage1A5 = value;
+  //     recompute_power(state);
+  //     return;
+  //   }
+  //   if (strcmp(name, "FrontMotorCurrent1A5") == 0) {
+  //     s_frontMotorCurrent1A5 = value;
+  //     recompute_power(state);
+  //     return;
+  //   }
+  //   return;
+  // }
 
   // ---------------------------------------------------------------------
   // Batterie HV : ID261_12vBattStatus / v12vBattVoltage261

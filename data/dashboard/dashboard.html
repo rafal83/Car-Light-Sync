@@ -40,7 +40,7 @@
         <!-- Main content wrapper -->
         <div class="dashboard-content">
             <!-- PARK MODE -->
-            <div class="park-mode " id="park-mode">
+            <div class="park-mode active" id="park-mode">
                 <!-- Left panel - Main info -->
                 <div class="left-panel">
                     <!-- Battery & Charging -->
@@ -396,7 +396,7 @@
             </div>
 
             <!-- DRIVE MODE (D/R/N) -->
-            <div class="drive-mode active" id="drive-mode">
+            <div class="drive-mode" id="drive-mode">
                 <!-- Left indicators -->
                 <div class="left-indicators">
                     <div class="drive-indicator" id="ind-turn-left-drive" style="display: none;">
@@ -516,24 +516,11 @@
                 </div>
 
                 <!-- Bottom warnings (collision, brake, autopilot) -->
-                <div class="bottom-warnings">
-                    <div class="drive-indicator warning-indicator" id="ind-forward-collision-drive" style="display: none;">
-                        <svg width="30" height="30" viewBox="0 0 30 30">
-                            <path d="M15 5 L25 23 L5 23 Z" stroke="currentColor" stroke-width="2" fill="none"/>
-                            <text x="15" y="20" text-anchor="middle" fill="currentColor" font-size="14" font-weight="bold">!</text>
-                        </svg>
-                    </div>
-                    <div class="drive-indicator warning-indicator" id="ind-brake-drive" style="display: none;">
-                        <svg width="30" height="30" viewBox="0 0 30 30">
-                            <circle cx="15" cy="15" r="12" stroke="currentColor" stroke-width="2.5" fill="none"/>
-                            <circle cx="15" cy="15" r="5" fill="currentColor"/>
-                        </svg>
-                    </div>
-                    <div class="drive-indicator autopilot-indicator" id="ind-autopilot-drive" style="display: none;">
-                        <svg width="30" height="30" viewBox="0 0 30 30">
-                            <circle cx="15" cy="15" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
-                            <path d="M10 15 L14 19 L20 11" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                <div class="bottom-warnings" id="drive-warning-bar" style="display: none;">
+                    <div class="warning-bar warning-bar-collision" id="warning-bar">
+                        <span class="warning-bar-half warning-bar-left"></span>
+                        <span class="warning-bar-half warning-bar-right"></span>
+                        <span class="warning-bar-label" id="warning-bar-label">WARNING</span>
                     </div>
                 </div>
             </div>

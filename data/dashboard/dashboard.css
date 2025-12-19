@@ -70,7 +70,7 @@ body.hud-mode {
 
 /* HUD Mode - Horizontal mirror for windshield projection */
 .dashboard-content.hud-mode {
-    transform: matrix(-1, 0, 0, 1, 0, 0) translateY(-15px) scale(1.35)
+    transform: matrix(-1, 0, 0, 1, 0, 0) translateY(-15px) scale(1.1);
 }
 
 #dashboard-container {
@@ -371,9 +371,105 @@ body.light-theme .config-btn:hover {
 
 .bottom-warnings {
     position: absolute;
-    bottom: 20px;
+    bottom: 18px;
+    left: 0;
+    right: 0;
     display: flex;
-    gap: 20px;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.warning-bar {
+    position: relative;
+    width: min(420px, 70vw);
+    height: 22px;
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.warning-bar-half {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+}
+
+.warning-bar-left {
+    left: 0;
+    border-top-left-radius: 999px;
+    border-bottom-left-radius: 999px;
+}
+
+.warning-bar-right {
+    right: 0;
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.warning-bar-label {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    color: #0b0b0b;
+    text-transform: uppercase;
+}
+
+.warning-bar-collision .warning-bar-left {
+    background: linear-gradient(270deg, #f59e0b 0%, #f6ad55 100%);
+    animation: warning-pulse 0.8s infinite;
+}
+
+.warning-bar-collision .warning-bar-right {
+    background: linear-gradient(90deg, #f59e0b 0%, #f6ad55 100%);
+    animation: warning-pulse 0.8s infinite;
+}
+
+.warning-bar-collision .warning-bar-label {
+    color: #2b1900;
+}
+
+.warning-bar-brake .warning-bar-left {
+    background: linear-gradient(270deg, #dc2626 0%, #f87171 100%);
+    animation: warning-pulse 0.6s infinite;
+}
+
+.warning-bar-brake .warning-bar-right {
+    background: linear-gradient(90deg, #dc2626 0%, #f87171 100%);
+    animation: warning-pulse 0.6s infinite;
+}
+
+.warning-bar-brake .warning-bar-label {
+    color: #1f0000;
+}
+
+.warning-bar-autopilot .warning-bar-left {
+    background: linear-gradient(270deg, #2563eb 0%, #60a5fa 100%);
+    animation: warning-shimmer 2.2s infinite;
+}
+
+.warning-bar-autopilot .warning-bar-right {
+    background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+    animation: warning-shimmer 2.2s infinite;
+}
+
+.warning-bar-autopilot .warning-bar-label {
+    color: #0b162e;
+}
+
+@keyframes warning-pulse {
+    0%, 100% { opacity: 1; filter: saturate(1); }
+    50% { opacity: 0.75; filter: saturate(1.3); }
+}
+
+@keyframes warning-shimmer {
+    0% { opacity: 0.85; }
+    50% { opacity: 1; }
+    100% { opacity: 0.85; }
 }
 
 /* Speedometer container */

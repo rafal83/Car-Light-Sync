@@ -27,8 +27,8 @@ const gearMap = { 1: 'P', 2: 'R', 3: 'N', 4: 'D' };
 let currentLang = 'fr';
 
 // BLE packet sizes for different modes
-const VEHICLE_STATE_DRIVE_SIZE = 24; // vehicle_state_ble_drive_t
-const VEHICLE_STATE_PARK_SIZE = 22;  // vehicle_state_ble_park_t
+const VEHICLE_STATE_DRIVE_SIZE = 22; // vehicle_state_ble_drive_t
+const VEHICLE_STATE_PARK_SIZE = 20;  // vehicle_state_ble_park_t
 const VEHICLE_STATE_SIZE = 28;       // vehicle_state_ble_t (deprecated, for compatibility)
 
 // Buffer for reassembling chunked BLE notifications
@@ -36,162 +36,28 @@ const MAX_BLE_SIZE = Math.max(VEHICLE_STATE_DRIVE_SIZE, VEHICLE_STATE_PARK_SIZE,
 let vehicleStateBuffer = new Uint8Array(MAX_BLE_SIZE);
 let vehicleStateBufferOffset = 0;
 
-/**
- * Decode compact BLE vehicle_state_ble_t from binary DataView
- * Structure from include/vehicle_can_unified.h
- */
-function decodeVehicleState(dataView) {
-    let offset = 0;
-
-    // Read int16 (little-endian)
-    const readInt16 = () => {
-        const val = dataView.getInt16(offset, true);
-        offset += 2;
-        return val;
-    };
-
-    // Read uint16 (little-endian)
-    const readUint16 = () => {
-        const val = dataView.getUint16(offset, true);
-        offset += 2;
-        return val;
-    };
-
-    // Read uint8
-    const readUint8 = () => {
-        const val = dataView.getUint8(offset);
-        offset += 1;
-        return val;
-    };
-
-    // Read int8
-    const readInt8 = () => {
-        const val = dataView.getInt8(offset);
-        offset += 1;
-        return val;
-    };
-
-    // Read uint32 (little-endian)
-    const readUint32 = () => {
-        const val = dataView.getUint32(offset, true);
-        offset += 4;
-        return val;
-    };
-
-    // Read floats (converted from int16 * 10)
-    const speed_kph = readInt16() / 10.0;
-    const soc_percent = readInt16() / 10.0;
-    const charge_power_kw = readInt16() / 10.0;
-    const battery_voltage_LV = readInt16() / 10.0;
-    const battery_voltage_HV = readInt16() / 10.0;
-    const odometer_km = readUint32();  // uint32 pour supporter > 65535 km
-    const brightness = readUint8() / 100.0;
-
-    // Read uint8 values
-    const gear = readInt8();
-    const accel_pedal_pos = readUint8();
-    const charge_status = readUint8();
-    const autopilot = readUint8();
-
-    // Read bit-packed flags (steering wheel buttons retirés, only 5 bytes now)
-    const flags0 = readUint8();
-    const flags1 = readUint8();
-    const flags2 = readUint8();
-    const flags3 = readUint8();
-    const flags4 = readUint8();
-
-    // Read meta
-    const last_update_ms = readUint32();
-
-    // Unpack bits (steering wheel buttons et doors_open_count retirés)
-    const state = {
-        // Converted floats
-        speed_kph,
-        soc_percent,
-        charge_power_kw,
-        battery_voltage_LV,
-        battery_voltage_HV,
-        odometer_km,
-        brightness,
-
-        // Direct uint8 values
-        gear,
-        accel_pedal_pos,
-        charge_status,
-        autopilot,
-
-        // Flags0: doors & locks
-        locked: (flags0 & (1<<0)) !== 0 ? 1 : 0,
-        door_front_left_open: (flags0 & (1<<1)) !== 0 ? 1 : 0,
-        door_rear_left_open: (flags0 & (1<<2)) !== 0 ? 1 : 0,
-        door_front_right_open: (flags0 & (1<<3)) !== 0 ? 1 : 0,
-        door_rear_right_open: (flags0 & (1<<4)) !== 0 ? 1 : 0,
-        frunk_open: (flags0 & (1<<5)) !== 0 ? 1 : 0,
-        trunk_open: (flags0 & (1<<6)) !== 0 ? 1 : 0,
-        brake_pressed: (flags0 & (1<<7)) !== 0 ? 1 : 0,
-
-        // Flags1: lights
-        turn_left: (flags1 & (1<<0)) !== 0 ? 1 : 0,
-        turn_right: (flags1 & (1<<1)) !== 0 ? 1 : 0,
-        hazard: (flags1 & (1<<2)) !== 0 ? 1 : 0,
-        headlights: (flags1 & (1<<3)) !== 0 ? 1 : 0,
-        high_beams: (flags1 & (1<<4)) !== 0 ? 1 : 0,
-        fog_lights: (flags1 & (1<<5)) !== 0 ? 1 : 0,
-
-        // Flags2: charging & sentry
-        charging_cable: (flags2 & (1<<0)) !== 0 ? 1 : 0,
-        charging: (flags2 & (1<<1)) !== 0 ? 1 : 0,
-        charging_port: (flags2 & (1<<2)) !== 0 ? 1 : 0,
-        sentry_mode: (flags2 & (1<<3)) !== 0 ? 1 : 0,
-        sentry_alert: (flags2 & (1<<4)) !== 0 ? 1 : 0,
-
-        // Flags3: safety 1
-        blindspot_left: (flags3 & (1<<0)) !== 0 ? 1 : 0,
-        blindspot_right: (flags3 & (1<<1)) !== 0 ? 1 : 0,
-        blindspot_left_alert: (flags3 & (1<<2)) !== 0 ? 1 : 0,
-        blindspot_right_alert: (flags3 & (1<<3)) !== 0 ? 1 : 0,
-        side_collision_left: (flags3 & (1<<4)) !== 0 ? 1 : 0,
-        side_collision_right: (flags3 & (1<<5)) !== 0 ? 1 : 0,
-        forward_collision: (flags3 & (1<<6)) !== 0 ? 1 : 0,
-        night_mode: (flags3 & (1<<7)) !== 0 ? 1 : 0,
-
-        // Flags4: safety 2 & autopilot alerts
-        lane_departure_left_lv1: (flags4 & (1<<0)) !== 0 ? 1 : 0,
-        lane_departure_left_lv2: (flags4 & (1<<1)) !== 0 ? 1 : 0,
-        lane_departure_right_lv1: (flags4 & (1<<2)) !== 0 ? 1 : 0,
-        lane_departure_right_lv2: (flags4 & (1<<3)) !== 0 ? 1 : 0,
-        autopilot_alert_lv1: (flags4 & (1<<4)) !== 0 ? 1 : 0,
-        autopilot_alert_lv2: (flags4 & (1<<5)) !== 0 ? 1 : 0,
-        autopilot_alert_lv3: (flags4 & (1<<6)) !== 0 ? 1 : 0,
-
-        // Meta
-        last_update_ms
-    };
-
-    return state;
-}
 
 /**
  * Decode BLE DRIVE mode packet (vehicle_state_ble_drive_t)
  * Structure from include/vehicle_can_unified.h
- * Total: ~24 bytes
+ * Total: ~22 bytes
  */
 function decodeVehicleStateDrive(dataView) {
     let offset = 0;
 
     // Helper functions
     const readInt16 = () => { const val = dataView.getInt16(offset, true); offset += 2; return val; };
+    const readUint16 = () => { const val = dataView.getUint16(offset, true); offset += 2; return val; };
     const readUint8 = () => { const val = dataView.getUint8(offset); offset += 1; return val; };
     const readInt8 = () => { const val = dataView.getInt8(offset); offset += 1; return val; };
     const readUint32 = () => { const val = dataView.getUint32(offset, true); offset += 4; return val; };
 
-    // Dynamique de conduite (int16 pour supporter régénération négative)
-    const speed_kph = readInt16() / 10.0;
+    // Dynamique de conduite
+    const speed_kph = readUint8() / 10.0;
     const rear_power_kw = readInt16() / 10.0;  // Peut être négatif (régén)
     const front_power_kw = readInt16() / 10.0; // Peut être négatif (régén)
-    const soc_percent = readInt16() / 10.0;
+    const soc_percent = readUint8();
     const odometer_km = readUint32();
-
     // Valeurs uint8
     const gear = readInt8();
     const pedal_map = readInt8();
@@ -274,23 +140,24 @@ function decodeVehicleStateDrive(dataView) {
 /**
  * Decode BLE PARK mode packet (vehicle_state_ble_park_t)
  * Structure from include/vehicle_can_unified.h
- * Total: ~24 bytes
+ * Total: ~21 bytes
  */
 function decodeVehicleStatePark(dataView) {
     let offset = 0;
 
     // Helper functions
     const readInt16 = () => { const val = dataView.getInt16(offset, true); offset += 2; return val; };
+    const readUint16 = () => { const val = dataView.getUint16(offset, true); offset += 2; return val; };
     const readUint8 = () => { const val = dataView.getUint8(offset); offset += 1; return val; };
+    const readInt8 = () => { const val = dataView.getInt8(offset); offset += 1; return val; };
     const readUint32 = () => { const val = dataView.getUint32(offset, true); offset += 4; return val; };
 
     // Energie
-    const soc_percent = readInt16() / 10.0;
+    const soc_percent = readUint8();
     const charge_power_kw = readInt16() / 10.0;
-    const battery_voltage_LV = readInt16() / 10.0;
+    const battery_voltage_LV = readUint8() / 10.0;
     const battery_voltage_HV = readInt16() / 10.0;
-    const odometer_km = readUint32();
-
+    const odometer_km = readUint32(); 
     // Valeurs uint8
     const charge_status = readUint8();
     const brightness = readUint8() / 100.0;
@@ -468,7 +335,7 @@ function updateDashboard(state) {
     // Update DRIVE MODE elements
     else {
         // Speed (large display)
-        document.getElementById('speed-value-drive').textContent = Math.abs(Math.round(state.speed_kph));
+        document.getElementById('speed-value-drive').textContent = Math.round(state.speed_kph);
 
         // Gear display
         document.getElementById('gear-display-drive').textContent = gearText;
@@ -495,9 +362,7 @@ function updateDashboard(state) {
         updateBlindspotArcs('blindspot-arcs-left', state.blindspot_left, state.blindspot_left_alert);
         updateBlindspotArcs('blindspot-arcs-right', state.blindspot_right, state.blindspot_right_alert);
 
-        updateDriveIndicator('ind-forward-collision-drive', state.forward_collision);
-        updateDriveIndicator('ind-brake-drive', state.brake_pressed);
-        updateDriveIndicator('ind-autopilot-drive', state.autopilot);
+        updateDriveWarningBar(state);
     }
 }
 
@@ -764,6 +629,50 @@ function updateDriveIndicator(elementId, active) {
     } else {
         el.style.display = 'none';
     }
+}
+
+function updateDriveWarningBar(state) {
+    const container = document.getElementById('drive-warning-bar');
+    const bar = document.getElementById('warning-bar');
+    const label = document.getElementById('warning-bar-label');
+    if (!container || !bar || !label) {
+        return;
+    }
+
+    let type = '';
+    let text = '';
+
+    if (state.forward_collision) {
+        type = 'collision';
+        text = 'WARNING';
+    } else if (state.brake_pressed) {
+        type = 'brake';
+        text = 'BRAKE';
+    } else {
+        const autopilotMap = {
+            2: 'AVAILABLE',
+            3: 'ACTIVE_NOMINAL',
+            4: 'ACTIVE_RESTRICTED',
+            5: 'ACTIVE_NAV',
+            8: 'ABORTING',
+            9: 'ABORTED'
+        };
+        const autopilotKey = typeof state.autopilot === 'number' ? state.autopilot : parseInt(state.autopilot, 10);
+        if (autopilotMap[autopilotKey]) {
+            type = 'autopilot';
+            text = autopilotMap[autopilotKey];
+        }
+    }
+
+    if (!type) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'flex';
+    bar.classList.remove('warning-bar-collision', 'warning-bar-brake', 'warning-bar-autopilot');
+    bar.classList.add(`warning-bar-${type}`);
+    label.textContent = text;
 }
 
 /**
@@ -1602,90 +1511,55 @@ window.simulateDriveMode = function() {
         header.classList.add('hidden');
     }
 
-    let speed = 0;
-    let pedalPos = 0;
     let battery = 85;
     let odometer = 12345;
-    let turnLeftActive = false;
-    let turnRightActive = false;
-    let blindspotLeftLv1 = false;
-    let blindspotLeftLv2 = false;
-    let blindspotRightLv1 = false;
-    let blindspotRightLv2 = false;
+    const stepDurationMs = 3000;
+    const startTime = Date.now();
+    const steps = [
+        (s) => { s.speed_kph = 100; s.accel_pedal_pos = 60; s.rear_power_kw = 120; s.front_power_kw = 60; },
+        (s) => { s.turn_left = true; },
+        (s) => { s.turn_right = true; },
+        (s) => { s.blindspot_left = true; },
+        (s) => { s.blindspot_left = true; s.blindspot_left_alert = true; },
+        (s) => { s.blindspot_right = true; },
+        (s) => { s.blindspot_right = true; s.blindspot_right_alert = true; },
+        (s) => { s.forward_collision = true; },
+        (s) => { s.brake_pressed = true; },
+        (s) => { s.autopilot = 2; },
+        (s) => { s.autopilot = 3; },
+        (s) => { s.autopilot = 4; },
+        (s) => { s.autopilot = 5; },
+        (s) => { s.autopilot = 8; },
+        (s) => { s.autopilot = 9; }
+    ];
 
     const simulationInterval = setInterval(() => {
-        // Simulate speed changes (0-120 km/h)
-        speed = Math.abs(Math.sin(Date.now() / 2000) * 120);
-
-        // Simulate pedal position (0-100%)
-        pedalPos = Math.abs(Math.sin(Date.now() / 1500) * 100);
-
-        // Toggle turn signals every 3 seconds
-        if (Math.floor(Date.now() / 3000) % 2 === 0) {
-            turnLeftActive = true;
-            turnRightActive = false;
-        } else {
-            turnLeftActive = false;
-            turnRightActive = true;
-        }
-
-        // Simulate blindspot with progressive levels
-        // Cycle through: no detection -> level 1 -> level 2 -> no detection
-        const blindspotCycle = Math.floor(Date.now() / 2000) % 3;
-
-        // Left side
-        if (blindspotCycle === 1) {
-            blindspotLeftLv1 = true;
-            blindspotLeftLv2 = false;
-        } else if (blindspotCycle === 2) {
-            blindspotLeftLv1 = true;
-            blindspotLeftLv2 = true;
-        } else {
-            blindspotLeftLv1 = false;
-            blindspotLeftLv2 = false;
-        }
-
-        // Right side (offset by 1 second)
-        const blindspotCycleRight = Math.floor((Date.now() + 1000) / 2000) % 3;
-        if (blindspotCycleRight === 1) {
-            blindspotRightLv1 = true;
-            blindspotRightLv2 = false;
-        } else if (blindspotCycleRight === 2) {
-            blindspotRightLv1 = true;
-            blindspotRightLv2 = true;
-        } else {
-            blindspotRightLv1 = false;
-            blindspotRightLv2 = false;
-        }
-
-        // Simulate power (with regeneration)
-        const rearPower = Math.sin(Date.now() / 1000) * 150; // -150 to +150 kW
-        const frontPower = Math.cos(Date.now() / 1200) * 100; // -100 to +100 kW
-
-        // Cycle pedal map every 4 seconds: Chill -> Standard -> Sport
-        const pedalMapCycle = Math.floor(Date.now() / 4000) % 3;
+        const elapsedMs = Date.now() - startTime;
+        const stepIndex = Math.floor(elapsedMs / stepDurationMs) % steps.length;
+        const pedalMapCycle = Math.floor(elapsedMs / (stepDurationMs * 2)) % 3;
         const pedalMap = pedalMapCycle === 0 ? -1 : pedalMapCycle === 1 ? 0 : 1;
 
         // Simulate state
         const simulatedState = {
-            speed_kph: speed,
+            speed_kph: 60,
             soc_percent: battery,
-            accel_pedal_pos: Math.round(pedalPos),
+            accel_pedal_pos: 25,
             gear: 4, // D
             pedal_map: pedalMap,
-            rear_power_kw: rearPower,
-            front_power_kw: frontPower,
+            rear_power_kw: 40,
+            front_power_kw: 20,
             odometer_km: odometer,
-            turn_left: turnLeftActive,
-            turn_right: turnRightActive,
-            blindspot_left: blindspotLeftLv1,
-            blindspot_right: blindspotRightLv1,
-            blindspot_left_alert: blindspotLeftLv2,
-            blindspot_right_alert: blindspotRightLv2,
-            forward_collision: Math.random() > 0.9,
-            brake_pressed: Math.random() > 0.8,
-            autopilot: Math.random() > 0.5
+            turn_left: false,
+            turn_right: false,
+            blindspot_left: false,
+            blindspot_right: false,
+            blindspot_left_alert: false,
+            blindspot_right_alert: false,
+            forward_collision: false,
+            brake_pressed: false,
+            autopilot: 0
         };
+        steps[stepIndex](simulatedState);
 
         // Update display
         document.getElementById('speed-value-drive').textContent = Math.round(simulatedState.speed_kph);
@@ -1713,11 +1587,9 @@ window.simulateDriveMode = function() {
         updateBlindspotArcs('blindspot-arcs-left', simulatedState.blindspot_left, simulatedState.blindspot_left_alert);
         updateBlindspotArcs('blindspot-arcs-right', simulatedState.blindspot_right, simulatedState.blindspot_right_alert);
 
-        updateDriveIndicator('ind-forward-collision-drive', simulatedState.forward_collision);
-        updateDriveIndicator('ind-brake-drive', simulatedState.brake_pressed);
-        updateDriveIndicator('ind-autopilot-drive', simulatedState.autopilot);
+        updateDriveWarningBar(simulatedState);
 
-    }, 500); // Update every 500ms (2 Hz for smoother, less intensive simulation)
+    }, 500); // UI refresh, state changes every stepDurationMs
 
     console.log('[Dashboard] Drive simulation running. To stop: stopSimulation()');
     window.stopSimulation = () => {
@@ -1749,23 +1621,43 @@ window.simulateParkMode = function() {
     let batteryLV = 12.5;
     let odometer = 12345;
     let chargePower = 0;
-    let cycleStep = 0;
+    const stepDurationMs = 3000;
+    const startTime = Date.now();
+    const steps = [
+        (s) => { s.door_front_left_open = true; s.doors_open_count = 1; },
+        (s) => { s.door_front_right_open = true; s.doors_open_count = 1; },
+        (s) => { s.door_rear_left_open = true; s.doors_open_count = 1; },
+        (s) => { s.door_rear_right_open = true; s.doors_open_count = 1; },
+        (s) => { s.frunk_open = true; s.doors_open_count = 1; },
+        (s) => { s.trunk_open = true; s.doors_open_count = 1; },
+        (s) => { s.headlights = true; },
+        (s) => { s.high_beams = true; },
+        (s) => { s.fog_lights = true; },
+        (s) => { s.turn_left = true; },
+        (s) => { s.turn_right = true; },
+        (s) => { s.hazard = true; },
+        (s) => { s.brake_pressed = true; },
+        (s) => { s.locked = false; },
+        (s) => { s.sentry_mode = true; },
+        (s) => { s.sentry_alert = true; },
+        (s) => {
+            s.charging_cable = true;
+            s.charging = true;
+            s.charging_port = true;
+            s.charge_status = 1;
+            s.night_mode = true;
+            s.charge_power_kw = 11.0;
+            s.soc_percent = 78;
+            s.battery_voltage_HV = 386.5;
+        }
+    ];
 
     const simulationInterval = setInterval(() => {
-        // Cycle through different states every 3 seconds
-        const currentTime = Date.now();
-        cycleStep = Math.floor(currentTime / 3000) % 8;
-
-        // Simulate charging (slowly increase battery)
-        if (cycleStep >= 4) {
-            chargePower = 11.0;
-            battery = Math.min(100, 75 + (currentTime % 10000) / 1000);
-            batteryHV = 385.0 + Math.sin(currentTime / 1000) * 2;
-        } else {
-            chargePower = 0;
-            battery = 75;
-            batteryHV = 385.0;
-        }
+        const elapsedMs = Date.now() - startTime;
+        const stepIndex = Math.floor(elapsedMs / stepDurationMs) % steps.length;
+        chargePower = 0;
+        battery = 75;
+        batteryHV = 385.0;
 
         // Create simulated state based on cycle step
         const simulatedState = {
@@ -1777,47 +1669,48 @@ window.simulateParkMode = function() {
             gear: 1, // P
 
             // Doors - open one at a time in sequence
-            door_front_left_open: cycleStep === 0,
-            door_front_right_open: cycleStep === 1,
-            door_rear_left_open: cycleStep === 2,
-            door_rear_right_open: cycleStep === 3,
-            frunk_open: cycleStep === 4,
-            trunk_open: cycleStep === 5,
+            door_front_left_open: false,
+            door_front_right_open: false,
+            door_rear_left_open: false,
+            door_rear_right_open: false,
+            frunk_open: false,
+            trunk_open: false,
 
             // Lights - cycle through different combinations
-            headlights: cycleStep >= 2 && cycleStep <= 4,
-            high_beams: cycleStep === 3,
-            fog_lights: cycleStep === 4,
-            turn_left: cycleStep === 1 || cycleStep === 5,
-            turn_right: cycleStep === 2 || cycleStep === 6,
-            hazard: cycleStep === 7,
-            brake_pressed: cycleStep % 2 === 0,
+            headlights: false,
+            high_beams: false,
+            fog_lights: false,
+            turn_left: false,
+            turn_right: false,
+            hazard: false,
+            brake_pressed: false,
 
             // Security
-            locked: cycleStep < 4,
-            sentry_mode: cycleStep === 6,
-            sentry_alert: cycleStep === 7,
+            locked: true,
+            sentry_mode: false,
+            sentry_alert: false,
 
             // Charging
-            charging_cable: cycleStep >= 4,
-            charging: cycleStep >= 5,
-            charging_port: cycleStep >= 4,
+            charging_cable: false,
+            charging: false,
+            charging_port: false,
 
             // Night mode
-            night_mode: cycleStep >= 4,
+            night_mode: false,
 
             // Other
-            charge_status: cycleStep >= 4 ? 1 : 0,
-            doors_open_count: cycleStep < 6 ? 1 : 0,
+            charge_status: 0,
+            doors_open_count: 0,
             brightness: 0.5,
-            autopilot: false,
-            last_update_ms: currentTime
+            autopilot: 0,
+            last_update_ms: Date.now()
         };
+        steps[stepIndex](simulatedState);
 
         // Update dashboard using the main updateDashboard function
         updateDashboard(simulatedState);
 
-    }, 500); // Update every 500ms (2 Hz for smoother, less intensive simulation)
+    }, 500); // UI refresh, state changes every stepDurationMs
 
     console.log('[Dashboard] Park mode simulation running. To stop: stopSimulation()');
     window.stopSimulation = () => {

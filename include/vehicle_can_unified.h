@@ -71,8 +71,8 @@ typedef struct {
   uint8_t charge_status;
   float charge_power_kw;
   uint8_t charging_port;
-  float rearPower;
-  float frontPower;
+  float rear_power;
+  float front_power;
 
   // Divers
   uint8_t sentry_mode;  // 0/1
@@ -107,13 +107,13 @@ typedef struct {
 
 // Structure compacte BLE pour mode DRIVE (conduite)
 // Focus: vitesse, puissance, assistance conduite, sécurité
-// Total: ~24 bytes
+// Total: ~22 bytes
 typedef struct __attribute__((packed)) {
   // Dynamique de conduite
-  int16_t speed_kph_x10;           // vitesse * 10 (ex: 1234 = 123.4 km/h)
+  uint8_t speed_kph_x10;           // vitesse * 10 (valeur absolue)
   int16_t rear_power_kw_x10;       // puissance moteur arrière * 10
   int16_t front_power_kw_x10;      // puissance moteur avant * 10
-  int16_t soc_percent_x10;         // batterie % * 10
+  uint8_t soc_percent;         // batterie %
   uint32_t odometer_km;            // odomètre (uint32 = max 4 294 967 km)
 
   // Valeurs uint8
@@ -139,12 +139,12 @@ typedef struct __attribute__((packed)) {
 
 // Structure compacte BLE pour mode PARK (stationnement)
 // Focus: batterie, charge, portes, sécurité statique
-// Total: ~24 bytes
+// Total: ~20 bytes
 typedef struct __attribute__((packed)) {
   // Energie
-  int16_t soc_percent_x10;         // batterie % * 10
+  uint8_t soc_percent;         // batterie %
   int16_t charge_power_kw_x10;     // puissance charge * 10
-  int16_t battery_voltage_LV_x10;  // tension 12V * 10
+  uint8_t battery_voltage_LV_x10;  // tension 12V * 10
   int16_t battery_voltage_HV_x10;  // tension HV * 10
   uint32_t odometer_km;            // odomètre
 
@@ -167,35 +167,11 @@ typedef struct __attribute__((packed)) {
   uint32_t last_update_ms;
 } vehicle_state_ble_park_t;
 
-// Ancienne structure BLE unifiée (deprecated, garder pour compatibilité)
-typedef struct __attribute__((packed)) {
-  int16_t speed_kph_x10;
-  int16_t soc_percent_x10;
-  int16_t charge_power_kw_x10;
-  int16_t battery_voltage_LV_x10;
-  int16_t battery_voltage_HV_x10;
-  uint32_t odometer_km;
-  uint8_t brightness;
-  int8_t gear;
-  uint8_t accel_pedal_pos;
-  uint8_t charge_status;
-  uint8_t autopilot;
-  uint8_t flags0;
-  uint8_t flags1;
-  uint8_t flags2;
-  uint8_t flags3;
-  uint8_t flags4;
-  uint32_t last_update_ms;
-} vehicle_state_ble_t;
-
 // Convertit vehicle_state_t en format compact BLE Drive
 void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_drive_t *dst);
 
 // Convertit vehicle_state_t en format compact BLE Park
 void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_park_t *dst);
-
-// Ancienne fonction (deprecated)
-void vehicle_state_to_ble(const vehicle_state_t *src, vehicle_state_ble_t *dst);
 
 // Initialise l'historique interne des signaux
 void vehicle_can_unified_init(void);
@@ -210,3 +186,6 @@ void IRAM_ATTR vehicle_can_process_frame_static(const can_frame_t *frame, vehicl
 #endif
 
 #endif // VEHICLE_CAN_UNIFIED_H
+
+
+
