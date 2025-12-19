@@ -28,7 +28,13 @@
                     <span class="progress-text" id="progress-text"></span>
                 </div>
             </div>
-            <button class="config-btn" id="config-btn">⚙️ <span data-i18n="dashboard.config">Config</span></button>
+            <div class="header-actions">
+                <button class="config-btn auto-brightness-btn" id="auto-brightness-btn" aria-pressed="false">
+                    <span data-i18n="dashboard.autoBrightness">Auto Brightness</span>
+                    <span class="auto-brightness-state" id="auto-brightness-state">OFF</span>
+                </button>
+                <button class="config-btn" id="config-btn">⚙️ <span data-i18n="dashboard.config">Config</span></button>
+            </div>
         </div>
 
         <!-- Main content wrapper -->
@@ -468,7 +474,7 @@
                     </div>
 
                     <!-- Speed display -->
-                    <div class="speed-display">
+                    <div class="speed-display" id="speed-display-drive">
                         <div class="speed-large" id="speed-value-drive">0</div>
                         <div class="speed-unit-large">km/h</div>
                         <div class="gear-display-drive" id="gear-display-drive">D</div>
@@ -537,3 +543,5 @@
     <script src="dashboard.js"></script>
 </body>
 </html>
+
+

@@ -80,6 +80,9 @@ const translations = {
       connected: "Connecté",
       disconnected: "Déconnecté",
       config: "Config",
+      autoBrightness: "Luminosité auto",
+      on: "ON",
+      off: "OFF",
       rotateDevice: "↻ Veuillez tourner votre appareil en mode paysage",
       parkMode: "Mode Park",
       driveMode: "Mode Conduite",
@@ -681,6 +684,9 @@ const translations = {
       connected: "Connected",
       disconnected: "Disconnected",
       config: "Config",
+      autoBrightness: "Auto Brightness",
+      on: "ON",
+      off: "OFF",
       rotateDevice: "↻ Please rotate your device to landscape mode",
       parkMode: "Park Mode",
       driveMode: "Drive Mode",
@@ -1197,3 +1203,4 @@ const translations = {
     },
   },
 };
+

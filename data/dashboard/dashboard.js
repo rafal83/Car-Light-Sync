@@ -1151,6 +1151,7 @@ function applyLanguage() {
     currentLang = localStorage.getItem('language') || 'fr';
     console.log('[Dashboard] Applying language:', currentLang);
     applyTranslations();
+    updateAutoBrightnessButton();
 }
 
 /**
@@ -1332,11 +1333,27 @@ function toggleAutoBrightness() {
     if (!autoBrightnessEnabled && usingCapacitor && window.Capacitor?.Plugins?.ScreenBrightness) {
         window.Capacitor.Plugins.ScreenBrightness.setBrightness({ brightness: -1 }); // -1 = system default
     }
+    if (!autoBrightnessEnabled) {
+        lastSyncedBrightnessPercent = null;
+    }
+    updateAutoBrightnessButton();
 }
 
+function updateAutoBrightnessButton() {
+    const button = document.getElementById('auto-brightness-btn');
+    if (!button) {
+        return;
+    }
+    const state = document.getElementById('auto-brightness-state');
+    button.classList.toggle('active', autoBrightnessEnabled);
+    button.setAttribute('aria-pressed', autoBrightnessEnabled ? 'true' : 'false');
+    if (state) {
+        state.textContent = autoBrightnessEnabled ? t('dashboard.on') : t('dashboard.off');
+    }
+}
 /**
  * Initialize HUD mode (Head-Up Display)
- * Clicking on the screen toggles HUD mode: flip vertical + force dark theme
+ * Clicking on the speed display toggles HUD mode: flip vertical + force dark theme
  */
 function initHUDMode() {
     // Load HUD mode state from localStorage
@@ -1345,15 +1362,12 @@ function initHUDMode() {
         applyHUDMode();
     }
 
-    // Toggle HUD mode on screen click (except config button)
-    document.addEventListener('click', (event) => {
-        // Don't toggle if clicking on config button or its children
-        if (event.target.id === 'config-btn' || event.target.closest('#config-btn')) {
-            return;
-        }
-
-        toggleHUDMode();
-    });
+    const speedDisplay = document.getElementById('speed-display-drive');
+    if (speedDisplay) {
+        speedDisplay.addEventListener('click', () => {
+            toggleHUDMode();
+        });
+    }
 }
 
 /**
@@ -1378,6 +1392,10 @@ function applyHUDMode() {
     if (content) {
         content.classList.add('hud-mode');
     }
+    const header = document.querySelector('.dashboard-header');
+    if (header) {
+        header.classList.add('hidden');
+    }
     // Force dark theme in HUD mode
     document.documentElement.setAttribute('data-theme', 'dark');
     console.log('[Dashboard] HUD mode activated');
@@ -1390,6 +1408,10 @@ function removeHUDMode() {
     const content = document.querySelector('.dashboard-content');
     if (content) {
         content.classList.remove('hud-mode');
+    }
+    const header = document.querySelector('.dashboard-header');
+    if (header) {
+        header.classList.remove('hidden');
     }
     // Restore user's preferred theme
     applyTheme();
@@ -1838,6 +1860,10 @@ async function init() {
 
     // Config button
     document.getElementById('config-btn').addEventListener('click', switchToConfig);
+    const autoBrightnessBtn = document.getElementById('auto-brightness-btn');
+    if (autoBrightnessBtn) {
+        autoBrightnessBtn.addEventListener('click', toggleAutoBrightness);
+    }
 
     // Connect to BLE
     await connectBLE();
