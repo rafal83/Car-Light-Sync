@@ -1001,28 +1001,62 @@ body.light-theme .speed-unit-large {
 }
 
 /* Doors open animation */
+.door-fl,
+.door-fr,
+.door-rl,
+.door-rr,
+.frunk-door,
+.trunk-door {
+    transform-box: fill-box;
+    stroke-width: 1px !important;
+}
+
+.door-fl {
+    transform-origin: 0% 12%;
+}
+
+.door-rl {
+    transform-origin: 0% 8%;
+}
+
+.door-fr {
+    transform-origin: 100% 12%;
+}
+
+.door-rr {
+    transform-origin: 100% 8%;
+}
+
+.frunk-door {
+    transform-origin: 50% 100%;
+}
+
+.trunk-door {
+    transform-origin: 50% 0%;
+}
+
 .door-fl.open {
-    transform: translate(-15px, 0);
+    transform: rotate(42deg);
 }
 
 .door-fr.open {
-    transform: translate(15px, 0);
+    transform: rotate(-42deg);
 }
 
 .door-rl.open {
-    transform: translate(-15px, 0);
+    transform: rotate(34deg);
 }
 
 .door-rr.open {
-    transform: translate(15px, 0);
+    transform: rotate(-34deg);
 }
 
 .frunk-door.open {
-    transform: translateY(-10px);
+    transform: translateY(-8px);
 }
 
 .trunk-door.open {
-    transform: translateY(10px);
+    transform: translateY(8px);
 }
 
 /* Headlights active */
