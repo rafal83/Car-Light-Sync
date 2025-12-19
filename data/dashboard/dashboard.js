@@ -413,6 +413,11 @@ function updateDashboard(state) {
         lastGear = state.gear;
     }
 
+    // Sync phone brightness with car brightness
+    if (state.brightness !== undefined) {
+        syncBrightness(state.brightness * 100); // Convert 0-1 to 0-100
+    }
+
     // Update PARK MODE elements
     if (currentMode === 'park') {
         // Battery
@@ -928,14 +933,23 @@ async function connectBLE() {
         hideConnectionProgress();
         updateConnectionStatus(false);
 
-        // Don't retry if user cancelled the device selection
+        // Don't retry if stopping BLE or if user cancelled the device selection
+        if (stoppingBLE) {
+            console.log('[Dashboard] BLE operations stopped, not retrying');
+            return;
+        }
+
         if (error.name === 'NotFoundError' || error.message.includes('User cancelled')) {
             console.log('[Dashboard] User cancelled device selection, not retrying');
             return;
         }
 
         // Retry after 3 seconds for other errors
-        setTimeout(connectBLE, 3000);
+        setTimeout(() => {
+            if (!stoppingBLE) {
+                connectBLE();
+            }
+        }, 3000);
     }
 }
 
@@ -1023,21 +1037,52 @@ function onDisconnected() {
 async function switchToConfig() {
     console.log('[Dashboard] Switching to config mode...');
 
+    // Set flag to prevent any new BLE operations and reconnection attempts
+    stoppingBLE = true;
+
+    // Unlock orientation to allow rotation in config mode
+    await unlockOrientation();
+
+    // Allow screen to sleep in config mode
+    await allowScreenSleep();
+
+    // Restore default brightness (disable auto brightness sync)
+    if (usingCapacitor && window.Capacitor?.Plugins?.ScreenBrightness) {
+        try {
+            await window.Capacitor.Plugins.ScreenBrightness.setBrightness({ brightness: -1 }); // -1 = system default
+            console.log('[Dashboard] Brightness restored to system default');
+        } catch (error) {
+            console.log('[Dashboard] Could not restore brightness:', error.message);
+        }
+    }
+
     // Disconnect BLE and stop notifications
     try {
         if (bleCharacteristicVehicleState) {
             console.log('[Dashboard] Stopping notifications...');
-            await bleCharacteristicVehicleState.stopNotifications();
+            try {
+                await bleCharacteristicVehicleState.stopNotifications();
+            } catch (e) {
+                console.log('[Dashboard] Could not stop notifications:', e.message);
+            }
             bleCharacteristicVehicleState.removeEventListener('characteristicvaluechanged', handleVehicleStateNotification);
+            bleCharacteristicVehicleState = null;
         }
 
-        if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+        if (bleDevice) {
             console.log('[Dashboard] Disconnecting BLE device...');
-            bleDevice.removeEventListener('gattserverdisconnected', onDisconnected);
-            bleDevice.gatt.disconnect();
+            try {
+                bleDevice.removeEventListener('gattserverdisconnected', onDisconnected);
+                if (bleDevice.gatt && bleDevice.gatt.connected) {
+                    bleDevice.gatt.disconnect();
+                }
+            } catch (e) {
+                console.log('[Dashboard] Could not disconnect:', e.message);
+            }
+            bleDevice = null;
 
             // Wait a bit to ensure disconnection is processed
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
     } catch (error) {
         console.error('[Dashboard] Error during BLE cleanup:', error);
@@ -1046,9 +1091,12 @@ async function switchToConfig() {
     // Mark that we're coming from dashboard to prevent redirect loop
     sessionStorage.setItem('from-dashboard', 'true');
 
-    // Navigate to config page
+    // Wait a bit longer to ensure all BLE operations are fully stopped
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Navigate to config page (use replace to ensure dashboard is fully unloaded)
     console.log('[Dashboard] Navigating to config page...');
-    window.location.href = usingCapacitor ? '/index.html' : '../index.html';
+    window.location.replace(usingCapacitor ? '/index.html' : '../index.html');
 }
 
 /**
@@ -1140,10 +1188,17 @@ async function configureStatusBar() {
 }
 
 /**
- * Force landscape orientation
+ * Force landscape orientation (dashboard mode)
  */
 async function forceLandscapeOrientation() {
-    if (!usingCapacitor) {
+    if (usingCapacitor && window.Capacitor?.Plugins?.ScreenOrientation) {
+        try {
+            await window.Capacitor.Plugins.ScreenOrientation.lock({ type: 'landscape' });
+            console.log('[Dashboard] Screen orientation locked to landscape');
+        } catch (error) {
+            console.log('[Dashboard] Could not lock orientation:', error.message);
+        }
+    } else if (!usingCapacitor) {
         // For web browsers, try to lock to landscape
         if (screen.orientation && screen.orientation.lock) {
             try {
@@ -1151,11 +1206,240 @@ async function forceLandscapeOrientation() {
                 console.log('[Dashboard] Screen orientation locked to landscape');
             } catch (error) {
                 console.log('[Dashboard] Could not lock orientation:', error.message);
-                // Fallback: Just show a message if in portrait (handled by CSS)
             }
         }
     }
-    // For Capacitor, orientation should be configured in capacitor.config.json
+}
+
+/**
+ * Unlock orientation (allow auto-rotate for config mode)
+ */
+async function unlockOrientation() {
+    if (usingCapacitor && window.Capacitor?.Plugins?.ScreenOrientation) {
+        try {
+            await window.Capacitor.Plugins.ScreenOrientation.unlock();
+            console.log('[Dashboard] Screen orientation unlocked');
+        } catch (error) {
+            console.log('[Dashboard] Could not unlock orientation:', error.message);
+        }
+    } else if (!usingCapacitor) {
+        // For web browsers
+        if (screen.orientation && screen.orientation.unlock) {
+            try {
+                screen.orientation.unlock();
+                console.log('[Dashboard] Screen orientation unlocked');
+            } catch (error) {
+                console.log('[Dashboard] Could not unlock orientation:', error.message);
+            }
+        }
+    }
+}
+
+// Global variable to store wake lock
+let wakeLock = null;
+
+// HUD mode state
+let isHUDMode = false;
+
+// Auto brightness sync state
+let autoBrightnessEnabled = true;
+let lastSyncedBrightnessPercent = null;
+
+// Flag to stop all BLE operations when switching to config
+let stoppingBLE = false;
+
+/**
+ * Keep screen awake (prevent screen from turning off)
+ */
+async function keepScreenAwake() {
+    if (usingCapacitor && window.Capacitor?.Plugins?.KeepAwake) {
+        try {
+            await window.Capacitor.Plugins.KeepAwake.keepAwake();
+            console.log('[Dashboard] Screen will stay awake');
+        } catch (error) {
+            console.log('[Dashboard] Could not keep screen awake:', error.message);
+        }
+    } else if ('wakeLock' in navigator) {
+        // Web Wake Lock API (modern browsers)
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('[Dashboard] Wake Lock activated');
+
+            // Re-acquire wake lock if page becomes visible again
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible' && wakeLock !== null) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            });
+        } catch (error) {
+            console.log('[Dashboard] Could not activate Wake Lock:', error.message);
+        }
+    }
+}
+
+/**
+ * Allow screen to sleep again
+ */
+async function allowScreenSleep() {
+    if (usingCapacitor && window.Capacitor?.Plugins?.KeepAwake) {
+        try {
+            await window.Capacitor.Plugins.KeepAwake.allowSleep();
+            console.log('[Dashboard] Screen sleep allowed');
+        } catch (error) {
+            console.log('[Dashboard] Could not allow screen sleep:', error.message);
+        }
+    }
+    // Note: Web Wake Lock is automatically released when page is not visible
+}
+
+/**
+ * Synchronize phone brightness with car brightness
+ */
+async function syncBrightness(carBrightnessPercent) {
+    if (!autoBrightnessEnabled) {
+        return;
+    }
+
+    const normalizedPercent = Math.round(Math.max(0, Math.min(100, carBrightnessPercent)));
+    if (lastSyncedBrightnessPercent === normalizedPercent) {
+        return;
+    }
+
+    // Convert percentage (0-100) to brightness value (0-1)
+    const brightness = normalizedPercent / 100;
+
+    if (usingCapacitor && window.Capacitor?.Plugins?.ScreenBrightness) {
+        try {
+            await window.Capacitor.Plugins.ScreenBrightness.setBrightness({ brightness });
+            // console.log('[Dashboard] Screen brightness set to:', brightness);
+            lastSyncedBrightnessPercent = normalizedPercent;
+        } catch (error) {
+            console.log('[Dashboard] Could not set brightness:', error.message);
+        }
+    }
+    // Note: Web browsers don't have a standard API to control screen brightness
+}
+
+/**
+ * Toggle auto brightness sync
+ */
+function toggleAutoBrightness() {
+    autoBrightnessEnabled = !autoBrightnessEnabled;
+    localStorage.setItem('autoBrightness', autoBrightnessEnabled ? 'true' : 'false');
+    console.log('[Dashboard] Auto brightness:', autoBrightnessEnabled ? 'enabled' : 'disabled');
+
+    // If disabled, restore default brightness
+    if (!autoBrightnessEnabled && usingCapacitor && window.Capacitor?.Plugins?.ScreenBrightness) {
+        window.Capacitor.Plugins.ScreenBrightness.setBrightness({ brightness: -1 }); // -1 = system default
+    }
+}
+
+/**
+ * Initialize HUD mode (Head-Up Display)
+ * Clicking on the screen toggles HUD mode: flip vertical + force dark theme
+ */
+function initHUDMode() {
+    // Load HUD mode state from localStorage
+    isHUDMode = localStorage.getItem('hudMode') === 'true';
+    if (isHUDMode) {
+        applyHUDMode();
+    }
+
+    // Toggle HUD mode on screen click (except config button)
+    document.addEventListener('click', (event) => {
+        // Don't toggle if clicking on config button or its children
+        if (event.target.id === 'config-btn' || event.target.closest('#config-btn')) {
+            return;
+        }
+
+        toggleHUDMode();
+    });
+}
+
+/**
+ * Toggle HUD mode
+ */
+function toggleHUDMode() {
+    isHUDMode = !isHUDMode;
+    localStorage.setItem('hudMode', isHUDMode ? 'true' : 'false');
+
+    if (isHUDMode) {
+        applyHUDMode();
+    } else {
+        removeHUDMode();
+    }
+}
+
+/**
+ * Apply HUD mode: flip vertical + force dark theme
+ */
+function applyHUDMode() {
+    const content = document.querySelector('.dashboard-content');
+    if (content) {
+        content.classList.add('hud-mode');
+    }
+    // Force dark theme in HUD mode
+    document.documentElement.setAttribute('data-theme', 'dark');
+    console.log('[Dashboard] HUD mode activated');
+}
+
+/**
+ * Remove HUD mode: restore normal orientation and theme
+ */
+function removeHUDMode() {
+    const content = document.querySelector('.dashboard-content');
+    if (content) {
+        content.classList.remove('hud-mode');
+    }
+    // Restore user's preferred theme
+    applyTheme();
+    console.log('[Dashboard] HUD mode deactivated');
+}
+
+/**
+ * Setup background handler - close app when going to background to save battery
+ */
+function setupBackgroundHandler() {
+    if (window.Capacitor?.Plugins?.App) {
+        const App = window.Capacitor.Plugins.App;
+
+        App.addListener('appStateChange', (state) => {
+            console.log('[Dashboard] App state changed:', state.isActive ? 'active' : 'background');
+
+            if (!state.isActive) {
+                // App went to background - close it completely
+                console.log('[Dashboard] App going to background - closing to save battery');
+
+                // Disconnect BLE first
+                if (bleDevice) {
+                    bleDevice.disconnect();
+                }
+
+                // Close the app
+                App.exitApp();
+            }
+        });
+
+        console.log('[Dashboard] Background handler setup - app will close when backgrounded');
+    }
+}
+
+/**
+ * Optimize battery consumption by reducing update frequency when not in focus
+ */
+function optimizeBatteryConsumption() {
+    // Reduce animation frequency
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            console.log('[Dashboard] Page hidden - pausing animations');
+            // Stop CSS animations
+            document.body.style.animationPlayState = 'paused';
+        } else {
+            console.log('[Dashboard] Page visible - resuming animations');
+            // Resume CSS animations
+            document.body.style.animationPlayState = 'running';
+        }
+    });
 }
 
 /**
@@ -1500,6 +1784,12 @@ async function init() {
     console.log('[Dashboard] Initializing...');
     console.log('[Dashboard] Platform:', usingCapacitor ? 'Capacitor' : 'Web');
 
+    // Load auto brightness preference
+    const savedAutoBrightness = localStorage.getItem('autoBrightness');
+    if (savedAutoBrightness !== null) {
+        autoBrightnessEnabled = savedAutoBrightness === 'true';
+    }
+
     // Apply language
     applyLanguage();
 
@@ -1513,6 +1803,9 @@ async function init() {
 
     // Force landscape orientation
     await forceLandscapeOrientation();
+
+    // Keep screen awake while on dashboard
+    await keepScreenAwake();
 
     // Request fullscreen
     if (usingCapacitor) {
@@ -1531,6 +1824,17 @@ async function init() {
             }
         }, { once: true }); // Only on first click
     }
+
+    // Initialize HUD mode toggle
+    initHUDMode();
+
+    // Handle app going to background - close completely to save battery
+    if (usingCapacitor) {
+        setupBackgroundHandler();
+    }
+
+    // Optimize battery consumption
+    optimizeBatteryConsumption();
 
     // Config button
     document.getElementById('config-btn').addEventListener('click', switchToConfig);

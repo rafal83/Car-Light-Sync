@@ -1033,10 +1033,13 @@ async function switchToDashboard() {
 
     // Disconnect BLE cleanly before switching
     try {
-        if (bleManager && bleManager.device && bleManager.device.gatt && bleManager.device.gatt.connected) {
+        if (bleTransportInstance && bleTransportInstance.isConnected && bleTransportInstance.isConnected()) {
             console.log('[Config] Disconnecting BLE before switching to dashboard...');
-            bleManager.bleManualDisconnect = true; // Prevent auto-reconnect
-            await bleManager.bleDisconnect(false); // Don't clear history
+            bleManualDisconnect = true; // Prevent auto-reconnect during transition
+            if (bleTransportInstance.waitForQueue) {
+                await bleTransportInstance.waitForQueue();
+            }
+            await bleTransportInstance.disconnect(false); // Don't clear history
 
             // Wait a bit to ensure disconnection is processed
             await new Promise(resolve => setTimeout(resolve, 300));
