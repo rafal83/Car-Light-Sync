@@ -374,7 +374,6 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddBoolToObject(doors, "rr", current_vehicle_state.door_rear_right_open);
   cJSON_AddBoolToObject(doors, "t", current_vehicle_state.trunk_open);
   cJSON_AddBoolToObject(doors, "f", current_vehicle_state.frunk_open);
-  cJSON_AddNumberToObject(doors, "co", current_vehicle_state.doors_open_count);
   cJSON_AddItemToObject(vehicle, "doors", doors);
 
   // Verrouillage
@@ -416,7 +415,6 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(safety, "ap", current_vehicle_state.autopilot);
   cJSON_AddNumberToObject(safety, "apa1", current_vehicle_state.autopilot_alert_lv1);
   cJSON_AddNumberToObject(safety, "apa2", current_vehicle_state.autopilot_alert_lv2);
-  cJSON_AddNumberToObject(safety, "apa3", current_vehicle_state.autopilot_alert_lv3);
   cJSON_AddBoolToObject(safety, "sa", current_vehicle_state.sentry_alert);
   cJSON_AddItemToObject(vehicle, "safety", safety);
 

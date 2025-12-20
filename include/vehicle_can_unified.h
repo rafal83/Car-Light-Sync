@@ -32,7 +32,6 @@ typedef struct {
 
   // Verrouillage / ouvertures
   uint8_t locked;           // 0/1
-  uint8_t doors_open_count; // nombre de portes ouvertes
   uint8_t door_front_left_open;
   uint8_t door_rear_left_open;
   uint8_t door_front_right_open;
@@ -73,6 +72,7 @@ typedef struct {
   uint8_t charging_port;
   float rear_power;
   float front_power;
+  uint8_t train_type; // 0 RWD, 1 AWD
 
   // Divers
   uint8_t sentry_mode;  // 0/1
@@ -94,12 +94,12 @@ typedef struct {
   uint8_t lane_departure_right_lv2;
 
   uint8_t forward_collision;
+  
   uint8_t night_mode;
   float brightness;
   uint8_t autopilot;
   uint8_t autopilot_alert_lv1;
   uint8_t autopilot_alert_lv2;
-  uint8_t autopilot_alert_lv3;
 
   // Meta
   uint32_t last_update_ms;
@@ -131,7 +131,7 @@ typedef struct __attribute__((packed)) {
   uint8_t flags1;  // bits: blindspot_L, blindspot_R, blindspot_L_alert, blindspot_R_alert, side_collision_L, side_collision_R, forward_collision, night_mode
 
   // Byte 2 (8 bits): autopilot alerts & lane departure
-  uint8_t flags2;  // bits: lane_dep_L_lv1, lane_dep_L_lv2, lane_dep_R_lv1, lane_dep_R_lv2, autopilot_alert_lv1, autopilot_alert_lv2, autopilot_alert_lv3, unused
+  uint8_t flags2;  // bits: lane_dep_L_lv1, lane_dep_L_lv2, lane_dep_R_lv1, lane_dep_R_lv2, autopilot_alert_lv1, autopilot_alert_lv2, unused, unused
 
   // Meta
   uint32_t last_update_ms;
@@ -151,7 +151,6 @@ typedef struct __attribute__((packed)) {
   // Valeurs uint8
   uint8_t charge_status;           // statut charge
   uint8_t brightness;              // 0-100%
-  uint8_t doors_open_count;        // nombre de portes ouvertes
 
   // Bit-packed flags
   // Byte 0 (8 bits): doors & locks

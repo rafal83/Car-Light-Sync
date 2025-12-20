@@ -40,7 +40,7 @@
 #endif
 
 // Power limiting to avoid brownout on USB power
-#define MAX_POWER_MILLIAMPS 2000 // Consommation max en mA (USB peut fournir ~2A max)
+#define MAX_POWER_MILLIAMPS 3000 // Consommation max en mA (USB peut fournir ~2A max)
 #define LED_MILLIAMPS_PER_LED 60 // Max consumption per LED in white at full brightness (mA)
 
 // Brightness and color constants
@@ -1275,7 +1275,7 @@ static void effect_vehicle_sync(void) {
   rgb_t base_color = {0, 0, 0};
 
   // Portes ouvertes = rouge
-  if (last_vehicle_state.doors_open_count > 0) {
+  if (last_vehicle_state.door_front_left_open + last_vehicle_state.door_front_right_open + last_vehicle_state.door_rear_left_open + last_vehicle_state.door_rear_right_open > 0) {
     base_color = (rgb_t){255, 0, 0};
   }
   // En charge = vert

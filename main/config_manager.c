@@ -1026,8 +1026,6 @@ const char *config_manager_enum_to_id(can_event_type_t event) {
     return EVENT_ID_AUTOPILOT_ALERT_LV1;
   case CAN_EVENT_AUTOPILOT_ALERT_LV2:
     return EVENT_ID_AUTOPILOT_ALERT_LV2;
-  case CAN_EVENT_AUTOPILOT_ALERT_LV3:
-    return EVENT_ID_AUTOPILOT_ALERT_LV3;
   case CAN_EVENT_GEAR_DRIVE:
     return EVENT_ID_GEAR_DRIVE;
   case CAN_EVENT_GEAR_REVERSE:
@@ -1118,8 +1116,6 @@ can_event_type_t config_manager_id_to_enum(const char *id) {
     return CAN_EVENT_AUTOPILOT_ALERT_LV1;
   if (strcmp(id, EVENT_ID_AUTOPILOT_ALERT_LV2) == 0)
     return CAN_EVENT_AUTOPILOT_ALERT_LV2;
-  if (strcmp(id, EVENT_ID_AUTOPILOT_ALERT_LV3) == 0)
-    return CAN_EVENT_AUTOPILOT_ALERT_LV3;
   if (strcmp(id, EVENT_ID_GEAR_DRIVE) == 0)
     return CAN_EVENT_GEAR_DRIVE;
   if (strcmp(id, EVENT_ID_GEAR_REVERSE) == 0)
@@ -1153,7 +1149,6 @@ bool config_manager_event_can_switch_profile(can_event_type_t event) {
   case CAN_EVENT_AUTOPILOT_DISENGAGED:
   case CAN_EVENT_AUTOPILOT_ALERT_LV1:
   case CAN_EVENT_AUTOPILOT_ALERT_LV2:
-  case CAN_EVENT_AUTOPILOT_ALERT_LV3:
   case CAN_EVENT_FORWARD_COLLISION:
   case CAN_EVENT_GEAR_DRIVE:
   case CAN_EVENT_GEAR_REVERSE:

@@ -129,6 +129,8 @@ static void can_event_task(void *pvParameters) {
 
   // Counter for periodic BLE dashboard updates (send every 200ms = 4 iterations)
   uint8_t ble_send_counter = 0;
+  TickType_t last_state_send_ticks = 0;
+  const TickType_t min_state_send_period = pdMS_TO_TICKS(50);
 
   while (1) {
     // Copy current state
@@ -244,6 +246,22 @@ static void can_event_task(void *pvParameters) {
         config_manager_stop_event(CAN_EVENT_BLINDSPOT_RIGHT);
       }
     }
+    if (current_state.blindspot_left_alert != previous_state.blindspot_left_alert) {
+      if (current_state.blindspot_left_alert) {
+        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_LEFT_ALERT);
+      } else {
+        config_manager_stop_event(CAN_EVENT_BLINDSPOT_LEFT_ALERT);
+      }
+    }
+    if (current_state.blindspot_right_alert != previous_state.blindspot_right_alert) {
+      if (current_state.blindspot_right_alert) {
+        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_RIGHT_ALERT);
+      } else {
+        config_manager_stop_event(CAN_EVENT_BLINDSPOT_RIGHT_ALERT);
+      }
+    }
+
+    // Sidecollision
     if (current_state.side_collision_left != previous_state.side_collision_left) {
       if (current_state.side_collision_left) {
         config_manager_process_can_event(CAN_EVENT_SIDE_COLLISION_LEFT);
@@ -341,13 +359,6 @@ static void can_event_task(void *pvParameters) {
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_ALERT_LV2);
       }
     }
-    if (current_state.autopilot_alert_lv3 != previous_state.autopilot_alert_lv3) {
-      if (current_state.autopilot_alert_lv3) {
-        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ALERT_LV3);
-      } else {
-        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ALERT_LV3);
-      }
-    }
 
     // Charging
     if (current_state.charging != previous_state.charging) {
@@ -430,6 +441,13 @@ static void can_event_task(void *pvParameters) {
           }
         }
       }
+    }
+
+    TickType_t now = xTaskGetTickCount();
+    if (vehicle_can_state_dirty_get() && (now - last_state_send_ticks) >= min_state_send_period) {
+      vehicle_can_state_dirty_clear();
+      espnow_link_send_vehicle_state(&current_state);
+      last_state_send_ticks = now;
     }
 
     vTaskDelay(pdMS_TO_TICKS(50)); // Check every 50 ms

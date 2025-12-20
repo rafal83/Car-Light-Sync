@@ -776,7 +776,6 @@ const simulationSections = [
             { id: 'AUTOPILOT_DISENGAGED', labelKey: 'simulation.autopilotDisengaged' },
             { id: 'AUTOPILOT_ALERT_LV1', labelKey: 'simulation.autopilotAlertLv1' },
             { id: 'AUTOPILOT_ALERT_LV2', labelKey: 'simulation.autopilotAlertLv2' },
-            { id: 'AUTOPILOT_ALERT_LV3', labelKey: 'simulation.autopilotAlertLv3' }
         ]
     },
     {
@@ -2964,8 +2963,7 @@ async function updateStatus() {
                 const autopilotAlert = $('v-autopilot-alert');
                 if(autopilotAlert) {
                   autopilotAlert.textContent = v.safety.apa1 ? t('vehicle.autopilotAlertLv1') : 
-                                               (v.safety.apa2 ? t('vehicle.autopilotAlertLv2') : 
-                                                v.safety.apa3 ? t('vehicle.autopilotAlertLv3') : t('vehicle.none'));
+                                               (v.safety.apa2 ? t('vehicle.autopilotAlertLv2') : t('vehicle.none'));
                 }
                 const sentryAlertEl = $('v-sentry-alert');
                 if (sentryAlertEl) {

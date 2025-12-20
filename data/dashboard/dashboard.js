@@ -28,7 +28,7 @@ let currentLang = 'fr';
 
 // BLE packet sizes for different modes
 const VEHICLE_STATE_DRIVE_SIZE = 22; // vehicle_state_ble_drive_t
-const VEHICLE_STATE_PARK_SIZE = 20;  // vehicle_state_ble_park_t
+const VEHICLE_STATE_PARK_SIZE = 19;  // vehicle_state_ble_park_t
 const VEHICLE_STATE_SIZE = 28;       // vehicle_state_ble_t (deprecated, for compatibility)
 
 // Buffer for reassembling chunked BLE notifications
@@ -92,6 +92,7 @@ function decodeVehicleStateDrive(dataView) {
         high_beams: (flags0 & (1<<4)) !== 0,
         headlights: (flags0 & (1<<5)) !== 0,
         fog_lights: (flags0 & (1<<6)) !== 0,
+        train_type: (flags0 & (1<<7)) !== 0,
 
         // Flags1: blindspots & collisions
         blindspot_left: (flags1 & (1<<0)) !== 0,
@@ -110,14 +111,12 @@ function decodeVehicleStateDrive(dataView) {
         lane_departure_right_lv2: (flags2 & (1<<3)) !== 0,
         autopilot_alert_lv1: (flags2 & (1<<4)) !== 0,
         autopilot_alert_lv2: (flags2 & (1<<5)) !== 0,
-        autopilot_alert_lv3: (flags2 & (1<<6)) !== 0,
 
         // Missing fields from Park mode (defaults)
         charge_power_kw: 0,
         battery_voltage_LV: 0,
         battery_voltage_HV: 0,
         charge_status: 0,
-        doors_open_count: 0,
         locked: false,
         door_front_left_open: false,
         door_rear_left_open: false,
@@ -161,7 +160,6 @@ function decodeVehicleStatePark(dataView) {
     // Valeurs uint8
     const charge_status = readUint8();
     const brightness = readUint8();
-    const doors_open_count = readUint8();
 
     // Bit-packed flags
     const flags0 = readUint8();
@@ -178,7 +176,6 @@ function decodeVehicleStatePark(dataView) {
         odometer_km,
         charge_status,
         brightness,
-        doors_open_count,
 
         // Flags0: doors & locks
         locked: (flags0 & (1<<0)) !== 0,
@@ -205,6 +202,7 @@ function decodeVehicleStatePark(dataView) {
         sentry_mode: (flags2 & (1<<3)) !== 0,
         sentry_alert: (flags2 & (1<<4)) !== 0,
         night_mode: (flags2 & (1<<5)) !== 0,
+        train_type: (flags2 & (1<<6)) !== 0,
 
         // Missing fields from Drive mode (defaults)
         speed_kph: 0,
@@ -227,7 +225,6 @@ function decodeVehicleStatePark(dataView) {
         lane_departure_right_lv2: false,
         autopilot_alert_lv1: false,
         autopilot_alert_lv2: false,
-        autopilot_alert_lv3: false,
 
         last_update_ms
     };
@@ -343,7 +340,7 @@ function updateDashboard(state) {
         // Pedal arc (0-100% maps to stroke-dashoffset 377 to 0) - 240° arc
         const pedalArcFill = document.getElementById('pedal-arc-fill');
         if (pedalArcFill) {
-            const dashOffset = 341 - (341 * state.accel_pedal_pos / 100);
+            const dashOffset = 340 - (340 * state.accel_pedal_pos / 100);
             pedalArcFill.style.strokeDashoffset = dashOffset;
         }
 
@@ -352,7 +349,7 @@ function updateDashboard(state) {
         document.getElementById('odometer-drive-compact').textContent = Math.round(state.odometer_km) + 'km';
 
         // Power & pedal map indicators
-        updatePowerIndicators(state.rear_power_kw, state.front_power_kw, state.pedal_map);
+        updatePowerIndicators(state.rear_power_kw, state.front_power_kw, state.pedal_map, state.train_type);
 
         // Show/hide indicators (only when active)
         updateDriveIndicator('ind-turn-left-drive', state.turn_left);
@@ -371,8 +368,9 @@ function updateDashboard(state) {
  * @param {number} rearPower - Rear motor power in kW (can be negative for regen)
  * @param {number} frontPower - Front motor power in kW (can be negative for regen)
  * @param {number} pedalMap - Pedal map mode (-1=Chill, 0=Standard, 1=Sport)
+ * @param {number} trainType - Train type (0 = RWD, 1 = AWD)
  */
-function updatePowerIndicators(rearPower, frontPower, pedalMap) {
+function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
     const maxPower = 200; // Maximum power in kW for normalization
 
     // Update rear power arc (left side)
@@ -433,6 +431,10 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap) {
     const frontArcNeg = document.getElementById('power-arc-front-neg');
     const frontValue = document.getElementById('power-front-value');
     if (frontArcPos && frontArcNeg && frontValue) {
+      if(trainType == 0) { // 0 = RWD, no front motor
+        document.getElementById('power-arc-front').style.display = 'none'; // Hide entire
+        document.getElementById('power-front-indicator').style.display = 'none'; // Hide entire
+      } else {
         const frontRounded = Math.round(frontPower || 0);
         frontValue.textContent = frontRounded;
 
@@ -476,7 +478,8 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap) {
             frontValue.classList.add('negative');
         } else {
             frontValue.classList.add('zero');
-        }
+        } 
+      }
     }
 
     // Update pedal map label
@@ -692,11 +695,11 @@ function updateBlindspotArcs(elementId, level1, level2) {
     if (level2) {
         el.style.display = 'block';
         arcs[0].style.display = 'block';
-        arcs[0].setAttribute('stroke', '#fc8181'); // Red
+        arcs[0].setAttribute('stroke', '#ff0000'); // Red
         arcs[1].style.display = 'block';
-        arcs[1].setAttribute('stroke', '#fc8181'); // Red
+        arcs[1].setAttribute('stroke', '#ff0000'); // Red
         arcs[2].style.display = 'block';
-        arcs[2].setAttribute('stroke', '#fc8181'); // Red
+        arcs[2].setAttribute('stroke', '#ff0000'); // Red
     }
     // Level 1 (detection): Show all 3 arcs in ORANGE
     else if (level1) {
@@ -1548,6 +1551,7 @@ window.simulateDriveMode = function() {
             pedal_map: pedalMap,
             rear_power_kw: 40,
             front_power_kw: 20,
+            train_type: 1, // AWD
             odometer_km: odometer,
             turn_left: false,
             turn_right: false,
@@ -1577,7 +1581,7 @@ window.simulateDriveMode = function() {
         document.getElementById('odometer-drive-compact').textContent = Math.round(simulatedState.odometer_km) + 'km';
 
         // Power & pedal map indicators
-        updatePowerIndicators(simulatedState.rear_power_kw, simulatedState.front_power_kw, simulatedState.pedal_map);
+        updatePowerIndicators(simulatedState.rear_power_kw, simulatedState.front_power_kw, simulatedState.pedal_map, simulatedState.train_type);
 
         // Indicators
         updateDriveIndicator('ind-turn-left-drive', simulatedState.turn_left);
@@ -1624,12 +1628,12 @@ window.simulateParkMode = function() {
     const stepDurationMs = 3000;
     const startTime = Date.now();
     const steps = [
-        (s) => { s.door_front_left_open = true; s.doors_open_count = 1; },
-        (s) => { s.door_front_right_open = true; s.doors_open_count = 1; },
-        (s) => { s.door_rear_left_open = true; s.doors_open_count = 1; },
-        (s) => { s.door_rear_right_open = true; s.doors_open_count = 1; },
-        (s) => { s.frunk_open = true; s.doors_open_count = 1; },
-        (s) => { s.trunk_open = true; s.doors_open_count = 1; },
+        (s) => { s.door_front_left_open = true; },
+        (s) => { s.door_front_right_open = true; },
+        (s) => { s.door_rear_left_open = true; },
+        (s) => { s.door_rear_right_open = true; },
+        (s) => { s.frunk_open = true; },
+        (s) => { s.trunk_open = true; },
         (s) => { s.headlights = true; },
         (s) => { s.high_beams = true; },
         (s) => { s.fog_lights = true; },
@@ -1700,7 +1704,6 @@ window.simulateParkMode = function() {
 
             // Other
             charge_status: 0,
-            doors_open_count: 0,
             brightness: 0.5,
             autopilot: 0,
             last_update_ms: Date.now()

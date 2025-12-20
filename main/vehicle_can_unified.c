@@ -157,7 +157,8 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
     (src->brake_pressed ? (1<<3) : 0) |
     (src->high_beams   ? (1<<4) : 0) |
     (src->headlights   ? (1<<5) : 0) |
-    (src->fog_lights   ? (1<<6) : 0);
+    (src->fog_lights   ? (1<<6) : 0) |
+    (src->train_type   ? (1<<7) : 0);
 
   // Byte 1: blindspots & collisions
   dst->flags1 =
@@ -177,8 +178,7 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
     (src->lane_departure_right_lv1 ? (1<<2) : 0) |
     (src->lane_departure_right_lv2 ? (1<<3) : 0) |
     (src->autopilot_alert_lv1      ? (1<<4) : 0) |
-    (src->autopilot_alert_lv2      ? (1<<5) : 0) |
-    (src->autopilot_alert_lv3      ? (1<<6) : 0);
+    (src->autopilot_alert_lv2      ? (1<<5) : 0);
 
   // Meta
   dst->last_update_ms = src->last_update_ms;
@@ -201,7 +201,6 @@ void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_par
   // Valeurs uint8
   dst->charge_status = src->charge_status;
   dst->brightness = (uint8_t)(src->brightness);
-  dst->doors_open_count = src->doors_open_count;
 
   // Byte 0: doors & locks
   dst->flags0 =
@@ -230,7 +229,8 @@ void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_par
     (src->charging_port  ? (1<<2) : 0) |
     (src->sentry_mode    ? (1<<3) : 0) |
     (src->sentry_alert   ? (1<<4) : 0) |
-    (src->night_mode     ? (1<<5) : 0);
+    (src->night_mode     ? (1<<5) : 0) |
+    (src->train_type     ? (1<<6) : 0);
 
   // Meta
   dst->last_update_ms = src->last_update_ms;

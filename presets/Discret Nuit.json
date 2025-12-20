@@ -43,21 +43,6 @@
       "priority": 89
     },
     {
-      "enabled": true,
-      "duration_ms": 2600,
-      "effect_config": {
-        "effect_id": "STROBE",
-        "brightness": 100,
-        "speed": 90,
-        "color1": 16711680,
-        "reverse": false,
-        "segment_start": 0,
-        "segment_length": 0
-      },
-      "event_id": "AUTOPILOT_ALERT_LV3",
-      "priority": 93
-    },
-    {
       "event_id": "AUTOPILOT_DISENGAGED",
       "enabled": true,
       "priority": 44,

@@ -2,10 +2,10 @@
 
 #include "config_manager.h" // pour can_event_type_t + can_event_trigger
 #include "esp_log.h"
-#include "espnow_link.h"
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 // Helper latch -> open/closed
@@ -15,25 +15,41 @@ static inline int IRAM_ATTR is_latch_open(float raw) {
   // DBC mapping (typique Tesla) :
   // 2 = LATCH_CLOSED
   // 0 = SNA, others = open / moving / fault
-  if (v == 2)
-    return 0; // closed
-  if (v == 0)
-    return 0; // SNA
+  if (v == 2 || v == 0)
+    return 0; // closed - SNA
   return 1;
 }
 
-// Historique de portes pour calculer doors_open_count
-static uint8_t s_door_front_left_open  = 0;
-static uint8_t s_door_rear_left_open   = 0;
-static uint8_t s_door_front_right_open = 0;
-static uint8_t s_door_rear_right_open  = 0;
-
 static uint8_t s_batterySMState = 0;
-// static float s_rearMotorCurrent126 = 0;
-// static float s_rearHighVoltage126 = 0;
-// static float s_frontMotorCurrent1A5 = 0;
-// static float s_frontHighVoltage1A5 = 0;
-static int maxL=0, maxR=0;
+
+static uint16_t s_blindspotLeftCm = 0;
+static uint16_t s_blindspotRightCm = 0;
+
+static uint16_t s_frontLeftCm = 0;
+static uint16_t s_frontRightCm = 0;
+static uint16_t s_prev_frontLeftCm = 0;
+static uint16_t s_prev_frontRightCm = 0;
+static uint32_t s_prev_frontSumAvg = 0;
+#ifndef FRONT_SUM_AVG_WINDOW
+#define FRONT_SUM_AVG_WINDOW 50
+#endif
+static uint32_t s_frontSumWindow[FRONT_SUM_AVG_WINDOW] = {0};
+static uint16_t s_frontSumWindowCount = 0;
+static uint16_t s_frontSumWindowIndex = 0;
+
+static volatile bool s_vehicle_state_dirty = false;
+
+void vehicle_can_state_dirty_set(void) {
+  s_vehicle_state_dirty = true;
+}
+
+bool vehicle_can_state_dirty_get(void) {
+  return s_vehicle_state_dirty;
+}
+
+void vehicle_can_state_dirty_clear(void) {
+  s_vehicle_state_dirty = false;
+}
 
 // Helpers to send the ESP-NOW state only when a value has changed
 #define UPDATE_AND_SEND_U8(field, value, state_ptr)                \
@@ -41,7 +57,7 @@ static int maxL=0, maxR=0;
     uint8_t _nv = (uint8_t)(value);                                \
     if ((field) != _nv) {                                          \
       (field) = _nv;                                               \
-      espnow_link_send_vehicle_state((state_ptr));                 \
+      vehicle_can_state_dirty_set();                               \
     } else {                                                       \
       (field) = _nv;                                               \
     }                                                              \
@@ -52,7 +68,7 @@ static int maxL=0, maxR=0;
     int8_t _nv = (int8_t)(value);                                  \
     if ((field) != _nv) {                                          \
       (field) = _nv;                                               \
-      espnow_link_send_vehicle_state((state_ptr));                 \
+      vehicle_can_state_dirty_set();                               \
     } else {                                                       \
       (field) = _nv;                                               \
     }                                                              \
@@ -63,33 +79,61 @@ static int maxL=0, maxR=0;
     float _nv = (float)(value);                                    \
     if ((field) != _nv) {                                          \
       (field) = _nv;                                               \
-      espnow_link_send_vehicle_state((state_ptr));                 \
+      vehicle_can_state_dirty_set();                               \
     } else {                                                       \
       (field) = _nv;                                               \
     }                                                              \
   } while (0)
 
-// IRAM_ATTR: recalcul rapide dans callback CAN
-static void IRAM_ATTR recompute_doors_open(vehicle_state_t *state) {
+static void IRAM_ATTR recompute_blindspot_alert(vehicle_state_t *state) {
   if (!state)
     return;
-  uint8_t c = 0;
-  c += s_door_front_left_open ? 1 : 0;
-  c += s_door_rear_left_open ? 1 : 0;
-  c += s_door_front_right_open ? 1 : 0;
-  c += s_door_rear_right_open ? 1 : 0;
-  if (state->doors_open_count != c) {
-    state->doors_open_count = c;
-    espnow_link_send_vehicle_state(state);
+
+  if(state->blindspot_left) {
+    if(state->gear == 2) { // Reverse
+      UPDATE_AND_SEND_U8(state->blindspot_left_alert, s_blindspotLeftCm < 200 && s_blindspotLeftCm > 1 ? 1 : 0, state);
+    } else if(state->turn_left) {
+      UPDATE_AND_SEND_U8(state->blindspot_left_alert, s_blindspotLeftCm < 250 && s_blindspotLeftCm > 1 ? 1 : 0, state);
+    } else {
+      UPDATE_AND_SEND_U8(state->blindspot_left_alert, 0, state);
+    }
+  }
+  if(state->blindspot_right) {
+    if(state->gear == 2) { // Reverse
+      UPDATE_AND_SEND_U8(state->blindspot_right_alert, s_blindspotRightCm < 200 && s_blindspotRightCm > 1 ? 1 : 0, state);
+    } else if(state->turn_right) {
+      UPDATE_AND_SEND_U8(state->blindspot_right_alert, s_blindspotRightCm < 250 && s_blindspotRightCm > 1 ? 1 : 0, state);
+    } else {
+      UPDATE_AND_SEND_U8(state->blindspot_right_alert, 0, state);
+    }    
   }
 }
 
-// static void IRAM_ATTR recompute_power(vehicle_state_t *state) {
-//   if (!state)
-//     return;
-//   UPDATE_AND_SEND_FLOAT(state->rear_power, (s_rearMotorCurrent126 * s_rearHighVoltage126) / 1000.0f, state);
-//   UPDATE_AND_SEND_FLOAT(state->front_power, (s_frontMotorCurrent1A5 * s_frontHighVoltage1A5) / 1000.0f, state);
-// }
+static void IRAM_ATTR recompute_front_alert(vehicle_state_t *state) {
+  uint32_t sum = (uint32_t)s_frontLeftCm + (uint32_t)s_frontRightCm;
+  uint32_t total = 0;
+  uint32_t avg = 0;
+
+  // Simple moving average to reduce sensitivity to sensor noise.
+  s_frontSumWindow[s_frontSumWindowIndex] = sum;
+  s_frontSumWindowIndex = (s_frontSumWindowIndex + 1) % FRONT_SUM_AVG_WINDOW;
+  if (s_frontSumWindowCount < FRONT_SUM_AVG_WINDOW)
+    s_frontSumWindowCount++;
+  for (uint8_t i = 0; i < s_frontSumWindowCount; i++)
+    total += s_frontSumWindow[i];
+  avg = total / s_frontSumWindowCount;
+
+  // Distance is shorter than previous value and accel pedal is > 0
+  if(((avg <= s_prev_frontSumAvg) && state->accel_pedal_pos > 0) && state->gear == 4 && state->speed_kph > 30){
+    UPDATE_AND_SEND_U8(state->forward_collision, 1, state); 
+  } else {
+    UPDATE_AND_SEND_U8(state->forward_collision, 0, state); 
+  }
+  s_prev_frontLeftCm = s_frontLeftCm;
+  s_prev_frontRightCm = s_frontRightCm;
+  s_prev_frontSumAvg = avg;
+}
+
 
 // ============================================================================
 // Mapping signaux -> vehicle_state_t
@@ -205,15 +249,11 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x102) { // gauche
     if (strcmp(name, "VCLEFT_frontLatchStatus") == 0) {
-      s_door_front_left_open      = is_latch_open(value);
-      UPDATE_AND_SEND_U8(state->door_front_left_open, s_door_front_left_open, state);
-      recompute_doors_open(state);
+      UPDATE_AND_SEND_U8(state->door_front_left_open, is_latch_open(value), state);
       return;
     }
     if (strcmp(name, "VCLEFT_rearLatchStatus") == 0) {
-      s_door_rear_left_open      = is_latch_open(value);
-      UPDATE_AND_SEND_U8(state->door_rear_left_open, s_door_rear_left_open, state);
-      recompute_doors_open(state);
+      UPDATE_AND_SEND_U8(state->door_rear_left_open, is_latch_open(value), state);
       return;
     }
     return;
@@ -221,19 +261,15 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
 
   if (id == 0x103) { // droite + trunk
     if (strcmp(name, "VCRIGHT_frontLatchStatus") == 0) {
-      s_door_front_right_open      = is_latch_open(value);
-      UPDATE_AND_SEND_U8(state->door_front_right_open, s_door_front_right_open, state);
-      recompute_doors_open(state);
+      UPDATE_AND_SEND_U8(state->door_front_right_open, is_latch_open(value), state);
       return;
     }
     if (strcmp(name, "VCRIGHT_rearLatchStatus") == 0) {
-      s_door_rear_right_open      = is_latch_open(value);
-      UPDATE_AND_SEND_U8(state->door_rear_right_open, s_door_rear_right_open, state);
-      recompute_doors_open(state);
+      UPDATE_AND_SEND_U8(state->door_rear_right_open, is_latch_open(value), state);
       return;
     }
     if (strcmp(name, "VCRIGHT_trunkLatchStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->trunk_open, is_latch_open(value) ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->trunk_open, is_latch_open(value), state);
       return;
     }
     return;
@@ -244,8 +280,8 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x2E1) {
     if (strcmp(name, "VCFRONT_frunkLatchStatus") == 0) {
-      if ((value > 0) && (value <= 5)) {
-        UPDATE_AND_SEND_U8(state->frunk_open, (value == 1 /* || value == 5*/) ? 1 : 0, state);
+      if ((value >= 1) && (value <= 2)) {
+        UPDATE_AND_SEND_U8(state->frunk_open, is_latch_open(value) ? 1 : 0, state);
       }
       return;
     }
@@ -280,20 +316,20 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
 
     // Low beams -> headlights_on
-    if (strcmp(name, "VCFRONT_lowBeamLeftStatus") == 0 || strcmp(name, "VCFRONT_lowBeamRightStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->headlights, (int)(value + 0.5f), state);
+    if (strcmp(name, "VCFRONT_lowBeamLeftStatus") == 0) { //  || strcmp(name, "VCFRONT_lowBeamRightStatus") == 0) {
+      UPDATE_AND_SEND_U8(state->headlights, (uint8_t)(value + 0.5f) == 1 ? 1 : 0, state);
       return;
     }
 
     // High beams
-    if (strcmp(name, "VCFRONT_highBeamLeftStatus") == 0 || strcmp(name, "VCFRONT_highBeamRightStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->high_beams, (int)(value + 0.5f), state);
+    if (strcmp(name, "VCFRONT_highBeamLeftStatus") == 0) { //  || strcmp(name, "VCFRONT_highBeamRightStatus") == 0) {
+      UPDATE_AND_SEND_U8(state->high_beams, (uint8_t)(value + 0.5f) == 1 ? 1 : 0, state);
       return;
     }
 
     // Feux de brouillard
-    if (strcmp(name, "VCFRONT_fogLeftStatus") == 0 || strcmp(name, "VCFRONT_fogRightStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->fog_lights, (int)(value + 0.5f), state);
+    if (strcmp(name, "VCFRONT_fogLeftStatus") == 0) { // || strcmp(name, "VCFRONT_fogRightStatus") == 0) {
+      UPDATE_AND_SEND_U8(state->fog_lights, (uint8_t)(value + 0.5f) == 1 ? 1 : 0 , state);
       return;
     }
 
@@ -312,9 +348,21 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x399) {
     if (strcmp(name, "DAS_autopilotState") == 0) {
+      /*
+        0 "DISABLED" 
+        1 "UNAVAILABLE"
+        2 "AVAILABLE" 
+        3 "ACTIVE_NOMINAL" 
+        4 "ACTIVE_RESTRICTED" 
+        5 "ACTIVE_NAV" 
+        8 "ABORTING" 
+        9 "ABORTED" 
+        14 "FAULT" 
+        15 "SNA" 
+      */
       int v                       = (int)(value + 0.5f);
       // ESP_LOGI(TAG_CAN, "%s %f", name, value); // 2 nada, 3 // FSD,
-      v = (v > 1) && (v < 14) ? v : 0;
+      v = (v >= 3) && (v <= 9) ? v : 0;
       UPDATE_AND_SEND_U8(state->autopilot, v, state);
       return;
     }
@@ -333,10 +381,11 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
         10 "LC_HANDS_ON_REQD_ESCALATED_CHIME_2"
         15 "LC_HANDS_ON_SNA"
       */
+      // ESP_LOGI(TAG_CAN, "%s %f", name, value);
       int v                       = (int)(value + 0.5f);
-      UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v == 1 ? 1 : 0, state);
-      // state->autopilot_alert_lv2 = v >= 2 && v <= 5 ? 1 : 0;
-      UPDATE_AND_SEND_U8(state->autopilot_alert_lv3, v >= 6 && v <= 10 ? 1 : 0, state);
+      // UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v == 1 ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v >= 3 && v <= 5 ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->autopilot_alert_lv2, v >= 6 && v <= 10 ? 1 : 0, state);
       return;
     }
     if (strcmp(name, "DAS_laneDepartureWarning") == 0) {
@@ -356,27 +405,52 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       UPDATE_AND_SEND_U8(state->side_collision_right, v == 2 || v == 3 ? 1 : 0, state);
       return;
     }
-    if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
-      int v                       = (int)(value + 0.5f);
-      UPDATE_AND_SEND_U8(state->forward_collision, v == 1 ? 1 : 0, state);
-      return;
-    }
+    // if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
+    //   int v                       = (int)(value + 0.5f);
+    //   UPDATE_AND_SEND_U8(state->forward_collision, v == 1 ? 1 : 0, state);
+    //   return;
+    // }
     if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
-      int v                       = (int)(value + 0.5f);
-      if (v>maxL){maxL=v; ESP_LOGI(TAG_CAN,"maxL=%d",maxL);}
-      UPDATE_AND_SEND_U8(state->blindspot_left, (v > 0) ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->blindspot_left_alert, (v > 1) ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->blindspot_left, (value > 0) ? 1 : 0, state);
       return;
     }
     if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
-      int v                        = (int)(value + 0.5f);
-      if (v>maxR){maxR=v; ESP_LOGI(TAG_CAN,"maxR=%d",maxR);}
-      UPDATE_AND_SEND_U8(state->blindspot_right, (v > 0) ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->blindspot_right_alert, (v > 1) ? 1 : 0, state);
+      UPDATE_AND_SEND_U8(state->blindspot_right, (value > 0) ? 1 : 0, state);
       return;
     }
     return;
   }
+  
+  if (id == 0x22E) {
+    if (strcmp(name, "PARK_sdiSensor12RawDistData") == 0) {
+      s_blindspotLeftCm = (uint16_t)(value + 0.5f);
+      recompute_blindspot_alert(state);
+      return;
+    }
+    if (strcmp(name, "PARK_sdiSensor7RawDistData") == 0) {
+      s_blindspotRightCm = (uint16_t)(value + 0.5f);
+      recompute_blindspot_alert(state);
+      return;
+    }
+    return;
+  }
+
+  if (id == 0x20E) {
+    if (strcmp(name, "PARK_sdiSensor3RawDistData") == 0) {
+      value = value > 1 && value <= 500 ? value : 0;
+      s_frontLeftCm = (uint16_t)(value + 0.5f);
+      recompute_front_alert(state);
+      return;
+    }
+    if (strcmp(name, "PARK_sdiSensor4RawDistData") == 0) {
+      value = value > 1 && value <= 500 ? value : 0;
+      s_frontRightCm = (uint16_t)(value + 0.5f);
+      recompute_front_alert(state);
+      return;
+    }
+    return;
+  }
+
   if (id == 0x334 && bus_id == CAN_BUS_CHASSIS) {
     if (strcmp(name, "UI_pedalMap") == 0) {
       UPDATE_AND_SEND_U8(state->pedal_map, (int)(value + 0.5f), state);
@@ -483,6 +557,13 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     return;
+  }
+
+  if (id == 0x7FF) {
+    if (strcmp(name, "GTW_drivetrainType") == 0) {
+      UPDATE_AND_SEND_U8(state->train_type, (value > 0.5f), state);
+      return;
+    }
   }
 
   // ---------------------------------------------------------------------
