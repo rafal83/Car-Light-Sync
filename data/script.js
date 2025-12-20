@@ -626,6 +626,7 @@ class BleTransport {
         console.log('[BLE] Queue vide, prêt pour la prochaine requête');
     }
 }
+
 const bleTransport = new BleTransport();
 bleTransportInstance = bleTransport;
 if (!wifiOnline) {
@@ -935,7 +936,7 @@ function updateOtaBleNote() {
     }
 }
 function updateLogsTabVisibility() {
-    const logsTabButton = $('logs-tab-button');
+    const logsTabButton = $('tab-logs');
     if (!logsTabButton) {
         return;
     }

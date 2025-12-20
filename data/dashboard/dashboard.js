@@ -53,7 +53,7 @@ function decodeVehicleStateDrive(dataView) {
     const readUint32 = () => { const val = dataView.getUint32(offset, true); offset += 4; return val; };
 
     // Dynamique de conduite
-    const speed_kph = readUint8() / 10.0;
+    const speed_kph = readUint8();
     const rear_power_kw = readInt16() / 10.0;  // Peut être négatif (régén)
     const front_power_kw = readInt16() / 10.0; // Peut être négatif (régén)
     const soc_percent = readUint8();
