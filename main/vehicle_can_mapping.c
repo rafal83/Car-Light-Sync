@@ -2,6 +2,7 @@
 
 #include "config_manager.h" // pour can_event_type_t + can_event_trigger
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
 
@@ -36,6 +37,10 @@ static uint32_t s_prev_frontSumAvg = 0;
 static uint32_t s_frontSumWindow[FRONT_SUM_AVG_WINDOW] = {0};
 static uint16_t s_frontSumWindowCount = 0;
 static uint16_t s_frontSumWindowIndex = 0;
+#ifndef FRONT_ALERT_HYST_MS
+#define FRONT_ALERT_HYST_MS 2000
+#endif
+static uint64_t s_frontAlertHoldUntilUs = 0;
 
 static volatile bool s_vehicle_state_dirty = false;
 
@@ -113,21 +118,27 @@ static void IRAM_ATTR recompute_front_alert(vehicle_state_t *state) {
   uint32_t sum = (uint32_t)s_frontLeftCm + (uint32_t)s_frontRightCm;
   uint32_t total = 0;
   uint32_t avg = 0;
+  uint64_t now_us = esp_timer_get_time();
+  bool should_alert = false;
 
   // Simple moving average to reduce sensitivity to sensor noise.
   s_frontSumWindow[s_frontSumWindowIndex] = sum;
   s_frontSumWindowIndex = (s_frontSumWindowIndex + 1) % FRONT_SUM_AVG_WINDOW;
   if (s_frontSumWindowCount < FRONT_SUM_AVG_WINDOW)
     s_frontSumWindowCount++;
-  for (uint8_t i = 0; i < s_frontSumWindowCount; i++)
+  for (uint16_t i = 0; i < s_frontSumWindowCount; i++)
     total += s_frontSumWindow[i];
   avg = total / s_frontSumWindowCount;
 
   // Distance is shorter than previous value and accel pedal is > 0
-  if(((avg <= s_prev_frontSumAvg) && state->accel_pedal_pos > 0) && state->gear == 4 && state->speed_kph > 30){
-    UPDATE_AND_SEND_U8(state->forward_collision, 1, state); 
+  should_alert = ((avg <= s_prev_frontSumAvg) && state->accel_pedal_pos > 0) && state->gear == 4 && state->speed_kph > 30;
+  if (should_alert) {
+    s_frontAlertHoldUntilUs = now_us + (uint64_t)FRONT_ALERT_HYST_MS * 1000ULL;
+    UPDATE_AND_SEND_U8(state->forward_collision, 1, state);
+  } else if (now_us < s_frontAlertHoldUntilUs) {
+    UPDATE_AND_SEND_U8(state->forward_collision, 1, state);
   } else {
-    UPDATE_AND_SEND_U8(state->forward_collision, 0, state); 
+    UPDATE_AND_SEND_U8(state->forward_collision, 0, state);
   }
   s_prev_frontLeftCm = s_frontLeftCm;
   s_prev_frontRightCm = s_frontRightCm;
