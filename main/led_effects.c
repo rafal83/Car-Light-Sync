@@ -40,7 +40,7 @@
 #endif
 
 // Power limiting to avoid brownout on USB power
-#define MAX_POWER_MILLIAMPS 3000 // Consommation max en mA (USB peut fournir ~2A max)
+#define MAX_POWER_MILLIAMPS 2000 // Consommation max en mA (USB peut fournir ~2A max)
 #define LED_MILLIAMPS_PER_LED 60 // Max consumption per LED in white at full brightness (mA)
 
 // Brightness and color constants
@@ -109,6 +109,7 @@ static effect_config_t current_config;
 static bool enabled                                = true;
 static uint32_t effect_counter                     = 0;
 static vehicle_state_t last_vehicle_state          = {0};
+static uint8_t max_allowed_brightness              = BRIGHTNESS_NO_REDUCTION;
 static bool ota_progress_mode                      = false;
 static bool ota_ready_mode                         = false;
 static bool ota_error_mode                         = false;
@@ -126,6 +127,8 @@ static uint16_t led_count                          = NUM_LEDS;
 static void cleanup_rmt_channel(void);
 static bool configure_rmt_channel(void);
 static uint16_t sanitize_led_count(uint16_t requested);
+static void update_max_allowed_brightness(uint16_t led_total);
+static uint8_t map_user_brightness(uint8_t brightness);
 
 // Conversion couleur 0xRRGGBB vers rgb_t
 static rgb_t color_to_rgb(uint32_t color) {
@@ -163,10 +166,11 @@ static void fill_solid(rgb_t color);
 // Apply brightness to a color (accounts for dynamic and audio brightness)
 static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   rgb_t result;
+  uint8_t effective_brightness = map_user_brightness(brightness);
   // Apply effect brightness
-  result.r = (color.r * brightness) / 255;
-  result.g = (color.g * brightness) / 255;
-  result.b = (color.b * brightness) / 255;
+  result.r = (color.r * effective_brightness) / 255;
+  result.g = (color.g * effective_brightness) / 255;
+  result.b = (color.b * effective_brightness) / 255;
 
   // Apply dynamic brightness if enabled (from active profile)
   bool dynamic_enabled;
@@ -363,6 +367,35 @@ static uint16_t sanitize_led_count(uint16_t requested) {
   }
 
   return requested;
+}
+
+static uint8_t map_user_brightness(uint8_t brightness) {
+  if (max_allowed_brightness >= BRIGHTNESS_NO_REDUCTION) {
+    return brightness;
+  }
+  return (uint8_t)(((uint32_t)brightness * max_allowed_brightness) / BRIGHTNESS_NO_REDUCTION);
+}
+
+static void update_max_allowed_brightness(uint16_t led_total) {
+  if (led_total == 0) {
+    max_allowed_brightness = BRIGHTNESS_NO_REDUCTION;
+    return;
+  }
+
+  uint32_t max_current = (uint32_t)LED_MILLIAMPS_PER_LED * led_total;
+  if (max_current == 0) {
+    max_allowed_brightness = BRIGHTNESS_NO_REDUCTION;
+    return;
+  }
+
+  uint32_t brightness = ((uint32_t)MAX_POWER_MILLIAMPS * BRIGHTNESS_NO_REDUCTION) / max_current;
+  if (brightness < 1) {
+    brightness = 1;
+  } else if (brightness > BRIGHTNESS_NO_REDUCTION) {
+    brightness = BRIGHTNESS_NO_REDUCTION;
+  }
+  max_allowed_brightness = (uint8_t)brightness;
+  ESP_LOGI(TAG_LED, "Power cap: %u LEDs, max brightness %u/255", led_total, max_allowed_brightness);
 }
 
 static void cleanup_rmt_channel(void) {
@@ -1625,6 +1658,7 @@ static const led_effect_descriptor_t *find_effect_descriptor_by_id(const char *i
 bool led_effects_init(void) {
   uint16_t configured_leds = config_manager_get_led_count();
   led_count                = sanitize_led_count(configured_leds);
+  update_max_allowed_brightness(led_count);
 
   if (!configure_rmt_channel()) {
     return false;
@@ -1656,6 +1690,7 @@ bool led_effects_set_led_count(uint16_t requested_led_count) {
   }
 
   led_count = requested_led_count;
+  update_max_allowed_brightness(led_count);
   ESP_LOGI(TAG_LED, "LED count updated: %d", led_count);
   return true;
 }
@@ -2019,41 +2054,15 @@ void led_effects_show_buffer(const led_rgb_t *buffer) {
     return;
   }
 
-  // Copy the buffer and calculate the estimated consumption
-  uint32_t total_brightness = 0;
+  if (led_count == 0) {
+    return;
+  }
+
+  // Copy the buffer
   for (uint16_t i = 0; i < led_count; i++) {
     leds[i].r             = buffer[i].r;
     leds[i].g             = buffer[i].g;
     leds[i].b             = buffer[i].b;
-
-    // Calculate total brightness (max RGB component to estimate consumption)
-    uint8_t max_component = leds[i].r;
-    if (leds[i].g > max_component)
-      max_component = leds[i].g;
-    if (leds[i].b > max_component)
-      max_component = leds[i].b;
-    total_brightness += max_component;
-  }
-
-  // Calculate estimated consumption in mA
-  // Simplified formula: max_current_per_led * average_brightness / 255
-  if (led_count == 0) {
-    return;
-  }
-  uint32_t estimated_milliamps = (LED_MILLIAMPS_PER_LED * total_brightness) / 255;
-
-  // If consumption exceeds the limit, proportionally reduce brightness
-  if (estimated_milliamps > MAX_POWER_MILLIAMPS) {
-    uint32_t scale_factor = (MAX_POWER_MILLIAMPS * 256) / estimated_milliamps;
-
-    // ESP_LOGW(TAG_LED, "Power limiting: %lu mA -> %d mA (brightness reduced to %lu%%)", estimated_milliamps, MAX_POWER_MILLIAMPS, (scale_factor * 100) / 256);
-
-    // Apply the reduction to all LEDs
-    for (uint16_t i = 0; i < led_count; i++) {
-      leds[i].r = (leds[i].r * scale_factor) / 256;
-      leds[i].g = (leds[i].g * scale_factor) / 256;
-      leds[i].b = (leds[i].b * scale_factor) / 256;
-    }
   }
 
   led_strip_show();

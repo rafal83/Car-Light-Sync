@@ -616,7 +616,7 @@ void app_main(void) {
   esp_log_level_set(TAG_WIFI, ESP_LOG_INFO); // WiFi module logs
   esp_log_level_set(TAG_WEBSERVER, ESP_LOG_INFO);
   // esp_log_level_set(TAG_LED_ENCODER, ESP_LOG_INFO);
-  // esp_log_level_set(TAG_LED, ESP_LOG_INFO);
+  esp_log_level_set(TAG_LED, ESP_LOG_INFO);
   esp_log_level_set(TAG_CONFIG, ESP_LOG_INFO);
   // esp_log_level_set(TAG_OTA, ESP_LOG_INFO);
   // esp_log_level_set(TAG_AUDIO, ESP_LOG_INFO);
