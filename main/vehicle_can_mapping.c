@@ -40,6 +40,9 @@ static uint16_t s_frontSumWindowIndex = 0;
 #ifndef FRONT_ALERT_HYST_MS
 #define FRONT_ALERT_HYST_MS 2000
 #endif
+#ifndef FRONT_ALERT_MIN_DROP_CM
+#define FRONT_ALERT_MIN_DROP_CM 20
+#endif
 static uint64_t s_frontAlertHoldUntilUs = 0;
 
 static volatile bool s_vehicle_state_dirty = false;
@@ -130,8 +133,11 @@ static void IRAM_ATTR recompute_front_alert(vehicle_state_t *state) {
     total += s_frontSumWindow[i];
   avg = total / s_frontSumWindowCount;
 
-  // Distance is shorter than previous value and accel pedal is > 0
-  should_alert = ((avg <= s_prev_frontSumAvg) && state->accel_pedal_pos > 0) && state->gear == 4 && state->speed_kph > 30;
+  // Distance is shorter than previous value (by a minimum drop) and accel pedal is > 0
+  should_alert = ((s_prev_frontSumAvg > 0) &&
+                  (avg + FRONT_ALERT_MIN_DROP_CM <= s_prev_frontSumAvg) &&
+                  state->accel_pedal_pos > 0) &&
+                 state->gear == 4 && state->speed_kph > 10;
   if (should_alert) {
     s_frontAlertHoldUntilUs = now_us + (uint64_t)FRONT_ALERT_HYST_MS * 1000ULL;
     UPDATE_AND_SEND_U8(state->forward_collision, 1, state);
