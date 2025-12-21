@@ -3,6 +3,7 @@
 
 #include "esp_err.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -56,6 +57,50 @@ void log_stream_unregister_client(int fd);
  * @return Number of connected SSE clients
  */
 int log_stream_get_client_count(void);
+
+/**
+ * @brief Get the current log file index (1..max)
+ *
+ * @return Current file index
+ */
+uint32_t log_stream_get_current_file_index(void);
+
+/**
+ * @brief Get the max log file index for rotation
+ *
+ * @return Max file index
+ */
+uint32_t log_stream_get_file_rotation_max(void);
+
+/**
+ * @brief Enable or disable log file saving to SPIFFS
+ *
+ * @param enable true to enable, false to disable
+ * @return ESP_OK on success
+ */
+esp_err_t log_stream_enable_file_logging(bool enable);
+
+/**
+ * @brief Check if file logging is enabled
+ *
+ * @return true if enabled
+ */
+bool log_stream_is_file_logging_enabled(void);
+
+/**
+ * @brief Get current log file size in bytes
+ *
+ * @param out_size Output size
+ * @return ESP_OK on success, ESP_ERR_NOT_FOUND if file doesn't exist
+ */
+esp_err_t log_stream_get_file_size(size_t *out_size);
+
+/**
+ * @brief Clear the log file
+ *
+ * @return ESP_OK on success
+ */
+esp_err_t log_stream_clear_file_log(void);
 
 #ifdef __cplusplus
 }

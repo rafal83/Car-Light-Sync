@@ -1009,6 +1009,44 @@
               </div>
             </div>
           </div>
+
+          <div class="profile-section">
+            <div class="profile-section-header">
+              <h3 data-i18n="logs.fileTitle"></h3>
+              <p class="info-box-blue" data-i18n="logs.fileDescription"></p>
+            </div>
+            <div class="profile-section-content">
+              <label class="toggle-container" for="logs-file-enabled">
+                <div class="toggle-switch">
+                  <input type="checkbox" id="logs-file-enabled" onchange="toggleFileLogs(event)">
+                  <span class="toggle-slider"></span>
+                </div>
+                <span class="toggle-label" data-i18n="logs.fileEnable"></span>
+              </label>
+              <div class="control-group mt-15">
+                <label class="control-label" data-i18n="logs.fileStatusLabel"></label>
+                <div id="logs-file-status" class="font-600 text-muted" data-i18n="logs.fileStatusLoading"></div>
+              </div>
+              <div class="control-group mt-15">
+                <label class="control-label" data-i18n="logs.fileSelectLabel"></label>
+                <div class="control-row">
+                  <select id="logs-file-index" onchange="updateLogFileStatus()">
+                    <option value="1">#1</option>
+                    <option value="2">#2</option>
+                    <option value="3">#3</option>
+                    <option value="4">#4</option>
+                    <option value="5">#5</option>
+                    <option value="6">#6</option>
+                    <option value="7">#7</option>
+                  </select>
+                  <button class="btn-secondary" id="logs-file-download-btn" onclick="downloadLogFile()" data-i18n="logs.fileDownload"></button>
+                </div>
+              </div>
+              <div class="button-group mt-10">
+                <button class="btn-danger" id="logs-file-purge-btn" onclick="purgeLogFiles()" data-i18n="logs.filePurge"></button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: OTA -->

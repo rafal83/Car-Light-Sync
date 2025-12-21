@@ -772,6 +772,11 @@ void app_main(void) {
                               NULL); // Increased to 8KB because of config_profile_t
   create_task_on_general_core(monitor_task, "monitor_task", 4096, NULL, 2, NULL);
 
+
+  // Log streaming (Server-Sent Events for real-time logs)
+  // ESP_ERROR_CHECK(log_stream_init());
+  // ESP_LOGI(TAG_MAIN, "Log streaming initialized");
+  
   // WiFi
   status_led_set_state(STATUS_LED_WIFI_CONNECTING);
   ESP_ERROR_CHECK(wifi_manager_init());
@@ -796,9 +801,7 @@ void app_main(void) {
   ESP_ERROR_CHECK(web_server_start());
   ESP_LOGI(TAG_MAIN, "Web server started");
 
-  // Log streaming (Server-Sent Events for real-time logs)
-  ESP_ERROR_CHECK(log_stream_init());
-  ESP_LOGI(TAG_MAIN, "Log streaming initialized");
+
 
   if (espnow_role == ESP_NOW_ROLE_MASTER) {
     // GVRET TCP server (initialized but not started - controlled via web interface)
@@ -840,4 +843,5 @@ void app_main(void) {
 
   // Main function ends, FreeRTOS tasks keep running
   ESP_LOGI(TAG_MAIN, "app_main completed, tasks running");
+  esp_log_level_set(TAG_MAIN, ESP_LOG_WARN);
 }

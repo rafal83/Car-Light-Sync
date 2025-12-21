@@ -702,6 +702,7 @@ window.fetch = async function(input, init = {}) {
 let lastBleStatus = bleTransport.getStatus();
 bleTransport.onStatusChange((status) => {
     updateBleUiState();
+    updateLogsTabVisibility();
     if (status === 'connected') {
         showNotification('ble-notification', t('ble.toastConnected'), 'success');
         updateApiConnectionState();
@@ -945,6 +946,9 @@ function updateLogsTabVisibility() {
         : false;
     // Afficher l'onglet Logs uniquement si on n'utilise PAS BLE (donc WiFi)
     logsTabButton.style.display = useBle ? 'none' : 'block';
+    if (useBle && activeTabName === 'logs') {
+        switchTab('profiles');
+    }
 }
 async function toggleBleConnection() {
     if (!bleTransport.isSupported()) {
@@ -4285,6 +4289,7 @@ let logsEnabled = false;
 let logsEventSource = null;
 const MAX_LOG_LINES = 500;
 let logLineCount = 0;
+let logFileStatusPending = null;
 
 async function toggleLiveLogs() {
     if (logsEnabled) {
@@ -4415,6 +4420,167 @@ function clearLogs() {
     }
 }
 
+function formatBytes(bytes) {
+    if (!bytes || bytes <= 0) {
+        return '0 KB';
+    }
+    if (bytes < 1024 * 1024) {
+        return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    }
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function fetchLogFileStatus(selectedIndex) {
+    const query = selectedIndex ? `?idx=${encodeURIComponent(selectedIndex)}` : '';
+    const response = await fetch(API_BASE + '/api/logs/file/status' + query);
+    if (!response.ok) {
+        throw new Error('Failed to load log file status');
+    }
+    return response.json();
+}
+
+function updateLogFileUi(data, selectedIndex) {
+    const toggle = $('logs-file-enabled');
+    const statusDiv = $('logs-file-status');
+    const select = $('logs-file-index');
+
+    if (toggle && typeof data.en === 'boolean') {
+        toggle.checked = data.en;
+    }
+
+    const max = data.max || 7;
+    const current = data.idx || 1;
+    const selected = selectedIndex || data.sel || current;
+    if (select) {
+        if (select.options.length !== max) {
+            select.innerHTML = '';
+            for (let i = 1; i <= max; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = '#' + i;
+                select.appendChild(opt);
+            }
+        }
+        select.value = selected;
+    }
+
+    if (statusDiv) {
+        const sizeText = formatBytes(data.size || 0);
+        let statusText = t('logs.fileStatusFormat', selected, max, sizeText);
+        if (current !== selected) {
+            statusText += ' ' + t('logs.fileStatusCurrentSuffix', current);
+        }
+        statusDiv.textContent = statusText;
+    }
+}
+
+async function updateLogFileStatus() {
+    if (logFileStatusPending) {
+        return logFileStatusPending;
+    }
+
+    const statusDiv = $('logs-file-status');
+    if (statusDiv) {
+        statusDiv.textContent = t('logs.fileStatusLoading');
+    }
+
+    const select = $('logs-file-index');
+    const selectedIndex = select ? parseInt(select.value, 10) : null;
+
+    logFileStatusPending = (async () => {
+        try {
+            const data = await fetchLogFileStatus(selectedIndex);
+            if (!data || data.st !== 'ok') {
+                throw new Error('Invalid log file status response');
+            }
+            updateLogFileUi(data, selectedIndex);
+        } catch (error) {
+            console.error('Failed to load log file status:', error);
+        } finally {
+            logFileStatusPending = null;
+        }
+    })();
+
+    return logFileStatusPending;
+}
+
+async function toggleFileLogs(event) {
+    const checkbox = event && event.target ? event.target : $('logs-file-enabled');
+    if (!checkbox) {
+        return;
+    }
+
+    const enable = checkbox.checked;
+    try {
+        const response = await fetch(API_BASE + '/api/logs/file/enable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ en: enable })
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data || data.st !== 'ok') {
+            throw new Error('Failed to toggle file logs');
+        }
+        showNotification('logs-notification',
+            enable ? t('logs.fileEnabled') : t('logs.fileDisabled'),
+            'success');
+        await updateLogFileStatus();
+    } catch (error) {
+        console.error('Failed to toggle file logs:', error);
+        checkbox.checked = !enable;
+        showNotification('logs-notification', t('logs.fileToggleError'), 'error');
+    }
+}
+
+async function downloadLogFile() {
+    const select = $('logs-file-index');
+    const selectedIndex = select ? parseInt(select.value, 10) : null;
+    if (!selectedIndex) {
+        return;
+    }
+
+    const url = API_BASE + '/api/logs/file/download?idx=' + encodeURIComponent(selectedIndex);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Download failed');
+        }
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = `logs.${selectedIndex}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+        console.error('Log file download failed:', error);
+        showNotification('logs-notification', t('logs.fileDownloadError'), 'error');
+    }
+}
+
+async function purgeLogFiles() {
+    if (!confirm(t('logs.filePurgeConfirm'))) {
+        return;
+    }
+
+    try {
+        const response = await fetch(API_BASE + '/api/logs/file/clear', {
+            method: 'POST'
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data || data.st !== 'ok') {
+            throw new Error('Failed to purge log files');
+        }
+        showNotification('logs-notification', t('logs.filePurgeSuccess'), 'success');
+        await updateLogFileStatus();
+    } catch (error) {
+        console.error('Failed to purge log files:', error);
+        showNotification('logs-notification', t('logs.filePurgeError'), 'error');
+    }
+}
+
 function retryLoading() {
     const errorDiv = $('loading-error');
     if (errorDiv) {
@@ -4484,6 +4650,7 @@ async function loadInitialData() {
         // Étape 9: OTA
         updateProgress(9, t('loading.loadingConfig'));
         await loadOTAInfo();
+        await updateLogFileStatus();
 
         // Masquer l'écran de chargement
         hideLoadingOverlay();

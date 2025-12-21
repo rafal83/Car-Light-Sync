@@ -35,6 +35,7 @@
 #include "wifi_manager.h"
 
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -1772,6 +1773,141 @@ static esp_err_t log_stream_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+static esp_err_t log_file_status_handler(httpd_req_t *req) {
+  uint32_t max_index = log_stream_get_file_rotation_max();
+  uint32_t current   = log_stream_get_current_file_index();
+  uint32_t selected  = current;
+
+  char query[32];
+  if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+    char idx_str[8];
+    if (httpd_query_key_value(query, "idx", idx_str, sizeof(idx_str)) == ESP_OK) {
+      int idx = atoi(idx_str);
+      if (idx > 0) {
+        selected = (uint32_t)idx;
+      }
+    }
+  }
+
+  if (selected < 1 || selected > max_index) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid log index");
+    return ESP_FAIL;
+  }
+
+  char path[64];
+  snprintf(path, sizeof(path), "/spiffs/logs/logs.%u.txt", (unsigned)selected);
+  int file_size = spiffs_get_file_size(path);
+  size_t size   = (file_size > 0) ? (size_t)file_size : 0;
+
+  bool enabled  = log_stream_is_file_logging_enabled();
+
+  char json[160];
+  snprintf(json, sizeof(json), "{\"st\":\"ok\",\"en\":%s,\"size\":%u,\"idx\":%u,\"max\":%u,\"sel\":%u}",
+           enabled ? "true" : "false", (unsigned)size, (unsigned)current, (unsigned)max_index, (unsigned)selected);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json);
+  return ESP_OK;
+}
+
+static esp_err_t log_file_enable_handler(httpd_req_t *req) {
+  char buffer[BUFFER_SIZE_SMALL];
+  cJSON *json = NULL;
+
+  if (parse_json_request(req, buffer, sizeof(buffer), &json) != ESP_OK) {
+    return ESP_FAIL;
+  }
+
+  cJSON *en_item = cJSON_GetObjectItemCaseSensitive(json, "en");
+  if (!cJSON_IsBool(en_item)) {
+    cJSON_Delete(json);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or invalid 'en' field");
+    return ESP_FAIL;
+  }
+
+  bool enable  = cJSON_IsTrue(en_item);
+  esp_err_t ret = log_stream_enable_file_logging(enable);
+  cJSON_Delete(json);
+
+  if (ret != ESP_OK) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to update log file state");
+    return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
+  return ESP_OK;
+}
+
+static esp_err_t log_file_clear_handler(httpd_req_t *req) {
+  esp_err_t ret = log_stream_clear_file_log();
+  if (ret != ESP_OK) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to clear log file");
+    return ESP_FAIL;
+  }
+
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
+  return ESP_OK;
+}
+
+static esp_err_t log_file_download_handler(httpd_req_t *req) {
+  uint32_t max_index = log_stream_get_file_rotation_max();
+  uint32_t selected  = log_stream_get_current_file_index();
+
+  char query[32];
+  if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
+    char idx_str[8];
+    if (httpd_query_key_value(query, "idx", idx_str, sizeof(idx_str)) == ESP_OK) {
+      int idx = atoi(idx_str);
+      if (idx > 0) {
+        selected = (uint32_t)idx;
+      }
+    }
+  }
+
+  if (selected < 1 || selected > max_index) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid log index");
+    return ESP_FAIL;
+  }
+
+  char path[64];
+  char filename[32];
+  snprintf(path, sizeof(path), "/spiffs/logs/logs.%u.txt", (unsigned)selected);
+  snprintf(filename, sizeof(filename), "logs.%u.txt", (unsigned)selected);
+
+  if (!spiffs_file_exists(path)) {
+    httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Log file not found");
+    return ESP_FAIL;
+  }
+
+  FILE *f = fopen(path, "r");
+  if (f == NULL) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to open log file");
+    return ESP_FAIL;
+  }
+
+  char disposition[64];
+  snprintf(disposition, sizeof(disposition), "attachment; filename=\"%s\"", filename);
+  httpd_resp_set_type(req, "text/plain");
+  httpd_resp_set_hdr(req, "Content-Disposition", disposition);
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+
+  char buffer[1024];
+  size_t read_bytes = 0;
+  esp_err_t err     = ESP_OK;
+
+  while ((read_bytes = fread(buffer, 1, sizeof(buffer), f)) > 0) {
+    err = httpd_resp_send_chunk(req, buffer, read_bytes);
+    if (err != ESP_OK) {
+      break;
+    }
+  }
+
+  fclose(f);
+  httpd_resp_send_chunk(req, NULL, 0);
+  return err;
+}
+
 // Handler to stop a CAN event
 static esp_err_t stop_event_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL];
@@ -2453,6 +2589,18 @@ esp_err_t web_server_start(void) {
     // Log Streaming route (Server-Sent Events)
     httpd_uri_t log_stream_uri = {.uri = "/api/logs/stream", .method = HTTP_GET, .handler = log_stream_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &log_stream_uri);
+
+    httpd_uri_t log_file_status_uri = {.uri = "/api/logs/file/status", .method = HTTP_GET, .handler = log_file_status_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &log_file_status_uri);
+
+    httpd_uri_t log_file_enable_uri = {.uri = "/api/logs/file/enable", .method = HTTP_POST, .handler = log_file_enable_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &log_file_enable_uri);
+
+    httpd_uri_t log_file_clear_uri = {.uri = "/api/logs/file/clear", .method = HTTP_POST, .handler = log_file_clear_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &log_file_clear_uri);
+
+    httpd_uri_t log_file_download_uri = {.uri = "/api/logs/file/download", .method = HTTP_GET, .handler = log_file_download_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &log_file_download_uri);
 
     // Register the 404 handler for the captive portal
     // All unknown URLs are redirected to the main page

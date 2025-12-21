@@ -1,15 +1,20 @@
 #include "log_stream.h"
 
 #include "esp_log.h"
+#include "spiffs_storage.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/message_buffer.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
 #include <errno.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <time.h>
+#include <unistd.h>
 
 static const char *TAG = "LOG_STREAM";
 
@@ -17,16 +22,123 @@ static const char *TAG = "LOG_STREAM";
 #define LOG_BUFFER_SIZE 512
 #define KEEPALIVE_INTERVAL_SEC 30
 #define CHECK_INTERVAL_MS 1000
+#define LOG_FILE_MAX_SIZE (128 * 1024)
+#define LOG_ROTATE_BOOT_MAX 7
+#define LOG_FILE_MESSAGE_BUFFER_SIZE (LOG_BUFFER_SIZE * 12)
+
+static const char *LOG_BOOT_COUNT_PATH = "/spiffs/logs/boot_count";
+static char current_log_path[64]       = "/spiffs/logs/logs.1.txt";
 
 // SSE client list
 static int sse_clients[MAX_SSE_CLIENTS];
 static SemaphoreHandle_t clients_mutex     = NULL;
+static SemaphoreHandle_t log_file_mutex    = NULL;
+static MessageBufferHandle_t log_file_msg_buffer = NULL;
 
 // Original log handler (for chaining)
 static vprintf_like_t original_log_handler = NULL;
 
 // Watchdog thread handle
 static TaskHandle_t watchdog_task_handle   = NULL;
+static bool file_logging_enabled           = false;
+static uint32_t current_log_index          = 1;
+static TaskHandle_t log_file_task_handle   = NULL;
+
+static char log_line_buffer[LOG_BUFFER_SIZE];
+
+static size_t log_file_get_size_no_log(const char *path) {
+  if (!path) {
+    return 0;
+  }
+
+  struct stat st;
+  if (stat(path, &st) != 0) {
+    return 0;
+  }
+
+  return (size_t)st.st_size;
+}
+
+static void log_file_set_current_path(uint32_t index) {
+  if (index < 1 || index > LOG_ROTATE_BOOT_MAX) {
+    index = 1;
+  }
+  current_log_index = index;
+  snprintf(current_log_path, sizeof(current_log_path),
+           "/spiffs/logs/logs.%u.txt", (unsigned)index);
+}
+
+static void log_file_truncate_current(void) {
+  FILE *f = fopen(current_log_path, "w");
+  if (f != NULL) {
+    fclose(f);
+  }
+}
+
+static void log_file_rotate_if_needed(size_t incoming_len) {
+  size_t current_size = log_file_get_size_no_log(current_log_path);
+  if (current_size + incoming_len <= LOG_FILE_MAX_SIZE) {
+    return;
+  }
+
+  log_file_truncate_current();
+}
+
+static uint32_t log_boot_count_read(void) {
+  uint32_t count = 0;
+  FILE *f = fopen(LOG_BOOT_COUNT_PATH, "rb");
+  if (f == NULL) {
+    return 0;
+  }
+
+  (void)fread(&count, 1, sizeof(count), f);
+  fclose(f);
+  return count;
+}
+
+static void log_boot_count_write(uint32_t count) {
+  FILE *f = fopen(LOG_BOOT_COUNT_PATH, "wb");
+  if (f == NULL) {
+    return;
+  }
+
+  (void)fwrite(&count, 1, sizeof(count), f);
+  fclose(f);
+}
+
+static void log_file_append_line(const char *line, size_t len) {
+  if (!file_logging_enabled || !line || len == 0 || !log_file_msg_buffer) {
+    return;
+  }
+
+  (void)xMessageBufferSend(log_file_msg_buffer, line, len, 0);
+}
+
+static void log_file_writer_task(void *arg) {
+  (void)arg;
+  char buffer[LOG_BUFFER_SIZE];
+
+  while (1) {
+    if (!file_logging_enabled || !log_file_msg_buffer || !log_file_mutex) {
+      vTaskDelay(pdMS_TO_TICKS(200));
+      continue;
+    }
+
+    size_t len = xMessageBufferReceive(log_file_msg_buffer, buffer, sizeof(buffer), pdMS_TO_TICKS(500));
+    if (len == 0) {
+      continue;
+    }
+
+    xSemaphoreTake(log_file_mutex, portMAX_DELAY);
+    log_file_rotate_if_needed(len);
+    FILE *f = fopen(current_log_path, "a");
+    if (f != NULL) {
+      fwrite(buffer, 1, len, f);
+      fclose(f);
+    }
+    xSemaphoreGive(log_file_mutex);
+  }
+}
 
 // Custom log handler qui intercepte tous les logs ESP-IDF
 static int custom_log_handler(const char *fmt, va_list args) {
@@ -39,25 +151,44 @@ static int custom_log_handler(const char *fmt, va_list args) {
     va_end(args_copy);
   }
 
-  // If SSE clients are connected, send the log
+  const char *task_name = pcTaskGetName(NULL);
+  if (task_name && strcmp(task_name, "sys_evt") == 0) {
+    return ret;
+  }
+
+  bool file_logging = file_logging_enabled;
   int client_count = log_stream_get_client_count();
+  if (client_count == 0 && !file_logging) {
+    return ret;
+  }
+
+  // Format raw log line once, and reuse it
+  int raw_len = vsnprintf(log_line_buffer, sizeof(log_line_buffer), fmt, args);
+  if (raw_len > 0 && raw_len < (int)sizeof(log_line_buffer)) {
+    size_t len = (size_t)raw_len;
+    if (log_line_buffer[len - 1] != '\n' && len + 1 < sizeof(log_line_buffer)) {
+      log_line_buffer[len] = '\n';
+      log_line_buffer[len + 1] = '\0';
+      len += 1;
+    }
+    if (file_logging) {
+      log_file_append_line(log_line_buffer, len);
+    }
+  }
+
   if (client_count > 0) {
     // Parser le format ESP-IDF: "X (12345) TAG: message"
     // where X = E/W/I/D/V for Error/Warning/Info/Debug/Verbose
-    char buffer[LOG_BUFFER_SIZE];
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-
-    // Extraire niveau, tag et message du format ESP-IDF
     char level_char = 'I'; // Default INFO
     char tag[32]    = "APP";
-    char *message   = buffer;
+    char *message   = log_line_buffer;
 
     // Format typique: "I (12345) TAG: message"
-    if (buffer[0] && buffer[1] == ' ' && buffer[2] == '(') {
-      level_char      = buffer[0];
+    if (log_line_buffer[0] && log_line_buffer[1] == ' ' && log_line_buffer[2] == '(') {
+      level_char      = log_line_buffer[0];
 
       // Trouver le tag (entre ") " et ": ")
-      char *tag_start = strstr(buffer, ") ");
+      char *tag_start = strstr(log_line_buffer, ") ");
       if (tag_start) {
         tag_start += 2;
         char *tag_end = strstr(tag_start, ": ");
@@ -72,7 +203,6 @@ static int custom_log_handler(const char *fmt, va_list args) {
       }
     }
 
-    // Convertir le niveau en string
     const char *level_str = "info";
     switch (level_char) {
     case 'E':
@@ -173,11 +303,19 @@ esp_err_t log_stream_init(void) {
     ESP_LOGE(TAG, "Failed to create mutex");
     return ESP_ERR_NO_MEM;
   }
+  log_file_mutex = xSemaphoreCreateMutex();
+  if (!log_file_mutex) {
+    ESP_LOGE(TAG, "Failed to create log file mutex");
+    vSemaphoreDelete(clients_mutex);
+    clients_mutex = NULL;
+    return ESP_ERR_NO_MEM;
+  }
 
   // Initialize client array
   for (int i = 0; i < MAX_SSE_CLIENTS; i++) {
     sse_clients[i] = -1;
   }
+  log_file_set_current_path(1);
 
   // Create watchdog task for SSE client monitoring
   BaseType_t ret = xTaskCreate(sse_watchdog_task,
@@ -190,6 +328,36 @@ esp_err_t log_stream_init(void) {
   if (ret != pdPASS) {
     ESP_LOGE(TAG, "Failed to create SSE watchdog task");
     vSemaphoreDelete(clients_mutex);
+    vSemaphoreDelete(log_file_mutex);
+    clients_mutex  = NULL;
+    log_file_mutex = NULL;
+    return ESP_FAIL;
+  }
+
+  log_file_msg_buffer = xMessageBufferCreate(LOG_FILE_MESSAGE_BUFFER_SIZE);
+  if (!log_file_msg_buffer) {
+    ESP_LOGE(TAG, "Failed to create log file message buffer");
+    vSemaphoreDelete(clients_mutex);
+    vSemaphoreDelete(log_file_mutex);
+    clients_mutex  = NULL;
+    log_file_mutex = NULL;
+    return ESP_ERR_NO_MEM;
+  }
+
+  ret = xTaskCreate(log_file_writer_task,
+                    "log_file_writer",
+                    4096,
+                    NULL,
+                    4,
+                    &log_file_task_handle);
+  if (ret != pdPASS) {
+    ESP_LOGE(TAG, "Failed to create log file writer task");
+    vSemaphoreDelete(clients_mutex);
+    vSemaphoreDelete(log_file_mutex);
+    vMessageBufferDelete(log_file_msg_buffer);
+    clients_mutex       = NULL;
+    log_file_mutex      = NULL;
+    log_file_msg_buffer = NULL;
     return ESP_FAIL;
   }
 
@@ -274,6 +442,14 @@ int log_stream_get_client_count(void) {
   xSemaphoreGive(clients_mutex);
 
   return count;
+}
+
+uint32_t log_stream_get_current_file_index(void) {
+  return current_log_index;
+}
+
+uint32_t log_stream_get_file_rotation_max(void) {
+  return LOG_ROTATE_BOOT_MAX;
 }
 
 // Escape a string for JSON (RFC 8259 compliant)
@@ -372,4 +548,82 @@ void log_stream_send(const char *message, const char *level, const char *tag) {
   }
 
   xSemaphoreGive(clients_mutex);
+}
+
+esp_err_t log_stream_enable_file_logging(bool enable) {
+  if (!log_file_mutex) {
+    return ESP_ERR_INVALID_STATE;
+  }
+
+  if (enable) {
+    xSemaphoreTake(log_file_mutex, portMAX_DELAY);
+    uint32_t boot_count = log_boot_count_read();
+    boot_count          = (boot_count % LOG_ROTATE_BOOT_MAX) + 1;
+    log_boot_count_write(boot_count);
+    log_file_set_current_path(boot_count);
+
+  FILE *f = fopen(current_log_path, "w");
+  if (f == NULL) {
+    xSemaphoreGive(log_file_mutex);
+    return ESP_FAIL;
+  }
+  fclose(f);
+  if (log_file_msg_buffer) {
+    xMessageBufferReset(log_file_msg_buffer);
+  }
+  file_logging_enabled = true;
+  xSemaphoreGive(log_file_mutex);
+  } else {
+    file_logging_enabled = false;
+  }
+
+  return ESP_OK;
+}
+
+bool log_stream_is_file_logging_enabled(void) {
+  return file_logging_enabled;
+}
+
+esp_err_t log_stream_get_file_size(size_t *out_size) {
+  if (!out_size) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  if (!log_file_mutex) {
+    return ESP_ERR_INVALID_STATE;
+  }
+
+  xSemaphoreTake(log_file_mutex, portMAX_DELAY);
+  size_t size = log_file_get_size_no_log(current_log_path);
+  bool exists = spiffs_file_exists(current_log_path);
+  xSemaphoreGive(log_file_mutex);
+
+  if (size == 0 && !exists) {
+    *out_size = 0;
+    return ESP_ERR_NOT_FOUND;
+  }
+
+  *out_size = size;
+  return ESP_OK;
+}
+
+esp_err_t log_stream_clear_file_log(void) {
+  if (!log_file_mutex) {
+    return ESP_ERR_INVALID_STATE;
+  }
+
+  xSemaphoreTake(log_file_mutex, portMAX_DELAY);
+  for (uint32_t i = 1; i <= LOG_ROTATE_BOOT_MAX; i++) {
+    char path[64];
+    snprintf(path, sizeof(path), "/spiffs/logs/logs.%u.txt", (unsigned)i);
+    unlink(path);
+  }
+  unlink(LOG_BOOT_COUNT_PATH);
+  log_file_set_current_path(1);
+  if (log_file_msg_buffer) {
+    xMessageBufferReset(log_file_msg_buffer);
+  }
+  xSemaphoreGive(log_file_mutex);
+
+  return ESP_OK;
 }

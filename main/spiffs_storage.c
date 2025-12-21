@@ -52,6 +52,7 @@ esp_err_t spiffs_storage_init(void) {
   mkdir("/spiffs/profiles", 0755);
   mkdir("/spiffs/audio", 0755);
   mkdir("/spiffs/ble", 0755);
+  mkdir("/spiffs/logs", 0755);
 
   s_spiffs_initialized = true;
   return ESP_OK;
