@@ -840,4 +840,5 @@ void app_main(void) {
 
   // Main function ends, FreeRTOS tasks keep running
   ESP_LOGI(TAG_MAIN, "app_main completed, tasks running");
+  esp_log_level_set(TAG_MAIN, ESP_LOG_WARN);
 }
