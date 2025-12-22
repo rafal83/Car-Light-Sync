@@ -19,6 +19,8 @@ static int sta_retry_count          = 0;
 static const int STA_MAX_RETRY      = 5;
 static bool sta_auto_reconnect      = true;
 
+static void wifi_apply_power_settings(wifi_mode_t mode);
+
 bool wifi_wait_for_sta(uint32_t timeout_ms) {
   uint32_t start = esp_log_timestamp();
   while ((esp_log_timestamp() - start) < timeout_ms) {
@@ -130,6 +132,35 @@ esp_err_t wifi_manager_init(void) {
   return ESP_OK;
 }
 
+static void wifi_apply_power_settings(wifi_mode_t mode) {
+  // Reduce TX power to mitigate brownout during WiFi bursts
+  // Range is 8..84 (0.25 dBm units). 8 ~= 2 dBm.
+  esp_err_t ret = esp_wifi_set_max_tx_power(8);
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG_WIFI, "Failed to set max TX power: %s", esp_err_to_name(ret));
+  }
+
+  // Enable modem power save to reduce peak current
+  ret = esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG_WIFI, "Failed to set WiFi PS: %s", esp_err_to_name(ret));
+  }
+
+  // Force 20 MHz bandwidth to lower power draw
+  if (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA) {
+    ret = esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+    if (ret != ESP_OK) {
+      ESP_LOGW(TAG_WIFI, "Failed to set AP bandwidth: %s", esp_err_to_name(ret));
+    }
+  }
+  if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
+    ret = esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+    if (ret != ESP_OK) {
+      ESP_LOGW(TAG_WIFI, "Failed to set STA bandwidth: %s", esp_err_to_name(ret));
+    }
+  }
+}
+
 esp_err_t wifi_manager_start_ap(void) {
   if (!wifi_initialized) {
     ESP_LOGE(TAG_WIFI, "WiFi not initialized");
@@ -157,6 +188,7 @@ esp_err_t wifi_manager_start_ap(void) {
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
   ESP_ERROR_CHECK(esp_wifi_start());
+  wifi_apply_power_settings(WIFI_MODE_AP);
 
   // Retrieve AP IP
   esp_netif_ip_info_t ip_info;
@@ -191,11 +223,13 @@ esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
   if (start_ret != ESP_OK && start_ret != ESP_ERR_WIFI_CONN) {
     ESP_ERROR_CHECK(start_ret);
   }
+  wifi_apply_power_settings(WIFI_MODE_APSTA);
 
   wifi_config_t sta_config = {0};
   strncpy((char *)sta_config.sta.ssid, ssid, sizeof(sta_config.sta.ssid) - 1);
   strncpy((char *)sta_config.sta.password, password, sizeof(sta_config.sta.password) - 1);
   sta_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+  sta_config.sta.listen_interval    = 5;
 
   // ESP-IDF 5.5: esp_wifi_set_config returns ESP_ERR_WIFI_STATE if a connection is in progress.
   // Force a disconnect first then apply the new config before calling connect.
@@ -206,6 +240,7 @@ esp_err_t wifi_manager_connect_sta(const char *ssid, const char *password) {
     cfg_ret = esp_wifi_set_config(WIFI_IF_STA, &sta_config);
   }
   ESP_ERROR_CHECK(cfg_ret);
+  vTaskDelay(pdMS_TO_TICKS(200));
   ESP_ERROR_CHECK(esp_wifi_connect());
 
   strncpy(current_status.sta_ssid, ssid, sizeof(current_status.sta_ssid) - 1);

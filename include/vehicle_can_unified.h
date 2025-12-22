@@ -110,7 +110,7 @@ typedef struct {
 // Total: ~22 bytes
 typedef struct __attribute__((packed)) {
   // Dynamique de conduite
-  uint8_t speed_kph_x10;           // vitesse * 10 (valeur absolue)
+  uint8_t speed_kph;           // vitesse * 10 (valeur absolue)
   int16_t rear_power_kw_x10;       // puissance moteur arrière * 10
   int16_t front_power_kw_x10;      // puissance moteur avant * 10
   uint8_t soc_percent;         // batterie %

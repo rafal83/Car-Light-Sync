@@ -136,7 +136,7 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
 
   // Dynamique de conduite
   float speed_kph_abs = fabsf(src->speed_kph);
-  dst->speed_kph_x10 = (uint8_t)(speed_kph_abs * 10.0f);
+  dst->speed_kph = (uint8_t)(speed_kph_abs);
   dst->rear_power_kw_x10 = (int16_t)(src->rear_power * 10.0f);  // Peut Gtre n?gatif (r?g?n)
   dst->front_power_kw_x10 = (int16_t)(src->front_power * 10.0f); // Peut Gtre n?gatif (r?g?n)
   dst->soc_percent = (uint8_t)(src->soc_percent);

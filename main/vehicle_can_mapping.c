@@ -215,16 +215,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
     return;
   }
-  // ---------------------------------------------------------------------
-  // Vehicle speed: ID257DIspeed / DI_vehicleSpeed (kph)
-  // ---------------------------------------------------------------------
-  if (id == 0x257) {
-    if (strcmp(name, "DI_vehicleSpeed") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->speed_kph, value, state); // already in kph
-      return;
-    }
-    return;
-  }
 
   // ---------------------------------------------------------------------
   // Etat drive system : ID118DriveSystemStatus
@@ -233,6 +223,14 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x118) {
     if (strcmp(name, "DI_gear") == 0) {
+      /*
+      0 "DI_GEAR_INVALID" 
+      1 "DI_GEAR_P" 
+      2 "DI_GEAR_R" 
+      3 "DI_GEAR_N" 
+      4 "DI_GEAR_D" 
+      7 "DI_GEAR_SNA" ;
+      */
       UPDATE_AND_SEND_I8(state->gear, (int8_t)(value + 0.5f), state);
       return;
     }
@@ -256,50 +254,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   if (id == 0x3F3) {
     if (strcmp(name, "UI_odometer") == 0) {
       UPDATE_AND_SEND_FLOAT(state->odometer_km, value, state);
-      return;
-    }
-    return;
-  }
-
-  // ---------------------------------------------------------------------
-  // Portes : ID102VCLEFT_doorStatus & ID103VCRIGHT_doorStatus
-  // ---------------------------------------------------------------------
-  if (id == 0x102) { // gauche
-    if (strcmp(name, "VCLEFT_frontLatchStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->door_front_left_open, is_latch_open(value), state);
-      return;
-    }
-    if (strcmp(name, "VCLEFT_rearLatchStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->door_rear_left_open, is_latch_open(value), state);
-      return;
-    }
-    return;
-  }
-
-  if (id == 0x103) { // droite + trunk
-    if (strcmp(name, "VCRIGHT_frontLatchStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->door_front_right_open, is_latch_open(value), state);
-      return;
-    }
-    if (strcmp(name, "VCRIGHT_rearLatchStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->door_rear_right_open, is_latch_open(value), state);
-      return;
-    }
-    if (strcmp(name, "VCRIGHT_trunkLatchStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->trunk_open, is_latch_open(value), state);
-      return;
-    }
-    return;
-  }
-
-  // ---------------------------------------------------------------------
-  // Frunk : ID2E1VCFRONT_status / VCFRONT_frunkLatchStatus
-  // ---------------------------------------------------------------------
-  if (id == 0x2E1) {
-    if (strcmp(name, "VCFRONT_frunkLatchStatus") == 0) {
-      if ((value >= 1) && (value <= 2)) {
-        UPDATE_AND_SEND_U8(state->frunk_open, is_latch_open(value) ? 1 : 0, state);
-      }
       return;
     }
     return;
@@ -359,128 +313,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // Blind spot : ID399DAS_status
-  //  - DAS_blindSpotRearLeft / Right : 0=NO_WARNING, 1/2=warning,
-  //  3=SNA
-  // ---------------------------------------------------------------------
-  if (id == 0x399) {
-    if (strcmp(name, "DAS_autopilotState") == 0) {
-      /*
-        0 "DISABLED" 
-        1 "UNAVAILABLE"
-        2 "AVAILABLE" 
-        3 "ACTIVE_NOMINAL" 
-        4 "ACTIVE_RESTRICTED" 
-        5 "ACTIVE_NAV" 
-        8 "ABORTING" 
-        9 "ABORTED" 
-        14 "FAULT" 
-        15 "SNA" 
-      */
-      int v                       = (int)(value + 0.5f);
-      // ESP_LOGI(TAG_CAN, "%s %f", name, value); // 2 nada, 3 // FSD,
-      v = (v >= 3) && (v <= 9) ? v : 0;
-      UPDATE_AND_SEND_U8(state->autopilot, v, state);
-      return;
-    }
-    if (strcmp(name, "DAS_autopilotHandsOnState") == 0) {
-      /*
-        0 "LC_HANDS_ON_NOT_REQD"
-        1 "LC_HANDS_ON_REQD_DETECTED"
-        2 "LC_HANDS_ON_REQD_NOT_DETECTED"
-        3 "LC_HANDS_ON_REQD_VISUAL"
-        4 "LC_HANDS_ON_REQD_CHIME_1"
-        5 "LC_HANDS_ON_REQD_CHIME_2"
-        6 "LC_HANDS_ON_REQD_SLOWING"
-        7 "LC_HANDS_ON_REQD_STRUCK_OUT"
-        8 "LC_HANDS_ON_SUSPENDED" ;
-        9 "LC_HANDS_ON_REQD_ESCALATED_CHIME_1"
-        10 "LC_HANDS_ON_REQD_ESCALATED_CHIME_2"
-        15 "LC_HANDS_ON_SNA"
-      */
-      // ESP_LOGI(TAG_CAN, "%s %f", name, value);
-      int v                       = (int)(value + 0.5f);
-      // UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v == 1 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v >= 3 && v <= 5 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->autopilot_alert_lv2, v >= 6 && v <= 10 ? 1 : 0, state);
-      return;
-    }
-    if (strcmp(name, "DAS_laneDepartureWarning") == 0) {
-      // 1 "LEFT_WARNING" 3 "LEFT_WARNING_SEVERE" 0 "NONE" 2 "RIGHT_WARNING" 4
-      // "RIGHT_WARNING_SEVERE"
-      int v                       = (int)(value + 0.5f);
-      UPDATE_AND_SEND_U8(state->lane_departure_left_lv1, v == 1 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->lane_departure_left_lv2, v == 3 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->lane_departure_right_lv1, v == 2 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->lane_departure_right_lv2, v == 4 ? 1 : 0, state);
-      return;
-    }
-    if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
-      // ESP_LOGI(TAG_CAN, "%s %f", name, value);
-      int v                       = (int)(value + 0.5f);
-      UPDATE_AND_SEND_U8(state->side_collision_left, v == 1 || v == 3 ? 1 : 0, state);
-      UPDATE_AND_SEND_U8(state->side_collision_right, v == 2 || v == 3 ? 1 : 0, state);
-      return;
-    }
-    // if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
-    //   int v                       = (int)(value + 0.5f);
-    //   UPDATE_AND_SEND_U8(state->forward_collision, v == 1 ? 1 : 0, state);
-    //   return;
-    // }
-    if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
-      UPDATE_AND_SEND_U8(state->blindspot_left, (value > 0) ? 1 : 0, state);
-      return;
-    }
-    if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
-      UPDATE_AND_SEND_U8(state->blindspot_right, (value > 0) ? 1 : 0, state);
-      return;
-    }
-    return;
-  }
-  
-  if (id == 0x22E) {
-    if (strcmp(name, "PARK_sdiSensor12RawDistData") == 0) {
-      s_blindspotLeftCm = (uint16_t)(value + 0.5f);
-      recompute_blindspot_alert(state);
-      return;
-    }
-    if (strcmp(name, "PARK_sdiSensor7RawDistData") == 0) {
-      s_blindspotRightCm = (uint16_t)(value + 0.5f);
-      recompute_blindspot_alert(state);
-      return;
-    }
-    return;
-  }
-
-  if (id == 0x20E) {
-    if (strcmp(name, "PARK_sdiSensor3RawDistData") == 0) {
-      value = value > 1 && value <= 500 ? value : 0;
-      s_frontLeftCm = (uint16_t)(value + 0.5f);
-      recompute_front_alert(state);
-      return;
-    }
-    if (strcmp(name, "PARK_sdiSensor4RawDistData") == 0) {
-      value = value > 1 && value <= 500 ? value : 0;
-      s_frontRightCm = (uint16_t)(value + 0.5f);
-      recompute_front_alert(state);
-      return;
-    }
-    return;
-  }
-
-  if (id == 0x334 && bus_id == CAN_BUS_CHASSIS) {
-    if (strcmp(name, "UI_pedalMap") == 0) {
-      UPDATE_AND_SEND_U8(state->pedal_map, (int)(value + 0.5f), state);
-      return;
-    }
-    if (strcmp(name, "UI_speedLimit") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->speed_limit, (int)(value + 0.5f), state);
-      return;
-    }
-    return;
-  }
-
-  // ---------------------------------------------------------------------
   // SOC : ID292BMS_SOC / BMS_socUI
   // ---------------------------------------------------------------------
   if (id == 0x292) {
@@ -502,48 +334,6 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     return;
   }
 
-  if (id == 0x2e5) {
-    if (strcmp(name, "FrontPower2E5") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->front_power, value, state);
-      return;
-    }
-    return;
-  }
-  if (id == 0x266) {
-    if (strcmp(name, "RearPower266") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->rear_power, value, state);
-      return;
-    }
-    return;
-  }
-
-  // if (id == 0x126) {
-  //   if (strcmp(name, "RearHighVoltage126") == 0) {
-  //     s_rearHighVoltage126 = value;
-  //     recompute_power(state);
-  //     return;
-  //   }
-  //   if (strcmp(name, "RearMotorCurrent126") == 0) {
-  //     s_rearMotorCurrent126 = value;
-  //     recompute_power(state);
-  //     return;
-  //   }
-  //   return;
-  // }
-  // if (id == 0x126) {
-  //   if (strcmp(name, "FrontHighVoltage1A5") == 0) {
-  //     s_frontHighVoltage1A5 = value;
-  //     recompute_power(state);
-  //     return;
-  //   }
-  //   if (strcmp(name, "FrontMotorCurrent1A5") == 0) {
-  //     s_frontMotorCurrent1A5 = value;
-  //     recompute_power(state);
-  //     return;
-  //   }
-  //   return;
-  // }
-
   // ---------------------------------------------------------------------
   // Batterie HV : ID261_12vBattStatus / v12vBattVoltage261
   // ---------------------------------------------------------------------
@@ -558,98 +348,298 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     return;
   }
 
-  // ---------------------------------------------------------------------
-  // Etat BMS / charge : ID204PCS_chgStatus
-  // ---------------------------------------------------------------------
-  if (id == 0x204) {
-    if (strcmp(name, "PCS_hvChargeStatus") == 0) {
-      // 0 = not charging, 2 = charging (per the DBC
-      // opendbc)
-      int v = (int)(value + 0.5f);
-      if (v == 2) {
-        UPDATE_AND_SEND_U8(state->charging, 1, state);
-      } else if (v == 0) {
-        UPDATE_AND_SEND_U8(state->charging, 0, state);
-      }
-      return;
-    }
-    return;
-  }
-
   if (id == 0x7FF) {
     if (strcmp(name, "GTW_drivetrainType") == 0) {
       UPDATE_AND_SEND_U8(state->train_type, (value > 0.5f), state);
       return;
     }
-  }
+  }  
 
   // ---------------------------------------------------------------------
-  // Night mode : ID273UI_vehicleControl
+  // Blind spot : ID399DAS_status
+  //  - DAS_blindSpotRearLeft / Right : 0=NO_WARNING, 1/2=warning,
+  //  3=SNA
   // ---------------------------------------------------------------------
-  if (id == 0x273) {
-    if (strcmp(name, "UI_ambientLightingEnabled") == 0) {
-      UPDATE_AND_SEND_U8(state->night_mode, (value > 0.5f) ? 1 : 0, state);
+  if(state->gear == 2 || state->gear == 3 || state->gear == 4) {
+    // ---------------------------------------------------------------------
+    // Vehicle speed: ID257DIspeed / DI_vehicleSpeed (kph)
+    // ---------------------------------------------------------------------
+    if (id == 0x257) {
+      if (strcmp(name, "DI_vehicleSpeed") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->speed_kph, value, state); // already in kph
+        return;
+      }
       return;
     }
-    if (strcmp(name, "UI_alarmEnabled") == 0) {
-      // state->sentry_mode = (value > 0.5f) ? 1 : 0;
+
+    if (id == 0x399) {
+      if (strcmp(name, "DAS_autopilotState") == 0) {
+        /*
+          0 "DISABLED" 
+          1 "UNAVAILABLE"
+          2 "AVAILABLE" 
+          3 "ACTIVE_NOMINAL" 
+          4 "ACTIVE_RESTRICTED" 
+          5 "ACTIVE_NAV" 
+          8 "ABORTING" 
+          9 "ABORTED" 
+          14 "FAULT" 
+          15 "SNA" 
+        */
+        int v                       = (int)(value + 0.5f);
+        // ESP_LOGI(TAG_CAN, "%s %f", name, value); // 2 nada, 3 // FSD,
+        v = (v >= 3) && (v <= 9) ? v : 0;
+        UPDATE_AND_SEND_U8(state->autopilot, v, state);
+        return;
+      }
+      if (strcmp(name, "DAS_autopilotHandsOnState") == 0) {
+        /*
+          0 "LC_HANDS_ON_NOT_REQD"
+          1 "LC_HANDS_ON_REQD_DETECTED"
+          2 "LC_HANDS_ON_REQD_NOT_DETECTED"
+          3 "LC_HANDS_ON_REQD_VISUAL"
+          4 "LC_HANDS_ON_REQD_CHIME_1"
+          5 "LC_HANDS_ON_REQD_CHIME_2"
+          6 "LC_HANDS_ON_REQD_SLOWING"
+          7 "LC_HANDS_ON_REQD_STRUCK_OUT"
+          8 "LC_HANDS_ON_SUSPENDED" ;
+          9 "LC_HANDS_ON_REQD_ESCALATED_CHIME_1"
+          10 "LC_HANDS_ON_REQD_ESCALATED_CHIME_2"
+          15 "LC_HANDS_ON_SNA"
+        */
+        // ESP_LOGI(TAG_CAN, "%s %f", name, value);
+        int v                       = (int)(value + 0.5f);
+        // UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v == 1 ? 1 : 0, state);
+        UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v >= 3 && v <= 5 ? 1 : 0, state);
+        UPDATE_AND_SEND_U8(state->autopilot_alert_lv2, v >= 6 && v <= 10 ? 1 : 0, state);
+        return;
+      }
+      if (strcmp(name, "DAS_laneDepartureWarning") == 0) {
+        // 1 "LEFT_WARNING" 3 "LEFT_WARNING_SEVERE" 0 "NONE" 2 "RIGHT_WARNING" 4
+        // "RIGHT_WARNING_SEVERE"
+        int v                       = (int)(value + 0.5f);
+        UPDATE_AND_SEND_U8(state->lane_departure_left_lv1, v == 1 ? 1 : 0, state);
+        UPDATE_AND_SEND_U8(state->lane_departure_left_lv2, v == 3 ? 1 : 0, state);
+        UPDATE_AND_SEND_U8(state->lane_departure_right_lv1, v == 2 ? 1 : 0, state);
+        UPDATE_AND_SEND_U8(state->lane_departure_right_lv2, v == 4 ? 1 : 0, state);
+        return;
+      }
+      if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
+        // ESP_LOGI(TAG_CAN, "%s %f", name, value);
+        int v                       = (int)(value + 0.5f);
+        UPDATE_AND_SEND_U8(state->side_collision_left, v == 1 || v == 3 ? 1 : 0, state);
+        UPDATE_AND_SEND_U8(state->side_collision_right, v == 2 || v == 3 ? 1 : 0, state);
+        return;
+      }
+      // if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
+      //   int v                       = (int)(value + 0.5f);
+      //   UPDATE_AND_SEND_U8(state->forward_collision, v == 1 ? 1 : 0, state);
+      //   return;
+      // }
+      if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
+        UPDATE_AND_SEND_U8(state->blindspot_left, (value > 0) ? 1 : 0, state);
+        return;
+      }
+      if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
+        UPDATE_AND_SEND_U8(state->blindspot_right, (value > 0) ? 1 : 0, state);
+        return;
+      }
       return;
     }
-    if (strcmp(name, "UI_intrusionSensorOn") == 0) {
-      // state->sentry_mode = (value > 0.5f) ? 1 : 0;
+  
+    if (id == 0x22E) {
+      if (strcmp(name, "PARK_sdiSensor12RawDistData") == 0) {
+        s_blindspotLeftCm = (uint16_t)(value + 0.5f);
+        recompute_blindspot_alert(state);
+        return;
+      }
+      if (strcmp(name, "PARK_sdiSensor7RawDistData") == 0) {
+        s_blindspotRightCm = (uint16_t)(value + 0.5f);
+        recompute_blindspot_alert(state);
+        return;
+      }
       return;
     }
-    if (strcmp(name, "UI_lockRequest") == 0) {
-      int v = (int)(value + 0.5f);
-      // 1 = LOCK, 2 = UNLOCK (voir mapping dans JSON)
-      if (v == 1) {
-        UPDATE_AND_SEND_U8(state->locked, 1, state);
-      } else if (v == 2) {
-        UPDATE_AND_SEND_U8(state->locked, 0, state);
+
+    if (id == 0x20E) {
+      if (strcmp(name, "PARK_sdiSensor3RawDistData") == 0) {
+        value = value > 1 && value <= 500 ? value : 0;
+        s_frontLeftCm = (uint16_t)(value + 0.5f);
+        recompute_front_alert(state);
+        return;
+      }
+      if (strcmp(name, "PARK_sdiSensor4RawDistData") == 0) {
+        value = value > 1 && value <= 500 ? value : 0;
+        s_frontRightCm = (uint16_t)(value + 0.5f);
+        recompute_front_alert(state);
+        return;
+      }
+      return;
+    }
+
+    if (id == 0x334 && bus_id == CAN_BUS_CHASSIS) {
+      if (strcmp(name, "UI_pedalMap") == 0) {
+        UPDATE_AND_SEND_U8(state->pedal_map, (int)(value + 0.5f), state);
+        return;
+      }
+      if (strcmp(name, "UI_speedLimit") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->speed_limit, (int)(value + 0.5f), state);
+        return;
+      }
+      return;
+    }
+
+    if (id == 0x2e5) {
+      if (strcmp(name, "FrontPower2E5") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->front_power, value, state);
+        return;
+      }
+      return;
+    }
+    if (id == 0x266) {
+      if (strcmp(name, "RearPower266") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->rear_power, value, state);
+        return;
       }
       return;
     }
     return;
   }
 
+
+
   // ---------------------------------------------------------------------
-  // Sentry mode : ID284UIvehicleModes / UIsentryMode284
+  // Portes : ID102VCLEFT_doorStatus & ID103VCRIGHT_doorStatus
   // ---------------------------------------------------------------------
-  if (id == 0x284) {
-    if (strcmp(name, "CP_chargeCablePresent") == 0) {
-      int v = (int)(value + 0.5f);
-      // 1 = NOT_CONNECTED, 2 = CONNECTED (voir mapping
-      // dans JSON)
-      if (v == 1) {
-        UPDATE_AND_SEND_U8(state->charging_cable, 0, state);
-      } else if (v == 2) {
-        UPDATE_AND_SEND_U8(state->charging_cable, 1, state);
+  if(state->gear == 1) {
+    if (id == 0x102) { // gauche
+      if (strcmp(name, "VCLEFT_frontLatchStatus") == 0) {
+        UPDATE_AND_SEND_U8(state->door_front_left_open, is_latch_open(value), state);
+        return;
+      }
+      if (strcmp(name, "VCLEFT_rearLatchStatus") == 0) {
+        UPDATE_AND_SEND_U8(state->door_rear_left_open, is_latch_open(value), state);
+        return;
       }
       return;
     }
-    return;
-  }
 
-  if (id == 0x212) {
-    // 2 "BMS_ABOUT_TO_CHARGE"
-    // 4 "BMS_CHARGE_COMPLETE"
-    // 5 "BMS_CHARGE_STOPPED"
-    // 3 "BMS_CHARGING"
-    // 0 "BMS_DISCONNECTED"
-    // 1 "BMS_NO_POWER"
-    if (strcmp(name, "BMS_uiChargeStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->charge_status, value, state);
-      return;
-    } else if (strcmp(name, "BMS_chgPowerAvailable") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->charge_power_kw, value > 255 ? 0 : value, state);
+    if (id == 0x103) { // droite + trunk
+      if (strcmp(name, "VCRIGHT_frontLatchStatus") == 0) {
+        UPDATE_AND_SEND_U8(state->door_front_right_open, is_latch_open(value), state);
+        return;
+      }
+      if (strcmp(name, "VCRIGHT_rearLatchStatus") == 0) {
+        UPDATE_AND_SEND_U8(state->door_rear_right_open, is_latch_open(value), state);
+        return;
+      }
+      if (strcmp(name, "VCRIGHT_trunkLatchStatus") == 0) {
+        UPDATE_AND_SEND_U8(state->trunk_open, is_latch_open(value), state);
+        return;
+      }
       return;
     }
-    return;
-  }
 
-  if (id == 0x25D) {
-    if (strcmp(name, "CP_chargeDoorOpen") == 0) {
-      UPDATE_AND_SEND_U8(state->charging_port, (value > 0.5f) ? 1 : 0, state);
+    // ---------------------------------------------------------------------
+    // Frunk : ID2E1VCFRONT_status / VCFRONT_frunkLatchStatus
+    // ---------------------------------------------------------------------
+    if (id == 0x2E1) {
+      if (strcmp(name, "VCFRONT_frunkLatchStatus") == 0) {
+        if ((value >= 1) && (value <= 2)) {
+          UPDATE_AND_SEND_U8(state->frunk_open, is_latch_open(value) ? 1 : 0, state);
+        }
+        return;
+      }
+      return;
+    }
+
+    // ---------------------------------------------------------------------
+    // Etat BMS / charge : ID204PCS_chgStatus
+    // ---------------------------------------------------------------------
+    if (id == 0x204) {
+      if (strcmp(name, "PCS_hvChargeStatus") == 0) {
+        // 0 = not charging, 2 = charging (per the DBC
+        // opendbc)
+        int v = (int)(value + 0.5f);
+        if (v == 2) {
+          UPDATE_AND_SEND_U8(state->charging, 1, state);
+        } else if (v == 0) {
+          UPDATE_AND_SEND_U8(state->charging, 0, state);
+        }
+        return;
+      }
+      return;
+    }
+
+    // ---------------------------------------------------------------------
+    // Night mode : ID273UI_vehicleControl
+    // ---------------------------------------------------------------------
+    if (id == 0x273) {
+      if (strcmp(name, "UI_ambientLightingEnabled") == 0) {
+        UPDATE_AND_SEND_U8(state->night_mode, (value > 0.5f) ? 1 : 0, state);
+        return;
+      }
+      if (strcmp(name, "UI_alarmEnabled") == 0) {
+        // state->sentry_mode = (value > 0.5f) ? 1 : 0;
+        return;
+      }
+      if (strcmp(name, "UI_intrusionSensorOn") == 0) {
+        // state->sentry_mode = (value > 0.5f) ? 1 : 0;
+        return;
+      }
+      if (strcmp(name, "UI_lockRequest") == 0) {
+        int v = (int)(value + 0.5f);
+        // 1 = LOCK, 2 = UNLOCK (voir mapping dans JSON)
+        if (v == 1) {
+          UPDATE_AND_SEND_U8(state->locked, 1, state);
+        } else if (v == 2) {
+          UPDATE_AND_SEND_U8(state->locked, 0, state);
+        }
+        return;
+      }
+      return;
+    }
+
+    // ---------------------------------------------------------------------
+    // Sentry mode : ID284UIvehicleModes / UIsentryMode284
+    // ---------------------------------------------------------------------
+    if (id == 0x284) {
+      if (strcmp(name, "CP_chargeCablePresent") == 0) {
+        int v = (int)(value + 0.5f);
+        // 1 = NOT_CONNECTED, 2 = CONNECTED (voir mapping
+        // dans JSON)
+        if (v == 1) {
+          UPDATE_AND_SEND_U8(state->charging_cable, 0, state);
+        } else if (v == 2) {
+          UPDATE_AND_SEND_U8(state->charging_cable, 1, state);
+        }
+        return;
+      }
+      return;
+    }
+
+    if (id == 0x212) {
+      // 2 "BMS_ABOUT_TO_CHARGE"
+      // 4 "BMS_CHARGE_COMPLETE"
+      // 5 "BMS_CHARGE_STOPPED"
+      // 3 "BMS_CHARGING"
+      // 0 "BMS_DISCONNECTED"
+      // 1 "BMS_NO_POWER"
+      if (strcmp(name, "BMS_uiChargeStatus") == 0) {
+        UPDATE_AND_SEND_U8(state->charge_status, value, state);
+        return;
+      } else if (strcmp(name, "BMS_chgPowerAvailable") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->charge_power_kw, value > 255 ? 0 : value, state);
+        return;
+      }
+      return;
+    }
+
+    if (id == 0x25D) {
+      if (strcmp(name, "CP_chargeDoorOpen") == 0) {
+        UPDATE_AND_SEND_U8(state->charging_port, (value > 0.5f) ? 1 : 0, state);
+        return;
+      }
       return;
     }
     return;

@@ -593,12 +593,42 @@ static void psram_free(void *ptr) {
 }
 #endif
 
+static const char *reset_reason_to_str(esp_reset_reason_t reason) {
+  switch (reason) {
+  case ESP_RST_POWERON:
+    return "POWERON";
+  case ESP_RST_EXT:
+    return "EXT";
+  case ESP_RST_SW:
+    return "SW";
+  case ESP_RST_PANIC:
+    return "PANIC";
+  case ESP_RST_INT_WDT:
+    return "INT_WDT";
+  case ESP_RST_TASK_WDT:
+    return "TASK_WDT";
+  case ESP_RST_WDT:
+    return "WDT";
+  case ESP_RST_DEEPSLEEP:
+    return "DEEPSLEEP";
+  case ESP_RST_BROWNOUT:
+    return "BROWNOUT";
+  case ESP_RST_SDIO:
+    return "SDIO";
+  default:
+    return "UNKNOWN";
+  }
+}
+
 void app_main(void) {
 // Temporarily disabled: cJSON uses regular RAM instead of PSRAM to avoid conflicts with the LED/RMT task
 #ifdef CONFIG_HAS_PSRAM
   cJSON_Hooks hooks = {.malloc_fn = psram_malloc, .free_fn = psram_free};
   cJSON_InitHooks(&hooks);
 #endif
+
+  esp_reset_reason_t reset_reason = esp_reset_reason();
+  ESP_LOGI(TAG_MAIN, "Reset reason: %s (%d)", reset_reason_to_str(reset_reason), reset_reason);
 
   // Default: master/none. SPIFFS can override via /api/espnow/config
   espnow_role_t default_role  = ESP_NOW_ROLE_MASTER;
@@ -620,7 +650,7 @@ void app_main(void) {
   esp_log_level_set(TAG_CONFIG, ESP_LOG_INFO);
   // esp_log_level_set(TAG_OTA, ESP_LOG_INFO);
   // esp_log_level_set(TAG_AUDIO, ESP_LOG_INFO);
-  // esp_log_level_set(TAG_BLE_API, ESP_LOG_INFO);
+  esp_log_level_set(TAG_BLE_API, ESP_LOG_INFO);
   esp_log_level_set(TAG_ESP_NOW, ESP_LOG_INFO);
 
   ESP_LOGI(TAG_MAIN, "=================================");
@@ -774,8 +804,9 @@ void app_main(void) {
 
 
   // Log streaming (Server-Sent Events for real-time logs)
-  // ESP_ERROR_CHECK(log_stream_init());
-  // ESP_LOGI(TAG_MAIN, "Log streaming initialized");
+  ESP_ERROR_CHECK(log_stream_init());
+  ESP_ERROR_CHECK(log_stream_enable_file_logging(true));
+  ESP_LOGI(TAG_MAIN, "Log streaming initialized");
   
   // WiFi
   status_led_set_state(STATUS_LED_WIFI_CONNECTING);

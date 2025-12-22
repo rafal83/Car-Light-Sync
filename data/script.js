@@ -1148,7 +1148,19 @@ function isSimulationEventEnabled(eventType) {
     }
     return config.en !== false;
 }
+function isMobileConnectionInProgress() {
+    if (!usingCapacitor) {
+        return false;
+    }
+    const status = bleTransport && typeof bleTransport.getStatus === 'function'
+        ? bleTransport.getStatus()
+        : null;
+    return status === 'connecting' || bleAutoConnectInProgress || bleAutoConnectAwaitingGesture;
+}
 function switchTab(tabName, evt) {
+    if (tabName === 'config' && isMobileConnectionInProgress()) {
+        return;
+    }
     const tabs = doc.querySelectorAll('.tabs .tab');
     tabs.forEach(tab => tab.classList.remove('active'));
     doc.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -1162,6 +1174,10 @@ function switchTab(tabName, evt) {
     }
     activeTabName = tabName;
 
+    if (tabName !== 'logs' && logsEnabled) {
+        stopLiveLogs();
+    }
+
     // Gérer le polling audio et FFT selon l'onglet actif
     if (tabName === 'config') {
       loadFFTStatus();
@@ -1172,7 +1188,13 @@ function switchTab(tabName, evt) {
 
     // Load data for specific tabs
     if (tabName === 'events-config') {
-        loadEventsConfig();
+        const shouldRefreshEvents = eventsConfigData.length === 0 || eventsConfigNeedsRefresh;
+        if (shouldRefreshEvents) {
+            eventsConfigNeedsRefresh = false;
+            loadEventsConfig();
+        } else {
+            renderEventsTable();
+        }
     } else if (tabName === 'config') {
         loadHardwareConfig();
     } else if (tabName === 'espnow') {
@@ -1239,11 +1261,6 @@ async function autoStopSimulationEvent(eventType) {
     }
 }
 async function getSimulationEventDuration(eventType) {
-    try {
-        await ensureEventsConfigData();
-    } catch (error) {
-        return 0;
-    }
     const config = getSimulationEventConfig(eventType);
     return config && typeof config.dur === 'number' ? config.dur : 0;
 }
@@ -1432,6 +1449,8 @@ let eventsConfigData = [];
 const eventAutoSaveTimers = new Map();
 let defaultEffectSaveTimer = null;
 let eventsConfigLoadingPromise = null;
+let eventsConfigNeedsRefresh = false;
+let lastEventsProfileId = null;
 function getDefaultEffectId() {
     if (effectsList.length === 0) {
         return 'OFF';
@@ -1447,6 +1466,9 @@ function getDefaultEffectId() {
     return effectsList[0].id;
 }
 async function ensureEventsConfigData(forceRefresh = false) {
+    if (!forceRefresh && eventsConfigNeedsRefresh) {
+        forceRefresh = true;
+    }
     if (!forceRefresh && eventsConfigData.length > 0) {
         return eventsConfigData;
     }
@@ -1461,6 +1483,7 @@ async function ensureEventsConfigData(forceRefresh = false) {
             }
             const data = await response.json();
             eventsConfigData = data.events || [];
+            eventsConfigNeedsRefresh = false;
             return eventsConfigData;
         } catch (error) {
             console.error('Failed to load events config:', error);
@@ -1483,6 +1506,7 @@ async function loadEventsConfig() {
     try {
         await ensureEventsConfigData(true);
         renderEventsTable();
+        eventsConfigNeedsRefresh = false;
         loading.style.display = 'none';
         content.style.display = 'block';
     } catch (e) {
@@ -2473,6 +2497,16 @@ async function loadProfiles() {
             select.appendChild(option);
         });
         $('profile-status').textContent = data.an;
+        const activeProfile = data.profiles.find(profile => profile.ac);
+        const activeProfileId = activeProfile ? activeProfile.id : null;
+        if (activeProfileId !== null) {
+            if (lastEventsProfileId === null) {
+                lastEventsProfileId = activeProfileId;
+            } else if (activeProfileId !== lastEventsProfileId) {
+                eventsConfigNeedsRefresh = true;
+                lastEventsProfileId = activeProfileId;
+            }
+        }
 
         // Afficher les statistiques de stockage
         if (data.storage) {
@@ -2528,6 +2562,10 @@ async function activateProfile() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pid: profileId })
         });
+        if (!Number.isNaN(profileId) && profileId !== lastEventsProfileId) {
+            eventsConfigNeedsRefresh = true;
+            lastEventsProfileId = profileId;
+        }
         loadProfiles();
         loadConfig();
     } catch (e) {
@@ -4300,6 +4338,9 @@ async function toggleLiveLogs() {
 }
 
 function startLiveLogs() {
+    if (activeTabName !== 'logs') {
+        return;
+    }
     logsEnabled = true;
     const statusDiv = $('logs-status');
     const toggleBtn = $('logs-toggle-btn');
@@ -4617,8 +4658,6 @@ async function loadInitialData() {
         await loadEffects();
         await delay(baseDelay);
         await loadEventTypes();
-        await delay(baseDelay);
-        await ensureEventsConfigData().catch(() => null);
         await delay(baseDelay);
 
         // Étape 4: Rendu des sections

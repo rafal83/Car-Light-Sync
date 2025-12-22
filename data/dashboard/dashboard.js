@@ -332,7 +332,7 @@ function updateDashboard(state) {
     // Update DRIVE MODE elements
     else {
         // Speed (large display)
-        document.getElementById('speed-value-drive').textContent = Math.round(state.speed_kph);
+        document.getElementById('speed-value-drive').textContent = state.speed_kph;
 
         // Gear display
         document.getElementById('gear-display-drive').textContent = gearText;

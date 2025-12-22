@@ -16,6 +16,37 @@ VALUE_TYPE_MAP = {
     "boolean":  "SIGNAL_TYPE_BOOLEAN",
 }
 
+# If non-empty, only keep messages whose CAN ID is listed here.
+# Use ints (e.g. 0x118) or strings ("0x118", "280").
+KEEP_MESSAGE_IDS = {
+    # From main/vehicle_can_mapping.c
+    0x3C2,
+    0x118,
+    0x39D,
+    0x3F3,
+    0x3F5,
+    0x292,
+    0x132,
+    0x261,
+    0x7FF,
+    0x257,
+    0x399,
+    0x22E,
+    0x20E,
+    0x334,
+    0x2E5,
+    0x266,
+    0x102,
+    0x103,
+    0x2E1,
+    0x204,
+    0x273,
+    0x284,
+    0x212,
+    0x25D,
+    0x33A
+}
+
 
 def c_ident(name: str) -> str:
     out = []
@@ -32,12 +63,27 @@ def c_ident(name: str) -> str:
     return ident
 
 
+def normalize_keep_ids(values) -> set:
+    out = set()
+    for value in values:
+        if isinstance(value, str):
+            if value.lower().startswith("0x"):
+                out.add(int(value, 16))
+            else:
+                out.add(int(value))
+        else:
+            out.add(int(value))
+    return out
+
+
 def generate(config_json_path: Path, out_header_path: Path) -> None:
     data = json.loads(config_json_path.read_text(encoding="utf-8"))
 
     messages = data.get("messages", [])
     if not messages:
         raise SystemExit("Aucun message dans JSON (can_config.messages est vide)")
+
+    keep_ids = normalize_keep_ids(KEEP_MESSAGE_IDS)
 
     lines = []
     lines.append("// Auto-généré depuis %s" % config_json_path.name)
@@ -64,6 +110,9 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
             msg_id = int(msg_id_str, 16)
         else:
             msg_id = int(msg_id_str)
+
+        if keep_ids and msg_id not in keep_ids:
+            continue
 
         sigs = msg.get("signals", [])
         if not sigs:
