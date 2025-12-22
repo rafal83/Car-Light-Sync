@@ -110,6 +110,7 @@ static bool enabled                                = true;
 static uint32_t effect_counter                     = 0;
 static vehicle_state_t last_vehicle_state          = {0};
 static uint8_t max_allowed_brightness              = BRIGHTNESS_NO_REDUCTION;
+static can_event_type_t active_event_context       = CAN_EVENT_NONE;
 static bool ota_progress_mode                      = false;
 static bool ota_ready_mode                         = false;
 static bool ota_error_mode                         = false;
@@ -176,7 +177,7 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   bool dynamic_enabled;
   uint8_t dynamic_rate;
   if (config_manager_get_dynamic_brightness(&dynamic_enabled, &dynamic_rate)) {
-    if (dynamic_enabled) {
+    if (dynamic_enabled && !config_manager_is_dynamic_brightness_excluded(active_event_context)) {
       // Formula: final_brightness = effect_brightness x (vehicle_brightness x rate / 100)
       // Minimum 1% pour garantir que la strip reste visible
       float vehicle_brightness = last_vehicle_state.brightness;                                          // 0-100 from CAN
@@ -205,6 +206,14 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   }
 
   return result;
+}
+
+void led_effects_set_event_context(uint16_t event_id) {
+  if (event_id >= CAN_EVENT_MAX) {
+    active_event_context = CAN_EVENT_NONE;
+  } else {
+    active_event_context = (can_event_type_t)event_id;
+  }
 }
 
 // static rgb_t progress_base_color = {0, 160, 32};
@@ -1766,6 +1775,7 @@ void led_effects_get_config(effect_config_t *config) {
 }
 
 void led_effects_update(void) {
+  led_effects_set_event_context(CAN_EVENT_NONE);
   // Display nothing if config_manager handles active events
   if (config_manager_has_active_events()) {
     effect_counter++;

@@ -48,6 +48,12 @@ static uint32_t calculate_checksum(const void *data, size_t length) {
   return sum;
 }
 
+typedef struct __attribute__((packed)) {
+  uint32_t magic;
+  uint16_t version;
+  uint16_t data_size;
+} profile_header_t;
+
 // RAM cache: active profile (stored in SPIFFS, ~2KB in RAM)
 static config_profile_t active_profile;
 static int active_profile_id             = -1;
@@ -232,36 +238,55 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
     return false;
   }
 
-  // Check the size read
-  if (buffer_size != sizeof(profile_file_t)) {
-    ESP_LOGE(TAG_CONFIG, "Invalid file size for profile %d: %d bytes (expected %d)", profile_id, buffer_size, sizeof(profile_file_t));
+  if (buffer_size < (sizeof(profile_header_t) + sizeof(uint32_t))) {
+    ESP_LOGE(TAG_CONFIG, "Invalid file size for profile %d: %d bytes (too small)", profile_id, buffer_size);
+    free(file_data);
+    return false;
+  }
+
+  profile_header_t header;
+  memcpy(&header, file_data, sizeof(profile_header_t));
+  const size_t expected_size = sizeof(profile_header_t) + header.data_size + sizeof(uint32_t);
+
+  if (buffer_size < expected_size) {
+    ESP_LOGE(TAG_CONFIG, "Invalid file size for profile %d: %d bytes (expected >= %d)", profile_id, buffer_size, expected_size);
     free(file_data);
     return false;
   }
 
   // Check the magic number
-  if (file_data->magic != PROFILE_FILE_MAGIC) {
-    ESP_LOGE(TAG_CONFIG, "Invalid magic number for profile %d: 0x%08X", profile_id, file_data->magic);
+  if (header.magic != PROFILE_FILE_MAGIC) {
+    ESP_LOGE(TAG_CONFIG, "Invalid magic number for profile %d: 0x%08X", profile_id, header.magic);
     free(file_data);
     return false;
   }
 
   // Check the version (for future compatibility)
-  if (file_data->version != PROFILE_FILE_VERSION) {
-    ESP_LOGW(TAG_CONFIG, "Different version for profile %d: v%d (current: v%d)", profile_id, file_data->version, PROFILE_FILE_VERSION);
-    // Continue anyway for future backward compatibility
+  if (header.version != PROFILE_FILE_VERSION) {
+    ESP_LOGW(TAG_CONFIG, "Different version for profile %d: v%d (current: v%d)", profile_id, header.version, PROFILE_FILE_VERSION);
+    // Continue anyway for backward compatibility
   }
 
-  // Verify the checksum
-  uint32_t calculated_checksum = calculate_checksum(&file_data->data, sizeof(config_profile_t));
-  if (calculated_checksum != file_data->checksum) {
-    ESP_LOGE(TAG_CONFIG, "Invalid checksum for profile %d: 0x%08X (expected 0x%08X)", profile_id, calculated_checksum, file_data->checksum);
+  if (header.data_size == 0 || header.data_size > sizeof(config_profile_t)) {
+    ESP_LOGE(TAG_CONFIG, "Invalid profile data size for profile %d: %d", profile_id, header.data_size);
     free(file_data);
     return false;
   }
 
-  // Copy the data
-  memcpy(profile, &file_data->data, sizeof(config_profile_t));
+  const uint8_t *data_ptr = (const uint8_t *)file_data + sizeof(profile_header_t);
+  uint32_t stored_checksum = 0;
+  memcpy(&stored_checksum, data_ptr + header.data_size, sizeof(uint32_t));
+
+  uint32_t calculated_checksum = calculate_checksum(data_ptr, header.data_size);
+  if (calculated_checksum != stored_checksum) {
+    ESP_LOGE(TAG_CONFIG, "Invalid checksum for profile %d: 0x%08X (expected 0x%08X)", profile_id, calculated_checksum, stored_checksum);
+    free(file_data);
+    return false;
+  }
+
+  // Copy the data (accept older profile sizes)
+  memset(profile, 0, sizeof(config_profile_t));
+  memcpy(profile, data_ptr, header.data_size);
 
   ESP_LOGD(TAG_CONFIG, "Profile %d loaded (binary, %d bytes): %s", profile_id, buffer_size, profile->name);
   free(file_data);
@@ -451,6 +476,16 @@ bool config_manager_get_dynamic_brightness(bool *enabled, uint8_t *rate) {
   return true;
 }
 
+bool config_manager_is_dynamic_brightness_excluded(can_event_type_t event) {
+  if (!active_profile_loaded) {
+    return false;
+  }
+  if (event <= CAN_EVENT_NONE || event >= CAN_EVENT_MAX) {
+    return false;
+  }
+  return (active_profile.dynamic_brightness_exclude_mask & (1ULL << event)) != 0;
+}
+
 bool config_manager_get_wheel_control_enabled(void) {
   return wheel_control_enabled;
 }
@@ -582,6 +617,7 @@ void config_manager_create_off_profile(config_profile_t *profile, const char *na
 
   profile->dynamic_brightness_enabled = false;
   profile->dynamic_brightness_rate    = 0;
+  profile->dynamic_brightness_exclude_mask = 0;
   profile->active                     = false;
   profile->created_timestamp          = (uint32_t)time(NULL);
   profile->modified_timestamp         = profile->created_timestamp;
@@ -893,6 +929,7 @@ void config_manager_update(void) {
     }
 
     memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
+    led_effects_set_event_context(CAN_EVENT_NONE);
     led_effects_render_to_buffer(&base, default_start, default_length, frame_counter, temp_buffer);
 
     // Copy only LEDs that are not reserved (priority == 0)
@@ -931,6 +968,7 @@ void config_manager_update(void) {
     if (segment_reserved) {
       memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
 
+      led_effects_set_event_context(active_events[i].event);
       led_effects_render_to_buffer(&active_events[i].effect_config, start, length, frame_counter, temp_buffer);
 
       // Copier tout le segment
@@ -946,6 +984,7 @@ void config_manager_update(void) {
 
   audio_input_set_fft_enabled(needs_fft);
 
+  led_effects_set_event_context(CAN_EVENT_NONE);
   led_effects_show_buffer(composed_buffer);
 
   effect_override_active = any_active;
@@ -1280,6 +1319,13 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
   // Dynamic brightness parameters
   cJSON_AddBoolToObject(root, "dynamic_brightness_enabled", profile->dynamic_brightness_enabled);
   cJSON_AddNumberToObject(root, "dynamic_brightness_rate", profile->dynamic_brightness_rate);
+  cJSON *dyn_excluded = cJSON_CreateArray();
+  for (int i = CAN_EVENT_NONE + 1; i < CAN_EVENT_MAX; i++) {
+    if (profile->dynamic_brightness_exclude_mask & (1ULL << i)) {
+      cJSON_AddItemToArray(dyn_excluded, cJSON_CreateString(config_manager_enum_to_id((can_event_type_t)i)));
+    }
+  }
+  cJSON_AddItemToObject(root, "dynamic_brightness_excluded_events", dyn_excluded);
 
   // CAN events
   cJSON *events = cJSON_CreateArray();
@@ -1455,6 +1501,20 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
     profile->dynamic_brightness_rate = dyn_bright_rate->valueint;
   } else {
     profile->dynamic_brightness_rate = 50; // Default
+  }
+
+  profile->dynamic_brightness_exclude_mask = 0;
+  const cJSON *dyn_bright_excluded = cJSON_GetObjectItem(root, "dynamic_brightness_excluded_events");
+  if (dyn_bright_excluded && cJSON_IsArray(dyn_bright_excluded)) {
+    const cJSON *excluded = NULL;
+    cJSON_ArrayForEach(excluded, dyn_bright_excluded) {
+      if (excluded && cJSON_IsString(excluded)) {
+        can_event_type_t evt = config_manager_id_to_enum(excluded->valuestring);
+        if (evt > CAN_EVENT_NONE && evt < CAN_EVENT_MAX) {
+          profile->dynamic_brightness_exclude_mask |= (1ULL << evt);
+        }
+      }
+    }
   }
 
   // CAN events

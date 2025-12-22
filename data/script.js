@@ -1086,6 +1086,7 @@ function applyTranslations() {
     // Update select options
     updateSelectOptions();
     refreshEffectOptionLabels();
+    populateDynamicBrightnessExcludeOptions();
     updateLanguageIcon();
     updateThemeIcon();
     updateBleUiState();
@@ -1274,7 +1275,10 @@ function to255ToPercent(value) {
 }
 const dynamicBrightnessEnabled = $('dynamic-brightness-enabled');
 if (dynamicBrightnessEnabled) {
-    dynamicBrightnessEnabled.addEventListener('change', scheduleDefaultEffectSave);
+    dynamicBrightnessEnabled.addEventListener('change', () => {
+        updateDynamicBrightnessExcludeState();
+        scheduleDefaultEffectSave();
+    });
 }
 // Mise à jour des sliders avec pourcentage (seulement ceux qui existent)
 const dynamicBrightnessRateSlider = $('dynamic-brightness-rate');
@@ -1283,6 +1287,54 @@ if (dynamicBrightnessRateSlider) {
         $('dynamic-brightness-rate-value').textContent = this.value + '%';
         scheduleDefaultEffectSave();
     };
+}
+let dynamicBrightnessExcludedEvents = [];
+function getDynamicBrightnessExcludedEvents() {
+    const select = $('dynamic-brightness-exclude-events');
+    if (!select) {
+        return [];
+    }
+    return Array.from(select.selectedOptions).map(option => option.value);
+}
+function populateDynamicBrightnessExcludeOptions() {
+    const select = $('dynamic-brightness-exclude-events');
+    if (!select) {
+        return;
+    }
+    const selected = new Set(dynamicBrightnessExcludedEvents || []);
+    select.innerHTML = '';
+    if (!eventTypesList || eventTypesList.length === 0) {
+        const option = doc.createElement('option');
+        option.value = '';
+        option.disabled = true;
+        option.textContent = t('profiles.dynamicBrightnessExcludeLoading');
+        select.appendChild(option);
+        return;
+    }
+    eventTypesList
+        .filter(eventType => eventType.id !== 'NONE')
+        .forEach(eventType => {
+            const option = doc.createElement('option');
+            option.value = eventType.id;
+            option.textContent = getEventName(eventType.id);
+            option.selected = selected.has(eventType.id);
+            select.appendChild(option);
+        });
+}
+function updateDynamicBrightnessExcludeState() {
+    const select = $('dynamic-brightness-exclude-events');
+    const enabledToggle = $('dynamic-brightness-enabled');
+    if (!select || !enabledToggle) {
+        return;
+    }
+    select.disabled = !enabledToggle.checked;
+}
+const dynamicBrightnessExcludeSelect = $('dynamic-brightness-exclude-events');
+if (dynamicBrightnessExcludeSelect) {
+    dynamicBrightnessExcludeSelect.addEventListener('change', () => {
+        dynamicBrightnessExcludedEvents = getDynamicBrightnessExcludedEvents();
+        scheduleDefaultEffectSave();
+    });
 }
 const defaultBrightnessSlider = $('default-brightness-slider');
 if (defaultBrightnessSlider) {
@@ -2777,6 +2829,7 @@ async function saveProfile(params = {}) {
     if (params.settings !== false) {
         payload.dbe = $('dynamic-brightness-enabled').checked;
         payload.dbr = parseInt($('dynamic-brightness-rate').value);
+        payload.dbe_ex = getDynamicBrightnessExcludedEvents();
     }
 
     // Effet par défaut
@@ -3131,6 +3184,9 @@ async function loadActiveProfileDefaultEffect() {
                     dynBrightRateValue.textContent = activeProfile.dbr + '%';
                 }
             }
+            dynamicBrightnessExcludedEvents = Array.isArray(activeProfile.dbe_ex) ? activeProfile.dbe_ex : [];
+            populateDynamicBrightnessExcludeOptions();
+            updateDynamicBrightnessExcludeState();
         }
     } catch (e) {
         console.error('Error loading default effect:', e);
@@ -4066,6 +4122,7 @@ async function loadEventTypes() {
         const response = await fetch('/api/event-types');
         const data = await response.json();
         eventTypesList = data.event_types;
+        populateDynamicBrightnessExcludeOptions();
         console.log('Loaded', eventTypesList.length, 'event types from API');
     } catch (error) {
         console.error('Failed to load event types:', error);

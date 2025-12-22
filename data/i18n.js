@@ -295,6 +295,10 @@ const translations = {
       dynamicBrightnessRate: "Taux d'Application (%)",
       dynamicBrightnessHelp:
         "Exemple : si l'effet est à 80%, la voiture à 70% et le taux à 30%, la luminosité finale sera de 16,8%",
+      dynamicBrightnessExcludeLabel: "Événements exclus",
+      dynamicBrightnessExcludeHelp:
+        "Sélectionnez les événements qui ne doivent pas suivre la luminosité de la voiture.",
+      dynamicBrightnessExcludeLoading: "Chargement des événements...",
       defaultEffect: "Effet par Défaut",
       defaultEffectDesc:
         "Configurez l'effet affiché lorsqu'aucun événement CAN n'est actif.",
@@ -912,6 +916,10 @@ const translations = {
       dynamicBrightnessRate: "Application Rate (%)",
       dynamicBrightnessHelp:
         "Example: if the effect is at 80%, the car at 70% and the rate at 30%, the final brightness will be 16.8%",
+      dynamicBrightnessExcludeLabel: "Excluded events",
+      dynamicBrightnessExcludeHelp:
+        "Select events that should not follow the car brightness.",
+      dynamicBrightnessExcludeLoading: "Loading events...",
       defaultEffect: "Default Effect",
       defaultEffectDesc:
         "Configure the effect displayed when no CAN event is active.",

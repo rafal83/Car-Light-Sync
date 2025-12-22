@@ -178,6 +178,12 @@ void led_effects_update(void);
 void led_effects_update_vehicle_state(const vehicle_state_t *state);
 
 /**
+ * @brief Définit le contexte d'événement actif pour le rendu (0 = aucun)
+ * @param event_id ID numérique de l'événement CAN
+ */
+void led_effects_set_event_context(uint16_t event_id);
+
+/**
  * @brief Obtient le nom d'un effet
  * @param effect Type d'effet
  * @return Nom de l'effet

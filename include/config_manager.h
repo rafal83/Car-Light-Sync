@@ -152,6 +152,7 @@ typedef struct {
   // Paramètres généraux - Luminosité dynamique
   bool dynamic_brightness_enabled; // Active la luminosité dynamique liée au brightness de la voiture
   uint8_t dynamic_brightness_rate; // Taux d'application du brightness voiture (0-100%)
+  uint64_t dynamic_brightness_exclude_mask; // Masque des événements exclus de la luminosité dynamique
 
   // Métadonnées
   bool active; // Profil actif
@@ -161,7 +162,7 @@ typedef struct {
 
 // Format de fichier binaire pour stockage SPIFFS (avec versioning)
 #define PROFILE_FILE_MAGIC 0x50524F46  // "PROF" en ASCII
-#define PROFILE_FILE_VERSION 1
+#define PROFILE_FILE_VERSION 2
 
 typedef struct __attribute__((packed)) {
   uint32_t magic;           // 0x50524F46 ("PROF") pour validation
@@ -248,6 +249,7 @@ bool config_manager_cycle_active_profile(int direction);
  * @return true si le profil actif existe
  */
 bool config_manager_get_dynamic_brightness(bool *enabled, uint8_t *rate);
+bool config_manager_is_dynamic_brightness_excluded(can_event_type_t event);
 
 /**
  * @brief Liste tous les profils disponibles

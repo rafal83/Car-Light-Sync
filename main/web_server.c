@@ -966,6 +966,13 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     // Add dynamic brightness parameters
     cJSON_AddBoolToObject(profile_obj, "dbe", profile->dynamic_brightness_enabled);
     cJSON_AddNumberToObject(profile_obj, "dbr", profile->dynamic_brightness_rate);
+    cJSON *dyn_excluded = cJSON_CreateArray();
+    for (int evt = CAN_EVENT_NONE + 1; evt < CAN_EVENT_MAX; evt++) {
+      if (profile->dynamic_brightness_exclude_mask & (1ULL << evt)) {
+        cJSON_AddItemToArray(dyn_excluded, cJSON_CreateString(config_manager_enum_to_id((can_event_type_t)evt)));
+      }
+    }
+    cJSON_AddItemToObject(profile_obj, "dbe_ex", dyn_excluded);
 
     cJSON_AddItemToArray(profiles_array, profile_obj);
   }
@@ -1231,6 +1238,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   const cJSON *accel_pedal_offset_json  = cJSON_GetObjectItem(root, "apo");
   const cJSON *dyn_bright_enabled_json  = cJSON_GetObjectItem(root, "dbe");
   const cJSON *dyn_bright_rate_json     = cJSON_GetObjectItem(root, "dbr");
+  const cJSON *dyn_bright_exclude_json  = cJSON_GetObjectItem(root, "dbe_ex");
 
   if (effect_json) {
     profile->default_effect.effect = (led_effect_t)effect_json->valueint;
@@ -1279,6 +1287,19 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
   if (dyn_bright_rate_json && cJSON_IsNumber(dyn_bright_rate_json)) {
     profile->dynamic_brightness_rate = (uint8_t)dyn_bright_rate_json->valueint;
+  }
+  if (dyn_bright_exclude_json && cJSON_IsArray(dyn_bright_exclude_json)) {
+    uint64_t exclude_mask = 0;
+    const cJSON *excluded = NULL;
+    cJSON_ArrayForEach(excluded, dyn_bright_exclude_json) {
+      if (excluded && cJSON_IsString(excluded)) {
+        can_event_type_t evt = config_manager_id_to_enum(excluded->valuestring);
+        if (evt > CAN_EVENT_NONE && evt < CAN_EVENT_MAX) {
+          exclude_mask |= (1ULL << evt);
+        }
+      }
+    }
+    profile->dynamic_brightness_exclude_mask = exclude_mask;
   }
 
   // Sauvegarder le profil

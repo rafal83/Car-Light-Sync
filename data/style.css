@@ -409,6 +409,10 @@ select, input:not([type]), input[type="text"], input[type="password"], input[typ
     background: var(--color-panel);
     color: var(--color-text);
 }
+.multi-select {
+    min-height: 140px;
+    padding: 8px;
+}
 select:focus, input:focus {
     outline: none;
     border-color: var(--color-secondary);
