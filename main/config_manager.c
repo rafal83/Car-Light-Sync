@@ -54,6 +54,12 @@ typedef struct __attribute__((packed)) {
   uint16_t data_size;
 } profile_header_t;
 
+static void migrate_profile_if_needed(config_profile_t *profile, uint16_t version) {
+  if (profile == NULL) {
+    return;
+  }
+}
+
 // RAM cache: active profile (stored in SPIFFS, ~2KB in RAM)
 static config_profile_t active_profile;
 static int active_profile_id             = -1;
@@ -174,9 +180,8 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
     return false;
   }
 
-  // Copy data and update the timestamp
+  // Copy data
   memcpy(&file_data->data, profile, sizeof(config_profile_t));
-  file_data->data.modified_timestamp = (uint32_t)time(NULL);
 
   // Fill the header
   file_data->magic = PROFILE_FILE_MAGIC;
@@ -261,10 +266,16 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
     return false;
   }
 
-  // Check the version (for future compatibility)
+  if (header.version > PROFILE_FILE_VERSION) {
+    ESP_LOGE(TAG_CONFIG, "Unsupported profile version %d (current: v%d)", header.version, PROFILE_FILE_VERSION);
+    free(file_data);
+    return false;
+  }
+  if (header.version < PROFILE_FILE_MIN_VERSION) {
+    ESP_LOGW(TAG_CONFIG, "Profile version %d is older than min supported %d, attempting migration", header.version, PROFILE_FILE_MIN_VERSION);
+  }
   if (header.version != PROFILE_FILE_VERSION) {
     ESP_LOGW(TAG_CONFIG, "Different version for profile %d: v%d (current: v%d)", profile_id, header.version, PROFILE_FILE_VERSION);
-    // Continue anyway for backward compatibility
   }
 
   if (header.data_size == 0 || header.data_size > sizeof(config_profile_t)) {
@@ -287,6 +298,12 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
   // Copy the data (accept older profile sizes)
   memset(profile, 0, sizeof(config_profile_t));
   memcpy(profile, data_ptr, header.data_size);
+  migrate_profile_if_needed(profile, header.version);
+
+  if (header.version != PROFILE_FILE_VERSION) {
+    ESP_LOGI(TAG_CONFIG, "Migrating profile %d from v%d to v%d", profile_id, header.version, PROFILE_FILE_VERSION);
+    config_manager_save_profile(profile_id, profile);
+  }
 
   ESP_LOGD(TAG_CONFIG, "Profile %d loaded (binary, %d bytes): %s", profile_id, buffer_size, profile->name);
   free(file_data);
@@ -562,8 +579,6 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
     profile->default_effect.speed      = 1;
     profile->default_effect.color1     = 0xFFFFFF;
     profile->active                    = false;
-    profile->created_timestamp         = (uint32_t)time(NULL);
-    profile->modified_timestamp        = profile->created_timestamp;
     return;
   }
 
@@ -577,8 +592,6 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
 
   // Timestamp parameters
   profile->active             = false;
-  profile->created_timestamp  = (uint32_t)time(NULL);
-  profile->modified_timestamp = profile->created_timestamp;
 }
 
 void config_manager_create_off_profile(config_profile_t *profile, const char *name) {
@@ -619,8 +632,6 @@ void config_manager_create_off_profile(config_profile_t *profile, const char *na
   profile->dynamic_brightness_rate    = 0;
   profile->dynamic_brightness_exclude_mask = 0;
   profile->active                     = false;
-  profile->created_timestamp          = (uint32_t)time(NULL);
-  profile->modified_timestamp         = profile->created_timestamp;
 }
 
 bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority) {
@@ -1297,8 +1308,6 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
   // Metadata
   cJSON_AddStringToObject(root, "name", profile->name);
   cJSON_AddNumberToObject(root, "version", 1);
-  cJSON_AddNumberToObject(root, "created_timestamp", profile->created_timestamp);
-  cJSON_AddNumberToObject(root, "modified_timestamp", profile->modified_timestamp);
 
   // Default effect - convert to percentage for export
   cJSON *default_effect = cJSON_CreateObject();
@@ -1437,23 +1446,6 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
     ESP_LOGE(TAG_CONFIG, "Champ 'name' manquant ou invalide");
     cJSON_Delete(root);
     return false;
-  }
-
-  const cJSON *created = cJSON_GetObjectItem(root, "created_timestamp");
-  if (created && cJSON_IsNumber(created)) {
-    profile->created_timestamp = created->valueint;
-  }
-
-  const cJSON *modified = cJSON_GetObjectItem(root, "modified_timestamp");
-  if (modified && cJSON_IsNumber(modified)) {
-    profile->modified_timestamp = modified->valueint;
-  }
-
-  if (profile->created_timestamp == 0) {
-    profile->created_timestamp = (uint32_t)time(NULL);
-  }
-  if (profile->modified_timestamp == 0) {
-    profile->modified_timestamp = profile->created_timestamp;
   }
   profile->active             = false;
 

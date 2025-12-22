@@ -56,6 +56,9 @@
 #endif
 
 #define TAG_MAIN "Main"
+#define BLE_VEHICLE_STATE_TYPE_PARK 0u
+#define BLE_VEHICLE_STATE_TYPE_DRIVE 1u
+#define BLE_VEHICLE_STATE_HEADER(type, opts) ((uint8_t)((((type) & 0x07u) << 5) | ((opts) & 0x1Fu)))
 
 static vehicle_state_t last_vehicle_state = {0};
 static void espnow_test_frame_log(void);
@@ -427,7 +430,10 @@ static void can_event_task(void *pvParameters) {
           // Send DRIVE mode packet (smaller, focused on driving metrics)
           static vehicle_state_ble_drive_t ble_drive_state;
           vehicle_state_to_ble_drive(&current_state, &ble_drive_state);
-          esp_err_t ret = ble_api_service_send_vehicle_state(&ble_drive_state, sizeof(vehicle_state_ble_drive_t));
+          static uint8_t ble_drive_packet[1 + sizeof(vehicle_state_ble_drive_t)];
+          ble_drive_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_DRIVE, 0);
+          memcpy(ble_drive_packet + 1, &ble_drive_state, sizeof(vehicle_state_ble_drive_t));
+          esp_err_t ret = ble_api_service_send_vehicle_state(ble_drive_packet, sizeof(ble_drive_packet));
           if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
             ESP_LOGD(TAG_MAIN, "BLE drive mode send failed: %s", esp_err_to_name(ret));
           }
@@ -435,7 +441,10 @@ static void can_event_task(void *pvParameters) {
           // Send PARK mode packet (focused on battery, charging, doors)
           static vehicle_state_ble_park_t ble_park_state;
           vehicle_state_to_ble_park(&current_state, &ble_park_state);
-          esp_err_t ret = ble_api_service_send_vehicle_state(&ble_park_state, sizeof(vehicle_state_ble_park_t));
+          static uint8_t ble_park_packet[1 + sizeof(vehicle_state_ble_park_t)];
+          ble_park_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_PARK, 0);
+          memcpy(ble_park_packet + 1, &ble_park_state, sizeof(vehicle_state_ble_park_t));
+          esp_err_t ret = ble_api_service_send_vehicle_state(ble_park_packet, sizeof(ble_park_packet));
           if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
             ESP_LOGD(TAG_MAIN, "BLE park mode send failed: %s", esp_err_to_name(ret));
           }
@@ -450,7 +459,7 @@ static void can_event_task(void *pvParameters) {
       last_state_send_ticks = now;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(50)); // Check every 50 ms
+    vTaskDelay(pdMS_TO_TICKS(25)); // Check every 50 ms
   }
 }
 

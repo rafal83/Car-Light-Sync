@@ -145,6 +145,8 @@ typedef struct {
 // NOTE: Profils stockés en SPIFFS (176KB) au lieu de NVS (limite 1984 bytes)
 typedef struct {
   char name[PROFILE_NAME_MAX_LEN];
+  // Métadonnées
+  bool active; // Profil actif
   effect_config_t default_effect; // Effet par défaut
 
   can_event_effect_t event_effects[CAN_EVENT_MAX]; // Effets par événement
@@ -154,15 +156,12 @@ typedef struct {
   uint8_t dynamic_brightness_rate; // Taux d'application du brightness voiture (0-100%)
   uint64_t dynamic_brightness_exclude_mask; // Masque des événements exclus de la luminosité dynamique
 
-  // Métadonnées
-  bool active; // Profil actif
-  uint32_t created_timestamp;
-  uint32_t modified_timestamp;
 } config_profile_t;
 
 // Format de fichier binaire pour stockage SPIFFS (avec versioning)
 #define PROFILE_FILE_MAGIC 0x50524F46  // "PROF" en ASCII
-#define PROFILE_FILE_VERSION 2
+#define PROFILE_FILE_VERSION 1
+#define PROFILE_FILE_MIN_VERSION 1
 
 typedef struct __attribute__((packed)) {
   uint32_t magic;           // 0x50524F46 ("PROF") pour validation

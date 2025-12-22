@@ -26,15 +26,10 @@ const gearMap = { 1: 'P', 2: 'R', 3: 'N', 4: 'D' };
 // Language state
 let currentLang = 'fr';
 
-// BLE packet sizes for different modes
-const VEHICLE_STATE_DRIVE_SIZE = 22; // vehicle_state_ble_drive_t
-const VEHICLE_STATE_PARK_SIZE = 19;  // vehicle_state_ble_park_t
-const VEHICLE_STATE_SIZE = 28;       // vehicle_state_ble_t (deprecated, for compatibility)
-
-// Buffer for reassembling chunked BLE notifications
-const MAX_BLE_SIZE = Math.max(VEHICLE_STATE_DRIVE_SIZE, VEHICLE_STATE_PARK_SIZE, VEHICLE_STATE_SIZE);
-let vehicleStateBuffer = new Uint8Array(MAX_BLE_SIZE);
-let vehicleStateBufferOffset = 0;
+// BLE packet sizes for different modes (payload sizes only)
+const BLE_PACKET_HEADER_SIZE = 1;
+const BLE_PACKET_TYPE_PARK = 0;
+const BLE_PACKET_TYPE_DRIVE = 1;
 
 
 /**
@@ -866,67 +861,60 @@ async function connectBLE() {
 }
 
 /**
- * Handle vehicle state notification (may be chunked)
- * Auto-detects packet format based on size
+ * Handle vehicle state notification
+ * Auto-detects packet format based on header
  */
 function handleVehicleStateNotification(event) {
     const dataView = event.target.value;
-    const chunkSize = dataView.byteLength;
 
-    // console.log('[Dashboard] Received chunk, size:', chunkSize, 'offset:', vehicleStateBufferOffset);
-
-    // If this chunk would overflow the buffer, assume it's a new message
-    if (vehicleStateBufferOffset + chunkSize > MAX_BLE_SIZE) {
-        console.log('[Dashboard] Buffer overflow detected, resetting (offset:', vehicleStateBufferOffset, 'chunk:', chunkSize, ')');
-        vehicleStateBufferOffset = 0;
+    if (dataView.byteLength < BLE_PACKET_HEADER_SIZE) {
+        console.log('[Dashboard] BLE packet too short:', dataView.byteLength);
+        return;
     }
 
-    // Copy chunk to buffer
-    const chunk = new Uint8Array(dataView.buffer);
-    vehicleStateBuffer.set(chunk, vehicleStateBufferOffset);
-    vehicleStateBufferOffset += chunkSize;
+    const header = dataView.getUint8(0);
+    const packetType = (header >> 5) & 0x07;
 
-    // Auto-detect packet type based on accumulated size
-    let expectedSize = 0;
-    let packetType = null;
+    let payloadSize = 0;
+    let mode = null;
 
-    if (vehicleStateBufferOffset >= VEHICLE_STATE_PARK_SIZE) {
-        // Try to detect which packet type we have
-        if (vehicleStateBufferOffset === VEHICLE_STATE_PARK_SIZE ||
-            (vehicleStateBufferOffset < VEHICLE_STATE_DRIVE_SIZE && chunkSize === VEHICLE_STATE_PARK_SIZE)) {
-            expectedSize = VEHICLE_STATE_PARK_SIZE;
-            packetType = 'park';
-        } else if (vehicleStateBufferOffset >= VEHICLE_STATE_DRIVE_SIZE) {
-            expectedSize = VEHICLE_STATE_DRIVE_SIZE;
-            packetType = 'drive';
-        }
+    if (packetType === BLE_PACKET_TYPE_PARK) {
+        payloadSize = VEHICLE_STATE_PARK_PAYLOAD_SIZE;
+        mode = 'park';
+    } else if (packetType === BLE_PACKET_TYPE_DRIVE) {
+        payloadSize = VEHICLE_STATE_DRIVE_PAYLOAD_SIZE;
+        mode = 'drive';
+    } else {
+        console.log('[Dashboard] Unknown BLE packet type:', packetType);
+        return;
     }
 
-    // Check if we have received a complete packet
-    if (packetType && vehicleStateBufferOffset >= expectedSize) {
-        try {
-            const completeDataView = new DataView(vehicleStateBuffer.buffer, 0, expectedSize);
-            let state;
+    if (dataView.byteLength < BLE_PACKET_HEADER_SIZE + payloadSize) {
+        console.log('[Dashboard] BLE packet too short for type:', packetType, 'len:', dataView.byteLength);
+        return;
+    }
 
-            // Decode based on packet type
-            if (packetType === 'drive') {
-                state = decodeVehicleStateDrive(completeDataView);
-                // console.log('[Dashboard] Decoded DRIVE mode state:', state);
-            } else if (packetType === 'park') {
-                state = decodeVehicleStatePark(completeDataView);
-                // console.log('[Dashboard] Decoded PARK mode state:', state);
-            }
+    try {
+        const payloadView = new DataView(
+            dataView.buffer,
+            dataView.byteOffset + BLE_PACKET_HEADER_SIZE,
+            payloadSize
+        );
+        let state;
 
-            if (state) {
-                updateDashboard(state);
-            }
-
-            // Reset buffer for next message
-            vehicleStateBufferOffset = 0;
-        } catch (error) {
-            console.error('[Dashboard] Failed to decode vehicle state:', error);
-            vehicleStateBufferOffset = 0; // Reset on error
+        if (mode === 'drive') {
+            state = decodeVehicleStateDrive(payloadView);
+            // console.log('[Dashboard] Decoded DRIVE mode state:', state);
+        } else if (mode === 'park') {
+            state = decodeVehicleStatePark(payloadView);
+            // console.log('[Dashboard] Decoded PARK mode state:', state);
         }
+
+        if (state) {
+            updateDashboard(state);
+        }
+    } catch (error) {
+        console.error('[Dashboard] Failed to decode vehicle state:', error);
     }
 }
 

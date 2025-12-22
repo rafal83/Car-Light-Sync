@@ -389,7 +389,7 @@ static esp_err_t ble_perform_local_http_request(const char *method, const char *
 }
 
 static void ble_process_request_message(const char *json) {
-  ESP_LOGI(TAG_BLE_API, "Processing request: %s", json);
+  ESP_LOGD(TAG_BLE_API, "Processing request: %s", json);
   cJSON *root = cJSON_Parse(json);
   if (!root) {
     ESP_LOGW(TAG_BLE_API, "JSON BLE invalide: %s", json);
@@ -403,7 +403,7 @@ static void ble_process_request_message(const char *json) {
   size_t body_len    = body ? strlen(body) : 0;
   cJSON *headers     = cJSON_GetObjectItem(root, "headers");
 
-  ESP_LOGI(TAG_BLE_API, "HTTP %s %s", method ? method : "GET", path ? path : "/");
+  ESP_LOGD(TAG_BLE_API, "HTTP %s %s", method ? method : "GET", path ? path : "/");
 
   ble_http_response_t *response = heap_caps_malloc(sizeof(ble_http_response_t), MALLOC_CAP_DEFAULT);
   if (response == NULL) {
@@ -414,7 +414,7 @@ static void ble_process_request_message(const char *json) {
   }
 
   esp_err_t err = ble_perform_local_http_request(method, path, body, body_len, headers, response);
-  ESP_LOGI(TAG_BLE_API, "HTTP response: status=%d, body_len=%d", response->status_code, response->body_length);
+  ESP_LOGD(TAG_BLE_API, "HTTP response: status=%d, body_len=%d", response->status_code, response->body_length);
 
   cJSON *json_response = cJSON_CreateObject();
   cJSON_AddNumberToObject(json_response, "status", response->status_code);
@@ -432,7 +432,7 @@ static void ble_process_request_message(const char *json) {
     cJSON_AddStringToObject(json_response, "error", esp_err_to_name(err));
   }
 
-  ESP_LOGI(TAG_BLE_API, "Sending JSON response");
+  ESP_LOGD(TAG_BLE_API, "Sending JSON response");
   ble_send_json_response(json_response);
   cJSON_Delete(root);
   heap_caps_free(response);
