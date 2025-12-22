@@ -40,8 +40,8 @@
 #endif
 
 // Power limiting to avoid brownout on USB power
-#define MAX_POWER_MILLIAMPS 2000 // Consommation max en mA (USB peut fournir ~2A max)
-#define LED_MILLIAMPS_PER_LED 60 // Max consumption per LED in white at full brightness (mA)
+#define MAX_POWER_MILLIAMPS 3000 // Consommation max en mA (USB peut fournir ~2A max)
+#define LED_MILLIAMPS_PER_LED 40 // Max consumption per LED in white at full brightness (mA)
 
 // Brightness and color constants
 #define BRIGHTNESS_MAX 255

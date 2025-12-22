@@ -70,7 +70,7 @@ static bool wheel_control_enabled        = false;
 static uint8_t wheel_control_speed_limit = 5; // km/h
 
 // Multiple event system
-#define MAX_ACTIVE_EVENTS 5
+#define MAX_ACTIVE_EVENTS 10
 typedef struct {
   can_event_type_t event;
   effect_config_t effect_config;
@@ -734,16 +734,10 @@ bool config_manager_process_can_event(can_event_type_t event) {
     //   effect_to_apply.segment_length = total_leds;
     // }
 
-    ESP_LOGI(TAG_CONFIG,
-             "Event %s: segment_start=%d, segment_length=%d, reverse=%d",
-             config_manager_enum_to_id(event),
-             effect_to_apply.segment_start,
-             effect_to_apply.segment_length,
-             effect_to_apply.reverse);
-
     // Find a free slot for the event
-    int free_slot     = -1;
+    int slot = -1;
     int existing_slot = -1;
+    int free_slot     = -1;
 
     // Check if the event is already active or find a free slot
     for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
@@ -757,7 +751,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
     }
 
     // If the event already exists, update it
-    int slot = (existing_slot >= 0) ? existing_slot : free_slot;
+    slot = (existing_slot >= 0) ? existing_slot : free_slot;
 
     if (slot < 0) {
       // No free slot, check if a lower priority event can be overwritten
@@ -786,10 +780,18 @@ bool config_manager_process_can_event(can_event_type_t event) {
     // Save the active event
     active_events[slot].event         = event;
     active_events[slot].effect_config = effect_to_apply;
-    active_events[slot].start_time    = xTaskGetTickCount();
     active_events[slot].duration_ms   = duration_ms;
     active_events[slot].priority      = priority;
     active_events[slot].active        = true;
+
+    if (existing_slot >= 0) {
+      // Keep animation phase; only reset timer for finite-duration events
+      if (duration_ms > 0) {
+        active_events[slot].start_time = xTaskGetTickCount();
+      }
+    } else {
+      active_events[slot].start_time    = xTaskGetTickCount();
+    }
 
     // DO NOT apply immediately - let config_manager_update() handle it
     // according to per-zone priority to avoid visual glitches
@@ -881,49 +883,7 @@ void config_manager_update(void) {
   uint32_t frame_counter = led_effects_get_frame_counter();
   bool needs_fft         = false;
 
-  // First pass: mark segments reserved by active events
-  int reserved_count     = 0;
-  for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-    if (!active_events[i].active)
-      continue;
-
-    uint16_t start  = active_events[i].effect_config.segment_start;
-    uint16_t length = active_events[i].effect_config.segment_length;
-
-    // Normalize length == 0 -> full strip
-    if (length == 0) {
-      length = total_leds;
-    }
-
-    // Check segment validity
-    if (start >= total_leds) {
-      ESP_LOGW(TAG_CONFIG, "Event skipped: start >= total_leds (start=%d, total=%d)", start, total_leds);
-      continue;
-    }
-    if ((uint32_t)start + length > total_leds) {
-      ESP_LOGW(TAG_CONFIG, "Event length trimmed: %d -> %d", length, total_leds - start);
-      length = total_leds - start;
-    }
-
-    // Check if the entire segment can be reserved (priority per segment)
-    bool can_reserve_segment = true;
-    for (uint16_t idx = start; idx < (uint16_t)(start + length); idx++) {
-      if (active_events[i].priority < priority_buffer[idx]) {
-        can_reserve_segment = false;
-        break;
-      }
-    }
-
-    // Reserve the entire segment while marking priorities
-    if (can_reserve_segment) {
-      for (uint16_t idx = start; idx < (uint16_t)(start + length); idx++) {
-        priority_buffer[idx] = active_events[i].priority;
-      }
-      reserved_count++;
-    }
-  }
-
-  // Second pass: render the default effect only on unreserved zones
+  // Render the default effect as a base layer
   if (active_profile_loaded) {
     effect_config_t base    = active_profile.default_effect;
 
@@ -943,17 +903,14 @@ void config_manager_update(void) {
     led_effects_set_event_context(CAN_EVENT_NONE);
     led_effects_render_to_buffer(&base, default_start, default_length, frame_counter, temp_buffer);
 
-    // Copy only LEDs that are not reserved (priority == 0)
     for (uint16_t idx = 0; idx < total_leds; idx++) {
-      if (priority_buffer[idx] == 0) {
-        composed_buffer[idx] = temp_buffer[idx];
-      }
+      composed_buffer[idx] = temp_buffer[idx];
     }
 
     needs_fft |= led_effects_requires_fft(active_profile.default_effect.effect);
   }
 
-  // Third pass: render events on their reserved segments
+  // Render events on top of the base layer (per-LED priority)
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (!active_events[i].active)
       continue;
@@ -966,25 +923,31 @@ void config_manager_update(void) {
       length = total_leds;
     }
 
-    // Verify that this segment was reserved for this event
-    bool segment_reserved = true;
-    for (uint16_t idx = start; idx < (uint16_t)(start + length); idx++) {
-      if (priority_buffer[idx] != active_events[i].priority) {
-        segment_reserved = false;
-        break;
-      }
+    if (start >= total_leds) {
+      continue;
+    }
+    if ((uint32_t)start + length > total_leds) {
+      length = total_leds - start;
     }
 
-    // Render the effect on the reserved segment
-    if (segment_reserved) {
-      memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
+    memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
 
-      led_effects_set_event_context(active_events[i].event);
-      led_effects_render_to_buffer(&active_events[i].effect_config, start, length, frame_counter, temp_buffer);
+    effect_config_t event_config = active_events[i].effect_config;
+    event_config.segment_start   = 0;
+    event_config.segment_length  = length;
 
-      // Copier tout le segment
-      for (uint16_t idx = start; idx < (uint16_t)(start + length); idx++) {
-        composed_buffer[idx] = temp_buffer[idx];
+    led_effects_set_event_context(active_events[i].event);
+    led_effects_render_to_buffer(&event_config, 0, length, frame_counter, temp_buffer);
+
+    // Apply per-LED priority overlay (segment-local buffer)
+    for (uint16_t j = 0; j < length; j++) {
+      uint16_t idx = start + j;
+      if (idx >= total_leds) {
+        break;
+      }
+      if (active_events[i].priority >= priority_buffer[idx]) {
+        composed_buffer[idx] = temp_buffer[j];
+        priority_buffer[idx] = active_events[i].priority;
       }
     }
 

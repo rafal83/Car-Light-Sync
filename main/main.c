@@ -116,8 +116,9 @@ static void led_task(void *pvParameters) {
   ESP_LOGI(TAG_MAIN, "LED task started");
 
   while (1) {
-    led_effects_update();
+    // Render event overlays first so led_effects_update can skip/allow base effect correctly.
     config_manager_update();       // Handle temporary effects
+    led_effects_update();
     vTaskDelay(pdMS_TO_TICKS(20)); // 50 FPS
   }
 }
