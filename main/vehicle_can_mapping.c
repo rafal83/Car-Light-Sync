@@ -506,12 +506,10 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     return;
   }
 
-
-
   // ---------------------------------------------------------------------
   // Portes : ID102VCLEFT_doorStatus & ID103VCRIGHT_doorStatus
   // ---------------------------------------------------------------------
-  if(state->gear == 1) {
+  else {
     if (id == 0x102) { // gauche
       if (strcmp(name, "VCLEFT_frontLatchStatus") == 0) {
         UPDATE_AND_SEND_U8(state->door_front_left_open, is_latch_open(value), state);

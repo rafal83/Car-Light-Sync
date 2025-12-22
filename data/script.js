@@ -1289,51 +1289,156 @@ if (dynamicBrightnessRateSlider) {
     };
 }
 let dynamicBrightnessExcludedEvents = [];
+function getDynamicBrightnessExcludeFilterValue() {
+    const input = $('dynamic-brightness-exclude-filter');
+    if (!input) {
+        return '';
+    }
+    return input.value.trim().toLowerCase();
+}
 function getDynamicBrightnessExcludedEvents() {
-    const select = $('dynamic-brightness-exclude-events');
-    if (!select) {
+    const list = $('dynamic-brightness-exclude-list');
+    if (!list) {
         return [];
     }
-    return Array.from(select.selectedOptions).map(option => option.value);
+    return Array.from(list.querySelectorAll('input[type="checkbox"][data-event-id]'))
+        .filter(input => input.checked)
+        .map(input => input.value);
+}
+function updateDynamicBrightnessExcludeSummary() {
+    const summary = $('dynamic-brightness-exclude-summary');
+    if (!summary) {
+        return;
+    }
+    const count = dynamicBrightnessExcludedEvents.length;
+    summary.textContent = t('profiles.dynamicBrightnessExcludeSelectedCount', count);
 }
 function populateDynamicBrightnessExcludeOptions() {
-    const select = $('dynamic-brightness-exclude-events');
-    if (!select) {
+    const list = $('dynamic-brightness-exclude-list');
+    if (!list) {
         return;
     }
     const selected = new Set(dynamicBrightnessExcludedEvents || []);
-    select.innerHTML = '';
+    const filterValue = getDynamicBrightnessExcludeFilterValue();
+    list.innerHTML = '';
     if (!eventTypesList || eventTypesList.length === 0) {
-        const option = doc.createElement('option');
-        option.value = '';
-        option.disabled = true;
-        option.textContent = t('profiles.dynamicBrightnessExcludeLoading');
-        select.appendChild(option);
+        const empty = doc.createElement('div');
+        empty.className = 'text-sm text-muted';
+        empty.textContent = t('profiles.dynamicBrightnessExcludeLoading');
+        list.appendChild(empty);
+        updateDynamicBrightnessExcludeSelectAllState();
+        updateDynamicBrightnessExcludeSummary();
         return;
     }
-    eventTypesList
+    const filtered = eventTypesList
         .filter(eventType => eventType.id !== 'NONE')
-        .forEach(eventType => {
-            const option = doc.createElement('option');
-            option.value = eventType.id;
-            option.textContent = getEventName(eventType.id);
-            option.selected = selected.has(eventType.id);
-            select.appendChild(option);
+        .filter((eventType) => {
+            if (!filterValue) {
+                return true;
+            }
+            const name = getEventName(eventType.id);
+            return String(name).toLowerCase().includes(filterValue);
         });
+
+    if (!filtered.length) {
+        const empty = doc.createElement('div');
+        empty.className = 'text-sm text-muted';
+        empty.textContent = t('profiles.dynamicBrightnessExcludeNoResults');
+        list.appendChild(empty);
+        updateDynamicBrightnessExcludeSelectAllState();
+        updateDynamicBrightnessExcludeSummary();
+        return;
+    }
+
+    filtered
+        .forEach(eventType => {
+            const label = doc.createElement('label');
+            label.className = 'exclude-checkbox-item';
+
+            const checkbox = doc.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = eventType.id;
+            checkbox.checked = selected.has(eventType.id);
+            checkbox.setAttribute('data-event-id', eventType.id);
+
+            const text = doc.createElement('span');
+            text.textContent = getEventName(eventType.id);
+
+            label.appendChild(checkbox);
+            label.appendChild(text);
+            list.appendChild(label);
+        });
+    updateDynamicBrightnessExcludeSelectAllState();
+    updateDynamicBrightnessExcludeSummary();
 }
 function updateDynamicBrightnessExcludeState() {
-    const select = $('dynamic-brightness-exclude-events');
+    const list = $('dynamic-brightness-exclude-list');
+    const selectAll = $('dynamic-brightness-exclude-select-all');
     const enabledToggle = $('dynamic-brightness-enabled');
-    if (!select || !enabledToggle) {
+    if (!list || !enabledToggle || !selectAll) {
         return;
     }
-    select.disabled = !enabledToggle.checked;
+    const disabled = !enabledToggle.checked;
+    list.classList.toggle('is-disabled', disabled);
+    selectAll.disabled = disabled;
+    list.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.disabled = disabled;
+    });
 }
-const dynamicBrightnessExcludeSelect = $('dynamic-brightness-exclude-events');
-if (dynamicBrightnessExcludeSelect) {
-    dynamicBrightnessExcludeSelect.addEventListener('change', () => {
+function updateDynamicBrightnessExcludeSelectAllState() {
+    const list = $('dynamic-brightness-exclude-list');
+    const selectAll = $('dynamic-brightness-exclude-select-all');
+    if (!list || !selectAll) {
+        return;
+    }
+    const totalIds = (eventTypesList || [])
+        .filter((eventType) => eventType.id !== 'NONE')
+        .map((eventType) => eventType.id);
+    if (!totalIds.length) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        return;
+    }
+    const selected = new Set(dynamicBrightnessExcludedEvents || []);
+    const checkedCount = totalIds.filter((id) => selected.has(id)).length;
+    selectAll.checked = checkedCount === totalIds.length;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < totalIds.length;
+}
+
+const dynamicBrightnessExcludeList = $('dynamic-brightness-exclude-list');
+if (dynamicBrightnessExcludeList) {
+    dynamicBrightnessExcludeList.addEventListener('change', (event) => {
+        const target = event.target;
+        if (!target || target.type !== 'checkbox') {
+            return;
+        }
         dynamicBrightnessExcludedEvents = getDynamicBrightnessExcludedEvents();
+        updateDynamicBrightnessExcludeSelectAllState();
+        updateDynamicBrightnessExcludeSummary();
         scheduleDefaultEffectSave();
+    });
+}
+
+const dynamicBrightnessExcludeSelectAll = $('dynamic-brightness-exclude-select-all');
+if (dynamicBrightnessExcludeSelectAll) {
+    dynamicBrightnessExcludeSelectAll.addEventListener('change', () => {
+        if (!eventTypesList || !eventTypesList.length) {
+            return;
+        }
+        const allIds = eventTypesList
+            .filter((eventType) => eventType.id !== 'NONE')
+            .map((eventType) => eventType.id);
+        dynamicBrightnessExcludedEvents = dynamicBrightnessExcludeSelectAll.checked ? allIds : [];
+        populateDynamicBrightnessExcludeOptions();
+        updateDynamicBrightnessExcludeSelectAllState();
+        updateDynamicBrightnessExcludeSummary();
+        scheduleDefaultEffectSave();
+    });
+}
+const dynamicBrightnessExcludeFilter = $('dynamic-brightness-exclude-filter');
+if (dynamicBrightnessExcludeFilter) {
+    dynamicBrightnessExcludeFilter.addEventListener('input', () => {
+        populateDynamicBrightnessExcludeOptions();
     });
 }
 const defaultBrightnessSlider = $('default-brightness-slider');
@@ -4537,40 +4642,101 @@ async function fetchLogFileStatus(selectedIndex) {
     return response.json();
 }
 
-function updateLogFileUi(data, selectedIndex) {
-    const toggle = $('logs-file-enabled');
-    const statusDiv = $('logs-file-status');
-    const select = $('logs-file-index');
+  function updateLogFileUi(data) {
+      const toggle = $('logs-file-enabled');
+      const statusDiv = $('logs-file-status');
+  
+      if (toggle && typeof data.en === 'boolean') {
+          toggle.checked = data.en;
+      }
+  
+      if (statusDiv) {
+          statusDiv.textContent = '';
+      }
+  }
+  
+  function renderLogFileList(max, current, sizeByIndex) {
+      const list = $('logs-file-list');
+      if (!list) {
+          return;
+      }
 
-    if (toggle && typeof data.en === 'boolean') {
-        toggle.checked = data.en;
-    }
+      list.innerHTML = '';
+      for (let i = 1; i <= max; i++) {
+        const row = document.createElement('div');
+        row.className = 'logs-file-card';
 
-    const max = data.max || 7;
-    const current = data.idx || 1;
-    const selected = selectedIndex || data.sel || current;
-    if (select) {
-        if (select.options.length !== max) {
-            select.innerHTML = '';
-            for (let i = 1; i <= max; i++) {
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.textContent = '#' + i;
-                select.appendChild(opt);
-            }
-        }
-        select.value = selected;
-    }
+          const activeIcon = document.createElement('span');
+          activeIcon.className = 'logs-file-active-icon';
+          activeIcon.textContent = '\u2714';
+          if (i !== current) {
+              activeIcon.classList.add('is-hidden');
+          }
+          const activeLabel = t('logs.fileActiveLabel');
+          activeIcon.title = activeLabel;
+          activeIcon.setAttribute('aria-label', activeLabel);
 
-    if (statusDiv) {
-        const sizeText = formatBytes(data.size || 0);
-        let statusText = t('logs.fileStatusFormat', selected, max, sizeText);
-        if (current !== selected) {
-            statusText += ' ' + t('logs.fileStatusCurrentSuffix', current);
-        }
-        statusDiv.textContent = statusText;
-    }
-}
+          const name = document.createElement('div');
+          name.className = 'logs-file-name';
+          const label = document.createElement('span');
+          label.textContent = '#' + i;
+
+          name.appendChild(label);
+
+          const size = document.createElement('div');
+          size.className = 'logs-file-size';
+          size.textContent = formatBytes(sizeByIndex[i] || 0);
+
+          const action = document.createElement('div');
+          action.className = 'logs-file-action';
+  
+          const link = document.createElement('a');
+          link.className = 'btn-secondary';
+          link.href = API_BASE + '/api/logs/file/download?idx=' + encodeURIComponent(i);
+          link.download = 'logs.' + i + '.txt';
+          link.textContent = '\u2B07';
+          action.appendChild(link);
+
+          row.appendChild(activeIcon);
+          row.appendChild(name);
+          row.appendChild(size);
+          row.appendChild(action);
+          list.appendChild(row);
+      }
+  }
+  
+  async function updateLogFileList(data) {
+      const max = data.max || 7;
+      const current = data.idx || 1;
+      const baseIndex = data.sel || current;
+      const sizeByIndex = new Array(max + 1).fill(null);
+      sizeByIndex[baseIndex] = data.size || 0;
+  
+      const requests = [];
+      for (let i = 1; i <= max; i++) {
+          if (sizeByIndex[i] !== null) {
+              continue;
+          }
+          requests.push(fetchLogFileStatus(i)
+              .then((item) => {
+                  if (item && item.st === 'ok') {
+                      sizeByIndex[i] = item.size || 0;
+                  } else {
+                      sizeByIndex[i] = 0;
+                  }
+              })
+              .catch((error) => {
+                  console.error('Failed to load log file size:', error);
+                  sizeByIndex[i] = 0;
+              }));
+      }
+  
+      if (requests.length) {
+          await Promise.all(requests);
+      }
+  
+      renderLogFileList(max, current, sizeByIndex);
+  }
 
 async function updateLogFileStatus() {
     if (logFileStatusPending) {
@@ -4579,24 +4745,22 @@ async function updateLogFileStatus() {
 
     const statusDiv = $('logs-file-status');
     if (statusDiv) {
-        statusDiv.textContent = t('logs.fileStatusLoading');
+        statusDiv.textContent = '';
     }
 
-    const select = $('logs-file-index');
-    const selectedIndex = select ? parseInt(select.value, 10) : null;
-
-    logFileStatusPending = (async () => {
-        try {
-            const data = await fetchLogFileStatus(selectedIndex);
-            if (!data || data.st !== 'ok') {
-                throw new Error('Invalid log file status response');
-            }
-            updateLogFileUi(data, selectedIndex);
-        } catch (error) {
-            console.error('Failed to load log file status:', error);
-        } finally {
-            logFileStatusPending = null;
-        }
+      logFileStatusPending = (async () => {
+          try {
+              const data = await fetchLogFileStatus();
+              if (!data || data.st !== 'ok') {
+                  throw new Error('Invalid log file status response');
+              }
+              updateLogFileUi(data);
+              await updateLogFileList(data);
+          } catch (error) {
+              console.error('Failed to load log file status:', error);
+          } finally {
+              logFileStatusPending = null;
+          }
     })();
 
     return logFileStatusPending;
@@ -4627,34 +4791,6 @@ async function toggleFileLogs(event) {
         console.error('Failed to toggle file logs:', error);
         checkbox.checked = !enable;
         showNotification('logs-notification', t('logs.fileToggleError'), 'error');
-    }
-}
-
-async function downloadLogFile() {
-    const select = $('logs-file-index');
-    const selectedIndex = select ? parseInt(select.value, 10) : null;
-    if (!selectedIndex) {
-        return;
-    }
-
-    const url = API_BASE + '/api/logs/file/download?idx=' + encodeURIComponent(selectedIndex);
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error('Download failed');
-        }
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = `logs.${selectedIndex}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(objectUrl);
-    } catch (error) {
-        console.error('Log file download failed:', error);
-        showNotification('logs-notification', t('logs.fileDownloadError'), 'error');
     }
 }
 

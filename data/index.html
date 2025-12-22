@@ -209,7 +209,16 @@
               </div>
               <div class="control-group mt-15">
                 <label class="control-label" data-i18n="profiles.dynamicBrightnessExcludeLabel"></label>
-                <select id="dynamic-brightness-exclude-events" class="multi-select" multiple></select>
+                <div class="exclude-controls">
+                  <label class="checkbox-container" for="dynamic-brightness-exclude-select-all">
+                    <input type="checkbox" id="dynamic-brightness-exclude-select-all">
+                    <span data-i18n="profiles.dynamicBrightnessExcludeSelectAll"></span>
+                  </label>
+                  <input type="text" id="dynamic-brightness-exclude-filter"
+                    data-i18n-placeholder="profiles.dynamicBrightnessExcludeFilterPlaceholder">
+                </div>
+                <div id="dynamic-brightness-exclude-summary" class="text-sm text-muted mt-8"></div>
+                <div id="dynamic-brightness-exclude-list" class="exclude-checkbox-list"></div>
                 <p class="text-sm text-muted mt-8"
                   data-i18n="profiles.dynamicBrightnessExcludeHelp">
                 </p>
@@ -1031,23 +1040,11 @@
                 <span class="toggle-label" data-i18n="logs.fileEnable"></span>
               </label>
               <div class="control-group mt-15">
-                <label class="control-label" data-i18n="logs.fileStatusLabel"></label>
-                <div id="logs-file-status" class="font-600 text-muted" data-i18n="logs.fileStatusLoading"></div>
+                <div id="logs-file-status" class="font-600 text-muted"></div>
               </div>
               <div class="control-group mt-15">
-                <label class="control-label" data-i18n="logs.fileSelectLabel"></label>
-                <div class="control-row">
-                  <select id="logs-file-index" onchange="updateLogFileStatus()">
-                    <option value="1">#1</option>
-                    <option value="2">#2</option>
-                    <option value="3">#3</option>
-                    <option value="4">#4</option>
-                    <option value="5">#5</option>
-                    <option value="6">#6</option>
-                    <option value="7">#7</option>
-                  </select>
-                  <button class="btn-secondary" id="logs-file-download-btn" onclick="downloadLogFile()" data-i18n="logs.fileDownload"></button>
-                </div>
+                <label class="control-label" data-i18n="logs.fileListLabel"></label>
+                <div id="logs-file-list" class="logs-file-list"></div>
               </div>
               <div class="button-group mt-10">
                 <button class="btn-danger" id="logs-file-purge-btn" onclick="purgeLogFiles()" data-i18n="logs.filePurge"></button>
