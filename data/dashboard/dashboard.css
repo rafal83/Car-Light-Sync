@@ -21,6 +21,8 @@
     --border-color-strong: rgba(255, 255, 255, 0.2);
     --gauge-bg-start: rgba(30, 30, 30, 0.8);
     --gauge-bg-end: rgba(50, 50, 50, 0.8);
+    --power-positive: #ffffff;
+    --power-positive-glow: rgba(255, 255, 255, 0.6);
 }
 
 body.light-theme {
@@ -38,6 +40,8 @@ body.light-theme {
     --border-color-strong: rgba(0, 0, 0, 0.2);
     --gauge-bg-start: rgba(230, 230, 230, 0.8);
     --gauge-bg-end: rgba(240, 240, 240, 0.8);
+    --power-positive: #1a1a1a;
+    --power-positive-glow: rgba(0, 0, 0, 0.35);
 }
 
 body {
@@ -507,9 +511,14 @@ body.light-theme .config-btn:hover {
 }
 
 /* Arc actif (quand il y a de la puissance) */
-.power-arc-fill.active {
+.power-arc-fill.power-arc-negative.active {
     stroke: #48bb78 !important; /* Vert quand actif */
     filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.8)) !important;
+}
+
+.power-arc-fill.power-arc-positive.active {
+    stroke: var(--power-positive) !important;
+    filter: drop-shadow(0 0 8px var(--power-positive-glow)) !important;
 }
 
 /* Pedal arc (SVG path) - 240° arc from bottom-left to bottom-right */
@@ -626,7 +635,7 @@ body.light-theme .config-btn:hover {
 
 /* Color coding for power (positive = acceleration, negative = regen) */
 .power-value.positive {
-    color: var(--status-success);
+    color: var(--text-success);
 }
 
 .power-value.negative {
