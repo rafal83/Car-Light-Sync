@@ -432,7 +432,7 @@ static void can_event_task(void *pvParameters) {
         if (!config_sended) {
           // Send CONFIG mode packet 
           static vehicle_state_ble_config_t ble_config_state;
-          vehicle_state_to_ble_drive(&current_state, &ble_config_state);
+          vehicle_state_to_ble_config(&current_state, &ble_config_state);
           static uint8_t ble_config_packet[1 + sizeof(vehicle_state_ble_drive_t)];
           ble_config_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_CONFIG, 0);
           memcpy(ble_config_packet + 1, &ble_config_state, sizeof(vehicle_state_ble_drive_t));
