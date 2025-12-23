@@ -40,6 +40,8 @@
 #define EFFECT_ID_DUAL_GRADIENT "DUAL_GRADIENT"
 #define EFFECT_ID_SPARKLE_OVERLAY "SPARKLE_OVERLAY"
 #define EFFECT_ID_CENTER_OUT_SCAN "CENTER_OUT_SCAN"
+#define EFFECT_ID_POWER_METER "POWER_METER"
+#define EFFECT_ID_POWER_METER_CENTER "POWER_METER_CENTER"
 
 #define EFFECT_ID_MAX_LEN 32 // Longueur max d'un ID d'effet
 
@@ -76,6 +78,8 @@ typedef enum {
   EFFECT_DUAL_GRADIENT,   // Double degrade qui respire
   EFFECT_SPARKLE_OVERLAY, // Fond doux + scintilles rares
   EFFECT_CENTER_OUT_SCAN, // Double scan centre -> bords
+  EFFECT_POWER_METER,     // Power bar combinee (front + rear)
+  EFFECT_POWER_METER_CENTER, // Power bar centre (zero au milieu)
   EFFECT_MAX
 } led_effect_t;
 

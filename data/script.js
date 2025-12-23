@@ -1459,6 +1459,14 @@ const defaultColorInput = $('default-color1');
 if (defaultColorInput) {
     defaultColorInput.addEventListener('change', scheduleDefaultEffectSave);
 }
+const defaultColor2Input = $('default-color2');
+if (defaultColor2Input) {
+    defaultColor2Input.addEventListener('change', scheduleDefaultEffectSave);
+}
+const defaultColor3Input = $('default-color3');
+if (defaultColor3Input) {
+    defaultColor3Input.addEventListener('change', scheduleDefaultEffectSave);
+}
 const defaultEffectSelect = $('default-effect-select');
 if (defaultEffectSelect) {
     defaultEffectSelect.addEventListener('change', scheduleDefaultEffectSave);
@@ -1712,6 +1720,8 @@ function renderEventsTable() {
                         br: 128,
                         sp: 128,
                         c1: 0xFF0000,
+                        c2: 0x000000,
+                        c3: 0x000000,
                         dur: 0,
                         pri: 100,
                         en: true,
@@ -2164,7 +2174,7 @@ function buildEventPayload(event) {
         return null;
     }
     const allowedKeys = [
-        'ev', 'fx', 'br', 'sp', 'c1', 'rv',
+        'ev', 'fx', 'br', 'sp', 'c1', 'c2', 'rv',
         'dur', 'pri', 'en', 'at', 'pid', 'csp',
         'st', 'ln'
     ];
@@ -2943,6 +2953,10 @@ async function saveProfile(params = {}) {
         payload.br = percentTo255(parseInt($('default-brightness-slider').value));
         payload.sp = percentTo255(parseInt($('default-speed-slider').value));
         payload.c1 = parseInt($('default-color1').value.substring(1), 16);
+        const defaultColor2 = $('default-color2');
+        payload.c2 = defaultColor2 ? parseInt(defaultColor2.value.substring(1), 16) : 0;
+        const defaultColor3 = $('default-color3');
+        payload.c3 = defaultColor3 ? parseInt(defaultColor3.value.substring(1), 16) : 0;
         const audioReactiveCheckbox = $('default-audio-reactive');
         payload.ar = audioReactiveCheckbox ? audioReactiveCheckbox.checked : false;
 
@@ -3274,6 +3288,8 @@ async function loadActiveProfileDefaultEffect() {
             $('default-speed-slider').value = defSpeedPercent;
             $('default-speed-value').textContent = defSpeedPercent + '%';
             $('default-color1').value = '#' + defaultEffect.c1.toString(16).padStart(6, '0');
+            $('default-color2').value = '#' + defaultEffect.c2.toString(16).padStart(6, '0');
+            $('default-color3').value = '#' + defaultEffect.c3.toString(16).padStart(6, '0');
 
             // Audio reactive
             const audioReactiveCheckbox = $('default-audio-reactive');

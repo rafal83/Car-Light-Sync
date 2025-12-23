@@ -965,6 +965,8 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddNumberToObject(default_effect_obj, "br", profile->default_effect.brightness);
     cJSON_AddNumberToObject(default_effect_obj, "sp", profile->default_effect.speed);
     cJSON_AddNumberToObject(default_effect_obj, "c1", profile->default_effect.color1);
+    cJSON_AddNumberToObject(default_effect_obj, "c2", profile->default_effect.color2);
+    cJSON_AddNumberToObject(default_effect_obj, "c3", profile->default_effect.color3);
     cJSON_AddBoolToObject(default_effect_obj, "ar", profile->default_effect.audio_reactive);
     cJSON_AddBoolToObject(default_effect_obj, "rv", profile->default_effect.reverse);
     cJSON_AddNumberToObject(default_effect_obj, "st", profile->default_effect.segment_start);
@@ -1240,6 +1242,8 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   const cJSON *brightness_json          = cJSON_GetObjectItem(root, "br");
   const cJSON *speed_json               = cJSON_GetObjectItem(root, "sp");
   const cJSON *color_json               = cJSON_GetObjectItem(root, "c1");
+  const cJSON *color2_json              = cJSON_GetObjectItem(root, "c2");
+  const cJSON *color3_json              = cJSON_GetObjectItem(root, "c3");
   const cJSON *audio_reactive_json      = cJSON_GetObjectItem(root, "ar");
   const cJSON *reverse_json             = cJSON_GetObjectItem(root, "rv");
   const cJSON *segment_start_json       = cJSON_GetObjectItem(root, "st");
@@ -1264,6 +1268,14 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
   }
   if (color_json) {
     profile->default_effect.color1 = (uint32_t)color_json->valueint;
+    default_effect_updated         = true;
+  }
+  if (color2_json) {
+    profile->default_effect.color2 = (uint32_t)color2_json->valueint;
+    default_effect_updated         = true;
+  }
+  if (color3_json) {
+    profile->default_effect.color3 = (uint32_t)color3_json->valueint;
     default_effect_updated         = true;
   }
   if (audio_reactive_json && cJSON_IsBool(audio_reactive_json)) {
@@ -2086,6 +2098,8 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   const cJSON *brightness_json  = cJSON_GetObjectItem(event_obj, "br");
   const cJSON *speed_json       = cJSON_GetObjectItem(event_obj, "sp");
   const cJSON *color_json       = cJSON_GetObjectItem(event_obj, "c1");
+  const cJSON *color2_json      = cJSON_GetObjectItem(event_obj, "c2");
+  const cJSON *color3_json      = cJSON_GetObjectItem(event_obj, "c3");
   const cJSON *reverse_json     = cJSON_GetObjectItem(event_obj, "rv");
   const cJSON *duration_json    = cJSON_GetObjectItem(event_obj, "dur");
   const cJSON *priority_json    = cJSON_GetObjectItem(event_obj, "pri");
@@ -2116,6 +2130,12 @@ static bool apply_event_update_from_json(config_profile_t *profile, int profile_
   }
   if (color_json && cJSON_IsNumber(color_json)) {
     effect_config.color1 = color_json->valueint;
+  }
+  if (color2_json && cJSON_IsNumber(color2_json)) {
+    effect_config.color2 = color2_json->valueint;
+  }
+  if (color3_json && cJSON_IsNumber(color3_json)) {
+    effect_config.color3 = color3_json->valueint;
   }
   if (segment_start && cJSON_IsNumber(segment_start)) {
     effect_config.segment_start = segment_start->valueint;
@@ -2175,6 +2195,8 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
       cJSON_AddNumberToObject(event_obj, "br", event_effect.effect_config.brightness);
       cJSON_AddNumberToObject(event_obj, "sp", event_effect.effect_config.speed);
       cJSON_AddNumberToObject(event_obj, "c1", event_effect.effect_config.color1);
+      cJSON_AddNumberToObject(event_obj, "c2", event_effect.effect_config.color2);
+      cJSON_AddNumberToObject(event_obj, "c3", event_effect.effect_config.color3);
       cJSON_AddBoolToObject(event_obj, "rv", event_effect.effect_config.reverse);
       cJSON_AddNumberToObject(event_obj, "dur", event_effect.duration_ms);
       cJSON_AddNumberToObject(event_obj, "pri", event_effect.priority);
