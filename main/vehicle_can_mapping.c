@@ -494,11 +494,26 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
         UPDATE_AND_SEND_FLOAT(state->front_power, value, state);
         return;
       }
+      if (strcmp(name, "FrontPowerLimit2E5") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->front_power_limit, value, state);
+        return;
+      }
       return;
     }
     if (id == 0x266) {
       if (strcmp(name, "RearPower266") == 0) {
         UPDATE_AND_SEND_FLOAT(state->rear_power, value, state);
+        return;
+      }
+      if (strcmp(name, "RearPowerLimit266") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->rear_power_limit, value, state);
+        return;
+      }
+      return;
+    }
+    if (id == 0x252) {
+      if (strcmp(name, "BMS_maxRegenPower") == 0) {
+        UPDATE_AND_SEND_FLOAT(state->max_regen, value, state);
         return;
       }
       return;

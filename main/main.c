@@ -56,12 +56,14 @@
 #endif
 
 #define TAG_MAIN "Main"
-#define BLE_VEHICLE_STATE_TYPE_PARK 0u
-#define BLE_VEHICLE_STATE_TYPE_DRIVE 1u
+#define BLE_VEHICLE_STATE_TYPE_CONFIG 0u
+#define BLE_VEHICLE_STATE_TYPE_PARK 1u
+#define BLE_VEHICLE_STATE_TYPE_DRIVE 2u
 #define BLE_VEHICLE_STATE_HEADER(type, opts) ((uint8_t)((((type) & 0x07u) << 5) | ((opts) & 0x1Fu)))
 
 static vehicle_state_t last_vehicle_state = {0};
 static void espnow_test_frame_log(void);
+static bool config_sended = false;
 
 // Callback for scroll wheel events (called from vehicle_state_apply_signal)
 static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
@@ -427,7 +429,19 @@ static void can_event_task(void *pvParameters) {
         // Determine mode based on gear: P=1, R=2, N=3, D=4
         bool is_drive_mode = (current_state.gear == 2 || current_state.gear == 3 || current_state.gear == 4);
 
-        if (is_drive_mode) {
+        if (!config_sended) {
+          // Send CONFIG mode packet 
+          static vehicle_state_ble_config_t ble_config_state;
+          vehicle_state_to_ble_drive(&current_state, &ble_config_state);
+          static uint8_t ble_config_packet[1 + sizeof(vehicle_state_ble_drive_t)];
+          ble_config_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_CONFIG, 0);
+          memcpy(ble_config_packet + 1, &ble_config_state, sizeof(vehicle_state_ble_drive_t));
+          esp_err_t ret = ble_api_service_send_vehicle_state(ble_config_packet, sizeof(ble_config_packet));
+          if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+            ESP_LOGD(TAG_MAIN, "BLE config mode send failed: %s", esp_err_to_name(ret));
+          }
+          config_sended = true;
+        } else if (is_drive_mode) {
           // Send DRIVE mode packet (smaller, focused on driving metrics)
           static vehicle_state_ble_drive_t ble_drive_state;
           vehicle_state_to_ble_drive(&current_state, &ble_drive_state);
@@ -450,6 +464,8 @@ static void can_event_task(void *pvParameters) {
             ESP_LOGD(TAG_MAIN, "BLE park mode send failed: %s", esp_err_to_name(ret));
           }
         }
+      } else {
+        config_sended = false;
       }
     }
 
@@ -815,7 +831,7 @@ void app_main(void) {
 
   // Log streaming (Server-Sent Events for real-time logs)
   ESP_ERROR_CHECK(log_stream_init());
-  ESP_ERROR_CHECK(log_stream_enable_file_logging(true));
+  // ESP_ERROR_CHECK(log_stream_enable_file_logging(true));
   ESP_LOGI(TAG_MAIN, "Log streaming initialized");
   
   // WiFi

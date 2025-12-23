@@ -71,7 +71,10 @@ typedef struct {
   float charge_power_kw;
   uint8_t charging_port;
   float rear_power;
+  float rear_power_limit;
   float front_power;
+  float front_power_limit;
+  float max_regen;
   uint8_t train_type; // 0 RWD, 1 AWD
 
   // Divers
@@ -104,6 +107,20 @@ typedef struct {
   // Meta
   uint32_t last_update_ms;
 } vehicle_state_t;
+
+// Structure compacte BLE pour mode CONFIG
+// Total: ~22 bytes
+typedef struct __attribute__((packed)) {
+  // Dynamique de conduite
+  int16_t rear_power_max_kw_x10;       // puissance max moteur arrière * 10
+  int16_t front_power_max_kw_x10;      // puissance max moteur avant * 10
+  int16_t max_regen_x10;      // puissance regen * 10
+
+  uint8_t flags0;  // bits: train type
+
+  // Meta
+  uint32_t last_update_ms;
+} vehicle_state_ble_config_t;
 
 // Structure compacte BLE pour mode DRIVE (conduite)
 // Focus: vitesse, puissance, assistance conduite, sécurité

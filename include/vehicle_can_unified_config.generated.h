@@ -3952,6 +3952,64 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
     },
 };
 
+// Signaux pour signals_MSG_ID252BMS_powerAvailable
+static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
+    {
+        .name       = "BMS_maxRegenPower",
+        .start_bit  = 0,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.010000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_maxDischargePower",
+        .start_bit  = 16,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.013000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_maxStationaryHeatPower",
+        .start_bit  = 32,
+        .length     = 10,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.010000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_notEnoughPowerForHeatPump",
+        .start_bit  = 42,
+        .length     = 1,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_BOOLEAN,
+        .factor     = 1.000000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_powerLimitsState",
+        .start_bit  = 48,
+        .length     = 1,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_BOOLEAN,
+        .factor     = 1.000000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_hvacPowerBudget",
+        .start_bit  = 50,
+        .length     = 10,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.020000f,
+        .offset     = 0.000000f,
+    },
+};
+
 // Signaux pour signals_MSG_ID292BMS_SOC
 static const can_signal_def_t signals_MSG_ID292BMS_SOC[] = {
     {
@@ -4993,6 +5051,12 @@ const can_message_def_t g_can_messages[] = {
         .signal_count = 14,
     },
     {
+        .id           = 0x252,
+        .name         = "ID252BMS_powerAvailable",
+        .signals      = signals_MSG_ID252BMS_powerAvailable,
+        .signal_count = 6,
+    },
+    {
         .id           = 0x292,
         .name         = "ID292BMS_SOC",
         .signals      = signals_MSG_ID292BMS_SOC,
@@ -5030,6 +5094,6 @@ const can_message_def_t g_can_messages[] = {
     },
 };
 
-const uint16_t g_can_message_count = 25;
+const uint16_t g_can_message_count = 26;
 
 #endif // VEHICLE_CAN_UNIFIED_CONFIG_GENERATED_H

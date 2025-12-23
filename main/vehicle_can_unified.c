@@ -128,6 +128,26 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
 }
 
 // ---------------------------------------------------------------------------
+// Conversion vers format BLE CONFIG
+// ---------------------------------------------------------------------------
+
+void vehicle_state_to_ble_config(const vehicle_state_t *src, vehicle_state_ble_config_t *dst) {
+  if (!src || !dst) return;
+
+  // Dynamique de conduite
+  dst->rear_power_max_kw_x10 = (int16_t)(src->rear_power * 10.0f);
+  dst->front_power_max_kw_x10 = (int16_t)(src->front_power * 10.0f);
+  dst->max_regen_x10 = (uint16_t)(src->max_regen * 10.0f);
+
+  // Byte 0: turn signals & brake
+  dst->flags0 =
+    (src->train_type    ? (1<<0) : 0);
+
+  // Meta
+  dst->last_update_ms = src->last_update_ms;
+}
+
+// ---------------------------------------------------------------------------
 // Conversion vers format BLE DRIVE (conduite)
 // ---------------------------------------------------------------------------
 
@@ -135,7 +155,7 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
   if (!src || !dst) return;
 
   // Dynamique de conduite
-  float speed_kph_abs = fabsf(src->speed_kph);
+  float speed_kph_abs = fabsf(src->speed_kph) + 0.5f;
   dst->speed_kph = (uint8_t)(speed_kph_abs);
   dst->rear_power_kw_x10 = (int16_t)(src->rear_power * 10.0f);  // Peut Gtre n?gatif (r?g?n)
   dst->front_power_kw_x10 = (int16_t)(src->front_power * 10.0f); // Peut Gtre n?gatif (r?g?n)
@@ -157,8 +177,7 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
     (src->brake_pressed ? (1<<3) : 0) |
     (src->high_beams   ? (1<<4) : 0) |
     (src->headlights   ? (1<<5) : 0) |
-    (src->fog_lights   ? (1<<6) : 0) |
-    (src->train_type   ? (1<<7) : 0);
+    (src->fog_lights   ? (1<<6) : 0);
 
   // Byte 1: blindspots & collisions
   dst->flags1 =
@@ -229,8 +248,7 @@ void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_par
     (src->charging_port  ? (1<<2) : 0) |
     (src->sentry_mode    ? (1<<3) : 0) |
     (src->sentry_alert   ? (1<<4) : 0) |
-    (src->night_mode     ? (1<<5) : 0) |
-    (src->train_type     ? (1<<6) : 0);
+    (src->night_mode     ? (1<<5) : 0);
 
   // Meta
   dst->last_update_ms = src->last_update_ms;

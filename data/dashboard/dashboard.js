@@ -28,13 +28,47 @@ let currentLang = 'fr';
 
 // BLE packet sizes for different modes (payload sizes only)
 const BLE_PACKET_HEADER_SIZE = 1;
-const BLE_PACKET_TYPE_PARK = 0;
-const BLE_PACKET_TYPE_DRIVE = 1;
-const VEHICLE_STATE_DRIVE_PAYLOAD_SIZE = 22; // vehicle_state_ble_drive_t
+const BLE_PACKET_TYPE_CONFIG = 0;
+const BLE_PACKET_TYPE_PARK = 1;
+const BLE_PACKET_TYPE_DRIVE = 2;
+const VEHICLE_STATE_CONFIG_PAYLOAD_SIZE = 11; // vehicle_state_ble_drive_t
 const VEHICLE_STATE_PARK_PAYLOAD_SIZE = 19;  // vehicle_state_ble_park_t
-const VEHICLE_STATE_DRIVE_SIZE = BLE_PACKET_HEADER_SIZE + VEHICLE_STATE_DRIVE_PAYLOAD_SIZE;
+const VEHICLE_STATE_DRIVE_PAYLOAD_SIZE = 22; // vehicle_state_ble_drive_t
+const VEHICLE_STATE_CONFIG_SIZE = BLE_PACKET_HEADER_SIZE + VEHICLE_STATE_CONFIG_PAYLOAD_SIZE;
 const VEHICLE_STATE_PARK_SIZE = BLE_PACKET_HEADER_SIZE + VEHICLE_STATE_PARK_PAYLOAD_SIZE;
+const VEHICLE_STATE_DRIVE_SIZE = BLE_PACKET_HEADER_SIZE + VEHICLE_STATE_DRIVE_PAYLOAD_SIZE;
 
+let rearPowerMax_kw = 0;
+let frontPowerMax_kw = 0;
+let maxRegen_kw = 0;
+let trainType = 0;
+
+/**
+ * Decode BLE CONFIG mode packet (vehicle_state_ble_config_t)
+ * Structure from include/vehicle_can_unified.h
+ * Total: ~11 bytes
+ */
+function decodeVehicleStateConfig(dataView) {
+    let offset = 0;
+
+    // Helper functions
+    const readInt16 = () => { const val = dataView.getInt16(offset, true); offset += 2; return val; };
+    const readUint16 = () => { const val = dataView.getUint16(offset, true); offset += 2; return val; };
+    const readUint8 = () => { const val = dataView.getUint8(offset); offset += 1; return val; };
+    const readInt8 = () => { const val = dataView.getInt8(offset); offset += 1; return val; };
+    const readUint32 = () => { const val = dataView.getUint32(offset, true); offset += 4; return val; };
+
+    // Dynamique de conduite
+    rearPowerMax_kw = readUint16() / 10;
+    frontPowerMax_kw = readUint16() / 10;
+    maxRegen_kw = readUint16() / 10;
+
+    // Bit-packed flags
+    const flags0 = readUint8();
+    const last_update_ms = readUint32();
+
+    trainType = (flags0 & (1<<0)) !== 0;
+}
 
 /**
  * Decode BLE DRIVE mode packet (vehicle_state_ble_drive_t)
@@ -91,7 +125,6 @@ function decodeVehicleStateDrive(dataView) {
         high_beams: (flags0 & (1<<4)) !== 0,
         headlights: (flags0 & (1<<5)) !== 0,
         fog_lights: (flags0 & (1<<6)) !== 0,
-        train_type: (flags0 & (1<<7)) !== 0,
 
         // Flags1: blindspots & collisions
         blindspot_left: (flags1 & (1<<0)) !== 0,
@@ -201,7 +234,6 @@ function decodeVehicleStatePark(dataView) {
         sentry_mode: (flags2 & (1<<3)) !== 0,
         sentry_alert: (flags2 & (1<<4)) !== 0,
         night_mode: (flags2 & (1<<5)) !== 0,
-        train_type: (flags2 & (1<<6)) !== 0,
 
         // Missing fields from Drive mode (defaults)
         speed_kph: 0,
@@ -348,7 +380,7 @@ function updateDashboard(state) {
         document.getElementById('odometer-drive-compact').textContent = Math.round(state.odometer_km) + 'km';
 
         // Power & pedal map indicators
-        updatePowerIndicators(state.rear_power_kw, state.front_power_kw, state.pedal_map, state.train_type);
+        updatePowerIndicators(state.rear_power_kw, state.front_power_kw, state.pedal_map, trainType);
 
         // Show/hide indicators (only when active)
         updateDriveIndicator('ind-turn-left-drive', state.turn_left);
@@ -882,7 +914,10 @@ function handleVehicleStateNotification(event) {
     let payloadSize = 0;
     let mode = null;
 
-    if (packetType === BLE_PACKET_TYPE_PARK) {
+    if (packetType === BLE_PACKET_TYPE_CONFIG) {
+        payloadSize = VEHICLE_STATE_CONFIG_PAYLOAD_SIZE;
+        mode = 'config';
+    } else if (packetType === BLE_PACKET_TYPE_PARK) {
         payloadSize = VEHICLE_STATE_PARK_PAYLOAD_SIZE;
         mode = 'park';
     } else if (packetType === BLE_PACKET_TYPE_DRIVE) {
@@ -906,7 +941,10 @@ function handleVehicleStateNotification(event) {
         );
         let state;
 
-        if (mode === 'drive') {
+        if (mode === 'config') {
+            decodeVehicleStateConfig(payloadView);
+            // console.log('[Dashboard] Decoded CONFIG mode state:', state);
+        } else if (mode === 'drive') {
             state = decodeVehicleStateDrive(payloadView);
             // console.log('[Dashboard] Decoded DRIVE mode state:', state);
         } else if (mode === 'park') {
@@ -1543,7 +1581,6 @@ window.simulateDriveMode = function() {
             pedal_map: pedalMap,
             rear_power_kw: 40,
             front_power_kw: 20,
-            train_type: 1, // AWD
             odometer_km: odometer,
             turn_left: false,
             turn_right: false,
@@ -1573,7 +1610,7 @@ window.simulateDriveMode = function() {
         document.getElementById('odometer-drive-compact').textContent = Math.round(simulatedState.odometer_km) + 'km';
 
         // Power & pedal map indicators
-        updatePowerIndicators(simulatedState.rear_power_kw, simulatedState.front_power_kw, simulatedState.pedal_map, simulatedState.train_type);
+        updatePowerIndicators(simulatedState.rear_power_kw, simulatedState.front_power_kw, simulatedState.pedal_map, 1);
 
         // Indicators
         updateDriveIndicator('ind-turn-left-drive', simulatedState.turn_left);

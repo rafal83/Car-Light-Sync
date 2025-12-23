@@ -705,14 +705,6 @@ esp_err_t espnow_link_send_vehicle_state(const vehicle_state_t *state) {
     log_send_error(ret, "esp_now_send vehicle_state");
   }
 
-  // Also send via BLE if a client is connected (for dashboard mode)
-  if (ble_api_service_is_connected()) {
-    esp_err_t ble_ret = ble_api_service_send_vehicle_state(state, sizeof(vehicle_state_t));
-    if (ble_ret != ESP_OK && ble_ret != ESP_ERR_INVALID_STATE) {
-      ESP_LOGD(TAG_ESP_NOW, "BLE vehicle state send failed: %s", esp_err_to_name(ble_ret));
-    }
-  }
-
   return ret;
 }
 
