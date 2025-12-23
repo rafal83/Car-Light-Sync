@@ -1002,6 +1002,7 @@ body.light-theme .speed-unit-large {
     max-width: 100%;
     max-height: 100%;
     filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+    overflow: visible;
 }
 
 /* Vehicle parts - default closed state */
@@ -1016,62 +1017,29 @@ body.light-theme .speed-unit-large {
 .door-rr,
 .frunk-door,
 .trunk-door {
+    transform: none;
     transform-box: fill-box;
     stroke-width: 1px !important;
+    opacity: 0;
 }
 
-.door-fl {
-    transform-origin: 0% 12%;
-}
-
-.door-rl {
-    transform-origin: 0% 8%;
-}
-
-.door-fr {
-    transform-origin: 100% 12%;
-}
-
-.door-rr {
-    transform-origin: 100% 8%;
-}
-
-.frunk-door {
-    transform-origin: 50% 100%;
-}
-
-.trunk-door {
-    transform-origin: 50% 0%;
-}
-
-.door-fl.open {
-    transform: rotate(42deg);
-}
-
-.door-fr.open {
-    transform: rotate(-42deg);
-}
-
-.door-rl.open {
-    transform: rotate(34deg);
-}
-
+.door-fl.open,
+.door-fr.open,
+.door-rl.open,
 .door-rr.open {
-    transform: rotate(-34deg);
+    opacity: 1;
 }
 
-.frunk-door.open {
-    transform: translateY(-8px);
-}
-
+.frunk-door.open,
 .trunk-door.open {
-    transform: translateY(8px);
+    opacity: 1;
 }
 
 /* Headlights active */
 .headlight-left.active,
 .headlight-right.active {
     fill: #ffeb3b !important;
+    stroke: #ffeb3b !important;
     filter: drop-shadow(0 0 12px rgba(255, 235, 59, 0.9));
 }
 
@@ -1079,14 +1047,8 @@ body.light-theme .speed-unit-large {
 .headlight-left.high-beam,
 .headlight-right.high-beam {
     fill: #ffffff !important;
+    stroke: #ffffff !important;
     filter: drop-shadow(0 0 18px rgba(255, 255, 255, 1));
-}
-
-/* Tail lights active (brake) */
-.taillight-left.active,
-.taillight-right.active {
-    fill: #ff4444 !important;
-    filter: drop-shadow(0 0 12px rgba(255, 68, 68, 0.9));
 }
 
 /* Turn signals - blink animation */

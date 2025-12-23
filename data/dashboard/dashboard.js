@@ -594,14 +594,6 @@ function updateVehicleView(state) {
         headlightRight.classList.toggle('fog', state.fog_lights);
     }
 
-    // Tail lights (brake)
-    const taillightLeft = document.querySelector('.taillight-left');
-    const taillightRight = document.querySelector('.taillight-right');
-    if (taillightLeft && taillightRight) {
-        taillightLeft.classList.toggle('active', state.brake_pressed);
-        taillightRight.classList.toggle('active', state.brake_pressed);
-    }
-
     // Turn signals
     const turnSignalFL = document.querySelector('.turn-signal-fl');
     const turnSignalFR = document.querySelector('.turn-signal-fr');
@@ -634,43 +626,6 @@ function updateVehicleView(state) {
         }
     }
 
-    // Charging port
-    const chargePort = document.querySelector('.charge-port');
-    const chargeIcon = document.querySelector('.charge-icon');
-    if (chargePort && chargeIcon) {
-        const isCharging = state.charging || state.charging_port;
-        chargePort.classList.toggle('active', isCharging);
-        chargeIcon.classList.toggle('active', isCharging);
-    }
-
-    // Lock indicator
-    const lockBg = document.querySelector('.lock-bg');
-    const lockIcon = document.querySelector('.lock-icon');
-    if (lockBg && lockIcon) {
-        lockBg.classList.toggle('locked', state.locked);
-        lockBg.classList.toggle('unlocked', !state.locked);
-        lockIcon.classList.toggle('locked', state.locked);
-        lockIcon.classList.toggle('unlocked', !state.locked);
-    }
-
-    // Sentry mode
-    const sentryBg = document.querySelector('.sentry-bg');
-    const sentryEye = document.querySelector('.sentry-eye');
-    const sentryPupil = document.querySelector('.sentry-pupil');
-    if (sentryBg && sentryEye && sentryPupil) {
-        const sentryActive = state.sentry_mode || state.sentry_alert;
-        sentryBg.classList.toggle('active', sentryActive);
-        sentryEye.classList.toggle('active', sentryActive);
-        sentryPupil.classList.toggle('active', sentryActive);
-    }
-
-    // Night mode
-    const nightModeBg = document.querySelector('.night-mode-bg');
-    const nightModeMoon = document.querySelector('.night-mode-moon');
-    if (nightModeBg && nightModeMoon) {
-        nightModeBg.classList.toggle('active', state.night_mode);
-        nightModeMoon.classList.toggle('active', state.night_mode);
-    }
 }
 
 /**
