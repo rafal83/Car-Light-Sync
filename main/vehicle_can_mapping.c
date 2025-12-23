@@ -152,6 +152,15 @@ static void IRAM_ATTR recompute_front_alert(vehicle_state_t *state) {
 }
 
 
+static void IRAM_ATTR recompute_soc(vehicle_state_t *state) {
+  if (!state)
+    return;
+
+  if(state->pack_energy && state->remaining_energy) {
+    UPDATE_AND_SEND_FLOAT(state->soc_percent, state->remaining_energy * 100 / state->pack_energy, state);
+  }
+}
+
 // ============================================================================
 // Mapping signaux -> vehicle_state_t
 // ============================================================================
@@ -313,11 +322,17 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // SOC : ID292BMS_SOC / BMS_socUI
+  // SOC
   // ---------------------------------------------------------------------
-  if (id == 0x292) {
-    if (strcmp(name, "BMS_socUI") == 0) {
+  if (id == 0x352) {
+    if (strcmp(name, "BMS_packEnergy_kWh") == 0) {
+      UPDATE_AND_SEND_FLOAT(state->pack_energy, value, state);
+      recompute_soc_percent(state);
+      return;
+    }
+    if (strcmp(name, "BMS_remainingEnergy3_kWh") == 0) {
       UPDATE_AND_SEND_FLOAT(state->soc_percent, value, state);
+      recompute_soc_percent(state);
       return;
     }
     return;

@@ -65,6 +65,8 @@ typedef struct {
 
   // Energie
   float soc_percent;      // niveau de batterie (%)
+  float pack_energy;
+  float remaining_energy;
   uint8_t charging_cable; // 0/1
   uint8_t charging;       // 0/1
   uint8_t charge_status;
@@ -182,6 +184,9 @@ typedef struct __attribute__((packed)) {
   // Meta
   uint32_t last_update_ms;
 } vehicle_state_ble_park_t;
+
+// Convertit vehicle_state_t en format compact BLE Config
+void vehicle_state_to_ble_config(const vehicle_state_t *src, vehicle_state_ble_config_t *dst);
 
 // Convertit vehicle_state_t en format compact BLE Drive
 void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_drive_t *dst);

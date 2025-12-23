@@ -435,10 +435,10 @@ static void can_event_task(void *pvParameters) {
           vehicle_state_to_ble_config(&current_state, &ble_config_state);
           static uint8_t ble_config_packet[1 + sizeof(vehicle_state_ble_drive_t)];
           ble_config_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_CONFIG, 0);
-          memcpy(ble_config_packet + 1, &ble_config_state, sizeof(vehicle_state_ble_drive_t));
+          memcpy(ble_config_packet + 1, &ble_config_state, sizeof(vehicle_state_ble_config_t));
           esp_err_t ret = ble_api_service_send_vehicle_state(ble_config_packet, sizeof(ble_config_packet));
           if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-            ESP_LOGD(TAG_MAIN, "BLE config mode send failed: %s", esp_err_to_name(ret));
+            ESP_LOGD(TAG_MAIN, "BLE config send failed: %s", esp_err_to_name(ret));
           }
           config_sended = true;
         } else if (is_drive_mode) {
@@ -619,7 +619,7 @@ static void psram_free(void *ptr) {
 }
 #endif
 
-static const char *reset_reason_to_str(esp_reset_reason_t reason) {
+static const char *reset_reason_to_str(int reason) {
   switch (reason) {
   case ESP_RST_POWERON:
     return "POWERON";
@@ -641,6 +641,16 @@ static const char *reset_reason_to_str(esp_reset_reason_t reason) {
     return "BROWNOUT";
   case ESP_RST_SDIO:
     return "SDIO";
+  case ESP_RST_USB:
+    return "USB";
+  case ESP_RST_JTAG:
+    return "JTAG";
+  case ESP_RST_EFUSE:
+    return "EFUSE";
+  case ESP_RST_PWR_GLITCH:
+    return "PWR_GLITCH";
+  case ESP_RST_CPU_LOCKUP:
+    return "CPU_LOCKUP";
   default:
     return "UNKNOWN";
   }
@@ -653,7 +663,7 @@ void app_main(void) {
   cJSON_InitHooks(&hooks);
 #endif
 
-  esp_reset_reason_t reset_reason = esp_reset_reason();
+  int reset_reason = (int)esp_reset_reason();
   ESP_LOGI(TAG_MAIN, "Reset reason: %s (%d)", reset_reason_to_str(reset_reason), reset_reason);
 
   // Default: master/none. SPIFFS can override via /api/espnow/config
@@ -831,7 +841,10 @@ void app_main(void) {
 
   // Log streaming (Server-Sent Events for real-time logs)
   ESP_ERROR_CHECK(log_stream_init());
-  // ESP_ERROR_CHECK(log_stream_enable_file_logging(true));
+  esp_err_t log_file_ret = log_stream_enable_file_logging(true);
+  if (log_file_ret != ESP_OK) {
+    ESP_LOGW(TAG_MAIN, "Log file logging disabled (err=%s)", esp_err_to_name(log_file_ret));
+  }
   ESP_LOGI(TAG_MAIN, "Log streaming initialized");
   
   // WiFi

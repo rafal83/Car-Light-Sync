@@ -2173,55 +2173,6 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID33AUI_rangeSOC
-static const can_signal_def_t signals_MSG_ID33AUI_rangeSOC[] = {
-    {
-        .name       = "UI_expectedRange",
-        .start_bit  = 0,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 1.000000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "UI_idealRange",
-        .start_bit  = 16,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 1.000000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "UI_ratedConsumption",
-        .start_bit  = 32,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.625000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "UI_actualSOC",
-        .start_bit  = 48,
-        .length     = 7,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 1.000000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "UI_usableSOC",
-        .start_bit  = 56,
-        .length     = 7,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 1.000000f,
-        .offset     = 0.000000f,
-    },
-};
-
 // Signaux pour signals_MSG_ID284UIvehicleModes
 static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
     {
@@ -3952,6 +3903,73 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
     },
 };
 
+// Signaux pour signals_MSG_ID352BMS_energyStatus
+static const can_signal_def_t signals_MSG_ID352BMS_energyStatus[] = {
+    {
+        .name       = "BMS_nominalFullPackEnergy",
+        .start_bit  = 0,
+        .length     = 11,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.100000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_nominalEnergyRemaining",
+        .start_bit  = 11,
+        .length     = 11,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.100000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_expectedEnergyRemaining",
+        .start_bit  = 22,
+        .length     = 11,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.100000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_idealEnergyRemaining",
+        .start_bit  = 33,
+        .length     = 11,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.100000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_energyToChargeComplete",
+        .start_bit  = 44,
+        .length     = 11,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.100000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_energyBuffer",
+        .start_bit  = 55,
+        .length     = 8,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.100000f,
+        .offset     = 0.000000f,
+    },
+    {
+        .name       = "BMS_fullChargeComplete",
+        .start_bit  = 63,
+        .length     = 1,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_BOOLEAN,
+        .factor     = 1.000000f,
+        .offset     = 0.000000f,
+    },
+};
+
 // Signaux pour signals_MSG_ID252BMS_powerAvailable
 static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
     {
@@ -4006,55 +4024,6 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.020000f,
-        .offset     = 0.000000f,
-    },
-};
-
-// Signaux pour signals_MSG_ID292BMS_SOC
-static const can_signal_def_t signals_MSG_ID292BMS_SOC[] = {
-    {
-        .name       = "BMS_socMin",
-        .start_bit  = 0,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_socUI",
-        .start_bit  = 10,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_socMax",
-        .start_bit  = 20,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_socAvg",
-        .start_bit  = 30,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BattBeginningOfLifeEnergy292",
-        .start_bit  = 40,
-        .length     = 10,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
         .offset     = 0.000000f,
     },
 };
@@ -5015,12 +4984,6 @@ const can_message_def_t g_can_messages[] = {
         .signal_count = 14,
     },
     {
-        .id           = 0x33A,
-        .name         = "ID33AUI_rangeSOC",
-        .signals      = signals_MSG_ID33AUI_rangeSOC,
-        .signal_count = 5,
-    },
-    {
         .id           = 0x284,
         .name         = "ID284UIvehicleModes",
         .signals      = signals_MSG_ID284UIvehicleModes,
@@ -5051,16 +5014,16 @@ const can_message_def_t g_can_messages[] = {
         .signal_count = 14,
     },
     {
+        .id           = 0x352,
+        .name         = "ID352BMS_energyStatus",
+        .signals      = signals_MSG_ID352BMS_energyStatus,
+        .signal_count = 7,
+    },
+    {
         .id           = 0x252,
         .name         = "ID252BMS_powerAvailable",
         .signals      = signals_MSG_ID252BMS_powerAvailable,
         .signal_count = 6,
-    },
-    {
-        .id           = 0x292,
-        .name         = "ID292BMS_SOC",
-        .signals      = signals_MSG_ID292BMS_SOC,
-        .signal_count = 5,
     },
     {
         .id           = 0x257,
@@ -5094,6 +5057,6 @@ const can_message_def_t g_can_messages[] = {
     },
 };
 
-const uint16_t g_can_message_count = 26;
+const uint16_t g_can_message_count = 25;
 
 #endif // VEHICLE_CAN_UNIFIED_CONFIG_GENERATED_H

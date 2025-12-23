@@ -556,23 +556,28 @@ esp_err_t log_stream_enable_file_logging(bool enable) {
   }
 
   if (enable) {
+    // Ensure logs directory exists (SPIFFS may be freshly formatted).
+    mkdir("/spiffs/logs", 0755);
+
     xSemaphoreTake(log_file_mutex, portMAX_DELAY);
     uint32_t boot_count = log_boot_count_read();
     boot_count          = (boot_count % LOG_ROTATE_BOOT_MAX) + 1;
     log_boot_count_write(boot_count);
     log_file_set_current_path(boot_count);
 
-  FILE *f = fopen(current_log_path, "w");
-  if (f == NULL) {
+    FILE *f = fopen(current_log_path, "w");
+    if (f == NULL) {
+      int err = errno;
+      xSemaphoreGive(log_file_mutex);
+      ESP_LOGE(TAG, "Failed to open log file %s (errno=%d)", current_log_path, err);
+      return ESP_FAIL;
+    }
+    fclose(f);
+    if (log_file_msg_buffer) {
+      xMessageBufferReset(log_file_msg_buffer);
+    }
+    file_logging_enabled = true;
     xSemaphoreGive(log_file_mutex);
-    return ESP_FAIL;
-  }
-  fclose(f);
-  if (log_file_msg_buffer) {
-    xMessageBufferReset(log_file_msg_buffer);
-  }
-  file_logging_enabled = true;
-  xSemaphoreGive(log_file_mutex);
   } else {
     file_logging_enabled = false;
   }

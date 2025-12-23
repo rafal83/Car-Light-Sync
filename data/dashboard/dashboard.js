@@ -402,7 +402,10 @@ function updateDashboard(state) {
  * @param {number} trainType - Train type (0 = RWD, 1 = AWD)
  */
 function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
-    const maxPower = 200; // Maximum power in kW for normalization
+    const fallbackMaxPower = 200; // Fallback when config values are unavailable
+    const rearMaxPower = rearPowerMax_kw > 0 ? rearPowerMax_kw : fallbackMaxPower;
+    const frontMaxPower = frontPowerMax_kw > 0 ? frontPowerMax_kw : fallbackMaxPower;
+    const regenMaxPower = maxRegen_kw > 0 ? maxRegen_kw : fallbackMaxPower;
 
     // Update rear power arc (left side)
     // Two arcs: positive (upwards) and negative (downwards)
@@ -415,7 +418,8 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
 
         // Half arc length: 79.5 (55° in units)
         const halfArc = 79.5;
-        const rearPercent = Math.abs(rearPower) / maxPower;
+        const rearLimit = rearPower >= 0 ? rearMaxPower : regenMaxPower;
+        const rearPercent = Math.abs(rearPower) / rearLimit;
         const rearClamped = Math.max(0, Math.min(1, rearPercent));
         const rearDashOffset = halfArc - (halfArc * rearClamped);
 
@@ -471,7 +475,8 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
 
         // Half arc length: 79.5 (55° in units)
         const halfArc = 79.5;
-        const frontPercent = Math.abs(frontPower) / maxPower;
+        const frontLimit = frontPower >= 0 ? frontMaxPower : regenMaxPower;
+        const frontPercent = Math.abs(frontPower) / frontLimit;
         const frontClamped = Math.max(0, Math.min(1, frontPercent));
         const frontDashOffset = halfArc - (halfArc * frontClamped);
 

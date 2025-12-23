@@ -2608,14 +2608,30 @@ BO_ 280 ID118DriveSystemStatus: 8 VehicleBus
  SG_ DI_trackModeState : 48|2@1+ (1,0) [0|2] ""  Receiver
  SG_ DI_tractionControlMode : 40|3@1+ (1,0) [0|6] ""  Receiver
 
-BO_ 850 ID352BMS_energyStatus: 8 VehicleBus
- SG_ BMS_energyBuffer : 55|8@1+ (0.1,0) [0|25.4] "KWh"  Receiver
- SG_ BMS_energyToChargeComplete : 44|11@1+ (0.1,0) [0|204.6] "KWh"  Receiver
- SG_ BMS_expectedEnergyRemaining : 22|11@1+ (0.1,0) [0|204.6] "KWh"  Receiver
- SG_ BMS_fullChargeComplete : 63|1@1+ (1,0) [0|1] ""  Receiver
- SG_ BMS_idealEnergyRemaining : 33|11@1+ (0.1,0) [0|204.6] "KWh"  Receiver
- SG_ BMS_nominalEnergyRemaining : 11|11@1+ (0.1,0) [0|204.6] "KWh"  Receiver
- SG_ BMS_nominalFullPackEnergy : 0|11@1+ (0.1,0) [0|204.6] "KWh"  Receiver
+BO_ 850 ID352_BMS_EnergyStatusMux: 8 VehicleBus
+ SG_ MUX M : 0|8@1+ (1,0) [0|255] "" Receiver
+ ; --------------------
+ ; MUX 0 : energies (uint16 LE, 25 Wh)
+ ; --------------------
+ SG_ BMS_packEnergy_kWh        m0 : 16|16@1+ (0.025,0) [0|200] "kWh" Receiver
+ SG_ BMS_remainingEnergy_kWh   m0 : 32|16@1+ (0.025,0) [0|200] "kWh" Receiver
+ SG_ BMS_usableEnergy_kWh      m0 : 48|16@1+ (0.025,0) [0|200] "kWh" Receiver
+ ; --------------------
+ ; MUX 1 : buffers / limits
+ ; --------------------
+ SG_ BMS_bufferLow_kWh         m1 : 16|16@1+ (0.025,0) [0|50] "kWh" Receiver
+ SG_ BMS_remainingEnergy2_kWh  m1 : 32|16@1+ (0.025,0) [0|200] "kWh" Receiver
+ SG_ BMS_bufferHigh_kWh        m1 : 48|16@1+ (0.025,0) [0|50] "kWh" Receiver
+ ; --------------------
+ ; MUX 2 : remaining energies (CONFIRMÉ TERRAIN)
+ ; --------------------
+ SG_ BMS_remainingEnergy3_kWh  m2 : 8|16@1+  (0.025,0) [0|200] "kWh" Receiver
+ SG_ BMS_usableEnergy2_kWh     m2 : 24|16@1+ (0.025,0) [0|200] "kWh" Receiver
+
+ SG_ BMS_packParam_const       m2 : 40|8@1+  (1,0) [0|255] "" Receiver
+ SG_ BMS_status_counter        m2 : 48|8@1+  (1,0) [0|255] "" Receiver
+ SG_ BMS_checksum              m2 : 56|8@1+  (1,0) [0|255] "" Receiver
+
 
 BO_ 893 ID37DCP_thermalStatus: 7 VehicleBus
  SG_ CP_acPinTemperature : 8|8@1+ (0.803922,-55) [-55|149.99] "C"  Receiver
