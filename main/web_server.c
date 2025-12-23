@@ -1204,7 +1204,7 @@ static esp_err_t factory_reset_handler(httpd_req_t *req) {
 
 // Handler to update profile settings
 static esp_err_t profile_update_handler(httpd_req_t *req) {
-  char content[BUFFER_SIZE_LARGE]; // Increased to accept settings + default effect
+  char content[BUFFER_SIZE_JSON]; // Increased to accept settings + default effect
   cJSON *root = NULL;
 
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
