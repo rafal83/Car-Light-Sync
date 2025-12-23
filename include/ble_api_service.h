@@ -39,6 +39,9 @@ esp_err_t ble_api_service_stop(void);
  */
 bool ble_api_service_is_connected(void);
 
+bool ble_api_service_config_ack_received(void);
+void ble_api_service_clear_config_ack(void);
+
 /**
  * @brief Envoie l'état du véhicule via BLE (pour le mode dashboard).
  * @param state Pointeur vers la structure vehicle_state_t.

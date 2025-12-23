@@ -44,6 +44,7 @@
 #include "wifi_credentials.h" // Optional WiFi configuration
 #include "wifi_manager.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -64,6 +65,8 @@
 static vehicle_state_t last_vehicle_state = {0};
 static void espnow_test_frame_log(void);
 static bool config_sended = false;
+static vehicle_state_ble_config_t last_ble_config = {0};
+static bool last_ble_config_valid = false;
 
 // Callback for scroll wheel events (called from vehicle_state_apply_signal)
 static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
@@ -136,7 +139,9 @@ static void can_event_task(void *pvParameters) {
   // Counter for periodic BLE dashboard updates (send every 200ms = 4 iterations)
   uint8_t ble_send_counter = 0;
   TickType_t last_state_send_ticks = 0;
+  TickType_t last_config_send_ticks = 0;
   const TickType_t min_state_send_period = pdMS_TO_TICKS(50);
+  const TickType_t config_send_period = pdMS_TO_TICKS(2000);
 
   while (1) {
     // Copy current state
@@ -429,11 +434,21 @@ static void can_event_task(void *pvParameters) {
         // Determine mode based on gear: P=1, R=2, N=3, D=4
         bool is_drive_mode = (current_state.gear == 2 || current_state.gear == 3 || current_state.gear == 4);
 
-        if (!config_sended) {
+        vehicle_state_ble_config_t ble_config_state;
+        vehicle_state_to_ble_config(&current_state, &ble_config_state);
+        size_t config_compare_size = offsetof(vehicle_state_ble_config_t, last_update_ms);
+        TickType_t now_ticks = xTaskGetTickCount();
+        bool config_ack = ble_api_service_config_ack_received();
+        bool config_changed = !last_ble_config_valid ||
+                              (memcmp(&ble_config_state, &last_ble_config, config_compare_size) != 0);
+        if (config_changed) {
+          ble_api_service_clear_config_ack();
+          config_ack = false;
+        }
+        bool config_due = !config_ack && (now_ticks - last_config_send_ticks) >= config_send_period;
+        if (!config_sended || config_changed || config_due) {
           // Send CONFIG mode packet 
-          static vehicle_state_ble_config_t ble_config_state;
-          vehicle_state_to_ble_config(&current_state, &ble_config_state);
-          static uint8_t ble_config_packet[1 + sizeof(vehicle_state_ble_drive_t)];
+          static uint8_t ble_config_packet[1 + sizeof(vehicle_state_ble_config_t)];
           ble_config_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_CONFIG, 0);
           memcpy(ble_config_packet + 1, &ble_config_state, sizeof(vehicle_state_ble_config_t));
           esp_err_t ret = ble_api_service_send_vehicle_state(ble_config_packet, sizeof(ble_config_packet));
@@ -441,7 +456,14 @@ static void can_event_task(void *pvParameters) {
             ESP_LOGD(TAG_MAIN, "BLE config send failed: %s", esp_err_to_name(ret));
           }
           config_sended = true;
-        } else if (is_drive_mode) {
+          if (ret == ESP_OK) {
+            last_ble_config = ble_config_state;
+            last_ble_config_valid = true;
+            last_config_send_ticks = now_ticks;
+          }
+        }
+
+        if (is_drive_mode) {
           // Send DRIVE mode packet (smaller, focused on driving metrics)
           static vehicle_state_ble_drive_t ble_drive_state;
           vehicle_state_to_ble_drive(&current_state, &ble_drive_state);

@@ -21,8 +21,6 @@ static inline int IRAM_ATTR is_latch_open(float raw) {
   return 1;
 }
 
-static uint8_t s_batterySMState = 0;
-
 static uint16_t s_blindspotLeftCm = 0;
 static uint16_t s_blindspotRightCm = 0;
 
@@ -353,10 +351,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // Batterie HV : ID261_12vBattStatus / v12vBattVoltage261
   // ---------------------------------------------------------------------
   if (id == 0x261) {
-    if (strcmp(name, "VCFRONT_batterySMState") == 0) {
-      s_batterySMState = (int)(value + 0.5f);; // 3 Standby
-    }
-    if ((strcmp(name, "v12vBattVoltage261") == 0) && (s_batterySMState == 3)) {
+    if ((strcmp(name, "v12vBattVoltage261") == 0) && value > 10) {
       UPDATE_AND_SEND_FLOAT(state->battery_voltage_LV, value, state);
       return;
     }

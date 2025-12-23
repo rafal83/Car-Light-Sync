@@ -135,7 +135,7 @@ esp_err_t wifi_manager_init(void) {
 static void wifi_apply_power_settings(wifi_mode_t mode) {
   // Reduce TX power to mitigate brownout during WiFi bursts
   // Range is 8..84 (0.25 dBm units). 8 ~= 2 dBm.
-  esp_err_t ret = esp_wifi_set_max_tx_power(8);
+  esp_err_t ret = esp_wifi_set_max_tx_power(20);
   if (ret != ESP_OK) {
     ESP_LOGW(TAG_WIFI, "Failed to set max TX power: %s", esp_err_to_name(ret));
   }

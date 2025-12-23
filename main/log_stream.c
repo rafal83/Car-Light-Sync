@@ -22,8 +22,8 @@ static const char *TAG = "LOG_STREAM";
 #define LOG_BUFFER_SIZE 512
 #define KEEPALIVE_INTERVAL_SEC 30
 #define CHECK_INTERVAL_MS 1000
-#define LOG_FILE_MAX_SIZE (128 * 1024)
-#define LOG_ROTATE_BOOT_MAX 7
+#define LOG_FILE_MAX_SIZE (12 * 1024)
+#define LOG_ROTATE_BOOT_MAX 6
 #define LOG_FILE_MESSAGE_BUFFER_SIZE (LOG_BUFFER_SIZE * 12)
 
 static const char *LOG_BOOT_COUNT_PATH = "/spiffs/logs/boot_count";

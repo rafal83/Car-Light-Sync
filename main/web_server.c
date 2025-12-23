@@ -397,6 +397,16 @@ static esp_err_t status_handler(httpd_req_t *req) {
   cJSON_AddNumberToObject(charge, "pw", current_vehicle_state.charge_power_kw);
   cJSON_AddItemToObject(vehicle, "charge", charge);
 
+  // Energie / puissance
+  cJSON_AddNumberToObject(vehicle, "pe", current_vehicle_state.pack_energy);
+  cJSON_AddNumberToObject(vehicle, "re", current_vehicle_state.remaining_energy);
+  cJSON_AddNumberToObject(vehicle, "rp", current_vehicle_state.rear_power);
+  cJSON_AddNumberToObject(vehicle, "rpl", current_vehicle_state.rear_power_limit);
+  cJSON_AddNumberToObject(vehicle, "fp", current_vehicle_state.front_power);
+  cJSON_AddNumberToObject(vehicle, "fpl", current_vehicle_state.front_power_limit);
+  cJSON_AddNumberToObject(vehicle, "mr", current_vehicle_state.max_regen);
+  cJSON_AddNumberToObject(vehicle, "tt", current_vehicle_state.train_type);
+
   // Batterie et autres
   cJSON_AddNumberToObject(vehicle, "blv", current_vehicle_state.battery_voltage_LV);
   cJSON_AddNumberToObject(vehicle, "bhv", current_vehicle_state.battery_voltage_HV);

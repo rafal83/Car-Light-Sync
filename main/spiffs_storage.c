@@ -3,12 +3,92 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 static bool s_spiffs_initialized = false;
+static const size_t SPIFFS_MIN_OVERHEAD = 8192; // Minimum headroom for metadata/allocation
+
+static void spiffs_delete_matching_files(const char *dir_path, const char *prefix, const char *suffix) {
+  DIR *dir = opendir(dir_path);
+  if (!dir) {
+    return;
+  }
+
+  struct dirent *entry;
+  while ((entry = readdir(dir)) != NULL) {
+    const char *name = entry->d_name;
+    if (!name || strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+      continue;
+    }
+
+    if (prefix && strncmp(name, prefix, strlen(prefix)) != 0) {
+      continue;
+    }
+
+    if (suffix) {
+      size_t name_len = strlen(name);
+      size_t suffix_len = strlen(suffix);
+      if (name_len < suffix_len || strcmp(name + name_len - suffix_len, suffix) != 0) {
+        continue;
+      }
+    }
+
+    char path[96];
+    size_t base_len = strlen(dir_path);
+    size_t name_len = strlen(name);
+    if (base_len + 1 + name_len >= sizeof(path)) {
+      continue;
+    }
+
+    memcpy(path, dir_path, base_len);
+    path[base_len] = '/';
+    memcpy(path + base_len + 1, name, name_len);
+    path[base_len + 1 + name_len] = '\0';
+    unlink(path);
+  }
+
+  closedir(dir);
+}
+
+static esp_err_t spiffs_cleanup_if_low_space(size_t required_bytes) {
+  size_t total = 0, used = 0;
+  if (spiffs_get_stats(&total, &used) != ESP_OK) {
+    return ESP_FAIL;
+  }
+
+  size_t free = total - used;
+  if (free >= required_bytes + SPIFFS_MIN_OVERHEAD) {
+    return ESP_OK;
+  }
+
+  // First, delete rotated logs and boot counter
+  spiffs_delete_matching_files("/spiffs/logs", "logs.", ".txt");
+  unlink("/spiffs/logs/boot_count");
+
+  if (spiffs_get_stats(&total, &used) == ESP_OK) {
+    free = total - used;
+    if (free >= required_bytes + SPIFFS_MIN_OVERHEAD) {
+      return ESP_OK;
+    }
+  }
+
+  // As a last resort, delete audio calibration/config
+  unlink("/spiffs/audio/config.bin");
+  unlink("/spiffs/audio/calibration.bin");
+
+  if (spiffs_get_stats(&total, &used) == ESP_OK) {
+    free = total - used;
+    if (free >= required_bytes + SPIFFS_MIN_OVERHEAD) {
+      return ESP_OK;
+    }
+  }
+
+  return ESP_ERR_NO_MEM;
+}
 
 esp_err_t spiffs_storage_init(void) {
   if (s_spiffs_initialized) {
@@ -87,27 +167,42 @@ esp_err_t spiffs_save_json(const char *path, const char *json_string) {
   spiffs_get_stats(&total, &used);
   size_t free = total - used;
 
-  // SPIFFS needs headroom for metadata plus block allocation
-  const size_t SPIFFS_OVERHEAD = 8192; // Minimum 8 KB margin
-  if (free < len + SPIFFS_OVERHEAD) {
+  if (free < len + SPIFFS_MIN_OVERHEAD) {
+    spiffs_cleanup_if_low_space(len);
+    spiffs_get_stats(&total, &used);
+    free = total - used;
+  }
+
+  if (free < len + SPIFFS_MIN_OVERHEAD) {
     ESP_LOGE(TAG_SPIFFS, "SPIFFS nearly full: need %d bytes + %d overhead, only %d available",
-             len, SPIFFS_OVERHEAD, free);
+             len, SPIFFS_MIN_OVERHEAD, free);
     return ESP_ERR_NO_MEM;
   }
 
   // Create the new file
-  FILE *f = fopen(path, "w");
+  bool retried = false;
+  FILE *f      = fopen(path, "w");
   if (f == NULL) {
-    int err            = errno;
-    const char *err_msg = "Unknown";
-    if (err == ENOMEM) err_msg = "ENOMEM (out of memory)";
-    else if (err == EMFILE) err_msg = "EMFILE (too many open files)";
-    else if (err == ENOSPC) err_msg = "ENOSPC (no space left)";
-    else if (err == ENOENT) err_msg = "ENOENT (directory not found)";
+    int err = errno;
+    if (err == ENOSPC && !retried) {
+      retried = true;
+      spiffs_cleanup_if_low_space(len);
+      spiffs_get_stats(&total, &used);
+      f = fopen(path, "w");
+      err = errno;
+    }
 
-    ESP_LOGE(TAG_SPIFFS, "Failed to open %s: errno=%d (%s), SPIFFS: %d/%d bytes used (%.1f%%)",
-             path, err, err_msg, used, total, total > 0 ? (used * 100.0 / total) : 0);
-    return ESP_FAIL;
+    if (f == NULL) {
+      const char *err_msg = "Unknown";
+      if (err == ENOMEM) err_msg = "ENOMEM (out of memory)";
+      else if (err == EMFILE) err_msg = "EMFILE (too many open files)";
+      else if (err == ENOSPC) err_msg = "ENOSPC (no space left)";
+      else if (err == ENOENT) err_msg = "ENOENT (directory not found)";
+
+      ESP_LOGE(TAG_SPIFFS, "Failed to open %s: errno=%d (%s), SPIFFS: %d/%d bytes used (%.1f%%)",
+               path, err, err_msg, used, total, total > 0 ? (used * 100.0 / total) : 0);
+      return ESP_FAIL;
+    }
   }
 
   size_t written = fwrite(json_string, 1, len, f);
@@ -224,10 +319,28 @@ esp_err_t spiffs_save_blob(const char *path, const void *data, size_t size) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  FILE *f = fopen(path, "wb");
+  size_t total = 0, used = 0;
+  if (spiffs_get_stats(&total, &used) == ESP_OK) {
+    size_t free = total - used;
+    if (free < size + SPIFFS_MIN_OVERHEAD) {
+      spiffs_cleanup_if_low_space(size);
+    }
+  }
+
+  bool retried = false;
+  FILE *f      = fopen(path, "wb");
   if (f == NULL) {
-    ESP_LOGE(TAG_SPIFFS, "Failed to open file %s for writing", path);
-    return ESP_FAIL;
+    int err = errno;
+    if (err == ENOSPC && !retried) {
+      retried = true;
+      spiffs_cleanup_if_low_space(size);
+      f = fopen(path, "wb");
+      err = errno;
+    }
+    if (f == NULL) {
+      ESP_LOGE(TAG_SPIFFS, "Failed to open file %s for writing (errno=%d)", path, err);
+      return ESP_FAIL;
+    }
   }
 
   size_t written = fwrite(data, 1, size, f);

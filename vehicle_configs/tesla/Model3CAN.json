@@ -39852,8 +39852,8 @@
           "min": 0,
           "max": 1,
           "mapping": {
-            "1": "AWD",
-            "0": "RWD"
+            "0": "AWD",
+            "1": "RWD"
           },
           "mux": 1,
           "mux_signal": "GTW_carConfigMultiplexer"

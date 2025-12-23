@@ -63,6 +63,7 @@ static bool notifications_enabled       = false;
 static bool vehicle_state_notifications_enabled = false;
 static uint16_t negotiated_mtu          = 23;
 static bool ble_started                 = false;
+static bool config_ack_received         = false;
 static QueueHandle_t request_queue      = NULL;
 static TaskHandle_t request_task_handle = NULL;
 static char incoming_buffer[BLE_MAX_REQUEST_LEN];
@@ -154,6 +155,7 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
       ble_connected         = true;
       notifications_enabled = false;
       vehicle_state_notifications_enabled = false;
+      config_ack_received   = false;
       negotiated_mtu        = 23;
       incoming_length       = 0;
       ESP_LOGI(TAG_BLE_API, "Client BLE connecte");
@@ -187,6 +189,7 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     ble_connected         = false;
     notifications_enabled = false;
     vehicle_state_notifications_enabled = false;
+    config_ack_received   = false;
     incoming_length       = 0;
     ESP_LOGI(TAG_BLE_API, "Client BLE deconnecte, raison=%d", event->disconnect.reason);
     {
@@ -404,6 +407,20 @@ static void ble_process_request_message(const char *json) {
   cJSON *headers     = cJSON_GetObjectItem(root, "headers");
 
   ESP_LOGD(TAG_BLE_API, "HTTP %s %s", method ? method : "GET", path ? path : "/");
+
+  if (path && (strcmp(path, "/ble/config_ack") == 0 || strcmp(path, "/api/ble/config_ack") == 0)) {
+    config_ack_received = true;
+    cJSON *response = cJSON_CreateObject();
+    cJSON_AddNumberToObject(response, "status", 200);
+    cJSON_AddStringToObject(response, "statusText", "OK");
+    cJSON *headers_json = cJSON_CreateObject();
+    cJSON_AddStringToObject(headers_json, "Content-Type", "application/json");
+    cJSON_AddItemToObject(response, "headers", headers_json);
+    cJSON_AddStringToObject(response, "body", "{\"ok\":true}");
+    ble_send_json_response(response);
+    cJSON_Delete(root);
+    return;
+  }
 
   ble_http_response_t *response = heap_caps_malloc(sizeof(ble_http_response_t), MALLOC_CAP_DEFAULT);
   if (response == NULL) {
@@ -677,6 +694,14 @@ bool ble_api_service_is_connected(void) {
   return ble_connected;
 }
 
+bool ble_api_service_config_ack_received(void) {
+  return config_ack_received;
+}
+
+void ble_api_service_clear_config_ack(void) {
+  config_ack_received = false;
+}
+
 esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size) {
   if (!ble_connected || !vehicle_state_notifications_enabled || ble_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
     return ESP_ERR_INVALID_STATE;
@@ -747,6 +772,13 @@ esp_err_t ble_api_service_stop(void) {
 
 bool ble_api_service_is_connected(void) {
   return false;
+}
+
+bool ble_api_service_config_ack_received(void) {
+  return false;
+}
+
+void ble_api_service_clear_config_ack(void) {
 }
 
 esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size) {

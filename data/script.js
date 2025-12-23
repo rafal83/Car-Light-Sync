@@ -3101,9 +3101,39 @@ async function updateStatus() {
             // Charge
             if (v.charge) {
                 $('v-charging').textContent = v.charge.ch ? t('status.active') : t('status.inactive');
-                $('v-charge').textContent = v.charge.pct?.toFixed(1) + '%';
+                $('v-charge').textContent = v.charge.pct?.toFixed(2) + '%';
                 $('v-charge-power').textContent = v.charge.pw?.toFixed(1) + ' kW';
             }
+            // Energie / puissance
+            const formatNumber = (value, unit) =>
+                Number.isFinite(value) ? value.toFixed(1) + " " + unit : "--";
+            const formatPowerPair = (value, limit) => {
+                const hasValue = Number.isFinite(value);
+                const hasLimit = Number.isFinite(limit) && limit > 0;
+                if (hasValue && hasLimit) {
+                    return value.toFixed(1) + " / " + limit.toFixed(1) + " kW";
+                }
+                if (hasValue) {
+                    return value.toFixed(1) + " kW";
+                }
+                if (hasLimit) {
+                    return limit.toFixed(1) + " kW";
+                }
+                return "--";
+            };
+            const trainTypeLabel = v.tt ? 'RWD' : 'AWD';
+            const frontPowerItem = $('v-front-power-item');
+            if (frontPowerItem) {
+                frontPowerItem.style.display = v.tt ? 'none' : '';
+            }
+            $('v-train-type').textContent = trainTypeLabel;
+            $("v-pack-energy").textContent = formatNumber(v.pe, "kWh");
+            $("v-remaining-energy").textContent = formatNumber(v.re, "kWh");
+            $("v-rear-power").textContent = formatPowerPair(v.rp, v.rpl);
+            if (!v.tt) {
+                $("v-front-power").textContent = formatPowerPair(v.fp, v.fpl);
+            }
+            $("v-max-regen").textContent = formatNumber(v.mr, "kW");
             // Lumières
             if (v.lights) {
                 $('v-headlights').textContent = v.lights.h ? t('status.active') : t('status.inactive');
@@ -3181,6 +3211,7 @@ async function updateStatus() {
                 'v-speed', 'v-gear', 'v-brake', 'v-locked',
                 'v-door-fl', 'v-door-fr', 'v-door-rl', 'v-door-rr', 'v-trunk', 'v-frunk',
                 'v-charging', 'v-charge', 'v-charge-power',
+                'v-train-type', 'v-pack-energy', 'v-remaining-energy', 'v-rear-power', 'v-front-power', 'v-max-regen',
                 'v-headlights', 'v-high-beams', 'v-fog-lights', 'v-turn-signal',
                 'v-battery-lv', 'v-battery-hv', 'v-odometer', 'v-night', 'v-brightness',
                 'v-blindspot-left', 'v-blindspot-right',

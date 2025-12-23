@@ -44,8 +44,8 @@ esp_err_t settings_manager_init(void) {
     // Save default values
     err = settings_manager_save(&s_settings);
     if (err != ESP_OK) {
-      ESP_LOGE(TAG_SETTINGS, "Error saving default parameters");
-      return err;
+      ESP_LOGE(TAG_SETTINGS, "Error saving default parameters (err=%s)", esp_err_to_name(err));
+      ESP_LOGW(TAG_SETTINGS, "Continuing with in-memory defaults; settings won't persist until SPIFFS has space");
     }
   }
 

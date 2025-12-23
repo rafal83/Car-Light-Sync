@@ -164,8 +164,8 @@ void vehicle_state_to_ble_config(const vehicle_state_t *src, vehicle_state_ble_c
   if (!src || !dst) return;
 
   // Dynamique de conduite
-  dst->rear_power_max_kw_x10 = (int16_t)(src->rear_power * 10.0f);
-  dst->front_power_max_kw_x10 = (int16_t)(src->front_power * 10.0f);
+  dst->rear_power_limit_kw_x10 = (uint16_t)(src->rear_power_limit * 10.0f);
+  dst->front_power_limit_kw_x10 = (uint16_t)(src->front_power_limit * 10.0f);
   dst->max_regen_x10 = (uint16_t)(src->max_regen * 10.0f);
 
   // Byte 0: turn signals & brake

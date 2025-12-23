@@ -8,6 +8,7 @@ const usingCapacitor = window.Capacitor?.isNativePlatform() || false;
 
 // BLE Configuration
 const BLE_SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
+const BLE_CHARACTERISTIC_COMMAND_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 const BLE_CHARACTERISTIC_VEHICLE_STATE_UUID = 'c5c9c331-914b-459e-8fcc-c5c91fb54fad'; // New characteristic for vehicle state
 
 // Device name pattern
@@ -15,6 +16,7 @@ const DEVICE_NAME_PREFIX = 'CarLightSync-';
 
 // BLE connection state
 let bleDevice = null;
+let bleCharacteristicCommand = null;
 let bleCharacteristicVehicleState = null;
 let isConnected = false;
 
@@ -41,7 +43,25 @@ const VEHICLE_STATE_DRIVE_SIZE = BLE_PACKET_HEADER_SIZE + VEHICLE_STATE_DRIVE_PA
 let rearPowerMax_kw = 0;
 let frontPowerMax_kw = 0;
 let maxRegen_kw = 0;
-let trainType = 0;
+let train_type = -1; // 1 = RWD, 0 = AWD
+let configAckKey = null;
+let configAckSent = false;
+
+const bleTextEncoder = new TextEncoder();
+
+function sendConfigAck() {
+    if (!bleCharacteristicCommand || configAckSent) {
+        return;
+    }
+    const payload = JSON.stringify({ method: 'POST', path: '/ble/config_ack', body: '' }) + '\n';
+    bleCharacteristicCommand.writeValue(bleTextEncoder.encode(payload))
+        .then(() => {
+            configAckSent = true;
+        })
+        .catch((error) => {
+            console.log('[Dashboard] Config ack failed:', error?.message || error);
+        });
+}
 
 /**
  * Decode BLE CONFIG mode packet (vehicle_state_ble_config_t)
@@ -67,7 +87,13 @@ function decodeVehicleStateConfig(dataView) {
     const flags0 = readUint8();
     const last_update_ms = readUint32();
 
-    trainType = (flags0 & (1<<0)) !== 0;
+    train_type = (flags0 & (1 << 0)) ? 1 : 0;
+    const newAckKey = `${rearPowerMax_kw}|${frontPowerMax_kw}|${maxRegen_kw}|${train_type}`;
+    if (newAckKey !== configAckKey) {
+        configAckKey = newAckKey;
+        configAckSent = false;
+    }
+    sendConfigAck();
 }
 
 /**
@@ -355,6 +381,7 @@ function updateDashboard(state) {
         document.getElementById('odometer-value-park').textContent = Math.round(state.odometer_km) + ' km';
         document.getElementById('battery-lv-park').textContent = state.battery_voltage_LV.toFixed(1) + 'V';
         document.getElementById('gear-display-park').textContent = gearText;
+        document.getElementById('train-type').textContent = train_type === -1 ? '--' : (train_type ? 'RWD' : 'AWD');
 
         // Update vehicle top view visualization
         updateVehicleView(state);
@@ -380,7 +407,7 @@ function updateDashboard(state) {
         document.getElementById('odometer-drive-compact').textContent = Math.round(state.odometer_km) + 'km';
 
         // Power & pedal map indicators
-        updatePowerIndicators(state.rear_power_kw, state.front_power_kw, state.pedal_map, trainType);
+        updatePowerIndicators(state.rear_power_kw, state.front_power_kw, state.pedal_map, train_type);
 
         // Show/hide indicators (only when active)
         updateDriveIndicator('ind-turn-left-drive', state.turn_left);
@@ -399,13 +426,15 @@ function updateDashboard(state) {
  * @param {number} rearPower - Rear motor power in kW (can be negative for regen)
  * @param {number} frontPower - Front motor power in kW (can be negative for regen)
  * @param {number} pedalMap - Pedal map mode (-1=Chill, 0=Standard, 1=Sport)
- * @param {number} trainType - Train type (0 = RWD, 1 = AWD)
+ * @param {number} trainType - Train type (1 = RWD, 0 = AWD)
  */
 function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
     const fallbackMaxPower = 200; // Fallback when config values are unavailable
     const rearMaxPower = rearPowerMax_kw > 0 ? rearPowerMax_kw : fallbackMaxPower;
     const frontMaxPower = frontPowerMax_kw > 0 ? frontPowerMax_kw : fallbackMaxPower;
     const regenMaxPower = maxRegen_kw > 0 ? maxRegen_kw : fallbackMaxPower;
+    const normalizedTrainType = Number(trainType);
+    const isRwd = normalizedTrainType === 1;
 
     // Update rear power arc (left side)
     // Two arcs: positive (upwards) and negative (downwards)
@@ -466,10 +495,16 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
     const frontArcNeg = document.getElementById('power-arc-front-neg');
     const frontValue = document.getElementById('power-front-value');
     if (frontArcPos && frontArcNeg && frontValue) {
-      if(trainType == 0) { // 0 = RWD, no front motor
-        document.getElementById('power-arc-front').style.display = 'none'; // Hide entire
-        document.getElementById('power-front-indicator').style.display = 'none'; // Hide entire
+      const frontArc = document.getElementById('power-arc-front');
+      const frontIndicator = document.getElementById('power-front-indicator');
+
+      if (isRwd) { // 1 = RWD, no front motor
+        if (frontArc) frontArc.style.display = 'none';
+        if (frontIndicator) frontIndicator.style.display = 'none';
       } else {
+        if (frontArc) frontArc.style.display = '';
+        if (frontIndicator) frontIndicator.style.display = '';
+
         const frontRounded = Math.round(frontPower || 0);
         frontValue.textContent = frontRounded;
 
@@ -843,6 +878,10 @@ async function connectBLE() {
         const service = await server.getPrimaryService(BLE_SERVICE_UUID);
         console.log('[Dashboard] Got service');
 
+        // Get command characteristic (for config ack)
+        bleCharacteristicCommand = await service.getCharacteristic(BLE_CHARACTERISTIC_COMMAND_UUID);
+        console.log('[Dashboard] Got command characteristic');
+
         // Get vehicle state characteristic
         bleCharacteristicVehicleState = await service.getCharacteristic(BLE_CHARACTERISTIC_VEHICLE_STATE_UUID);
         console.log('[Dashboard] Got vehicle state characteristic');
@@ -972,7 +1011,10 @@ function onDisconnected() {
     console.log('[Dashboard] BLE disconnected');
     updateConnectionStatus(false);
     bleDevice = null;
+    bleCharacteristicCommand = null;
     bleCharacteristicVehicleState = null;
+    configAckKey = null;
+    configAckSent = false;
 
     // Auto-reconnect after 2 seconds
     setTimeout(connectBLE, 2000);
@@ -1014,6 +1056,9 @@ async function switchToConfig() {
             }
             bleCharacteristicVehicleState.removeEventListener('characteristicvaluechanged', handleVehicleStateNotification);
             bleCharacteristicVehicleState = null;
+            bleCharacteristicCommand = null;
+            configAckKey = null;
+            configAckSent = false;
         }
 
         if (bleDevice) {
