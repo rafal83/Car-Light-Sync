@@ -19,6 +19,12 @@ typedef enum {
   SIGNAL_TYPE_BOOLEAN  = 2
 } signal_type_t;
 
+typedef enum {
+  SIGNAL_MUX_NONE         = 0,
+  SIGNAL_MUX_MULTIPLEXER  = 1,
+  SIGNAL_MUX_MULTIPLEXED  = 2
+} signal_mux_type_t;
+
 // Définition d'un signal DBC (ex: DI_vehicleSpeed, UI_turnSignalLeft, etc.)
 typedef struct can_signal_def_t {
   const char *name;
@@ -28,6 +34,8 @@ typedef struct can_signal_def_t {
   signal_type_t value_type;
   float factor;
   float offset;
+  signal_mux_type_t mux_type;
+  uint16_t mux_value;
 } can_signal_def_t;
 
 // Définition d'un message CAN DBC (ex: ID118DriveSystemStatus)

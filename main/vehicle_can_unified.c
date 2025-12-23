@@ -73,6 +73,15 @@ static uint64_t IRAM_ATTR extract_bits_be(const uint8_t *data, uint8_t start_bit
   return (raw >> shift) & mask;
 }
 
+// IRAM_ATTR: Called for every CAN signal to get raw (unscaled) value
+static uint64_t IRAM_ATTR decode_signal_raw(const can_signal_def_t *sig, const uint8_t *data, uint8_t dlc) {
+  (void)dlc;
+  if (sig->byte_order == BYTE_ORDER_LITTLE_ENDIAN) {
+    return extract_bits_le(data, sig->start_bit, sig->length);
+  }
+  return extract_bits_be(data, sig->start_bit, sig->length);
+}
+
 // IRAM_ATTR: Called for every CAN signal to decode and scale values (~100k-200k times/s)
 static float IRAM_ATTR decode_signal_value(const can_signal_def_t *sig, const uint8_t *data, uint8_t dlc) {
   (void)dlc; // not used here but kept for future extension
@@ -114,10 +123,30 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
     return;
   }
 
+  uint64_t mux_raw = 0;
+  bool has_mux = false;
+  for (uint8_t i = 0; i < msg->signal_count; i++) {
+    const can_signal_def_t *sig = &msg->signals[i];
+    if (sig->mux_type == SIGNAL_MUX_MULTIPLEXER) {
+      mux_raw = decode_signal_raw(sig, frame->data, frame->dlc);
+      has_mux = true;
+      break;
+    }
+  }
+
   for (uint8_t i = 0; i < msg->signal_count; i++) {
     const can_signal_def_t *sig = &msg->signals[i];
 
-    float now                   = decode_signal_value(sig, frame->data, frame->dlc);
+    if (sig->mux_type == SIGNAL_MUX_MULTIPLEXER) {
+      continue;
+    }
+    if (sig->mux_type == SIGNAL_MUX_MULTIPLEXED) {
+      if (!has_mux || mux_raw != sig->mux_value) {
+        continue;
+      }
+    }
+
+    float now = decode_signal_value(sig, frame->data, frame->dlc);
 
     history_set(msg->id, i, now);
 

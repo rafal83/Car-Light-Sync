@@ -76,6 +76,58 @@ def normalize_keep_ids(values) -> set:
     return out
 
 
+def _normalize_mux_value(value):
+    if isinstance(value, str):
+        raw = value.strip()
+        if raw.upper() == "M":
+            return "M"
+        lowered = raw.lower()
+        if lowered.startswith("mux"):
+            lowered = lowered[3:]
+        elif lowered.startswith("m"):
+            lowered = lowered[1:]
+        if lowered.startswith("0x"):
+            return int(lowered, 16)
+        if lowered.isdigit():
+            return int(lowered)
+        return raw
+    return value
+
+
+def get_mux_field(sig):
+    if sig.get("is_multiplexer"):
+        return "M"
+    for key in ("mux", "multiplexer", "mux_value", "multiplexer_id", "multiplexer_ids", "mux_ids"):
+        if key in sig:
+            return sig.get(key)
+    return None
+
+
+def expand_mux_signals(sig):
+    mux = _normalize_mux_value(get_mux_field(sig))
+    if mux is None or (isinstance(mux, str) and mux.upper() == "M"):
+        return [sig]
+    if isinstance(mux, list):
+        expanded = []
+        for value in mux:
+            clone = dict(sig)
+            clone["mux"] = _normalize_mux_value(value)
+            expanded.append(clone)
+        return expanded
+    clone = dict(sig)
+    clone["mux"] = mux
+    return [clone]
+
+
+def mux_info(sig):
+    mux = _normalize_mux_value(get_mux_field(sig))
+    if mux is None:
+        return "SIGNAL_MUX_NONE", 0
+    if isinstance(mux, str) and mux.upper() == "M":
+        return "SIGNAL_MUX_MULTIPLEXER", 0
+    return "SIGNAL_MUX_MULTIPLEXED", int(mux)
+
+
 def generate(config_json_path: Path, out_header_path: Path) -> None:
     data = json.loads(config_json_path.read_text(encoding="utf-8"))
 
@@ -118,11 +170,15 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
         if not sigs:
             continue
 
+        expanded_sigs = []
+        for sig in sigs:
+            expanded_sigs.extend(expand_mux_signals(sig))
+
         msg_ident = f"MSG_{c_ident(msg_name)}"
         sig_array_name = f"signals_{msg_ident}"
 
-        signal_arrays.append((sig_array_name, sigs))
-        message_defs.append((msg_ident, msg_name, msg_id, sig_array_name, len(sigs)))
+        signal_arrays.append((sig_array_name, expanded_sigs))
+        message_defs.append((msg_ident, msg_name, msg_id, sig_array_name, len(expanded_sigs)))
 
     for sig_array_name, sigs in signal_arrays:
         lines.append(f"// Signaux pour {sig_array_name}")
@@ -135,6 +191,7 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
             value_type = VALUE_TYPE_MAP.get(sig.get("value_type", "unsigned"), "SIGNAL_TYPE_UNSIGNED")
             factor = sig.get("factor", 1.0)
             offset = sig.get("offset", 0.0)
+            mux_type, mux_value = mux_info(sig)
 
             lines.append("    {")
             lines.append(f'        .name       = "{s_name}",')
@@ -144,6 +201,8 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
             lines.append(f"        .value_type = {value_type},")
             lines.append(f"        .factor     = {float(factor):.6f}f,")
             lines.append(f"        .offset     = {float(offset):.6f}f,")
+            lines.append(f"        .mux_type   = {mux_type},")
+            lines.append(f"        .mux_value  = {int(mux_value)},")
             lines.append("    },")
         lines.append("};")
         lines.append("")

@@ -16,6 +16,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearLatchStatus",
@@ -25,6 +27,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontLatchSwitch",
@@ -34,6 +38,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearLatchSwitch",
@@ -43,6 +49,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontHandlePulled",
@@ -52,6 +60,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearHandlePulled",
@@ -61,6 +71,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontRelActuatorSwitch",
@@ -70,6 +82,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearRelActuatorSwitch",
@@ -79,6 +93,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontHandlePWM",
@@ -88,6 +104,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearHandlePWM",
@@ -97,6 +115,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontIntSwitchPressed",
@@ -106,6 +126,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearIntSwitchPressed",
@@ -115,6 +137,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_mirrorTiltXPosition",
@@ -124,6 +148,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.020000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_mirrorTiltYPosition",
@@ -133,6 +159,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.020000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_mirrorState",
@@ -142,6 +170,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_mirrorFoldState",
@@ -151,6 +181,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_mirrorRecallState",
@@ -160,6 +192,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_mirrorHeatState",
@@ -169,6 +203,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_mirrorDipped",
@@ -178,6 +214,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontHandlePulledPersist",
@@ -187,6 +225,8 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -200,6 +240,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_rearLatchStatus",
@@ -209,6 +251,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_frontLatchSwitch",
@@ -218,6 +262,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_rearLatchSwitch",
@@ -227,6 +273,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_frontHandlePulled",
@@ -236,6 +284,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_rearHandlePulled",
@@ -245,6 +295,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_frontRelActuatorSwitch",
@@ -254,6 +306,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_rearRelActuatorSwitch",
@@ -263,6 +317,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_frontHandlePWM",
@@ -272,6 +328,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_rearHandlePWM",
@@ -281,6 +339,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_reservedForBackCompat",
@@ -290,6 +350,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_frontHandlePulledPersist",
@@ -299,6 +361,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_frontIntSwitchPressed",
@@ -308,6 +372,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_rearIntSwitchPressed",
@@ -317,6 +383,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_mirrorTiltXPosition",
@@ -326,6 +394,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.020000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_mirrorTiltYPosition",
@@ -335,6 +405,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.020000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_mirrorState",
@@ -344,6 +416,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_mirrorFoldState",
@@ -353,6 +427,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_trunkLatchStatus",
@@ -362,6 +438,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_mirrorRecallState",
@@ -371,6 +449,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCRIGHT_mirrorDipped",
@@ -380,6 +460,8 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -393,6 +475,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor2RawDistData",
@@ -402,6 +486,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor3RawDistData",
@@ -411,6 +497,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor4RawDistData",
@@ -420,6 +508,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor5RawDistData",
@@ -429,6 +519,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor6RawDistData",
@@ -438,6 +530,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiFrontCounter",
@@ -447,6 +541,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiFrontChecksum",
@@ -456,6 +552,8 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -469,6 +567,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_hvChargeStatus",
@@ -478,6 +578,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_gridConfig",
@@ -487,6 +589,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgPHAEnable",
@@ -496,6 +600,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgPHBEnable",
@@ -505,6 +611,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgPHCEnable",
@@ -514,6 +622,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgInstantAcPowerAvailable",
@@ -523,6 +633,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.100000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgMaxAcPowerAvailable",
@@ -532,6 +644,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.100000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgPHALineCurrentRequest",
@@ -541,6 +655,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.100000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgPHBLineCurrentRequest",
@@ -550,6 +666,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.100000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgPHCLineCurrentRequest",
@@ -559,6 +677,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.100000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chgPwmEnableLine",
@@ -568,6 +688,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_chargeShutdownRequest",
@@ -577,6 +699,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PCS_hwVariantType",
@@ -586,6 +710,8 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -599,6 +725,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_frontFogSwitch",
@@ -608,6 +736,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_summonActive",
@@ -617,6 +747,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_frunkRequest",
@@ -626,6 +758,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_wiperMode",
@@ -635,6 +769,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_steeringBacklightEnabled",
@@ -644,6 +780,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_steeringButtonMode",
@@ -653,6 +791,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_walkUpUnlock",
@@ -662,6 +802,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_walkAwayLock",
@@ -671,6 +813,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_unlockOnPark",
@@ -680,6 +824,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_globalUnlockOn",
@@ -689,6 +835,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_childDoorLockOn",
@@ -698,6 +846,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_lockRequest",
@@ -707,6 +857,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_alarmEnabled",
@@ -716,6 +868,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_intrusionSensorOn",
@@ -725,6 +879,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_stop12vSupport",
@@ -734,6 +890,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_rearFogSwitch",
@@ -743,6 +901,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_mirrorFoldRequest",
@@ -752,6 +912,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_mirrorHeatRequest",
@@ -761,6 +923,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_remoteStartRequest",
@@ -770,6 +934,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_seeYouHomeLightingOn",
@@ -779,6 +945,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_powerOff",
@@ -788,6 +956,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_displayBrightnessLevel",
@@ -797,6 +967,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.500000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_ambientLightingEnabled",
@@ -806,6 +978,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_autoHighBeamEnabled",
@@ -815,6 +989,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_frontLeftSeatHeatReq",
@@ -824,6 +1000,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_frontRightSeatHeatReq",
@@ -833,6 +1011,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_rearLeftSeatHeatReq",
@@ -842,6 +1022,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_rearCenterSeatHeatReq",
@@ -851,6 +1033,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_rearRightSeatHeatReq",
@@ -860,6 +1044,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_autoFoldMirrorsOn",
@@ -869,6 +1055,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_mirrorDipOnReverse",
@@ -878,6 +1066,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_remoteClosureRequest",
@@ -887,6 +1077,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_wiperRequest",
@@ -896,6 +1088,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_domeLightSwitch",
@@ -905,6 +1099,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_honkHorn",
@@ -914,6 +1110,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_driveStateRequest",
@@ -923,6 +1121,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_rearWindowLockout",
@@ -932,6 +1132,8 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -945,6 +1147,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor8RawDistData",
@@ -954,6 +1158,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor9RawDistData",
@@ -963,6 +1169,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor10RawDistData",
@@ -972,6 +1180,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor11RawDistData",
@@ -981,6 +1191,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiSensor12RawDistData",
@@ -990,6 +1202,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiRearCounter",
@@ -999,6 +1213,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "PARK_sdiRearChecksum",
@@ -1008,6 +1224,8 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -1021,6 +1239,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_insertEnableLine",
@@ -1030,6 +1250,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_chargeCablePresent",
@@ -1039,6 +1261,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_chargeCableSecured",
@@ -1048,6 +1272,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_latchState",
@@ -1057,6 +1283,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_permanentPowerRequest",
@@ -1066,6 +1294,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_latch2State",
@@ -1075,6 +1305,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_chargeDoorOpen",
@@ -1084,6 +1316,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_doorControlState",
@@ -1093,6 +1327,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_chargeCableState",
@@ -1102,6 +1338,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_latchControlState",
@@ -1111,6 +1349,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_latch2ControlState",
@@ -1120,6 +1360,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_apsVoltage",
@@ -1129,6 +1371,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.071569f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_doorButtonPressed",
@@ -1138,6 +1382,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_ledColor",
@@ -1147,6 +1393,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_swcanRelayClosed",
@@ -1156,6 +1404,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_UHF_controlState",
@@ -1165,6 +1415,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_UHF_handleFound",
@@ -1174,6 +1426,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_doorOpenRequested",
@@ -1183,6 +1437,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_faultLineSensed",
@@ -1192,6 +1448,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_inductiveDoorState",
@@ -1201,6 +1459,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_inductiveSensorState",
@@ -1210,6 +1470,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_chargeDoorOpenUI",
@@ -1219,6 +1481,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_vehicleUnlockRequest",
@@ -1228,6 +1492,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_numAlertsSet",
@@ -1237,6 +1503,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_coldWeatherMode",
@@ -1246,6 +1514,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_hvInletExposed",
@@ -1255,6 +1525,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_latchEngaged",
@@ -1264,6 +1536,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "CP_coverClosed",
@@ -1273,6 +1547,8 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -1286,6 +1562,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_blindSpotRearLeft",
@@ -1295,6 +1573,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_blindSpotRearRight",
@@ -1304,6 +1584,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_fusedSpeedLimit",
@@ -1313,6 +1595,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 5.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_suppressSpeedWarning",
@@ -1322,6 +1606,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_summonObstacle",
@@ -1331,6 +1617,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_summonClearedGate",
@@ -1340,6 +1628,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_visionOnlySpeedLimit",
@@ -1349,6 +1639,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 5.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_heaterState",
@@ -1358,6 +1650,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_forwardCollisionWarning",
@@ -1367,6 +1661,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_autoparkReady",
@@ -1376,6 +1672,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_autoParked",
@@ -1385,6 +1683,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_autoparkWaitingForBrake",
@@ -1394,6 +1694,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_summonFwdLeashReached",
@@ -1403,6 +1705,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_summonRvsLeashReached",
@@ -1412,6 +1716,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_sideCollisionAvoid",
@@ -1421,6 +1727,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_sideCollisionWarning",
@@ -1430,6 +1738,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_sideCollisionInhibit",
@@ -1439,6 +1749,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_csaState",
@@ -1448,6 +1760,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_laneDepartureWarning",
@@ -1457,6 +1771,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_fleetSpeedState",
@@ -1466,6 +1782,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_autopilotHandsOnState",
@@ -1475,6 +1793,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_autoLaneChangeState",
@@ -1484,6 +1804,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_summonAvailable",
@@ -1493,6 +1815,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_statusCounter",
@@ -1502,6 +1826,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DAS_statusChecksum",
@@ -1511,6 +1837,8 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -1524,6 +1852,8 @@ static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "IBST_statusCounter",
@@ -1533,6 +1863,8 @@ static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "IBST_iBoosterStatus",
@@ -1542,6 +1874,8 @@ static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "IBST_driverBrakeApply",
@@ -1551,6 +1885,8 @@ static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "IBST_internalState",
@@ -1560,6 +1896,8 @@ static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "IBST_sInputRodDriver",
@@ -1569,6 +1907,8 @@ static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.015625f,
         .offset     = -5.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -1582,6 +1922,8 @@ static const can_signal_def_t signals_MSG_ID3F3UI_odo[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.100000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -1595,6 +1937,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_indicatorRightRequest",
@@ -1604,6 +1948,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_hazardLightRequest",
@@ -1613,6 +1959,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_ambientLightingBrightnes",
@@ -1622,6 +1970,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.500000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_switchLightingBrightness",
@@ -1631,6 +1981,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.500000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_courtesyLightingRequest",
@@ -1640,6 +1992,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_approachLightingRequest",
@@ -1649,6 +2003,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_seeYouHomeLightingReq",
@@ -1658,6 +2014,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_hazardSwitchBacklight",
@@ -1667,6 +2025,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_lowBeamLeftStatus",
@@ -1676,6 +2036,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_lowBeamRightStatus",
@@ -1685,6 +2047,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_highBeamLeftStatus",
@@ -1694,6 +2058,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_highBeamRightStatus",
@@ -1703,6 +2069,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_DRLLeftStatus",
@@ -1712,6 +2080,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_DRLRightStatus",
@@ -1721,6 +2091,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_fogLeftStatus",
@@ -1730,6 +2102,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_fogRightStatus",
@@ -1739,6 +2113,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_sideMarkersStatus",
@@ -1748,6 +2124,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_sideRepeaterLeftStatus",
@@ -1757,6 +2135,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_sideRepeaterRightStatus",
@@ -1766,6 +2146,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_turnSignalLeftStatus",
@@ -1775,6 +2157,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_turnSignalRightStatus",
@@ -1784,6 +2168,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_parkLeftStatus",
@@ -1793,6 +2179,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_parkRightStatus",
@@ -1802,6 +2190,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_highBeamSwitchActive",
@@ -1811,6 +2201,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_simLatchingStalk",
@@ -1820,6 +2212,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_lowBeamsOnForDRL",
@@ -1829,6 +2223,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_lowBeamsCalibrated",
@@ -1838,6 +2234,8 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -1851,6 +2249,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_notEnoughPowerForDrive",
@@ -1860,6 +2260,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_notEnoughPowerForSupport",
@@ -1869,6 +2271,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_preconditionAllowed",
@@ -1878,6 +2282,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_updateAllowed",
@@ -1887,6 +2293,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_activeHeatingWorthwhile",
@@ -1896,6 +2304,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_cpMiaOnHvs",
@@ -1905,6 +2315,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_pcsPwmEnabled",
@@ -1914,6 +2326,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_contactorState",
@@ -1923,6 +2337,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_uiChargeStatus",
@@ -1932,6 +2348,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_ecuLogUploadRequest",
@@ -1941,6 +2359,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_hvState",
@@ -1950,6 +2370,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_isolationResistance",
@@ -1959,6 +2381,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 10.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_chargeRequest",
@@ -1968,6 +2392,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_keepWarmRequest",
@@ -1977,6 +2403,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_state",
@@ -1986,6 +2414,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_diLimpRequest",
@@ -1995,6 +2425,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_okToShipByAir",
@@ -2004,6 +2436,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_okToShipByLand",
@@ -2013,6 +2447,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_chgPowerAvailable",
@@ -2022,6 +2458,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.125000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_chargeRetryCount",
@@ -2031,6 +2469,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_smStateRequest",
@@ -2040,6 +2480,8 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -2053,6 +2495,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 20.000000f,
         .offset     = 20.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_pedalMap",
@@ -2062,6 +2506,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_systemTorqueLimit",
@@ -2071,6 +2517,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 100.000000f,
         .offset     = 4000.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_closureConfirmed",
@@ -2080,6 +2528,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_speedLimit",
@@ -2089,6 +2539,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 50.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_regenTorqueMax",
@@ -2098,6 +2550,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.500000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_limitMode",
@@ -2107,6 +2561,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_motorOnMode",
@@ -2116,6 +2572,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_wasteMode",
@@ -2125,6 +2583,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_wasteModeRegenLimit",
@@ -2134,6 +2594,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_stoppingMode",
@@ -2143,6 +2605,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_DIAppSliderDebug",
@@ -2152,6 +2616,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_powertrainControlCounter",
@@ -2161,6 +2627,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UI_powertrainControlChecksum",
@@ -2170,6 +2638,8 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -2183,6 +2653,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UItransportMode284",
@@ -2192,6 +2664,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIshowroomMode284",
@@ -2201,6 +2675,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIserviceMode284",
@@ -2210,6 +2686,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIisDelivered284",
@@ -2219,6 +2697,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIsentryMode284",
@@ -2228,6 +2708,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIhomelinkV2Command0284",
@@ -2237,6 +2719,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIhomelinkV2Command1284",
@@ -2246,6 +2730,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIhomelinkV2Command2284",
@@ -2255,6 +2741,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIcarWashModeRequest284",
@@ -2264,6 +2752,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIvaletMode284",
@@ -2273,6 +2763,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "UIgameMode284",
@@ -2282,6 +2774,8 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -2295,6 +2789,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXER,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_5VARailStable",
@@ -2304,6 +2800,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_frunkLatchStatus",
@@ -2313,6 +2811,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_iBoosterWakeLine",
@@ -2322,6 +2822,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_tempCompTargetVoltage",
@@ -2331,6 +2833,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.010000f,
         .offset     = 9.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_5VBRailStable",
@@ -2340,6 +2844,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_epasWakeLine",
@@ -2349,6 +2855,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_12VARailStable",
@@ -2358,6 +2866,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_iBoosterStateDBG",
@@ -2367,6 +2877,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_12VBRailStable",
@@ -2376,6 +2888,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_railAState",
@@ -2385,6 +2899,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_homelinkV2Response0",
@@ -2394,6 +2910,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_maxEvapHeatRejection",
@@ -2403,6 +2921,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 65.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_railBState",
@@ -2412,6 +2932,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_vehicleStatusDBG",
@@ -2421,6 +2943,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_wiperSpeed",
@@ -2430,6 +2954,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_ChargePumpVoltageStable",
@@ -2439,6 +2965,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_PEResetLineState",
@@ -2448,6 +2976,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_HSDInitCompleteU13",
@@ -2457,6 +2987,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_HSDInitCompleteU16",
@@ -2466,6 +2998,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_wiperPosition",
@@ -2475,6 +3009,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_chargeNeeded",
@@ -2484,6 +3020,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_PCSMia",
@@ -2493,6 +3031,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_IBSFault",
@@ -2502,6 +3042,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_12VOverchargeCounter",
@@ -2511,6 +3053,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_batterySMState",
@@ -2520,6 +3064,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_homelinkV2Response1",
@@ -2529,6 +3075,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_minEvapHeatRejection",
@@ -2538,6 +3086,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 10.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_vbatMonitorVoltage",
@@ -2547,6 +3097,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.005444f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_wiperState",
@@ -2556,6 +3108,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_crashDetectedType",
@@ -2565,6 +3119,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_voltageDropCounter",
@@ -2574,6 +3130,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_crashState",
@@ -2583,6 +3141,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_crashUnlockOverrideSet",
@@ -2592,6 +3152,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_freezeEvapITerm",
@@ -2601,6 +3163,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_homelinkV2Response2",
@@ -2610,6 +3174,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_timeSpentSleeping",
@@ -2619,6 +3185,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_voltageFloorReachedCount",
@@ -2628,6 +3196,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_airCompressorStatus",
@@ -2637,6 +3207,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_isEvapOperationAllowed",
@@ -2646,6 +3218,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_chillerDemandActive",
@@ -2655,6 +3229,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_compPerfRecoveryLimited",
@@ -2664,6 +3240,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_AS8510Voltage",
@@ -2673,6 +3251,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.005444f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_headlightLeftVPosition",
@@ -2682,6 +3262,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_hvacModeNotAttainable",
@@ -2691,6 +3273,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_voltageProfile",
@@ -2700,6 +3284,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_hasLowRefrigerant",
@@ -2709,6 +3295,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_isColdStartRunning",
@@ -2718,6 +3306,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_reverseBatteryFault",
@@ -2727,6 +3317,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_isHeatPumpOilPurgeActive",
@@ -2736,6 +3328,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_homelinkV2Response3",
@@ -2745,6 +3339,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_pressureRefrigSuction",
@@ -2754,6 +3350,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.125000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_silentWakeIBSCurrent",
@@ -2763,6 +3361,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.100000f,
         .offset     = -204.700000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_sleepCurrent",
@@ -2772,6 +3372,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.100000f,
         .offset     = -204.700000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_headlightRightVPosition",
@@ -2781,6 +3383,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_homelinkV2Response4",
@@ -2790,6 +3394,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_pressureRefrigDischarge",
@@ -2799,6 +3405,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.125000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_vbatProt",
@@ -2808,6 +3416,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.005444f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 5,
     },
     {
         .name       = "VCFRONT_shortedCellFaultCounter",
@@ -2817,6 +3427,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "VCFRONT_frunkInteriorRelSwitch",
@@ -2826,6 +3438,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_homelinkCommStatus",
@@ -2835,6 +3449,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_hvacPerfTestCommand",
@@ -2844,6 +3460,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_anyClosureOpen",
@@ -2853,6 +3471,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_anyDoorOpen",
@@ -2862,6 +3482,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_coolantFillRoutineStatus",
@@ -2871,6 +3493,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_hornOn",
@@ -2880,6 +3504,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_radarHeaterState",
@@ -2889,6 +3515,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_refrigFillRoutineStatus",
@@ -2898,6 +3526,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "VCFRONT_passengerBuckleStatus",
@@ -2907,6 +3537,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_frunkLatchType",
@@ -2916,6 +3548,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_headlampLeftFanStatus",
@@ -2925,6 +3559,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_headlampRightFanStatus",
@@ -2934,6 +3570,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_frunkAccessPost",
@@ -2943,6 +3581,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_isActiveHeatingBattery",
@@ -2952,6 +3592,8 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
 };
 
@@ -2965,6 +3607,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXER,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_hornSwitchPressed",
@@ -2974,6 +3618,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_hazardButtonPressed",
@@ -2983,6 +3629,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcLeftTiltRight",
@@ -2992,6 +3640,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_brakeSwitchPressed",
@@ -3001,6 +3651,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rightMirrorTilt",
@@ -3010,6 +3662,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcLeftPressed",
@@ -3019,6 +3673,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_frontSeatTrackBack",
@@ -3028,6 +3684,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcRightTiltLeft",
@@ -3037,6 +3695,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_frontSeatTrackForward",
@@ -3046,6 +3706,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcRightTiltRight",
@@ -3055,6 +3717,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_frontSeatTiltDown",
@@ -3064,6 +3728,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcRightPressed",
@@ -3073,6 +3739,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_frontSeatTiltUp",
@@ -3082,6 +3750,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcLeftTiltLeft",
@@ -3091,6 +3761,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_frontSeatLiftDown",
@@ -3100,6 +3772,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcLeftScrollTicks",
@@ -3109,6 +3783,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_frontSeatLiftUp",
@@ -3118,6 +3794,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontSeatBackrestBack",
@@ -3127,6 +3805,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontSeatBackrestForward",
@@ -3136,6 +3816,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontSeatLumbarDown",
@@ -3145,6 +3827,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcRightScrollTicks",
@@ -3154,6 +3838,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_frontSeatLumbarUp",
@@ -3163,6 +3849,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontSeatLumbarIn",
@@ -3172,6 +3860,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontSeatLumbarOut",
@@ -3181,6 +3871,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackUpLF",
@@ -3190,6 +3882,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowUpLR",
@@ -3199,6 +3893,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowAutoUpLR",
@@ -3208,6 +3904,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoUpLF",
@@ -3217,6 +3915,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowDownLR",
@@ -3226,6 +3926,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackDownLF",
@@ -3235,6 +3937,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowAutoDownLR",
@@ -3244,6 +3948,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoDownLF",
@@ -3253,6 +3959,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_2RowSeatReclineSwitch",
@@ -3262,6 +3970,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackUpLR",
@@ -3271,6 +3981,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_2RowSeatCenterSwitch",
@@ -3280,6 +3992,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoUpLR",
@@ -3289,6 +4003,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_2RowSeatLeftFoldFlatSwitc",
@@ -3298,6 +4014,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackDownLR",
@@ -3307,6 +4025,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_2RowSeatRightFoldFlatSwit",
@@ -3316,6 +4036,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoDownLR",
@@ -3325,6 +4047,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_2RowSeatBothFoldFlatSwitc",
@@ -3334,6 +4058,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackUpRF",
@@ -3343,6 +4069,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoUpRF",
@@ -3352,6 +4080,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcLeftDoublePress",
@@ -3361,6 +4091,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackDownRF",
@@ -3370,6 +4102,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_swcRightDoublePress",
@@ -3379,6 +4113,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoDownRF",
@@ -3388,6 +4124,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackUpRR",
@@ -3397,6 +4135,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoUpRR",
@@ -3406,6 +4146,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackDownRR",
@@ -3415,6 +4157,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_btnWindowSwPackAutoDownRR",
@@ -3424,6 +4168,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontBuckleSwitch",
@@ -3433,6 +4179,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_frontOccupancySwitch",
@@ -3442,6 +4190,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearLeftBuckleSwitch",
@@ -3451,6 +4201,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearCenterOccupancySwitch",
@@ -3460,6 +4212,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearLeftOccupancySwitch",
@@ -3469,6 +4223,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearRightOccupancySwitch",
@@ -3478,6 +4234,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_brakePressed",
@@ -3487,6 +4245,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearHVACButtonPressed",
@@ -3496,6 +4256,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCLEFT_rearCenterBuckleSwitch",
@@ -3505,6 +4267,8 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
 };
 
@@ -3518,6 +4282,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXER,
+        .mux_value  = 0,
     },
     {
         .name       = "v12vBattAH261",
@@ -3527,6 +4293,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.005000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_voltageProfile",
@@ -3536,6 +4304,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_IBSFault",
@@ -3545,6 +4315,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_batterySupportRequest",
@@ -3554,6 +4326,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_batterySMState",
@@ -3563,6 +4337,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_12VOverchargeCounter",
@@ -3572,6 +4348,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_targetCurrent",
@@ -3581,6 +4359,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.125000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_voltageDropCounter",
@@ -3590,6 +4370,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_isVehicleSupported",
@@ -3599,6 +4381,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_shortedCellFaultCounter",
@@ -3608,6 +4392,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "v12vBattCurrent261",
@@ -3617,6 +4403,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.005000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_IBSCurrent",
@@ -3626,6 +4414,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.005000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "v12vBattTemp261",
@@ -3635,6 +4425,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.010000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "VCFRONT_silentWakeIBSCurrent",
@@ -3644,15 +4436,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.100000f,
         .offset     = -204.700000f,
-    },
-    {
-        .name       = "v12vBattVoltage261",
-        .start_bit  = 32,
-        .length     = 12,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.005444f,
-        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_12VBatteryTargetVoltage",
@@ -3662,6 +4447,19 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.010000f,
         .offset     = 9.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
+    },
+    {
+        .name       = "v12vBattVoltage261",
+        .start_bit  = 32,
+        .length     = 12,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.005444f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_firstChargeOTA",
@@ -3671,6 +4469,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_PCSMia",
@@ -3680,6 +4480,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_firstChargePOR",
@@ -3689,6 +4491,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_chargeNeeded",
@@ -3698,6 +4502,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_good12VforUpdate",
@@ -3707,6 +4513,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_LVLoadRequest",
@@ -3716,6 +4524,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_voltageFloorReachedCount",
@@ -3725,6 +4535,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_reverseBatteryFault",
@@ -3734,6 +4546,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_LVBatterySupported",
@@ -3743,6 +4557,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_LVBatteryDisconnected",
@@ -3752,6 +4568,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "VCFRONT_12VBatteryStatusCounter",
@@ -3761,6 +4579,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "VCFRONT_12VBatteryStatusChecksum",
@@ -3770,6 +4590,8 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -3783,6 +4605,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_systemStatusCounter",
@@ -3792,6 +4616,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_driveBlocked",
@@ -3801,6 +4627,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_systemState",
@@ -3810,6 +4638,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_brakePedalState",
@@ -3819,6 +4649,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_gear",
@@ -3828,6 +4660,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_regenLight",
@@ -3837,6 +4671,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_immobilizerState",
@@ -3846,6 +4682,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_accelPedalPos",
@@ -3855,6 +4693,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.400000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_tractionControlMode",
@@ -3864,6 +4704,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_epbRequest",
@@ -3873,6 +4715,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_proximity",
@@ -3882,6 +4726,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_keepDrivePowerStateRequest",
@@ -3891,6 +4737,8 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_trackModeState",
@@ -3900,73 +4748,144 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
-// Signaux pour signals_MSG_ID352BMS_energyStatus
-static const can_signal_def_t signals_MSG_ID352BMS_energyStatus[] = {
+// Signaux pour signals_MSG_ID352_BMS_EnergyStatusMux
+static const can_signal_def_t signals_MSG_ID352_BMS_EnergyStatusMux[] = {
     {
-        .name       = "BMS_nominalFullPackEnergy",
+        .name       = "MUX",
         .start_bit  = 0,
-        .length     = 11,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_nominalEnergyRemaining",
-        .start_bit  = 11,
-        .length     = 11,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_expectedEnergyRemaining",
-        .start_bit  = 22,
-        .length     = 11,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_idealEnergyRemaining",
-        .start_bit  = 33,
-        .length     = 11,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_energyToChargeComplete",
-        .start_bit  = 44,
-        .length     = 11,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_energyBuffer",
-        .start_bit  = 55,
         .length     = 8,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.100000f,
-        .offset     = 0.000000f,
-    },
-    {
-        .name       = "BMS_fullChargeComplete",
-        .start_bit  = 63,
-        .length     = 1,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXER,
+        .mux_value  = 0,
+    },
+    {
+        .name       = "BMS_remainingEnergy3_kWh",
+        .start_bit  = 8,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
+    },
+    {
+        .name       = "BMS_packEnergy_kWh",
+        .start_bit  = 16,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
+    },
+    {
+        .name       = "BMS_bufferLow_kWh",
+        .start_bit  = 16,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
+    },
+    {
+        .name       = "BMS_usableEnergy2_kWh",
+        .start_bit  = 24,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
+    },
+    {
+        .name       = "BMS_remainingEnergy_kWh",
+        .start_bit  = 32,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
+    },
+    {
+        .name       = "BMS_remainingEnergy2_kWh",
+        .start_bit  = 32,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
+    },
+    {
+        .name       = "BMS_packParam_const",
+        .start_bit  = 40,
+        .length     = 8,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 1.000000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
+    },
+    {
+        .name       = "BMS_usableEnergy_kWh",
+        .start_bit  = 48,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 0,
+    },
+    {
+        .name       = "BMS_bufferHigh_kWh",
+        .start_bit  = 48,
+        .length     = 16,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 0.025000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
+    },
+    {
+        .name       = "BMS_status_counter",
+        .start_bit  = 48,
+        .length     = 8,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 1.000000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
+    },
+    {
+        .name       = "BMS_checksum",
+        .start_bit  = 56,
+        .length     = 8,
+        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
+        .value_type = SIGNAL_TYPE_UNSIGNED,
+        .factor     = 1.000000f,
+        .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
 };
 
@@ -3980,6 +4899,8 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.010000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_maxDischargePower",
@@ -3989,6 +4910,8 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.013000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_maxStationaryHeatPower",
@@ -3998,6 +4921,8 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.010000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_notEnoughPowerForHeatPump",
@@ -4007,6 +4932,8 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_powerLimitsState",
@@ -4016,6 +4943,8 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "BMS_hvacPowerBudget",
@@ -4025,6 +4954,8 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.020000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -4038,6 +4969,8 @@ static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_speedCounter",
@@ -4047,6 +4980,8 @@ static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_vehicleSpeed",
@@ -4056,6 +4991,8 @@ static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = -40.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_uiSpeed",
@@ -4065,6 +5002,8 @@ static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_uiSpeedUnits",
@@ -4074,6 +5013,8 @@ static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "DI_uiSpeedHighSpeed",
@@ -4083,6 +5024,8 @@ static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -4096,6 +5039,8 @@ static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.500000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "RearHeatPowerOptimal266",
@@ -4105,6 +5050,8 @@ static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "RearHeatPowerMax266",
@@ -4114,6 +5061,8 @@ static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "RearHeatPower266",
@@ -4123,6 +5072,8 @@ static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "RearExcessHeatCmd",
@@ -4132,6 +5083,8 @@ static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "RearPowerLimit266",
@@ -4141,6 +5094,8 @@ static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -4154,6 +5109,8 @@ static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = 0.500000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "FrontHeatPowerOptimal2E5",
@@ -4163,6 +5120,8 @@ static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "FrontHeatPowerMax2E5",
@@ -4172,6 +5131,8 @@ static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "FrontHeatPower2E5",
@@ -4181,6 +5142,8 @@ static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "FrontExcessHeatCmd",
@@ -4190,6 +5153,8 @@ static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.080000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "FrontPowerLimit2E5",
@@ -4199,6 +5164,8 @@ static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -4212,6 +5179,8 @@ static const can_signal_def_t signals_MSG_ID132HVBattAmpVolt[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 0.010000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "SmoothBattCurrent132",
@@ -4221,6 +5190,8 @@ static const can_signal_def_t signals_MSG_ID132HVBattAmpVolt[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = -0.100000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "RawBattCurrent132",
@@ -4230,6 +5201,8 @@ static const can_signal_def_t signals_MSG_ID132HVBattAmpVolt[] = {
         .value_type = SIGNAL_TYPE_SIGNED,
         .factor     = -0.050000f,
         .offset     = 822.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
     {
         .name       = "ChargeHoursRemaining132",
@@ -4239,6 +5212,8 @@ static const can_signal_def_t signals_MSG_ID132HVBattAmpVolt[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_NONE,
+        .mux_value  = 0,
     },
 };
 
@@ -4252,6 +5227,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXER,
+        .mux_value  = 0,
     },
     {
         .name       = "GTW_birthday",
@@ -4261,6 +5238,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "GTW_deliveryStatus",
@@ -4270,6 +5249,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_mapRegion",
@@ -4279,6 +5260,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_epasType",
@@ -4288,6 +5271,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_frontSeatHeaters",
@@ -4297,6 +5282,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_drivetrainType",
@@ -4306,6 +5293,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_rearSeatHeaters",
@@ -4315,6 +5304,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_rightHandDrive",
@@ -4324,6 +5315,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_tpmsType",
@@ -4333,6 +5326,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_performancePackage",
@@ -4342,6 +5337,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_rearLightType",
@@ -4351,6 +5348,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_homelinkType",
@@ -4360,6 +5359,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_headlamps",
@@ -4369,6 +5370,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_vdcType",
@@ -4378,6 +5381,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_towPackage",
@@ -4387,6 +5392,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_xcpIbst",
@@ -4396,6 +5403,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_country",
@@ -4405,6 +5414,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_xcpESP",
@@ -4414,6 +5425,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_coolantPumpType",
@@ -4423,6 +5436,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_memoryMirrors",
@@ -4432,6 +5447,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_chassisType",
@@ -4441,6 +5458,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_powerSteeringColumn",
@@ -4450,6 +5469,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_frontFogLamps",
@@ -4459,6 +5480,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_airSuspension",
@@ -4468,6 +5491,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_lumbarECUType",
@@ -4477,6 +5502,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_passengerOccupancySensorType",
@@ -4486,6 +5513,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_autopilotCameraType",
@@ -4495,6 +5524,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_auxParkLamps",
@@ -4504,6 +5535,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_connectivityPackage",
@@ -4513,6 +5546,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_plcSupportType",
@@ -4522,6 +5557,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_hvacPanelVaneType",
@@ -4531,6 +5568,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_audioType",
@@ -4540,6 +5579,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_cabinPTCHeaterType",
@@ -4549,6 +5590,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_eBuckConfig",
@@ -4558,6 +5601,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_packEnergy",
@@ -4567,6 +5612,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_tireType",
@@ -4576,6 +5623,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_windshieldType",
@@ -4585,6 +5634,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_activeHighBeam",
@@ -4594,6 +5645,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_airbagCutoffSwitch",
@@ -4603,6 +5656,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_intrusionSensorType",
@@ -4612,6 +5667,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_frontSeatReclinerHardware",
@@ -4621,6 +5678,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_spoilerType",
@@ -4630,6 +5689,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_rearGlassType",
@@ -4639,6 +5700,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_brakeLineSwitchType",
@@ -4648,6 +5711,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_rearFogLamps",
@@ -4657,6 +5722,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_dasHw",
@@ -4666,6 +5733,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_eCallEnabled",
@@ -4675,6 +5744,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "GTW_espValveType",
@@ -4684,6 +5755,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_roofType",
@@ -4693,6 +5766,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_autopilot",
@@ -4702,6 +5777,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_softRange",
@@ -4711,6 +5788,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_passengerAirbagType",
@@ -4720,6 +5799,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "GTW_refrigerantType",
@@ -4729,6 +5810,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_superchargingAccess",
@@ -4738,6 +5821,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_compressorType",
@@ -4747,6 +5832,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "GTW_headlightLevelerType",
@@ -4756,6 +5843,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_efficiencyPackage",
@@ -4765,6 +5854,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "GTW_exteriorColor",
@@ -4774,6 +5865,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_restraintsHardwareType",
@@ -4783,6 +5876,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 1,
     },
     {
         .name       = "GTW_wheelType",
@@ -4792,6 +5887,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_numberHVILNodes",
@@ -4801,6 +5898,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_steeringColumnMotorType",
@@ -4810,6 +5909,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 4,
     },
     {
         .name       = "GTW_pedestrianWarningSound",
@@ -4819,6 +5920,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_radarHeaterType",
@@ -4828,6 +5931,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_steeringColumnUJointType",
@@ -4837,6 +5942,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_bPillarNFCParam",
@@ -4846,6 +5953,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_immersiveAudio",
@@ -4855,6 +5964,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_interiorLighting",
@@ -4864,6 +5975,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_brakeHWType",
@@ -4873,6 +5986,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_frontSeatType",
@@ -4882,6 +5997,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
     {
         .name       = "GTW_roofGlassType",
@@ -4891,6 +6008,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 2,
     },
     {
         .name       = "GTW_twelveVBatteryType",
@@ -4900,6 +6019,8 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
         .value_type = SIGNAL_TYPE_BOOLEAN,
         .factor     = 1.000000f,
         .offset     = 0.000000f,
+        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
+        .mux_value  = 3,
     },
 };
 
@@ -5015,9 +6136,9 @@ const can_message_def_t g_can_messages[] = {
     },
     {
         .id           = 0x352,
-        .name         = "ID352BMS_energyStatus",
-        .signals      = signals_MSG_ID352BMS_energyStatus,
-        .signal_count = 7,
+        .name         = "ID352_BMS_EnergyStatusMux",
+        .signals      = signals_MSG_ID352_BMS_EnergyStatusMux,
+        .signal_count = 12,
     },
     {
         .id           = 0x252,

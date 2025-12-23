@@ -247,6 +247,18 @@ def signal_to_json(signal, message):
     if signal.choices:
         signal_json["mapping"] = {str(k): v.name for k, v in signal.choices.items()}
 
+    # Multiplexage (mux)
+    if getattr(signal, 'is_multiplexer', False):
+        signal_json["mux"] = "M"
+    else:
+        mux_ids = getattr(signal, 'multiplexer_ids', None)
+        if mux_ids:
+            mux_list = sorted(mux_ids)
+            signal_json["mux"] = mux_list[0] if len(mux_list) == 1 else mux_list
+            mux_signal = getattr(signal, 'multiplexer_signal', None)
+            if mux_signal:
+                signal_json["mux_signal"] = mux_signal.name if hasattr(mux_signal, 'name') else str(mux_signal)
+
     # Détecter automatiquement les événements
     signal_type, event_mapping = detect_signal_type(signal)
     events = []

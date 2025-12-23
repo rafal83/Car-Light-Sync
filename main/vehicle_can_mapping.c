@@ -152,7 +152,7 @@ static void IRAM_ATTR recompute_front_alert(vehicle_state_t *state) {
 }
 
 
-static void IRAM_ATTR recompute_soc(vehicle_state_t *state) {
+static void IRAM_ATTR recompute_soc_percent(vehicle_state_t *state) {
   if (!state)
     return;
 
@@ -331,7 +331,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
     if (strcmp(name, "BMS_remainingEnergy3_kWh") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->soc_percent, value, state);
+      UPDATE_AND_SEND_FLOAT(state->remaining_energy, value, state);
       recompute_soc_percent(state);
       return;
     }
