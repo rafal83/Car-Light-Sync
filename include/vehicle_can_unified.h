@@ -105,6 +105,7 @@ typedef struct {
   uint8_t autopilot;
   uint8_t autopilot_alert_lv1;
   uint8_t autopilot_alert_lv2;
+  uint8_t cruise;
 
   // Meta
   uint32_t last_update_ms;

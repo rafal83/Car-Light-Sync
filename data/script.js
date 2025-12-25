@@ -4225,10 +4225,11 @@ async function loadEffects() {
                 // filtrer les effets qui nécessitent le CAN bus
                 // Pour le sélecteur d'événement, filtrer aussi les effets audio
                 const isEventSelector = select.id === 'event-effect-select';
+                const isDefaultEffectSelector = select.id === 'default-effect-select';
                 let separatorInserted = false;
                 displayEffects.forEach(effect => {
-                    // Filtrer les effets CAN si ce n'est pas le sélecteur d'événement
-                    if (!isEventSelector && effect.cr) {
+                    // Filtrer les effets CAN pour tout sauf 'default-effect-select'
+                    if (!isDefaultEffectSelector && effect.cr) {
                         return; // Skip cet effet
                     }
                     // Filtrer les effets audio si c'est le sélecteur d'événement

@@ -16269,18 +16269,6 @@
           "max": 1
         },
         {
-          "name": "BMS_pcsPwmEnabled",
-          "start_bit": 7,
-          "length": 1,
-          "byte_order": "little_endian",
-          "value_type": "boolean",
-          "factor": 1,
-          "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 1
-        },
-        {
           "name": "BMS_contactorState",
           "start_bit": 8,
           "length": 3,
@@ -16302,7 +16290,7 @@
           }
         },
         {
-          "name": "BMS_uiChargeStatus",
+          "name": "BMS_state",
           "start_bit": 11,
           "length": 3,
           "byte_order": "little_endian",
@@ -16311,32 +16299,19 @@
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 5,
+          "max": 10,
           "mapping": {
-            "2": "BMS_ABOUT_TO_CHARGE",
-            "4": "BMS_CHARGE_COMPLETE",
-            "5": "BMS_CHARGE_STOPPED",
-            "3": "BMS_CHARGING",
-            "0": "BMS_DISCONNECTED",
-            "1": "BMS_NO_POWER"
-          }
-        },
-        {
-          "name": "BMS_ecuLogUploadRequest",
-          "start_bit": 14,
-          "length": 2,
-          "byte_order": "little_endian",
-          "value_type": "unsigned",
-          "factor": 1,
-          "offset": 0,
-          "unit": "",
-          "min": 0,
-          "max": 3,
-          "mapping": {
-            "1": "REQUEST_PRIORITY_1",
-            "2": "REQUEST_PRIORITY_2",
-            "3": "REQUEST_PRIORITY_3",
-            "0": "REQUEST_PRIORITY_NONE"
+            "3": "BMS_CHARGE",
+            "5": "BMS_CLEAR_FAULT",
+            "10": "BMS_DIAG",
+            "1": "BMS_DRIVE",
+            "6": "BMS_FAULT",
+            "4": "BMS_FEIM",
+            "9": "BMS_SNA",
+            "0": "BMS_STANDBY",
+            "2": "BMS_SUPPORT",
+            "8": "BMS_TEST",
+            "7": "BMS_WELD"
           }
         },
         {
@@ -16400,33 +16375,28 @@
           "max": 1
         },
         {
-          "name": "BMS_state",
+          "name": "BMS_uiChargeStatus",
           "start_bit": 32,
-          "length": 4,
+          "length": 3,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 10,
+          "max": 5,
           "mapping": {
-            "3": "BMS_CHARGE",
-            "5": "BMS_CLEAR_FAULT",
-            "10": "BMS_DIAG",
-            "1": "BMS_DRIVE",
-            "6": "BMS_FAULT",
-            "4": "BMS_FEIM",
-            "9": "BMS_SNA",
-            "0": "BMS_STANDBY",
-            "2": "BMS_SUPPORT",
-            "8": "BMS_TEST",
-            "7": "BMS_WELD"
+            "2": "BMS_ABOUT_TO_CHARGE",
+            "4": "BMS_CHARGE_COMPLETE",
+            "5": "BMS_CHARGE_STOPPED",
+            "3": "BMS_CHARGING",
+            "0": "BMS_DISCONNECTED",
+            "1": "BMS_NO_POWER"
           }
         },
         {
           "name": "BMS_diLimpRequest",
-          "start_bit": 36,
+          "start_bit": 35,
           "length": 1,
           "byte_order": "little_endian",
           "value_type": "boolean",
@@ -16442,7 +16412,7 @@
         },
         {
           "name": "BMS_okToShipByAir",
-          "start_bit": 37,
+          "start_bit": 36,
           "length": 1,
           "byte_order": "little_endian",
           "value_type": "boolean",
@@ -16454,7 +16424,7 @@
         },
         {
           "name": "BMS_okToShipByLand",
-          "start_bit": 38,
+          "start_bit": 37,
           "length": 1,
           "byte_order": "little_endian",
           "value_type": "boolean",
@@ -16466,7 +16436,7 @@
         },
         {
           "name": "BMS_chgPowerAvailable",
-          "start_bit": 40,
+          "start_bit": 38,
           "length": 11,
           "byte_order": "little_endian",
           "value_type": "unsigned",
@@ -16481,8 +16451,8 @@
         },
         {
           "name": "BMS_chargeRetryCount",
-          "start_bit": 51,
-          "length": 3,
+          "start_bit": 49,
+          "length": 4,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
@@ -16492,29 +16462,44 @@
           "max": 7
         },
         {
-          "name": "BMS_smStateRequest",
-          "start_bit": 56,
-          "length": 4,
+          "name": "BMS_pcsPwmEnabled",
+          "start_bit": 53,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1
+        },
+        {
+          "name": "BMS_ecuLogUploadRequest",
+          "start_bit": 54,
+          "length": 2,
           "byte_order": "little_endian",
           "value_type": "unsigned",
           "factor": 1,
           "offset": 0,
           "unit": "",
           "min": 0,
-          "max": 9,
+          "max": 3,
           "mapping": {
-            "3": "BMS_CHARGE",
-            "5": "BMS_CLEAR_FAULT",
-            "10": "BMS_DIAG",
-            "1": "BMS_DRIVE",
-            "6": "BMS_FAULT",
-            "4": "BMS_FEIM",
-            "9": "BMS_SNA",
-            "0": "BMS_STANDBY",
-            "2": "BMS_SUPPORT",
-            "8": "BMS_TEST",
-            "7": "BMS_WELD"
+            "1": "REQUEST_PRIORITY_1",
+            "2": "REQUEST_PRIORITY_2",
+            "3": "REQUEST_PRIORITY_3",
+            "0": "REQUEST_PRIORITY_NONE"
           }
+        },
+        {
+          "name": "BMS_minPackTemperature",
+          "start_bit": 56,
+          "length": 8,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 0.5,
+          "offset": -40,
+          "unit": "DegC"
         }
       ]
     },
@@ -36529,6 +36514,233 @@
           "max": 255,
           "mux": 2,
           "mux_signal": "MUX"
+        }
+      ]
+    },
+    {
+      "id": "0x368",
+      "name": "ID368DI_state",
+      "bus": "body",
+      "cycle_time_ms": 100,
+      "signals": [
+        {
+          "name": "DI_systemState",
+          "start_bit": 0,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "mapping": {
+            "3": "ABORT",
+            "4": "ENABLE",
+            "2": "FAULT",
+            "1": "STANDBY",
+            "0": "UNAVAILABLE"
+          }
+        },
+        {
+          "name": "DI_vehicleHoldState",
+          "start_bit": 3,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "mapping": {
+            "2": "BLEND_IN",
+            "4": "BLEND_OUT",
+            "6": "FAULT",
+            "7": "INIT",
+            "5": "PARK",
+            "1": "STANDBY",
+            "3": "STANDSTILL",
+            "0": "UNAVAILABLE"
+          }
+        },
+        {
+          "name": "DI_proximity",
+          "start_bit": 6,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "DI_driveReady",
+          "start_bit": 7,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "DI_regenLight",
+          "start_bit": 8,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "DI_state",
+          "start_bit": 9,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "mapping": {
+            "3": "ABORT",
+            "4": "ENABLE",
+            "2": "FAULT",
+            "1": "STANDBY",
+            "0": "UNAVAILABLE"
+          }
+        },
+        {
+          "name": "DI_cruiseState",
+          "start_bit": 12,
+          "length": 4,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "mapping": {
+            "2": "ENABLED",
+            "5": "FAULT",
+            "0": "OFF",
+            "4": "OVERRIDE",
+            "7": "PRE_CANCEL",
+            "6": "PRE_FAULT",
+            "1": "STANDBY",
+            "3": "STANDSTILL"
+          }
+        },
+        {
+          "name": "DI_analogSpeed",
+          "start_bit": 16,
+          "length": 12,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 0.1,
+          "offset": 0,
+          "unit": "speed",
+          "min": 0,
+          "max": 150,
+          "mapping": {
+            "4095": "SNA"
+          }
+        },
+        {
+          "name": "DI_immobilizerState",
+          "start_bit": 28,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "mapping": {
+            "2": "AUTHENTICATING",
+            "3": "DISARMED",
+            "6": "FAULT",
+            "4": "IDLE",
+            "0": "INIT_SNA",
+            "1": "REQUEST",
+            "5": "RESET"
+          }
+        },
+        {
+          "name": "DI_speedUnits",
+          "start_bit": 31,
+          "length": 1,
+          "byte_order": "little_endian",
+          "value_type": "boolean",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "mapping": {
+            "1": "KPH",
+            "0": "MPH"
+          }
+        },
+        {
+          "name": "DI_cruiseSet",
+          "start_bit": 32,
+          "length": 9,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 0.5,
+          "offset": 0,
+          "unit": "speed",
+          "min": 0,
+          "max": 255.5
+        },
+        {
+          "name": "DI_aebState",
+          "start_bit": 41,
+          "length": 3,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "mapping": {
+            "2": "ENABLED",
+            "4": "FAULT",
+            "7": "SNA",
+            "1": "STANDBY",
+            "3": "STANDSTILL",
+            "0": "UNAVAILABLE"
+          }
+        },
+        {
+          "name": "DI_stateCounter",
+          "start_bit": 44,
+          "length": 4,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
+        },
+        {
+          "name": "DI_digitalSpeed",
+          "start_bit": 48,
+          "length": 8,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": "",
+          "min": 0,
+          "max": 250,
+          "mapping": {
+            "255": "SNA"
+          }
+        },
+        {
+          "name": "DI_stateChecksum",
+          "start_bit": 56,
+          "length": 8,
+          "byte_order": "little_endian",
+          "value_type": "unsigned",
+          "factor": 1,
+          "offset": 0,
+          "unit": ""
         }
       ]
     },

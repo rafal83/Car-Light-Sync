@@ -7,6 +7,7 @@
 #include "vehicle_can_unified_config.h"
 
 #include <stdbool.h>
+#include <stddef.h>  // pour offsetof
 #include <string.h>
 
 // Helper latch -> open/closed
@@ -45,6 +46,96 @@ static uint64_t s_frontAlertHoldUntilUs = 0;
 
 static volatile bool s_vehicle_state_dirty = false;
 
+// Debounce tracking pour les champs vehicle_state
+// On utilise l'adresse du champ comme ID unique
+#define MAX_DEBOUNCE_FIELDS 128
+typedef struct {
+  void *field_addr;
+  uint64_t last_update_us;
+} field_debounce_t;
+
+static field_debounce_t s_field_debounce[MAX_DEBOUNCE_FIELDS] = {0};
+static uint8_t s_field_debounce_count = 0;
+
+// Debounce par défaut : 0 (pas de debounce)
+// Le debounce est activé uniquement pour les champs spécifiques
+#define DEFAULT_DEBOUNCE_US 0ULL
+
+// Configuration des debounces personnalisés pour certains champs (en microsecondes)
+// Par défaut : PAS de debounce (0)
+// Le debounce est activé uniquement pour les champs qui en ont besoin
+static uint64_t get_field_debounce_us(void *field_addr, vehicle_state_t *state) {
+  // Calcul de l'offset du champ dans la structure
+  ptrdiff_t offset = (uint8_t*)field_addr - (uint8_t*)state;
+
+  // Blindspot: debounce de 200ms pour éviter les faux positifs
+  if (offset == offsetof(vehicle_state_t, blindspot_left) ||
+      offset == offsetof(vehicle_state_t, blindspot_left_alert) ||
+      offset == offsetof(vehicle_state_t, blindspot_right) ||
+      offset == offsetof(vehicle_state_t, blindspot_right_alert)) {
+    return 200 * 1000ULL;
+  }
+
+  // Clignotants: debounce de 10ms pour lisser les transitions
+  if (offset == offsetof(vehicle_state_t, turn_left) ||
+      offset == offsetof(vehicle_state_t, turn_right)) {
+    return 10 * 1000ULL;
+  }
+
+  return DEFAULT_DEBOUNCE_US; // 0 par défaut (pas de debounce)
+}
+
+// Vérifie si le debounce est OK pour mettre à jour un champ
+static inline bool IRAM_ATTR check_field_debounce(void *field_addr, vehicle_state_t *state) {
+  uint64_t now_us = esp_timer_get_time();
+  uint64_t debounce_us = get_field_debounce_us(field_addr, state);
+
+  // Si debounce = 0, pas de debounce
+  if (debounce_us == 0) {
+    return true;
+  }
+
+  // Chercher le champ dans la table de debounce
+  for (uint8_t i = 0; i < s_field_debounce_count; i++) {
+    if (s_field_debounce[i].field_addr == field_addr) {
+      if (now_us - s_field_debounce[i].last_update_us >= debounce_us) {
+        s_field_debounce[i].last_update_us = now_us;
+        return true; // Debounce OK
+      }
+      return false; // Encore en debounce
+    }
+  }
+
+  // Champ pas encore dans la table, l'ajouter
+  if (s_field_debounce_count < MAX_DEBOUNCE_FIELDS) {
+    s_field_debounce[s_field_debounce_count].field_addr = field_addr;
+    s_field_debounce[s_field_debounce_count].last_update_us = now_us;
+    s_field_debounce_count++;
+  }
+
+  return true; // Premier accès, on autorise
+}
+
+// Reset le compteur de debounce pour un champ (appelé quand la valeur est stable)
+static inline void IRAM_ATTR reset_field_debounce(void *field_addr) {
+  uint64_t now_us = esp_timer_get_time();
+
+  // Chercher le champ dans la table et réinitialiser son timer
+  for (uint8_t i = 0; i < s_field_debounce_count; i++) {
+    if (s_field_debounce[i].field_addr == field_addr) {
+      s_field_debounce[i].last_update_us = now_us;
+      return;
+    }
+  }
+
+  // Si pas trouvé, l'ajouter avec le timestamp actuel
+  if (s_field_debounce_count < MAX_DEBOUNCE_FIELDS) {
+    s_field_debounce[s_field_debounce_count].field_addr = field_addr;
+    s_field_debounce[s_field_debounce_count].last_update_us = now_us;
+    s_field_debounce_count++;
+  }
+}
+
 void vehicle_can_state_dirty_set(void) {
   s_vehicle_state_dirty = true;
 }
@@ -58,37 +149,47 @@ void vehicle_can_state_dirty_clear(void) {
 }
 
 // Helpers to send the ESP-NOW state only when a value has changed
-#define UPDATE_AND_SEND_U8(field, value, state_ptr)                \
-  do {                                                             \
-    uint8_t _nv = (uint8_t)(value);                                \
-    if ((field) != _nv) {                                          \
-      (field) = _nv;                                               \
-      vehicle_can_state_dirty_set();                               \
-    } else {                                                       \
-      (field) = _nv;                                               \
-    }                                                              \
+// Avec debounce intégré
+#define UPDATE_AND_SEND_U8(field, value, state_ptr)                   \
+  do {                                                                \
+    uint8_t _nv = (uint8_t)(value);                                   \
+    if ((field) != _nv) {                                             \
+      if (check_field_debounce(&(field), state_ptr)) {                \
+        (field) = _nv;                                                \
+        vehicle_can_state_dirty_set();                                \
+      }                                                               \
+    } else {                                                          \
+      reset_field_debounce(&(field));                                 \
+      (field) = _nv;                                                  \
+    }                                                                 \
   } while (0)
 
-#define UPDATE_AND_SEND_I8(field, value, state_ptr)                \
-  do {                                                             \
-    int8_t _nv = (int8_t)(value);                                  \
-    if ((field) != _nv) {                                          \
-      (field) = _nv;                                               \
-      vehicle_can_state_dirty_set();                               \
-    } else {                                                       \
-      (field) = _nv;                                               \
-    }                                                              \
+#define UPDATE_AND_SEND_I8(field, value, state_ptr)                   \
+  do {                                                                \
+    int8_t _nv = (int8_t)(value);                                     \
+    if ((field) != _nv) {                                             \
+      if (check_field_debounce(&(field), state_ptr)) {                \
+        (field) = _nv;                                                \
+        vehicle_can_state_dirty_set();                                \
+      }                                                               \
+    } else {                                                          \
+      reset_field_debounce(&(field));                                 \
+      (field) = _nv;                                                  \
+    }                                                                 \
   } while (0)
 
-#define UPDATE_AND_SEND_FLOAT(field, value, state_ptr)             \
-  do {                                                             \
-    float _nv = (float)(value);                                    \
-    if ((field) != _nv) {                                          \
-      (field) = _nv;                                               \
-      vehicle_can_state_dirty_set();                               \
-    } else {                                                       \
-      (field) = _nv;                                               \
-    }                                                              \
+#define UPDATE_AND_SEND_FLOAT(field, value, state_ptr)                \
+  do {                                                                \
+    float _nv = (float)(value);                                       \
+    if ((field) != _nv) {                                             \
+      if (check_field_debounce(&(field), state_ptr)) {                \
+        (field) = _nv;                                                \
+        vehicle_can_state_dirty_set();                                \
+      }                                                               \
+    } else {                                                          \
+      reset_field_debounce(&(field));                                 \
+      (field) = _nv;                                                  \
+    }                                                                 \
   } while (0)
 
 static void IRAM_ATTR recompute_blindspot_alert(vehicle_state_t *state) {
@@ -189,13 +290,19 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       UPDATE_AND_SEND_U8(state->left_btn_dbl_press, value > 0.5f ? 1 : 0, state);
       return;
     } else if (strcmp(name, "VCLEFT_swcLeftPressed") == 0) {
-      UPDATE_AND_SEND_U8(state->left_btn_press, value == 2 ? 1 : 0, state);
+      if(value != 0) { // SNA
+        UPDATE_AND_SEND_U8(state->left_btn_press, value == 2 ? 1 : 0, state);
+      }
       return;
     } else if (strcmp(name, "VCLEFT_swcLeftTiltLeft") == 0) {
-      UPDATE_AND_SEND_U8(state->left_btn_tilt_left, value == 2 ? 1 : 0, state);
+      if(value != 0) { // SNA
+        UPDATE_AND_SEND_U8(state->left_btn_tilt_left, value == 2 ? 1 : 0, state);
+      }
       return;
     } else if (strcmp(name, "VCLEFT_swcLeftTiltRight") == 0) {
-      UPDATE_AND_SEND_U8(state->left_btn_tilt_right, value == 2 ? 1 : 0, state);
+      if(value != 0) { // SNA
+        UPDATE_AND_SEND_U8(state->left_btn_tilt_right, value == 2 ? 1 : 0, state);
+      }
       return;
     } else if (strcmp(name, "VCLEFT_swcRightScrollTicks") == 0) {
 
@@ -211,13 +318,19 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       UPDATE_AND_SEND_U8(state->right_btn_dbl_press, value > 0.5f ? 1 : 0, state);
       return;
     } else if (strcmp(name, "VCLEFT_swcRightPressed") == 0) {
-      UPDATE_AND_SEND_U8(state->right_btn_press, value == 2 ? 1 : 0, state);
+      if(value != 0) { // SNA
+        UPDATE_AND_SEND_U8(state->right_btn_press, value == 2 ? 1 : 0, state);
+      }
       return;
     } else if (strcmp(name, "VCLEFT_swcRightTiltLeft") == 0) {
-      UPDATE_AND_SEND_U8(state->right_btn_tilt_left, value == 2 ? 1 : 0, state);
+      if(value != 0) { // SNA
+        UPDATE_AND_SEND_U8(state->right_btn_tilt_left, value == 2 ? 1 : 0, state);
+      }
       return;
     } else if (strcmp(name, "VCLEFT_swcRightTiltRight") == 0) {
-      UPDATE_AND_SEND_U8(state->right_btn_tilt_right, value == 2 ? 1 : 0, state);
+      if(value != 0) { // SNA
+        UPDATE_AND_SEND_U8(state->right_btn_tilt_right, value == 2 ? 1 : 0, state);
+      }
       return;
     }
     return;
@@ -238,11 +351,15 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       4 "DI_GEAR_D" 
       7 "DI_GEAR_SNA" ;
       */
-      UPDATE_AND_SEND_I8(state->gear, (int8_t)(value + 0.5f), state);
+      if(value != 7) { // SNA
+        UPDATE_AND_SEND_I8(state->gear, (int8_t)(value + 0.5f), state);
+      }
       return;
     }
     if (strcmp(name, "DI_accelPedalPos") == 0) {
-      UPDATE_AND_SEND_I8(state->accel_pedal_pos, (int8_t)(value + 0.5f), state);
+      if(value != 255) { // SNA
+        UPDATE_AND_SEND_I8(state->accel_pedal_pos, (int8_t)(value + 0.5f), state);
+      }
       return;
     }
     return;
@@ -260,7 +377,9 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // ---------------------------------------------------------------------
   if (id == 0x3F3) {
     if (strcmp(name, "UI_odometer") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->odometer_km, value, state);
+      if(value != 16777215) { // SNA
+        UPDATE_AND_SEND_FLOAT(state->odometer_km, value, state);
+      }
       return;
     }
     return;
@@ -295,24 +414,32 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
 
     // Low beams -> headlights_on
     if (strcmp(name, "VCFRONT_lowBeamLeftStatus") == 0) { //  || strcmp(name, "VCFRONT_lowBeamRightStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->headlights, (uint8_t)(value + 0.5f) == 1 ? 1 : 0, state);
+      if(value != 3) { // SNA
+        UPDATE_AND_SEND_U8(state->headlights, (uint8_t)(value + 0.5f) == 1 ? 1 : 0, state);
+      }
       return;
     }
 
     // High beams
     if (strcmp(name, "VCFRONT_highBeamLeftStatus") == 0) { //  || strcmp(name, "VCFRONT_highBeamRightStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->high_beams, (uint8_t)(value + 0.5f) == 1 ? 1 : 0, state);
+      if(value != 3) { // SNA
+        UPDATE_AND_SEND_U8(state->high_beams, (uint8_t)(value + 0.5f) == 1 ? 1 : 0, state);
+      }
       return;
     }
 
     // Feux de brouillard
     if (strcmp(name, "VCFRONT_fogLeftStatus") == 0) { // || strcmp(name, "VCFRONT_fogRightStatus") == 0) {
-      UPDATE_AND_SEND_U8(state->fog_lights, (uint8_t)(value + 0.5f) == 1 ? 1 : 0 , state);
+      if(value != 3) { // SNA
+        UPDATE_AND_SEND_U8(state->fog_lights, (uint8_t)(value + 0.5f) == 1 ? 1 : 0 , state);
+      }
       return;
     }
 
     if (strcmp(name, "VCFRONT_switchLightingBrightness") == 0) {
-      UPDATE_AND_SEND_FLOAT(state->brightness, value, state); // 0-127
+      if(value != 255) { // SNA
+        UPDATE_AND_SEND_FLOAT(state->brightness, value, state); // 0-127
+      }
       return;
     }
 
@@ -376,7 +503,9 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     // ---------------------------------------------------------------------
     if (id == 0x257) {
       if (strcmp(name, "DI_vehicleSpeed") == 0) {
-        UPDATE_AND_SEND_FLOAT(state->speed_kph, value, state); // already in kph
+        if(value != 4095) { // SNA
+          UPDATE_AND_SEND_FLOAT(state->speed_kph, value, state); // already in kph
+        }
         return;
       }
       return;
@@ -396,10 +525,12 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
           14 "FAULT" 
           15 "SNA" 
         */
-        int v                       = (int)(value + 0.5f);
-        // ESP_LOGI(TAG_CAN, "%s %f", name, value); // 2 nada, 3 // FSD,
-        v = (v >= 3) && (v <= 9) ? v : 0;
-        UPDATE_AND_SEND_U8(state->autopilot, v, state);
+        if(value != 15) { // SNA
+          int v                       = (int)(value + 0.5f);
+          // ESP_LOGI(TAG_CAN, "%s %f", name, value); // 2 nada, 3 // FSD,
+          v = (v >= 3) && (v <= 9) ? v : 0;
+          UPDATE_AND_SEND_U8(state->autopilot, v, state);
+        }
         return;
       }
       if (strcmp(name, "DAS_autopilotHandsOnState") == 0) {
@@ -418,20 +549,24 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
           15 "LC_HANDS_ON_SNA"
         */
         // ESP_LOGI(TAG_CAN, "%s %f", name, value);
-        int v                       = (int)(value + 0.5f);
-        // UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v == 1 ? 1 : 0, state);
-        UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v >= 3 && v <= 5 ? 1 : 0, state);
-        UPDATE_AND_SEND_U8(state->autopilot_alert_lv2, v >= 6 && v <= 10 ? 1 : 0, state);
+        if(value != 15) { // SNA
+          int v                       = (int)(value + 0.5f);
+          // UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v == 1 ? 1 : 0, state);
+          UPDATE_AND_SEND_U8(state->autopilot_alert_lv1, v >= 3 && v <= 5 ? 1 : 0, state);
+          UPDATE_AND_SEND_U8(state->autopilot_alert_lv2, v >= 6 && v <= 10 ? 1 : 0, state);
+        }
         return;
       }
       if (strcmp(name, "DAS_laneDepartureWarning") == 0) {
         // 1 "LEFT_WARNING" 3 "LEFT_WARNING_SEVERE" 0 "NONE" 2 "RIGHT_WARNING" 4
         // "RIGHT_WARNING_SEVERE"
-        int v                       = (int)(value + 0.5f);
-        UPDATE_AND_SEND_U8(state->lane_departure_left_lv1, v == 1 ? 1 : 0, state);
-        UPDATE_AND_SEND_U8(state->lane_departure_left_lv2, v == 3 ? 1 : 0, state);
-        UPDATE_AND_SEND_U8(state->lane_departure_right_lv1, v == 2 ? 1 : 0, state);
-        UPDATE_AND_SEND_U8(state->lane_departure_right_lv2, v == 4 ? 1 : 0, state);
+        if(value != 5) { // SNA
+          int v                       = (int)(value + 0.5f);
+          UPDATE_AND_SEND_U8(state->lane_departure_left_lv1, v == 1 ? 1 : 0, state);
+          UPDATE_AND_SEND_U8(state->lane_departure_left_lv2, v == 3 ? 1 : 0, state);
+          UPDATE_AND_SEND_U8(state->lane_departure_right_lv1, v == 2 ? 1 : 0, state);
+          UPDATE_AND_SEND_U8(state->lane_departure_right_lv2, v == 4 ? 1 : 0, state);
+        }
         return;
       }
       if (strcmp(name, "DAS_sideCollisionWarning") == 0) {
@@ -443,15 +578,39 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       }
       // if (strcmp(name, "DAS_forwardCollisionWarning") == 0) {
       //   int v                       = (int)(value + 0.5f);
-      //   UPDATE_AND_SEND_U8(state->forward_collision, v == 1 ? 1 : 0, state);
+      //   if(value != 3) { // SNA
+      //     UPDATE_AND_SEND_U8(state->forward_collision, v == 1 ? 1 : 0, state);
+      //   }
       //   return;
       // }
       if (strcmp(name, "DAS_blindSpotRearLeft") == 0) {
-        UPDATE_AND_SEND_U8(state->blindspot_left, (value > 0) ? 1 : 0, state);
+        if(value != 3) { // SNA
+          UPDATE_AND_SEND_U8(state->blindspot_left, (value > 0) ? 1 : 0, state);
+        }
         return;
       }
       if (strcmp(name, "DAS_blindSpotRearRight") == 0) {
-        UPDATE_AND_SEND_U8(state->blindspot_right, (value > 0) ? 1 : 0, state);
+        if(value != 3) { // SNA
+          UPDATE_AND_SEND_U8(state->blindspot_right, (value > 0) ? 1 : 0, state);
+        }
+        return;
+      }
+      return;
+    }
+
+    if (id == 0x368) {
+      if(strcmp(name, "") == 0) {
+        /*
+        2 "ENABLED" 
+        5 "FAULT" 
+        0 "OFF" 
+        4 "OVERRIDE"
+        7 "PRE_CANCEL" 
+        6 "PRE_FAULT" 
+        1 "STANDBY" 
+        3 "STANDSTILL"
+        */
+        UPDATE_AND_SEND_U8(state->cruise, value, state);
         return;
       }
       return;
@@ -459,13 +618,17 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   
     if (id == 0x22E) {
       if (strcmp(name, "PARK_sdiSensor12RawDistData") == 0) {
-        s_blindspotLeftCm = (uint16_t)(value + 0.5f);
-        recompute_blindspot_alert(state);
+        if(value != 511) { // SNA
+          s_blindspotLeftCm = (uint16_t)(value + 0.5f);
+          recompute_blindspot_alert(state);
+        }
         return;
       }
       if (strcmp(name, "PARK_sdiSensor7RawDistData") == 0) {
-        s_blindspotRightCm = (uint16_t)(value + 0.5f);
-        recompute_blindspot_alert(state);
+        if(value != 511) { // SNA
+          s_blindspotRightCm = (uint16_t)(value + 0.5f);
+          recompute_blindspot_alert(state);
+        }
         return;
       }
       return;
@@ -473,15 +636,19 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
 
     if (id == 0x20E) {
       if (strcmp(name, "PARK_sdiSensor3RawDistData") == 0) {
-        value = value > 1 && value <= 500 ? value : 0;
-        s_frontLeftCm = (uint16_t)(value + 0.5f);
-        recompute_front_alert(state);
+        if(value != 511) { // SNA
+          value = value > 1 && value <= 500 ? value : 0;
+          s_frontLeftCm = (uint16_t)(value + 0.5f);
+          recompute_front_alert(state);
+        }
         return;
       }
       if (strcmp(name, "PARK_sdiSensor4RawDistData") == 0) {
-        value = value > 1 && value <= 500 ? value : 0;
-        s_frontRightCm = (uint16_t)(value + 0.5f);
-        recompute_front_alert(state);
+        if(value != 511) { // SNA
+          value = value > 1 && value <= 500 ? value : 0;
+          s_frontRightCm = (uint16_t)(value + 0.5f);
+          recompute_front_alert(state);
+        }
         return;
       }
       return;
@@ -493,7 +660,9 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
         return;
       }
       if (strcmp(name, "UI_speedLimit") == 0) {
-        UPDATE_AND_SEND_FLOAT(state->speed_limit, (int)(value + 0.5f), state);
+        if(value != 255) { // SNA
+          UPDATE_AND_SEND_FLOAT(state->speed_limit, (int)(value + 0.5f), state);
+        }
         return;
       }
       return;
@@ -537,11 +706,15 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   else {
     if (id == 0x102) { // gauche
       if (strcmp(name, "VCLEFT_frontLatchStatus") == 0) {
-        UPDATE_AND_SEND_U8(state->door_front_left_open, is_latch_open(value), state);
+        if(value != 0) { // SNA
+          UPDATE_AND_SEND_U8(state->door_front_left_open, is_latch_open(value), state);
+        }
         return;
       }
       if (strcmp(name, "VCLEFT_rearLatchStatus") == 0) {
-        UPDATE_AND_SEND_U8(state->door_rear_left_open, is_latch_open(value), state);
+        if(value != 0) { // SNA
+          UPDATE_AND_SEND_U8(state->door_rear_left_open, is_latch_open(value), state);
+        }
         return;
       }
       return;
@@ -549,15 +722,21 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
 
     if (id == 0x103) { // droite + trunk
       if (strcmp(name, "VCRIGHT_frontLatchStatus") == 0) {
-        UPDATE_AND_SEND_U8(state->door_front_right_open, is_latch_open(value), state);
+        if(value != 0) { // SNA
+          UPDATE_AND_SEND_U8(state->door_front_right_open, is_latch_open(value), state);
+        }
         return;
       }
       if (strcmp(name, "VCRIGHT_rearLatchStatus") == 0) {
-        UPDATE_AND_SEND_U8(state->door_rear_right_open, is_latch_open(value), state);
+        if(value != 0) { // SNA
+          UPDATE_AND_SEND_U8(state->door_rear_right_open, is_latch_open(value), state);
+        }
         return;
       }
       if (strcmp(name, "VCRIGHT_trunkLatchStatus") == 0) {
-        UPDATE_AND_SEND_U8(state->trunk_open, is_latch_open(value), state);
+        if(value != 0) { // SNA
+          UPDATE_AND_SEND_U8(state->trunk_open, is_latch_open(value), state);
+        }
         return;
       }
       return;
@@ -579,20 +758,20 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     // ---------------------------------------------------------------------
     // Etat BMS / charge : ID204PCS_chgStatus
     // ---------------------------------------------------------------------
-    if (id == 0x204) {
-      if (strcmp(name, "PCS_hvChargeStatus") == 0) {
-        // 0 = not charging, 2 = charging (per the DBC
-        // opendbc)
-        int v = (int)(value + 0.5f);
-        if (v == 2) {
-          UPDATE_AND_SEND_U8(state->charging, 1, state);
-        } else if (v == 0) {
-          UPDATE_AND_SEND_U8(state->charging, 0, state);
-        }
-        return;
-      }
-      return;
-    }
+    // if (id == 0x204) {
+    //   if (strcmp(name, "PCS_hvChargeStatus") == 0) {
+    //     // 0 = not charging, 2 = charging (per the DBC
+    //     // opendbc)
+    //     int v = (int)(value + 0.5f);
+    //     if (v == 2) {
+    //       UPDATE_AND_SEND_U8(state->charging, 1, state);
+    //     } else if (v == 0) {
+    //       UPDATE_AND_SEND_U8(state->charging, 0, state);
+    //     }
+    //     return;
+    //   }
+    //   return;
+    // }
 
     // ---------------------------------------------------------------------
     // Night mode : ID273UI_vehicleControl
@@ -613,33 +792,26 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       if (strcmp(name, "UI_lockRequest") == 0) {
         int v = (int)(value + 0.5f);
         // 1 = LOCK, 2 = UNLOCK (voir mapping dans JSON)
-        if (v == 1) {
-          UPDATE_AND_SEND_U8(state->locked, 1, state);
-        } else if (v == 2) {
-          UPDATE_AND_SEND_U8(state->locked, 0, state);
+        if(value != 7) { // SNA
+          if (v == 1) {
+            UPDATE_AND_SEND_U8(state->locked, 1, state);
+          } else if (v == 2) {
+            UPDATE_AND_SEND_U8(state->locked, 0, state);
+          }
         }
         return;
       }
       return;
     }
 
-    // ---------------------------------------------------------------------
-    // Sentry mode : ID284UIvehicleModes / UIsentryMode284
-    // ---------------------------------------------------------------------
-    if (id == 0x284) {
-      if (strcmp(name, "CP_chargeCablePresent") == 0) {
-        int v = (int)(value + 0.5f);
-        // 1 = NOT_CONNECTED, 2 = CONNECTED (voir mapping
-        // dans JSON)
-        if (v == 1) {
-          UPDATE_AND_SEND_U8(state->charging_cable, 0, state);
-        } else if (v == 2) {
-          UPDATE_AND_SEND_U8(state->charging_cable, 1, state);
-        }
+        if (id == 0x284) {
+      if (strcmp(name, "UIsentryMode284") == 0) {
+        UPDATE_AND_SEND_U8(state->sentry_mode, (int)(value + 0.5f), state);
         return;
       }
       return;
     }
+
 
     if (id == 0x212) {
       // 2 "BMS_ABOUT_TO_CHARGE"
@@ -649,10 +821,17 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       // 0 "BMS_DISCONNECTED"
       // 1 "BMS_NO_POWER"
       if (strcmp(name, "BMS_uiChargeStatus") == 0) {
+        if(value == 3) {
+          UPDATE_AND_SEND_U8(state->charging, 1, state);
+        } else {
+          UPDATE_AND_SEND_U8(state->charging, 0, state);
+        }
         UPDATE_AND_SEND_U8(state->charge_status, value, state);
         return;
       } else if (strcmp(name, "BMS_chgPowerAvailable") == 0) {
-        UPDATE_AND_SEND_FLOAT(state->charge_power_kw, value > 255 ? 0 : value, state);
+        if(value != 2047) { // SNA
+          UPDATE_AND_SEND_FLOAT(state->charge_power_kw, value, state);
+        }
         return;
       }
       return;
@@ -661,6 +840,17 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     if (id == 0x25D) {
       if (strcmp(name, "CP_chargeDoorOpen") == 0) {
         UPDATE_AND_SEND_U8(state->charging_port, (value > 0.5f) ? 1 : 0, state);
+        return;
+      }
+      if (strcmp(name, "CP_chargeCableState") == 0) {
+        int v = (int)(value + 0.5f);
+        // 1 = NOT_CONNECTED, 2 = CONNECTED (voir mapping
+        // dans JSON)
+        if (v == 1) {
+          UPDATE_AND_SEND_U8(state->charging_cable, 0, state);
+        } else if (v == 2) {
+          UPDATE_AND_SEND_U8(state->charging_cable, 1, state);
+        }
         return;
       }
       return;

@@ -16,6 +16,7 @@
 #include "cJSON.h"
 #include "config.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "led_effects.h"
@@ -730,6 +731,9 @@ bool config_manager_process_can_event(can_event_type_t event) {
     memcpy(&effect_to_apply, &event_effect->effect_config, sizeof(effect_config_t));
     duration_ms = event_effect->duration_ms;
     priority    = event_effect->priority;
+    // Pour les événements CAN, on utilise uniquement color1 pour toutes les couleurs
+    effect_to_apply.color2 = effect_to_apply.color1;
+    effect_to_apply.color3 = effect_to_apply.color1;
     // if(effect_to_apply.segment_length == 0) {
     //   effect_to_apply.segment_length = total_leds;
     // }

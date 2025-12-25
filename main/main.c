@@ -76,7 +76,7 @@ static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *sta
   }
 
   // Block if autopilot/cruise control is not fully disabled
-  if (state->autopilot != 0) {
+  if (state->autopilot != 0 || state->cruise != 0) {
     return;
   }
 
