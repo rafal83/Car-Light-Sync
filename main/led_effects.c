@@ -67,7 +67,7 @@
 #define ANIM_FLASH_DUTY_ALERT 60 // Percentage for alert (longer)
 #define ANIM_TURN_DUTY_CYCLE 70  // Percentage for turn signals
 
-// Facteurs de fade et decay
+// Fade and decay factors
 #define FADE_FACTOR_SLOW 95   // Slow fade: keep 95% (reduce by 5%)
 #define FADE_FACTOR_MEDIUM 90 // Medium fade: keep 90% (reduce by 10%)
 #define FADE_DIVISOR 100
@@ -373,7 +373,7 @@ static void led_strip_show(void) {
     return;
   }
 
-  // Attendre la fin de la transmission (sans section critique)
+  // Wait for transmission to complete (without critical section)
   ret = rmt_tx_wait_all_done(led_chan, pdMS_TO_TICKS(200));
   if (ret == ESP_ERR_TIMEOUT) {
     ESP_LOGE(TAG_LED, "Timeout transmission RMT");
@@ -484,7 +484,7 @@ static bool configure_rmt_channel(void) {
   return true;
 }
 
-// Remplit toutes les LEDs avec une couleur
+// Fill all LEDs with a color
 static void fill_solid(rgb_t color) {
   for (int i = 0; i < led_count; i++) {
     leds[i] = color;
@@ -666,7 +666,7 @@ static void effect_fire(void) {
     }
   }
 
-  // Conversion de la chaleur en couleurs (palette de feu)
+  // Convert heat to colors (fire palette)
   for (int i = 0; i < led_count; i++) {
     rgb_t color;
     uint8_t heat = heat_map[i];
@@ -876,7 +876,7 @@ static void effect_blindspot_flash(void) {
     period = 15;
   int cycle              = effect_counter % period;
 
-  // Flash actif pendant 60% du cycle (plus long que turn signal pour l'urgence)
+  // Flash active for 60% of cycle (longer than turn signal for urgency)
   int animation_duration = (period * 60) / 100;
 
   // Effacer tout le ruban
@@ -886,7 +886,7 @@ static void effect_blindspot_flash(void) {
     // Fast animation: light up gradually with more intensity
     int lit_count = (cycle * half_leds) / animation_duration;
 
-    // Allumer les LEDs avec animation directionnelle depuis le centre
+    // Light up LEDs with directional animation from center
     for (int i = 0; i < lit_count && i < half_leds; i++) {
       int led_index;
 
@@ -1159,7 +1159,7 @@ static void effect_sparkle_overlay(void) {
     return;
   }
 
-  // Fade rapide pour que les scintilles restent courtes
+  // Fast fade to keep sparkles short
   for (int i = 0; i < led_count; i++) {
     leds[i].r = (leds[i].r * 92) / 100;
     leds[i].g = (leds[i].g * 92) / 100;
@@ -1316,10 +1316,10 @@ static void effect_charge_status(void) {
   if (target_led >= led_count)
     target_led = led_count - 1;
 
-  // Effacer tout
+  // Clear all
   fill_solid((rgb_t){0, 0, 0});
 
-  // Afficher la barre de charge (statique) avec couleur selon le niveau
+  // Display charge bar (static) with color based on level
   for (int i = 0; i < target_led; i++) {
     rgb_t color;
 
@@ -1368,8 +1368,8 @@ static void effect_charge_status(void) {
     speed_factor = 0.017f + (current_config.speed / 255.0f) * 0.983f;
   }
 
-  // Position du pixel: commence au bout (led_count-1) et va vers 0
-  // Cycle complet: du bout jusqu'au niveau de charge + longueur de la trail
+  // Pixel position: starts at end (led_count-1) and goes to 0
+  // Full cycle: from end to charge level + trail length
   // This lets the entire trail be "consumed" before restarting
   const int TRAIL_LENGTH = 5;
   int cycle_length       = led_count - target_led + TRAIL_LENGTH;
@@ -1383,9 +1383,9 @@ static void effect_charge_status(void) {
       charge_anim_position -= (float)cycle_length;
     }
 
-    // Position actuelle du pixel (conversion en entier pour affichage)
+    // Current pixel position (convert to integer for display)
     int anim_pos         = (int)charge_anim_position;
-    // Calculer la position du pixel selon la direction
+    // Calculate pixel position based on direction
     int moving_pixel_pos = current_config.reverse ? anim_pos : (led_count - 1 - anim_pos);
 
     // Extract the RGB components of the configured color
@@ -1400,11 +1400,11 @@ static void effect_charge_status(void) {
     // Same-color trail behind the pixel (8 pixels for the trail
     // longue et fluide)
     for (int trail = 1; trail <= TRAIL_LENGTH; trail++) {
-      // Direction de la trail selon reverse
+      // Trail direction based on reverse
       int trail_pos        = current_config.reverse ? (moving_pixel_pos - trail) : (moving_pixel_pos + trail);
 
-      // Afficher la trail seulement si:
-      // 1. Elle est dans la zone visible (< led_count)
+      // Display trail only if:
+      // 1. It is in visible zone (< led_count)
       // 2. Elle has not yet been "consumed" by the charge bar
       bool in_visible_zone = current_config.reverse ? (trail_pos >= 0 && trail_pos < target_led) : (trail_pos >= target_led && trail_pos < led_count);
 
@@ -1592,10 +1592,10 @@ static void effect_power_meter_center(void) {
 
 // Effect: Vehicle sync
 static void effect_vehicle_sync(void) {
-  // Combine plusieurs indicateurs
+  // Combine multiple indicators
   rgb_t base_color = {0, 0, 0};
 
-  // Portes ouvertes = rouge
+  // Doors open = red
   if (last_vehicle_state.door_front_left_open + last_vehicle_state.door_front_right_open + last_vehicle_state.door_rear_left_open + last_vehicle_state.door_rear_right_open > 0) {
     base_color = (rgb_t){255, 0, 0};
   }
@@ -1670,7 +1670,7 @@ static void effect_audio_bpm(void) {
   uint32_t time_since_beat = now - audio_data.last_beat_ms;
 
   if (audio_data.beat_detected || time_since_beat < 100) {
-    // Flash sur le battement avec decay
+    // Flash on beat with decay
     float decay = 1.0f - (time_since_beat / 100.0f);
     if (decay < 0.0f)
       decay = 0.0f;
@@ -1698,7 +1698,7 @@ static void effect_fft_spectrum(void) {
     return;
   }
 
-  // Nombre de LEDs par bande
+  // Number of LEDs per band
   int leds_per_band = led_count / AUDIO_FFT_BANDS;
   if (leds_per_band < 1)
     leds_per_band = 1;
@@ -1716,7 +1716,7 @@ static void effect_fft_spectrum(void) {
     if (height > leds_per_band)
       height = leds_per_band;
 
-    // Allumer les LEDs pour cette bande
+    // Light up LEDs for this band
     for (int i = 0; i < leds_per_band && (band * leds_per_band + i) < led_count; i++) {
       int pos     = band * leds_per_band + i;
       int led_idx = current_config.reverse ? (led_count - 1 - pos) : pos;
@@ -2004,7 +2004,7 @@ uint8_t led_effects_get_accel_pedal_pos(void) {
 }
 
 uint16_t led_effects_apply_accel_modulation(uint16_t original_length, uint8_t accel_pedal_pos, uint8_t offset_percent) {
-  // Normaliser les valeurs
+  // Normalize values
   uint8_t accel_percent = accel_pedal_pos;
   if (accel_percent > 100)
     accel_percent = 100;
@@ -2151,11 +2151,11 @@ void led_effects_update(void) {
         segment_buffer[i] = leds[i];
       }
 
-      // Restaurer led_count et remettre tout en noir
+      // Restore led_count and reset everything to black
       led_count = saved_led_count;
       fill_solid((rgb_t){0, 0, 0});
 
-      // Appliquer le segment au bon endroit
+      // Apply segment at correct location
       for (uint16_t i = 0; i < segment_length; i++) {
         uint16_t idx = segment_start + i;
         if (idx < led_count) {
