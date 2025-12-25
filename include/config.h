@@ -18,7 +18,7 @@
 #define I2S_SD_PIN 18
 
 // Pins TWAI (CAN)
-// Note: Sur ESP32-C6, les pins TWAI peuvent être mappées sur n'importe quel
+// Note: On ESP32-C6, TWAI pins can be mapped to any
 // GPIO
 #define CAN_TX_BODY_PIN 15
 #define CAN_RX_BODY_PIN 14
@@ -26,7 +26,7 @@
 #define CAN_RX_CHASSIS_PIN 6
 
 #else
-// Configuration ESP32-S3 (défaut)
+// Configuration ESP32-S3 (default)
 #define LED_PIN 5
 
 // I2S pins for INMP441 microphone
@@ -66,10 +66,10 @@ void config_init_device_names(void);
 #define DEFAULT_SPEED 50
 #define MAX_BRIGHTNESS 255
 
-// Configuration LED matérielle
+// Hardware LED configuration
 /**
- * Nombre maximum de LEDs supportées par le système.
- * Limité à 200 pour éviter les problèmes de mémoire sur ESP32.
+ * Maximum number of LEDs supported by the system.
+ * Limited to 200 to avoid memory issues on ESP32.
  */
 #define MAX_LED_COUNT 200
 

@@ -9,13 +9,13 @@
 
 #define TAG_ESP_NOW "ESP_NOW_LINK"
 
-// Rôles
+// Roles
 typedef enum {
   ESP_NOW_ROLE_MASTER = 0,
   ESP_NOW_ROLE_SLAVE  = 1
 } espnow_role_t;
 
-// Types d'esclaves supportés
+// Supported slave types
 typedef enum {
   ESP_NOW_SLAVE_NONE = 0,
   ESP_NOW_SLAVE_EVENTS_LEFT,

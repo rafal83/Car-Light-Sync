@@ -9,21 +9,21 @@ extern "C" {
 #define TAG_LED_ENCODER "led_encoder"
 
 /**
- * @brief Configuration pour l'encodeur LED strip
+ * @brief Configuration for LED strip encoder
  */
 typedef struct {
-  uint32_t resolution; // Résolution de l'horloge RMT en Hz
+  uint32_t resolution; // RMT clock resolution in Hz
 } led_strip_encoder_config_t;
 
 /**
- * @brief Créer un encodeur RMT pour LED strip (WS2812)
+ * @brief Create RMT encoder for LED strip (WS2812)
  *
- * @param[in] config Configuration de l'encodeur
- * @param[out] ret_encoder Handle de l'encodeur créé
+ * @param[in] config Encoder configuration
+ * @param[out] ret_encoder Handle to created encoder
  * @return
- *      - ESP_OK: Encodeur créé avec succès
- *      - ESP_ERR_INVALID_ARG: Argument invalide
- *      - ESP_ERR_NO_MEM: Pas assez de mémoire
+ *      - ESP_OK: Encoder created successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid argument
+ *      - ESP_ERR_NO_MEM: Not enough memory
  */
 esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rmt_encoder_handle_t *ret_encoder);
 

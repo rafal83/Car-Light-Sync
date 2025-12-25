@@ -708,7 +708,7 @@ bleTransport.onStatusChange((status) => {
         updateApiConnectionState();
     } else if (status === 'disconnected' && lastBleStatus === 'connected') {
         showNotification('ble-notification', t('ble.toastDisconnected'), 'info');
-        // Réafficher l'overlay de chargement lors de la déconnexion BLE
+        // Redisplay the loading overlay when BLE disconnects
         if (!wifiOnline) {
             initialDataLoaded = false;
             initialDataLoadPromise = null;
@@ -719,7 +719,7 @@ bleTransport.onStatusChange((status) => {
         updateApiConnectionState();
     }
     lastBleStatus = status;
-    // Mettre à jour le bouton BLE sur l'overlay de chargement
+    // Update the BLE button on the loading overlay
     updateLoadingBleButton();
 });
 const simulationSections = [
@@ -1138,8 +1138,8 @@ function t(key, ...params) {
     });
     return result;
 }
-// Gestion des tabs
-// État des toggles de simulation (persiste entre les changements d'onglets)
+// Tab management
+// Simulation toggles state (persists between tab changes)
 let simulationTogglesState = {};
 let simulationAutoStopTimers = {};
 function isSimulationEventEnabled(eventType) {
@@ -1179,12 +1179,12 @@ function switchTab(tabName, evt) {
         stopLiveLogs();
     }
 
-    // Gérer le polling audio et FFT selon l'onglet actif
+    // Handle audio and FFT polling based on active tab
     if (tabName === 'config') {
       loadFFTStatus();
-      startAudioDataPolling(); // Démarrera seulement si audioEnabled est true
+      startAudioDataPolling(); // Will only start if audioEnabled is true
     } else {
-      stopAudioDataPolling(); // Arrêter le polling si on quitte l'onglet config
+      stopAudioDataPolling(); // Stop polling when leaving config tab
     }
 
     // Load data for specific tabs
@@ -1201,7 +1201,7 @@ function switchTab(tabName, evt) {
     } else if (tabName === 'espnow') {
         loadEspnowConfig();
     } else if (tabName === 'simulation') {
-        // Restaurer l'état des toggles de simulation
+        // Restore simulation toggles state
         restoreSimulationToggles();
     } else if (tabName === 'profiles') {
         loadProfiles();
@@ -1209,11 +1209,11 @@ function switchTab(tabName, evt) {
         updateGvretTcpStatus();
         updateCanserverStatus();
     } else if (tabName === 'logs') {
-        // Onglet Logs: rien à charger au démarrage
+        // Logs tab: nothing to load at startup
     }
 }
 function restoreSimulationToggles() {
-    // Restaurer l'état de tous les toggles
+    // Restore state of all toggles
     Object.keys(simulationTogglesState).forEach(eventId => {
         const checkbox = $('toggle-' + eventId);
         if (checkbox) {
@@ -1280,7 +1280,7 @@ if (dynamicBrightnessEnabled) {
         scheduleDefaultEffectSave();
     });
 }
-// Mise à jour des sliders avec pourcentage (seulement ceux qui existent)
+// Update sliders with percentage (only those that exist)
 const dynamicBrightnessRateSlider = $('dynamic-brightness-rate');
 if (dynamicBrightnessRateSlider) {
     dynamicBrightnessRateSlider.oninput = function() {
@@ -1516,7 +1516,7 @@ function normalizeSegmentRange(minSlider, maxSlider, minLength = SEGMENT_MIN_LEN
     return { start: min, end: max, length: max - min };
 }
 
-// Met à jour l'affichage visuel d'un segment (slider + valeurs)
+// Updates the visual display of a segment (slider + values)
 function renderSegmentRange(minSlider, maxSlider, selectedEl, startEl, lengthEl, maxValue = maxLeds) {
     const { start, end, length } = normalizeSegmentRange(minSlider, maxSlider, SEGMENT_MIN_LENGTH, maxValue);
 
@@ -1536,7 +1536,7 @@ function renderSegmentRange(minSlider, maxSlider, selectedEl, startEl, lengthEl,
     return { start, length };
 }
 
-// Helpers pour les sliders de segment par défaut
+// Helpers for default segment sliders
 function updateDefaultSegmentRange(triggerSave = true) {
     const minSlider = $('default-segment-range-min');
     const maxSlider = $('default-segment-range-max');
@@ -1579,7 +1579,7 @@ function setDefaultSegmentRange(start, length) {
     maxSlider.max = maxLeds;
     minSlider.value = resolvedStart;
     maxSlider.value = resolvedStart + resolvedLength;
-    // Mise à jour visuelle sans déclencher de sauvegarde
+    // Visual update without triggering save
     updateDefaultSegmentRange(false);
 }
 // Notification helper
@@ -1687,10 +1687,10 @@ function renderEventsTable() {
         return;
     }
 
-    // Sauvegarder l'état des accordéons ouverts avant de recréer
+    // Save state of open accordions before recreating
     const openAccordions = new Set();
     container.querySelectorAll('.event-accordion-header.active').forEach(header => {
-        // Trouver l'index réel de l'accordéon
+        // Find the real index of the accordion
         const contentId = header.nextElementSibling?.id;
         if (contentId) {
             const match = contentId.match(/event-accordion-content-(\d+)/);
@@ -1747,14 +1747,14 @@ function renderEventsTable() {
         const canSwitchProfile = event.csp || false;
         const profileId = event.pid !== undefined ? event.pid : -1;
 
-        // Générer les options d'action
+        // Generate action options
         let actionOptions = '';
         actionOptions += `<option value="0" ${actionType === 0 ? 'selected' : ''}>${t('eventsConfig.applyEffect')}</option>`;
         if (canSwitchProfile) {
             actionOptions += `<option value="1" ${actionType === 1 ? 'selected' : ''}>${t('eventsConfig.switchProfile')}</option>`;
         }
 
-        // Générer les options de profil
+        // Generate profile options
         const profileSelect = $('profile-select');
         let profileOptions = '<option value="-1">--</option>';
         if (profileSelect) {
@@ -1764,7 +1764,7 @@ function renderEventsTable() {
             }
         }
 
-        // Générer le résumé pour le mode comprimé (activé en premier)
+        // Generate summary for collapsed mode (enabled first)
         let summaryHTML = `
             <div class="event-accordion-summary-item enabled-item">
                 <span class="event-accordion-summary-label">${t('eventsConfig.enabled')}:</span>
@@ -1801,7 +1801,7 @@ function renderEventsTable() {
             `;
         }
 
-        // Créer l'élément accordéon
+        // Create accordion element
         const accordionItem = doc.createElement('div');
         accordionItem.className = 'event-accordion-item ' + (event.en ? 'enabled' : 'disabled');
         accordionItem.id = 'event-accordion-item-' + index;
@@ -1923,7 +1923,7 @@ function renderEventsTable() {
         container.appendChild(accordionItem);
     });
 
-    // Event delegation pour les selects d'action (évite les fuites mémoire)
+    // Event delegation for action selects (avoids memory leaks)
     container.querySelectorAll('[id^="event-action-"]').forEach(select => {
         select.addEventListener('change', function() {
             const idx = parseInt(this.dataset.eventIndex);
@@ -1932,7 +1932,7 @@ function renderEventsTable() {
         });
     });
 
-    // Restaurer l'état des accordéons qui étaient ouverts
+    // Restore state of accordions that were open
     openAccordions.forEach(index => {
         const header = container.querySelector(`#event-accordion-item-${index} .event-accordion-header`);
         const content = $(`event-accordion-content-${index}`);
@@ -1994,7 +1994,7 @@ function updateSegmentRange(index) {
     const { start, length } = renderSegmentRange(minSlider, maxSlider, selected, startValue, lengthValue);
     const lengthToSave = (length === maxLeds) ? 0 : length;
 
-    // Mettre à jour les données
+    // Update data
     updateEventConfig(index, 'st', start);
     updateEventConfig(index, 'ln', lengthToSave);
 }
@@ -2017,7 +2017,7 @@ function updateEventConfig(index, field, value) {
         }
     }
 
-    // Mettre à jour le résumé dans le header
+    // Update summary in header
     updateEventSummary(index);
 
     scheduleEventAutoSave(index);
@@ -2072,7 +2072,7 @@ function toggleEventFormFields(index) {
         input.disabled = !enabled;
     });
 
-    // Mettre à jour la classe CSS de l'item pour le style visuel
+    // Update CSS class of item for visual styling
     if (item) {
         if (enabled) {
             item.classList.remove('disabled');
@@ -2083,7 +2083,7 @@ function toggleEventFormFields(index) {
         }
     }
 
-    // Mettre à jour le toggle de test
+    // Update test toggle
     const eventId = eventsConfigData[index]?.ev;
     if (eventId) {
         const testToggle = $('toggle-' + eventId);
@@ -2096,7 +2096,7 @@ function toggleEventFormFields(index) {
         }
     }
 
-    // Mettre à jour le résumé dans le header
+    // Update summary in header
     updateEventSummary(index);
 }
 function updateEventSummary(index) {
@@ -2237,17 +2237,17 @@ async function loadHardwareConfig() {
     }
 }
 
-// Debounce timer pour saveHardwareConfig
+// Debounce timer for saveHardwareConfig
 let saveHardwareConfigTimeout = null;
 
-// Sauvegarder la configuration matérielle avec debounce
+// Save hardware configuration with debounce
 async function saveHardwareConfig() {
-    // Annuler le timer précédent
+    // Cancel previous timer
     if (saveHardwareConfigTimeout) {
         clearTimeout(saveHardwareConfigTimeout);
     }
 
-    // Créer un nouveau timer
+    // Create new timer
     saveHardwareConfigTimeout = setTimeout(async () => {
         await saveHardwareConfigImmediate();
     }, HARDWARE_SAVE_DEBOUNCE_MS);
@@ -2877,11 +2877,11 @@ function showImportDialog() {
 
         showNotification('profiles-notification', t('profiles.importQueue', files.length), 'info');
 
-        // Créer une file d'attente pour uploader les fichiers un par un
+        // Create queue to upload files one by one
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             try {
-                // Afficher une notification pour le fichier en cours
+                // Show notification for current file
                 showNotification('profiles-notification', t('profiles.importing', file.name, i + 1, files.length), 'info');
 
                 const profileData = await new Promise((resolve, reject) => {
@@ -2902,7 +2902,7 @@ function showImportDialog() {
                 const result = await response.json();
 
                 if (result.st === 'ok') {
-                    // Recharger les profils après chaque import réussi pour mettre la liste à jour
+                    // Reload profiles after each successful import to update the list
                     await loadProfiles(); 
                     if (typeof result.pid === 'number') {
                         const select = $('profile-select');
@@ -2913,20 +2913,20 @@ function showImportDialog() {
                 } else {
                     const message = result.msg || t('profiles.importErrorFile', file.name);
                     showNotification('profiles-notification', message, 'error');
-                    // Arrêter la file d'attente en cas d'erreur
+                    // Stop queue on error
                     break; 
                 }
             } catch (err) {
                 console.error('Erreur import:', err);
                 showNotification('profiles-notification', t('profiles.importErrorFile', file.name), 'error');
-                // Arrêter la file d'attente en cas d'erreur
+                // Stop queue on error
                 break;
             }
         }
 
-        // Notification finale
+        // Final notification
         showNotification('profiles-notification', t('profiles.importComplete'), 'success');
-        // Recharger la configuration complète du dernier profil importé (ou du profil actif)
+        // Reload complete configuration of last imported profile (or active profile)
         await loadConfig();
     };
     input.click();
@@ -3003,7 +3003,7 @@ async function saveProfile(params = {}) {
     }
 }
 // Appliquer l'effet
-// Mise à jour du statut
+// Update status
 async function updateStatus() {
     try {
         const response = await fetch(API_BASE + '/api/status');
@@ -3259,7 +3259,7 @@ async function loadConfig() {
         const response = await fetch(API_BASE + '/api/config');
         const config = await response.json();
 
-        // Mettre à jour le nombre max de LEDs
+        // Update max LED count
         if (config.lc && config.lc > 0) {
             maxLeds = config.lc;
         }
@@ -3521,23 +3521,23 @@ async function toggleAudio(enabled) {
     }
 }
 
-// Debounce timer pour saveAudioConfig
+// Debounce timer for saveAudioConfig
 let saveAudioConfigTimeout = null;
 
-// Mettre à jour les valeurs des sliders
+// Update slider values
 function updateAudioValue(param, value) {
     $(`audio-${param}-value`).textContent = value;
     saveAudioConfig();
 }
 
-// Sauvegarder la configuration audio avec debounce
+// Save audio configuration with debounce
 async function saveAudioConfig() {
-    // Annuler le timer précédent
+    // Cancel previous timer
     if (saveAudioConfigTimeout) {
         clearTimeout(saveAudioConfigTimeout);
     }
 
-    // Créer un nouveau timer
+    // Create new timer
     saveAudioConfigTimeout = setTimeout(async () => {
         await saveAudioConfigImmediate();
     }, AUDIO_SAVE_DEBOUNCE_MS);
@@ -3575,7 +3575,7 @@ async function updateAudioData() {
         const response = await fetch(API_BASE + '/api/audio/data');
         const data = await response.json();
 
-        // Mise à jour des données audio de base
+        // Update basic audio data
         if (data.av !== false) {
             $('audio-amplitude-value').textContent =
                 (data.amp * 100).toFixed(0) + '%';
@@ -3595,7 +3595,7 @@ async function updateAudioData() {
                 (data.tr * 100).toFixed(0) + '%';
         }
 
-        // Mise à jour des données FFT (si disponibles dans la réponse)
+        // Update FFT data (if available in response)
         if (data.fft && data.fft.av) {
             // Update frequency info
             $('fftPeakFreq').textContent = Math.round(data.fft.pf);
@@ -3725,18 +3725,18 @@ function startAudioDataPolling() {
     }
 
     if (audioUpdateInterval === null) {
-        // Utiliser un flag non-null pour indiquer que le polling est actif
+        // Use a non-null flag to indicate polling is active
         audioUpdateInterval = 'active';
-        // Démarrer immédiatement, puis utiliser setTimeout dans la fonction
+        // Start immediately, then use setTimeout in the function
         updateAudioData();
-        console.log('[Audio] Polling démarré à ~2Hz (WiFi, auto-régulé)');
+        console.log('[Audio] Polling started at ~2Hz (WiFi, self-regulated)');
     }
 }
 
 function stopAudioDataPolling() {
     if (audioUpdateInterval !== null) {
-        console.log('[Audio] Polling arrêté');
-        // Arrêter le setTimeout planifié (si audioUpdateInterval est un timeout ID)
+        console.log('[Audio] Polling stopped');
+        // Stop the scheduled setTimeout (if audioUpdateInterval is a timeout ID)
         if (typeof audioUpdateInterval === 'number') {
             clearTimeout(audioUpdateInterval);
         }
@@ -3929,7 +3929,7 @@ async function uploadFirmware() {
                     fileInputEl.disabled = false;
                     fileInputEl.style.display = 'block';
                 }
-                // Arrêter le polling OTA en cas d'erreur
+                // Stop OTA polling on error
                 if (otaPollingInterval) {
                     clearInterval(otaPollingInterval);
                     otaPollingInterval = null;
@@ -3945,7 +3945,7 @@ async function uploadFirmware() {
                 fileInputEl.disabled = false;
                 fileInputEl.style.display = 'block';
             }
-            // Arrêter le polling OTA en cas d'erreur réseau
+            // Stop OTA polling on network error
             if (otaPollingInterval) {
                 clearInterval(otaPollingInterval);
                 otaPollingInterval = null;
@@ -3963,7 +3963,7 @@ async function uploadFirmware() {
             fileInputEl.disabled = false;
             fileInputEl.style.display = 'block';
         }
-        // Arrêter le polling OTA en cas d'exception
+        // Stop OTA polling on exception
         if (otaPollingInterval) {
             clearInterval(otaPollingInterval);
             otaPollingInterval = null;
@@ -4210,7 +4210,7 @@ async function loadEffects() {
             ...baseEffects,
             ...audioEffects
         ];
-        // Mettre à jour tous les dropdowns d'effets
+        // Update all effect dropdowns
         const effectSelects = [
             $('default-effect-select'),
             $('effect-select'),
@@ -4255,7 +4255,7 @@ async function loadEffects() {
                     }
                     select.appendChild(option);
                 });
-                // Restaurer la valeur sélectionnée si elle existe encore
+                // Restore selected value if it still exists
                 if (currentValue !== undefined && currentValue !== '') {
                     select.value = currentValue;
                 }
@@ -4460,7 +4460,7 @@ async function toggleServer(serverName, serverDisplayName) {
         if (data.status === 'ok') {
             showNotification('diagnostic',
                 t(`server.${serverName}${isRunning ? 'Stopped' : 'Started'}`) ||
-                `Serveur ${serverDisplayName} ${isRunning ? 'arrêté' : 'démarré'} avec succès`,
+                `Server ${serverDisplayName} ${isRunning ? 'stopped' : 'started'} successfully`,
                 'success');
             await updateServerStatus(serverName, serverDisplayName);
         } else {
@@ -4946,23 +4946,23 @@ async function loadInitialData() {
         throw error;
     }
 }
-// Fonction de nettoyage des timers
+// Timer cleanup function
 function stopAllTimers() {
-    console.log('[Cleanup] Arrêt de tous les timers');
+    console.log('[Cleanup] Stopping all timers');
 
-    // Arrêter le polling de status
+    // Stop status polling
     if (typeof statusIntervalHandle === 'number') {
         clearTimeout(statusIntervalHandle);
     }
     statusIntervalHandle = 'stopped';
 
-    // Arrêter le polling audio
+    // Stop audio polling
     if (typeof audioUpdateInterval === 'number') {
         clearTimeout(audioUpdateInterval);
     }
     audioUpdateInterval = 'stopped';
 
-    // Arrêter le polling OTA
+    // Stop OTA polling
     if (typeof otaPollingInterval === 'number') {
         clearInterval(otaPollingInterval);
     }

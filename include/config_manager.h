@@ -126,7 +126,7 @@ typedef enum {
  *   CAN_EVENT_TURN_LEFT,      // event
  *   &turn_config,              // effect_config
  *   500,                       // duration_ms (500ms)
- *   200                        // priority (haute priorité)
+ *   200                        // priority (high priority)
  * );
  * config_manager_set_event_enabled(0, CAN_EVENT_TURN_LEFT, true);
  * @endcode

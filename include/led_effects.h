@@ -121,14 +121,14 @@ typedef enum {
  *   .color1 = 0xFF8000,  // Orange
  *   .reverse = true,     // Animation vers la gauche
  *   .segment_start = 0,
- *   .segment_length = 61  // Première moitié (0-60)
+ *   .segment_length = 61  // First half (0-60)
  * };
  * @endcode
  */
 typedef struct {
   led_effect_t effect;
   uint8_t brightness; // 0-255
-  uint8_t speed;      // 0-100 (vitesse d'animation)
+  uint8_t speed;      // 0-100 (animation speed)
   uint32_t color1;    // RGB au format 0xRRGGBB
   uint32_t color2;
   uint32_t color3;
@@ -159,8 +159,8 @@ bool led_effects_init(void);
 void led_effects_deinit(void);
 
 /**
- * @brief Configure un effet
- * @param config Configuration de l'effet
+ * @brief Configures an effect
+ * @param config Effect configuration
  */
 void led_effects_set_config(const effect_config_t *config);
 

@@ -5,37 +5,37 @@
 
 #include <stdbool.h>
 
-// États de la LED de statut
+// Status LED states
 typedef enum {
-  STATUS_LED_BOOT,            // Démarrage (blanc pulsant)
-  STATUS_LED_WIFI_CONNECTING, // Connexion WiFi (bleu pulsant)
-  STATUS_LED_WIFI_AP,         // Mode AP (orange fixe)
-  STATUS_LED_WIFI_STATION,    // WiFi connecté (cyan/blanc alternance lente)
-  STATUS_LED_BLE_CONNECTED,   // BLE connecté (vert fixe)
-  STATUS_LED_ESPNOW_PAIRING,  // Appairage ESP-NOW (bleu clignotant rapide)
-  STATUS_LED_CAN_ACTIVE,      // CAN actif (violet pulsant lent)
-  STATUS_LED_ERROR,           // Erreur (rouge clignotant rapide)
-  STATUS_LED_IDLE,            // Idle/Aucune connexion (jaune pulsant lent)
-  STATUS_LED_FACTORY_RESET    // Reset en cours (rouge/blanc alternance rapide)
+  STATUS_LED_BOOT,            // Boot (white pulsing)
+  STATUS_LED_WIFI_CONNECTING, // WiFi connecting (blue pulsing)
+  STATUS_LED_WIFI_AP,         // AP mode (solid orange)
+  STATUS_LED_WIFI_STATION,    // WiFi connected (cyan/white slow alternation)
+  STATUS_LED_BLE_CONNECTED,   // BLE connected (solid green)
+  STATUS_LED_ESPNOW_PAIRING,  // ESP-NOW pairing (blue fast blinking)
+  STATUS_LED_CAN_ACTIVE,      // CAN active (purple slow pulsing)
+  STATUS_LED_ERROR,           // Error (red fast blinking)
+  STATUS_LED_IDLE,            // Idle/No connection (yellow slow pulsing)
+  STATUS_LED_FACTORY_RESET    // Reset in progress (red/white fast alternation)
 } status_led_state_t;
 
 /**
- * @brief Initialise la LED de statut
+ * @brief Initializes the status LED
  */
 esp_err_t status_led_init(void);
 
 /**
- * @brief Change l'état de la LED
+ * @brief Changes the LED state
  */
 esp_err_t status_led_set_state(status_led_state_t state);
 
 /**
- * @brief Obtient l'état actuel
+ * @brief Gets the current state
  */
 status_led_state_t status_led_get_state(void);
 
 /**
- * @brief Éteint la LED
+ * @brief Turns off the LED
  */
 esp_err_t status_led_off(void);
 
