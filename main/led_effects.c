@@ -277,7 +277,7 @@ static void render_status_display(bool error_mode) {
   }
 }
 
-// Conversion HSV vers RGB pour rainbow
+// HSV to RGB conversion for rainbow
 static rgb_t hsv_to_rgb(uint16_t h, uint8_t s, uint8_t v) {
   rgb_t rgb;
   uint8_t region, remainder, p, q, t;
@@ -491,7 +491,7 @@ static void fill_solid(rgb_t color) {
   }
 }
 
-// Effet: Couleur unie
+// Effect: Solid color
 static void effect_solid(void) {
   if (led_count == 0) {
     return;
@@ -516,7 +516,7 @@ static void effect_solid(void) {
   }
 }
 
-// Effet: Respiration
+// Effect: Breathing
 static void effect_breathing(void) {
   float breath       = (sin(effect_counter * 0.01f * current_config.speed / 10.0f) + 1.0f) / 2.0f;
   uint8_t brightness = (uint8_t)(current_config.brightness * breath);
@@ -529,7 +529,7 @@ static void effect_breathing(void) {
   fill_solid(color);
 }
 
-// Effet: Arc-en-ciel
+// Effect: Rainbow
 static void effect_rainbow(void) {
   // Use speed to control animation speed
   uint32_t speed_factor = (effect_counter * (current_config.speed + 10)) / 50;
@@ -543,7 +543,7 @@ static void effect_rainbow(void) {
   }
 }
 
-// Effet: Arc-en-ciel cyclique
+// Effect: Rainbow cycle
 static void effect_rainbow_cycle(void) {
   // Speed controls the cycle rate (speed: 0-255)
   uint8_t speed_factor = current_config.speed;
@@ -556,7 +556,7 @@ static void effect_rainbow_cycle(void) {
   fill_solid(color);
 }
 
-// Effet: Theater Chase
+// Effect: Theater Chase
 static void effect_theater_chase(void) {
   rgb_t color1      = apply_brightness(color_to_rgb(current_config.color1), current_config.brightness);
   rgb_t color2      = apply_brightness(color_to_rgb_fallback(current_config.color2, current_config.color1), current_config.brightness);
@@ -581,7 +581,7 @@ static void effect_theater_chase(void) {
   }
 }
 
-// Effet: Running Lights
+// Effect: Running Lights
 static void effect_running_lights(void) {
   // Use speed to control scroll speed
   int speed_divider = 256 - current_config.speed;
@@ -609,9 +609,9 @@ static void effect_running_lights(void) {
   }
 }
 
-// Effet: Twinkle
+// Effect: Twinkle
 static void effect_twinkle(void) {
-  // Diminuer progressivement toutes les LEDs
+  // Gradually fade all LEDs
   for (int i = 0; i < led_count; i++) {
     leds[i].r = leds[i].r * 95 / 100;
     leds[i].g = leds[i].g * 95 / 100;
@@ -634,7 +634,7 @@ static void effect_twinkle(void) {
   }
 }
 
-// Effet: Feu
+// Effect: Fire
 static uint16_t heat_map[MAX_LED_COUNT]; // Heat map for the fire effect
 
 static void effect_fire(void) {
@@ -693,7 +693,7 @@ static void effect_fire(void) {
   }
 }
 
-// Effet: Scan (Knight Rider)
+// Effect: Scan (Knight Rider)
 static void effect_scan(void) {
   // Perform a progressive fade instead of clearing completely to keep the
   // trail
@@ -754,7 +754,7 @@ static void effect_scan(void) {
   }
 }
 
-// Effet: Knight Rider (K2000 - trail nette)
+// Effect: Knight Rider (K2000 - sharp trail)
 static void effect_knight_rider(void) {
   // Clear the strip to keep a sharp trail
   fill_solid((rgb_t){0, 0, 0});
@@ -798,7 +798,7 @@ static void effect_knight_rider(void) {
   }
 }
 
-// Effet: Fade (in/out fluide)
+// Effect: Fade (smooth in/out)
 static void effect_fade(void) {
   // Calculate the period based on speed (speed: 0-255)
   uint8_t speed_factor = current_config.speed;
@@ -831,7 +831,7 @@ static void effect_fade(void) {
   fill_solid(color);
 }
 
-// Effet: Strobe (flash de toute la strip)
+// Effect: Strobe (full strip flash)
 static void effect_strobe(void) {
   rgb_t color1 = color_to_rgb(current_config.color1);
   rgb_t color2 = color_to_rgb_fallback(current_config.color2, current_config.color1);
@@ -860,8 +860,8 @@ static void effect_strobe(void) {
   }
 }
 
-// Effet: Flash angle mort directionnel (blindspot avec animation directionnelle
-// rapide)
+// Effect: Directional blindspot flash (blindspot with fast directional
+// animation)
 static void effect_blindspot_flash(void) {
   rgb_t color   = color_to_rgb(current_config.color1);
   color         = apply_brightness(color, current_config.brightness);
@@ -1085,7 +1085,7 @@ static void effect_meteor_shower(void) {
   }
 }
 
-// Effet: Onde concentrique qui se propage depuis le centre
+// Effect: Concentric wave propagating from center
 static void effect_ripple_wave(void) {
   fill_solid((rgb_t){0, 0, 0});
 
@@ -1153,7 +1153,7 @@ static void effect_dual_gradient(void) {
   }
 }
 
-// Effet: Fond discret + scintilles courtes
+// Effect: Subtle background + short sparkles
 static void effect_sparkle_overlay(void) {
   if (led_count == 0) {
     return;
@@ -1191,7 +1191,7 @@ static void effect_sparkle_overlay(void) {
   }
 }
 
-// Effet: Double scan centre <-> bords (reverse = bords -> centre)
+// Effect: Double scan center <-> edges (reverse = edges -> center)
 static void effect_center_out_scan(void) {
   fill_solid((rgb_t){0, 0, 0});
 
@@ -1290,7 +1290,7 @@ static void effect_center_out_scan(void) {
   }
 }
 
-// Effet: Feux de stop
+// Effect: Brake lights
 static void effect_brake_light(void) {
   rgb_t color = last_vehicle_state.brake_pressed ? (rgb_t){255, 0, 0} : (rgb_t){64, 0, 0};
   color       = apply_brightness(color, current_config.brightness);
@@ -1650,7 +1650,7 @@ static void effect_audio_reactive(void) {
   }
 }
 
-// Effet: Audio BPM (flash sur les battements)
+// Effect: Audio BPM (flash on beats)
 static void effect_audio_bpm(void) {
   audio_data_t audio_data;
   if (!audio_input_get_data(&audio_data)) {
