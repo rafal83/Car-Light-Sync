@@ -31,7 +31,7 @@ void vehicle_can_unified_init(void) {
 }
 
 // ---------------------------------------------------------------------------
-// Recherche de message DBC par ID
+// DBC message lookup by ID
 // ---------------------------------------------------------------------------
 // IRAM_ATTR: Called for every CAN frame received (~2000 times/s)
 static const can_message_def_t * IRAM_ATTR find_message_def(uint32_t id) {
@@ -66,7 +66,7 @@ static uint64_t IRAM_ATTR extract_bits_be(const uint8_t *data, uint8_t start_bit
   for (int i = 0; i < 8; i++) {
     raw = (raw << 8) | data[i];
   }
-  // start_bit est comme en DBC : bit 0 = MSB du premier octet
+  // start_bit is as in DBC: bit 0 = MSB of first byte
   uint8_t msb_index = 63 - start_bit;
   uint8_t shift     = msb_index - (length - 1);
   uint64_t mask     = (length == 64) ? UINT64_MAX : (((uint64_t)1 << length) - 1);
@@ -98,7 +98,7 @@ static float IRAM_ATTR decode_signal_value(const can_signal_def_t *sig, const ui
   }
 
   if (sig->value_type == SIGNAL_TYPE_SIGNED) {
-    // signe sur "length" bits
+    // sign on "length" bits
     uint64_t sign_bit  = (uint64_t)1 << (sig->length - 1);
     int64_t signed_val = (raw & sign_bit) ? (int64_t)(raw | (~((sign_bit << 1) - 1))) : (int64_t)raw;
     return (float)signed_val * sig->factor + sig->offset;
@@ -109,7 +109,7 @@ static float IRAM_ATTR decode_signal_value(const can_signal_def_t *sig, const ui
 }
 
 // ---------------------------------------------------------------------------
-// Pipeline principal
+// Main pipeline
 // ---------------------------------------------------------------------------
 
 // IRAM_ATTR declared in header for public function
@@ -157,7 +157,7 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
 }
 
 // ---------------------------------------------------------------------------
-// Conversion vers format BLE CONFIG
+// Conversion to BLE CONFIG format
 // ---------------------------------------------------------------------------
 
 void vehicle_state_to_ble_config(const vehicle_state_t *src, vehicle_state_ble_config_t *dst) {
@@ -177,7 +177,7 @@ void vehicle_state_to_ble_config(const vehicle_state_t *src, vehicle_state_ble_c
 }
 
 // ---------------------------------------------------------------------------
-// Conversion vers format BLE DRIVE (conduite)
+// Conversion to BLE DRIVE format (driving)
 // ---------------------------------------------------------------------------
 
 void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_drive_t *dst) {
@@ -186,8 +186,8 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
   // Dynamique de conduite
   float speed_kph_abs = fabsf(src->speed_kph) + 0.5f;
   dst->speed_kph = (uint8_t)(speed_kph_abs);
-  dst->rear_power_kw_x10 = (int16_t)(src->rear_power * 10.0f);  // Peut Gtre n?gatif (r?g?n)
-  dst->front_power_kw_x10 = (int16_t)(src->front_power * 10.0f); // Peut Gtre n?gatif (r?g?n)
+  dst->rear_power_kw_x10 = (int16_t)(src->rear_power * 10.0f);  // Can be negative (regen)
+  dst->front_power_kw_x10 = (int16_t)(src->front_power * 10.0f); // Can be negative (regen)
   dst->soc_percent = (uint8_t)(src->soc_percent);
   dst->odometer_km = (uint32_t)src->odometer_km;
 
@@ -233,13 +233,13 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
 }
 
 // ---------------------------------------------------------------------------
-// Conversion vers format BLE PARK (stationnement)
+// Conversion to BLE PARK format (parking)
 // ---------------------------------------------------------------------------
 
 void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_park_t *dst) {
   if (!src || !dst) return;
 
-  // Energie
+  // Energy
   dst->soc_percent = (uint8_t)(src->soc_percent);
   dst->charge_power_kw_x10 = (int16_t)(src->charge_power_kw * 10.0f);
   dst->battery_voltage_LV_x10 = (uint8_t)(src->battery_voltage_LV * 10.0f);

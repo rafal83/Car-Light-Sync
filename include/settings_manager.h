@@ -7,10 +7,10 @@
 
 #define TAG_SETTINGS "Settings"
 
-// Fichier de configuration centralisé
+// Centralized configuration file
 #define SETTINGS_FILE_PATH "/spiffs/config/settings.json"
 
-// Structure pour la configuration système (stockée en JSON dans SPIFFS)
+// Structure for system configuration (stored in JSON in SPIFFS)
 typedef struct {
   // Active profile ID
   int32_t active_profile_id;
@@ -33,67 +33,67 @@ typedef struct {
 } system_settings_t;
 
 /**
- * @brief Initialise le gestionnaire de paramètres
- * @return ESP_OK si succès
+ * @brief Initializes the settings manager
+ * @return ESP_OK if successful
  */
 esp_err_t settings_manager_init(void);
 
 /**
- * @brief Charge les paramètres système depuis SPIFFS
- * @param settings Pointeur vers la structure à remplir
- * @return ESP_OK si succès
+ * @brief Loads system settings from SPIFFS
+ * @param settings Pointer to structure to fill
+ * @return ESP_OK if successful
  */
 esp_err_t settings_manager_load(system_settings_t *settings);
 
 /**
- * @brief Sauvegarde les paramètres système vers SPIFFS
- * @param settings Pointeur vers la structure à sauvegarder
- * @return ESP_OK si succès
+ * @brief Saves system settings to SPIFFS
+ * @param settings Pointer to structure to save
+ * @return ESP_OK if successful
  */
 esp_err_t settings_manager_save(const system_settings_t *settings);
 
 /**
- * @brief Obtient une valeur int32
+ * @brief Gets an int32 value
  */
 int32_t settings_get_i32(const char *key, int32_t default_value);
 
 /**
- * @brief Définit une valeur int32
+ * @brief Sets an int32 value
  */
 esp_err_t settings_set_i32(const char *key, int32_t value);
 
 /**
- * @brief Obtient une valeur uint8
+ * @brief Gets a uint8 value
  */
 uint8_t settings_get_u8(const char *key, uint8_t default_value);
 
 /**
- * @brief Définit une valeur uint8
+ * @brief Sets a uint8 value
  */
 esp_err_t settings_set_u8(const char *key, uint8_t value);
 
 /**
- * @brief Obtient une valeur uint16
+ * @brief Gets a uint16 value
  */
 uint16_t settings_get_u16(const char *key, uint16_t default_value);
 
 /**
- * @brief Définit une valeur uint16
+ * @brief Sets a uint16 value
  */
 esp_err_t settings_set_u16(const char *key, uint16_t value);
 
 /**
- * @brief Obtient une valeur bool
+ * @brief Gets a bool value
  */
 bool settings_get_bool(const char *key, bool default_value);
 
 /**
- * @brief Définit une valeur bool
+ * @brief Sets a bool value
  */
 esp_err_t settings_set_bool(const char *key, bool value);
 
 /**
- * @brief Efface tous les paramètres (factory reset)
+ * @brief Clears all settings (factory reset)
  */
 esp_err_t settings_manager_clear(void);
 

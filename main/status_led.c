@@ -14,9 +14,9 @@
 #define STATUS_LED_GPIO 21
 #elif CONFIG_IDF_TARGET_ESP32C6
 // Disabled on C6 to free RMT for the main LED strip
-#define STATUS_LED_GPIO 8 // Pas de LED sur les autres boards
+#define STATUS_LED_GPIO 8 // No LED on other boards
 #else
-#define STATUS_LED_GPIO -1 // Pas de LED sur les autres boards
+#define STATUS_LED_GPIO -1 // No LED on other boards
 #endif
 
 #define STATUS_LED_MEM_BLOCK_SYMBOLS 48
@@ -63,7 +63,7 @@ static void status_led_task(void *arg) {
   while (1) {
     switch (current_state) {
     case STATUS_LED_BOOT: {
-      // Blanc pulsant rapide
+      // Fast pulsing white
       float brightness = (sinf(counter * 0.1f) + 1.0f) / 2.0f;
       uint8_t val      = (uint8_t)(brightness * 100);
       status_led_set_color(val, val, val);
@@ -72,7 +72,7 @@ static void status_led_task(void *arg) {
     }
 
     case STATUS_LED_WIFI_CONNECTING: {
-      // Bleu pulsant
+      // Pulsing blue
       float brightness = (sinf(counter * 0.05f) + 1.0f) / 2.0f;
       uint8_t val      = (uint8_t)(brightness * 100);
       status_led_set_color(0, 0, val);
@@ -81,32 +81,32 @@ static void status_led_task(void *arg) {
     }
 
     case STATUS_LED_WIFI_AP: {
-      // Orange fixe
+      // Solid orange
       status_led_set_color(255, 80, 0);
       vTaskDelay(pdMS_TO_TICKS(500));
       break;
     }
 
     case STATUS_LED_WIFI_STATION: {
-      // Cyan/blanc alternance lente
+      // Slow cyan/white alternation
       if ((counter % 40) < 20) {
         status_led_set_color(0, 100, 100); // Cyan
       } else {
-        status_led_set_color(50, 50, 50); // Blanc doux
+        status_led_set_color(50, 50, 50); // Soft white
       }
       vTaskDelay(pdMS_TO_TICKS(50));
       break;
     }
 
     case STATUS_LED_BLE_CONNECTED: {
-      // Vert fixe
+      // Solid green
       status_led_set_color(0, 100, 0);
       vTaskDelay(pdMS_TO_TICKS(500));
       break;
     }
 
     case STATUS_LED_ESPNOW_PAIRING: {
-      // Bleu clignotant rapide
+      // Fast blinking blue
       if ((counter % 8) < 4) {
         status_led_set_color(0, 0, 150);
       } else {
@@ -117,7 +117,7 @@ static void status_led_task(void *arg) {
     }
 
     case STATUS_LED_CAN_ACTIVE: {
-      // Violet pulsant lent
+      // Slow pulsing purple
       float brightness = (sinf(counter * 0.02f) + 1.0f) / 2.0f;
       uint8_t val      = (uint8_t)(brightness * 80);
       status_led_set_color(val, 0, val);
@@ -126,7 +126,7 @@ static void status_led_task(void *arg) {
     }
 
     case STATUS_LED_ERROR: {
-      // Rouge clignotant rapide
+      // Fast blinking red
       if ((counter % 10) < 5) {
         status_led_set_color(255, 0, 0);
       } else {
@@ -137,17 +137,17 @@ static void status_led_task(void *arg) {
     }
 
     case STATUS_LED_IDLE: {
-      // Jaune pulsant lent
+      // Slow pulsing yellow
       float brightness = (sinf(counter * 0.07f) + 1.0f) / 2.0f;
       uint8_t r        = (uint8_t)(brightness * 100);
       uint8_t g        = (uint8_t)(brightness * 80);
-      status_led_set_color(r, g, 0); // Jaune
+      status_led_set_color(r, g, 0); // Yellow
       vTaskDelay(pdMS_TO_TICKS(50));
       break;
     }
 
     case STATUS_LED_FACTORY_RESET: {
-      // Rouge/blanc alternance rapide
+      // Fast red/white alternation
       if ((counter % 6) < 3) {
         status_led_set_color(255, 0, 0);
       } else {
@@ -163,11 +163,11 @@ static void status_led_task(void *arg) {
 
 esp_err_t status_led_init(void) {
 #if STATUS_LED_GPIO < 0
-  ESP_LOGI(TAG, "Pas de LED de statut sur cette board");
+  ESP_LOGI(TAG, "No status LED on this board");
   return ESP_ERR_NOT_SUPPORTED;
 #endif
 
-  ESP_LOGI(TAG, "Initialisation LED statut sur GPIO %d", STATUS_LED_GPIO);
+  ESP_LOGI(TAG, "Initializing status LED on GPIO %d", STATUS_LED_GPIO);
 
   // Configuration RMT
   rmt_tx_channel_config_t tx_chan_config = {

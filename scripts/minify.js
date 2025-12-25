@@ -5,7 +5,7 @@ const esbuild = require('esbuild');
 
 const dataDir = path.join(__dirname, '..', 'data');
 
-// Configuration HTML minifier
+// HTML minifier configuration
 const htmlMinifyOptions = {
     collapseWhitespace: true,
     removeComments: true,
@@ -15,11 +15,11 @@ const htmlMinifyOptions = {
     useShortDoctype: true,
     minifyCSS: true,
     minifyJS: true,
-    removeAttributeQuotes: false, // Garder les quotes pour compatibilité
+    removeAttributeQuotes: false, // Keep quotes for compatibility
     keepClosingSlash: true
 };
 
-// Configuration esbuild pour CSS
+// esbuild configuration for CSS
 const cssMinifyOptions = {
     minify: true,
     target: 'es2015',
@@ -28,32 +28,32 @@ const cssMinifyOptions = {
     }
 };
 
-// Configuration esbuild pour JS
-// IMPORTANT: Ne pas utiliser IIFE car les fichiers partagent des variables globales
+// esbuild configuration for JS
+// IMPORTANT: Don't use IIFE as files share global variables
 const jsMinifyOptions = {
     minify: true,
     target: 'es2015',
-    // PAS de format: 'iife' car cela encapsulerait le code et rendrait les variables inaccessibles
-    treeShaking: false, // Ne pas supprimer le code "inutilisé" car il peut être appelé dynamiquement
+    // NO format: 'iife' as it would encapsulate code and make variables inaccessible
+    treeShaking: false, // Don't remove "unused" code as it may be called dynamically
 
-    // Mangling prudent (renommage des variables)
-    // ATTENTION: On ne peut PAS activer un mangling agressif car:
-    // - Les IDs HTML (getElementById('wifi-status')) doivent correspondre au HTML
-    // - Les variables globales (translations, effectsList) sont partagées entre fichiers
-    // - Les propriétés API (ev, fx, bri) doivent matcher le backend C++
-    // - Les attributs data-* ne peuvent pas être renommés
+    // Careful mangling (variable renaming)
+    // WARNING: We CANNOT enable aggressive mangling because:
+    // - HTML IDs (getElementById('wifi-status')) must match the HTML
+    // - Global variables (translations, effectsList) are shared between files
+    // - API properties (ev, fx, bri) must match the C++ backend
+    // - data-* attributes cannot be renamed
 
-    // Ce qu'esbuild fait déjà avec minify:true:
-    // ✓ Renomme les variables locales (let x = 5 → let a = 5)
-    // ✓ Raccourcit les espaces
-    // ✓ Supprime les commentaires
-    // ✓ Optimise les expressions
+    // What esbuild already does with minify:true:
+    // ✓ Renames local variables (let x = 5 → let a = 5)
+    // ✓ Shortens whitespace
+    // ✓ Removes comments
+    // ✓ Optimizes expressions
 
-    // Pour aller plus loin de manière SÛRE:
-    keepNames: false, // Permet de renommer les fonctions/variables locales (gain ~5-10%)
-    // Note: On ne touche PAS aux noms des propriétés car trop dangereux
+    // To go further SAFELY:
+    keepNames: false, // Allows renaming functions/local variables (~5-10% gain)
+    // Note: We do NOT touch property names as it's too dangerous
 
-    globalName: undefined // Pas de wrapper global
+    globalName: undefined // No global wrapper
 };
 
 async function minifyFile(filePath, type) {

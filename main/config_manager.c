@@ -29,7 +29,7 @@
 #include <time.h>
 
 // Buffer for JSON export/import (full profile with all events)
-#define JSON_EXPORT_BUFFER_SIZE 16384 // 16KB buffer pour JSON
+#define JSON_EXPORT_BUFFER_SIZE 16384 // 16KB buffer for JSON
 
 // Forward declaration
 static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size);
@@ -136,7 +136,7 @@ bool config_manager_init(void) {
 
   // If no profile exists, create a default profile
   if (!profile_exists) {
-    ESP_LOGI(TAG_CONFIG, "No profile found, creating default profile + Eteint profile");
+    ESP_LOGI(TAG_CONFIG, "No profile found, creating default profile + Off profile");
     config_manager_create_default_profile(&active_profile, "Default");
     config_manager_save_profile(1, &active_profile);
     active_profile_id     = 1;
@@ -346,7 +346,7 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   }
   free(temp_profile);
 
-  // Supprimer le fichier SPIFFS
+  // Delete the SPIFFS file
   esp_err_t err = spiffs_delete_file(filepath);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "Error deleting profile file %d", profile_id);
@@ -398,7 +398,7 @@ bool config_manager_rename_profile(uint16_t profile_id, const char *new_name) {
   // Allocate dynamically to avoid stack overflow
   config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
   if (profile == NULL) {
-    ESP_LOGE(TAG_CONFIG, "Memory allocation error pour renommage");
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error for rename");
     return false;
   }
 
@@ -435,7 +435,7 @@ bool config_manager_activate_profile(uint16_t profile_id) {
   active_profile_id     = profile_id;
   active_profile_loaded = true;
 
-  // Save the active ID dans SPIFFS
+  // Save the active ID in SPIFFS
   settings_set_i32("active_profile_id", profile_id);
 
   // Stop all active events before applying the new effect
@@ -557,7 +557,7 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   // 1. Load the embedded JSON file (default.json)
   size_t json_size    = default_json_end - default_json_start;
 
-  // Allouer un buffer pour le JSON (avec null terminator)
+  // Allocate buffer for JSON (with null terminator)
   char *embedded_json = (char *)malloc(json_size + 1);
   if (embedded_json != NULL) {
     memcpy(embedded_json, default_json_start, json_size);
@@ -583,7 +583,7 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
     return;
   }
 
-  // Optionnel: Override le nom si fourni
+  // Optional: Override name if provided
   if (name != NULL && strlen(name) > 0) {
     strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
   }
@@ -726,12 +726,12 @@ bool config_manager_process_can_event(can_event_type_t event) {
     }
   }
 
-  // Si l'effet est configure et active, l'utiliser
+  // If the effect is configured and enabled, use it
   if (event_effect->enabled) {
     memcpy(&effect_to_apply, &event_effect->effect_config, sizeof(effect_config_t));
     duration_ms = event_effect->duration_ms;
     priority    = event_effect->priority;
-    // Pour les événements CAN, on utilise uniquement color1 pour toutes les couleurs
+    // For CAN events, only use color1 for all colors
     effect_to_apply.color2 = effect_to_apply.color1;
     effect_to_apply.color3 = effect_to_apply.color1;
     // if(effect_to_apply.segment_length == 0) {
@@ -833,7 +833,7 @@ void config_manager_stop_event(can_event_type_t event) {
 void config_manager_stop_all_events(void) {
   for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
     if (active_events[i].active) {
-      ESP_LOGI(TAG_CONFIG, "Arret global de l'evenement '%s'", config_manager_enum_to_id(active_events[i].event));
+      ESP_LOGI(TAG_CONFIG, "Stopping event '%s' globally", config_manager_enum_to_id(active_events[i].event));
       active_events[i].active = false;
     }
   }
@@ -880,7 +880,7 @@ void config_manager_update(void) {
     return;
   }
 
-  // Initialiser les buffers
+  // Initialize buffers
   memset(priority_buffer, 0, total_leds * sizeof(uint8_t));
   memset(composed_buffer, 0, total_leds * sizeof(led_rgb_t));
 
@@ -895,7 +895,7 @@ void config_manager_update(void) {
     uint16_t default_start  = base.segment_start;
     uint16_t default_length = base.segment_length;
 
-    // Normaliser le segment
+    // Normalize segment
     led_effects_normalize_segment(&default_start, &default_length, total_leds);
 
     // Modulate by accel_pedal_pos if enabled
@@ -1246,22 +1246,22 @@ bool config_manager_factory_reset(void) {
   return true;
 }
 
-// Conversion 0-255 vers pourcentage 1-100
+// Conversion 0-255 to percentage 1-100
 static uint8_t value_to_percent(uint8_t value) {
   if (value == 0) {
     return 1;
   }
-  uint8_t percent = (value * 100 + 127) / 255; // Arrondi au plus proche
+  uint8_t percent = (value * 100 + 127) / 255; // Round to nearest
   return (percent < 1) ? 1 : (percent > 100) ? 100 : percent;
 }
 
-// Conversion pourcentage 1-100 vers 0-255
+// Conversion percentage 1-100 to 0-255
 static uint8_t percent_to_value(uint8_t percent) {
   if (percent < 1)
     percent = 1;
   if (percent > 100)
     percent = 100;
-  return (percent * 255 + 50) / 100; // Arrondi au plus proche
+  return (percent * 255 + 50) / 100; // Round to nearest
 }
 
 // Internal function to export a profile to JSON (directly from the structure)
@@ -1410,7 +1410,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   if (name && cJSON_IsString(name)) {
     strncpy(profile->name, name->valuestring, PROFILE_NAME_MAX_LEN - 1);
   } else {
-    ESP_LOGE(TAG_CONFIG, "Champ 'name' manquant ou invalide");
+    ESP_LOGE(TAG_CONFIG, "Missing or invalid 'name' field");
     cJSON_Delete(root);
     return false;
   }
@@ -1580,7 +1580,7 @@ bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_
     return false;
   }
 
-  // Parser le JSON en structure
+  // Parse JSON into structure
   if (!config_manager_import_profile_from_json(json_string, temp_profile)) {
     free(temp_profile);
     return false;
@@ -1615,7 +1615,7 @@ uint16_t config_manager_get_led_count(void) {
 bool config_manager_set_led_count(uint16_t led_count) {
   // Validation
   if (led_count < 1 || led_count > 200) {
-    ESP_LOGE(TAG_CONFIG, "Nombre de LEDs invalide: %d (1-200)", led_count);
+    ESP_LOGE(TAG_CONFIG, "Invalid LED count: %d (1-200)", led_count);
     return false;
   }
 

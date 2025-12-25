@@ -4,7 +4,7 @@ const translations = {
       title: "Car Light Sync",
       subtitle: "Contrôle RGB synchronisé avec votre voiture",
     },
-    // Traductions communes pour les événements (utilisées par canEvents et eventNames)
+    // Common translations for events (used by canEvents and eventNames)
     commonEvents: {
       turnLeft: "Clignotant gauche",
       turnRight: "Clignotant droit",
@@ -95,7 +95,7 @@ const translations = {
       battery: "Batterie",
       charge: "Charge",
       speed: "Vitesse",
-      // Infos véhicule
+      // Vehicle info
       odometer: "Odomètre",
       batteryLV: "Batterie LV",
       state: "État",
@@ -113,14 +113,14 @@ const translations = {
       doorRR: "AR-D",
       frunk: "Frunk",
       trunk: "Coffre",
-      // Lumières
+      // Lights
       headlights: "Phares",
       highBeams: "Pleins feux",
       fog: "Antibrouillard",
       turnLeft: "Gauche",
       turnRight: "Droite",
       hazard: "Warnings",
-      // Sécurité
+      // Security
       locked: "Verrouillé",
       sentry: "Sentry",
       autopilot: "Autopilot",
@@ -490,7 +490,7 @@ const translations = {
       disabledEvent: "Événement désactivé dans la configuration",
     },
     eventNames: {
-      // Événements uniques (les communs sont dans commonEvents)
+      // Unique events (common ones are in commonEvents)
       CHARGING_STARTED: "Charge démarrée",
       CHARGING_STOPPED: "Charge arrêtée",
       CHARGING_CABLE_CONNECTED: "Câble connecté",

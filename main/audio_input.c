@@ -44,7 +44,7 @@ static bool fft_data_ready               = false;
 
 // Buffers
 static int32_t audio_buffer[AUDIO_BUFFER_SIZE];
-static float fft_output[AUDIO_FFT_SIZE]; // Pour stocker les magnitudes FFT
+static float fft_output[AUDIO_FFT_SIZE]; // To store FFT magnitudes
 
 // Variables for BPM detection
 static float bpm_history[AUDIO_BPM_HISTORY_SIZE] = {0};
@@ -53,7 +53,7 @@ static uint32_t last_beat_time_ms                = 0;
 static float energy_history[8]                   = {0};
 static uint8_t energy_index                      = 0;
 
-// Forward declarations pour les fonctions FFT
+// Forward declarations for FFT functions
 static void compute_fft_magnitude(int32_t *audio_samples, int num_samples);
 static void group_fft_into_bands(audio_fft_data_t *fft_data);
 // Calibration helpers
@@ -80,7 +80,7 @@ static void calculate_frequency_bands(int32_t *buffer, size_t size, float *bass,
   float mid_energy    = 0.0f;
   float high_energy   = 0.0f;
 
-  // Diviser le buffer en segments et analyser les variations
+  // Divide buffer into segments and analyze variations
   size_t segment_size = size / 8;
 
   for (size_t seg = 0; seg < 8; seg++) {
@@ -103,7 +103,7 @@ static void calculate_frequency_bands(int32_t *buffer, size_t size, float *bass,
     }
   }
 
-  // Normaliser
+  // Normalize
   float total = low_energy + mid_energy + high_energy;
   if (total > 0.0f) {
     *bass   = low_energy / total;
@@ -146,14 +146,14 @@ static void calibration_process_sample(float amplitude) {
     calib_result.noise_floor = (calibration_min == FLT_MAX) ? 0.0f : calibration_min;
     calib_result.peak_level  = calibration_max;
 
-    // Garantir une plage minimale pour la normalisation
+    // Ensure minimum range for normalization
     if (calib_result.peak_level < calib_result.noise_floor + CALIB_MIN_RANGE) {
       calib_result.peak_level = calib_result.noise_floor + CALIB_MIN_RANGE;
     }
   }
 }
 
-// Applique la calibration (suppression du bruit de fond et normalisation sur le pic)
+// Apply calibration (noise floor removal and peak normalization)
 static float apply_calibration(float amplitude) {
   if (!calibration.calibrated) {
     return amplitude;
@@ -164,7 +164,7 @@ static float apply_calibration(float amplitude) {
     range = CALIB_MIN_RANGE;
   }
 
-  // Appliquer un gate doux pour filtrer les micro-variations autour du bruit de fond
+  // Apply soft gate to filter micro-variations around noise floor
   float gate     = calibration.noise_floor + NOISE_GATE_MARGIN;
   float adjusted = amplitude - gate;
   if (adjusted < 0.0f) {
@@ -211,15 +211,15 @@ static float calculate_bpm(uint32_t current_time_ms) {
   uint32_t interval_ms = current_time_ms - last_beat_time_ms;
   last_beat_time_ms    = current_time_ms;
 
-  // Ignorer les intervalles trop courts ou trop longs
+  // Ignore intervals that are too short or too long
   if (interval_ms < 333 || interval_ms > 1000) { // 60-180 BPM
-    return current_audio_data.bpm;               // Garder l'ancienne valeur
+    return current_audio_data.bpm;               // Keep old value
   }
 
-  // Calculer le BPM brut
+  // Calculate raw BPM
   float raw_bpm                  = 60000.0f / (float)interval_ms;
 
-  // Lisser avec l'historique
+  // Smooth with history
   bpm_history[bpm_history_index] = raw_bpm;
   bpm_history_index              = (bpm_history_index + 1) % AUDIO_BPM_HISTORY_SIZE;
 
@@ -357,7 +357,7 @@ bool audio_input_init(void) {
     return false;
   }
 
-  // Configuration standard I2S pour INMP441
+  // Standard I2S configuration for INMP441
   i2s_std_config_t std_cfg = {
       .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(AUDIO_SAMPLE_RATE),
       .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO),
@@ -546,7 +546,7 @@ static bool audio_input_load_calibration(void) {
     if (ret == ESP_ERR_NOT_FOUND) {
       ESP_LOGW(TAG_AUDIO, "No saved calibration");
     } else {
-      ESP_LOGW(TAG_AUDIO, "Calibration absente ou invalide (%s)", esp_err_to_name(ret));
+      ESP_LOGW(TAG_AUDIO, "Calibration missing or invalid (%s)", esp_err_to_name(ret));
     }
     return false;
   }
@@ -625,7 +625,7 @@ void audio_input_get_calibration(audio_calibration_t *out_calibration) {
 // ============================================================================
 
 // FFT radix-2 in-place (Cooley-Tukey algorithm)
-// data contient [real0, imag0, real1, imag1, ...]
+// data contains [real0, imag0, real1, imag1, ...]
 static void fft_radix2(float *data, int size, bool inverse) {
   if (size <= 1)
     return;

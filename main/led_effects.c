@@ -40,7 +40,7 @@
 #endif
 
 // Power limiting to avoid brownout on USB power
-#define MAX_POWER_MILLIAMPS 3000 // Consommation max en mA (USB peut fournir ~2A max)
+#define MAX_POWER_MILLIAMPS 3000 // Max consumption in mA (USB can provide ~2A max)
 #define LED_MILLIAMPS_PER_LED 40 // Max consumption per LED in white at full brightness (mA)
 
 // Brightness and color constants
@@ -63,9 +63,9 @@
 #define ANIM_PERIOD_FAST_MIN 20
 #define ANIM_PERIOD_MEDIUM 100
 #define ANIM_PERIOD_SHORT 50
-#define ANIM_FLASH_DUTY_CYCLE 30 // Pourcentage du cycle pour le flash
+#define ANIM_FLASH_DUTY_CYCLE 30 // Percentage of cycle for flash
 #define ANIM_FLASH_DUTY_ALERT 60 // Percentage for alert (longer)
-#define ANIM_TURN_DUTY_CYCLE 70  // Pourcentage pour clignotants
+#define ANIM_TURN_DUTY_CYCLE 70  // Percentage for turn signals
 
 // Facteurs de fade et decay
 #define FADE_FACTOR_SLOW 95   // Slow fade: keep 95% (reduce by 5%)
@@ -92,11 +92,11 @@
 // Sentinel value for uninitialized indicator
 #define PROGRESS_NOT_INITIALIZED 255
 
-// Handles pour la nouvelle API RMT
+// Handles for new RMT API
 static rmt_channel_handle_t led_chan    = NULL;
 static rmt_encoder_handle_t led_encoder = NULL;
 
-// Structure pour un pixel RGB
+// Structure for an RGB pixel
 typedef struct {
   uint8_t r;
   uint8_t g;
@@ -119,7 +119,7 @@ static uint8_t ota_displayed_percent               = PROGRESS_NOT_INITIALIZED;
 static TickType_t ota_last_progress_refresh        = 0;
 static const TickType_t OTA_PROGRESS_REFRESH_LIMIT = pdMS_TO_TICKS(500);
 
-// Accumulateur flottant pour animation de charge fluide
+// Floating accumulator for smooth charging animation
 static float charge_anim_position                  = 0.0f;
 
 // Global LED strip direction (false = normal)
@@ -131,7 +131,7 @@ static uint16_t sanitize_led_count(uint16_t requested);
 static void update_max_allowed_brightness(uint16_t led_total);
 static uint8_t map_user_brightness(uint8_t brightness);
 
-// Conversion couleur 0xRRGGBB vers rgb_t
+// Convert 0xRRGGBB color to rgb_t
 static rgb_t color_to_rgb(uint32_t color) {
   rgb_t rgb;
   rgb.r = (color >> 16) & 0xFF;
@@ -199,7 +199,7 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   if (config_manager_get_dynamic_brightness(&dynamic_enabled, &dynamic_rate)) {
     if (dynamic_enabled && !config_manager_is_dynamic_brightness_excluded(active_event_context)) {
       // Formula: final_brightness = effect_brightness x (vehicle_brightness x rate / 100)
-      // Minimum 1% pour garantir que la strip reste visible
+      // Minimum 1% to ensure strip remains visible
       float vehicle_brightness = last_vehicle_state.brightness;                                          // 0-100 from CAN
       float rate               = (dynamic_rate ? dynamic_rate : 1) / 100.0f;                             // 0-1
       float applied_brightness = vehicle_brightness * rate / 100.0f;                                     // normalized to 0-1

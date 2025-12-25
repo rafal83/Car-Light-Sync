@@ -24,10 +24,10 @@ static const char *TAG = "CANSERVER_UDP";
 #define MAX_FRAMES_PER_PACKET 120           // Up to ~1900 bytes per UDP packet
 
 // Panda Protocol Format
-// Le protocole Panda utilise UDP avec un format binaire simple :
+// Panda protocol uses UDP with a simple binary format:
 // - Client sends "ehllo"/"hello" to start streaming
-// - Serveur envoie des paquets UDP contenant des frames (16 bytes chacune)
-// - Client doit renvoyer un ping toutes les 5 secondes pour maintenir la connexion
+// - Server sends UDP packets containing frames (16 bytes each)
+// - Client must send a ping every 5 seconds to maintain the connection
 //
 // Frame format (16 bytes total) (CANServer / Panda binary UDP):
 // [0-3]   : f1 (uint32_t LE) - (CAN ID << 21) | (extended << 31)
@@ -69,7 +69,7 @@ static bool has_active_clients     = false; // Cached client status for fast che
 /**
  * @brief Encode CAN frame in Panda binary format (16 bytes)
  *
- * Panda frame format (16 bytes) attendu par Scan My Tesla / CANServer:
+ * Panda frame format (16 bytes) expected by Scan My Tesla / CANServer:
  * [0-3]   : f1 (uint32_t LE) - (CAN ID << 21) | extended bit (31)
  * [4-7]   : f2 (uint32_t LE) - (length & 0x0F) | (busId << 4)
  * [8-15]  : data[8] (uint8_t[8]) - CAN payload (zero-padded if DLC < 8)

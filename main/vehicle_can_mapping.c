@@ -1,20 +1,20 @@
 #include "vehicle_can_mapping.h"
 
-#include "config_manager.h" // pour can_event_type_t + can_event_trigger
+#include "config_manager.h" // for can_event_type_t + can_event_trigger
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
 
 #include <stdbool.h>
-#include <stddef.h>  // pour offsetof
+#include <stddef.h>  // for offsetof
 #include <string.h>
 
 // Helper latch -> open/closed
 // IRAM_ATTR: called in CAN real-time callback
 static inline int IRAM_ATTR is_latch_open(float raw) {
   int v = (int)(raw + 0.5f);
-  // DBC mapping (typique Tesla) :
+  // DBC mapping (typical Tesla):
   // 2 = LATCH_CLOSED
   // 0 = SNA, others = open / moving / fault
   if (v == 2 || v == 0)
@@ -46,8 +46,8 @@ static uint64_t s_frontAlertHoldUntilUs = 0;
 
 static volatile bool s_vehicle_state_dirty = false;
 
-// Debounce tracking pour les champs vehicle_state
-// On utilise l'adresse du champ comme ID unique
+// Debounce tracking for vehicle_state fields
+// Uses field address as unique ID
 #define MAX_DEBOUNCE_FIELDS 128
 typedef struct {
   void *field_addr;
@@ -57,18 +57,18 @@ typedef struct {
 static field_debounce_t s_field_debounce[MAX_DEBOUNCE_FIELDS] = {0};
 static uint8_t s_field_debounce_count = 0;
 
-// Debounce par défaut : 0 (pas de debounce)
-// Le debounce est activé uniquement pour les champs spécifiques
+// Default debounce: 0 (no debounce)
+// Debounce is only enabled for specific fields
 #define DEFAULT_DEBOUNCE_US 0ULL
 
-// Configuration des debounces personnalisés pour certains champs (en microsecondes)
-// Par défaut : PAS de debounce (0)
-// Le debounce est activé uniquement pour les champs qui en ont besoin
+// Custom debounce configuration for certain fields (in microseconds)
+// Default: NO debounce (0)
+// Debounce is only enabled for fields that need it
 static uint64_t get_field_debounce_us(void *field_addr, vehicle_state_t *state) {
-  // Calcul de l'offset du champ dans la structure
+  // Calculate field offset in the structure
   ptrdiff_t offset = (uint8_t*)field_addr - (uint8_t*)state;
 
-  // Blindspot: debounce de 200ms pour éviter les faux positifs
+  // Blindspot: 200ms debounce to avoid false positives
   if (offset == offsetof(vehicle_state_t, blindspot_left) ||
       offset == offsetof(vehicle_state_t, blindspot_left_alert) ||
       offset == offsetof(vehicle_state_t, blindspot_right) ||
@@ -76,51 +76,51 @@ static uint64_t get_field_debounce_us(void *field_addr, vehicle_state_t *state) 
     return 200 * 1000ULL;
   }
 
-  // Clignotants: debounce de 10ms pour lisser les transitions
+  // Turn signals: 10ms debounce to smooth transitions
   if (offset == offsetof(vehicle_state_t, turn_left) ||
       offset == offsetof(vehicle_state_t, turn_right)) {
     return 10 * 1000ULL;
   }
 
-  return DEFAULT_DEBOUNCE_US; // 0 par défaut (pas de debounce)
+  return DEFAULT_DEBOUNCE_US; // 0 by default (no debounce)
 }
 
-// Vérifie si le debounce est OK pour mettre à jour un champ
+// Checks if debounce is OK to update a field
 static inline bool IRAM_ATTR check_field_debounce(void *field_addr, vehicle_state_t *state) {
   uint64_t now_us = esp_timer_get_time();
   uint64_t debounce_us = get_field_debounce_us(field_addr, state);
 
-  // Si debounce = 0, pas de debounce
+  // If debounce = 0, no debounce
   if (debounce_us == 0) {
     return true;
   }
 
-  // Chercher le champ dans la table de debounce
+  // Search for the field in the debounce table
   for (uint8_t i = 0; i < s_field_debounce_count; i++) {
     if (s_field_debounce[i].field_addr == field_addr) {
       if (now_us - s_field_debounce[i].last_update_us >= debounce_us) {
         s_field_debounce[i].last_update_us = now_us;
         return true; // Debounce OK
       }
-      return false; // Encore en debounce
+      return false; // Still debouncing
     }
   }
 
-  // Champ pas encore dans la table, l'ajouter
+  // Field not yet in table, add it
   if (s_field_debounce_count < MAX_DEBOUNCE_FIELDS) {
     s_field_debounce[s_field_debounce_count].field_addr = field_addr;
     s_field_debounce[s_field_debounce_count].last_update_us = now_us;
     s_field_debounce_count++;
   }
 
-  return true; // Premier accès, on autorise
+  return true; // First access, allow it
 }
 
-// Reset le compteur de debounce pour un champ (appelé quand la valeur est stable)
+// Reset debounce counter for a field (called when value is stable)
 static inline void IRAM_ATTR reset_field_debounce(void *field_addr) {
   uint64_t now_us = esp_timer_get_time();
 
-  // Chercher le champ dans la table et réinitialiser son timer
+  // Search for field in table and reset its timer
   for (uint8_t i = 0; i < s_field_debounce_count; i++) {
     if (s_field_debounce[i].field_addr == field_addr) {
       s_field_debounce[i].last_update_us = now_us;
@@ -128,7 +128,7 @@ static inline void IRAM_ATTR reset_field_debounce(void *field_addr) {
     }
   }
 
-  // Si pas trouvé, l'ajouter avec le timestamp actuel
+  // If not found, add it with current timestamp
   if (s_field_debounce_count < MAX_DEBOUNCE_FIELDS) {
     s_field_debounce[s_field_debounce_count].field_addr = field_addr;
     s_field_debounce[s_field_debounce_count].last_update_us = now_us;
@@ -149,7 +149,7 @@ void vehicle_can_state_dirty_clear(void) {
 }
 
 // Helpers to send the ESP-NOW state only when a value has changed
-// Avec debounce intégré
+// With integrated debounce
 #define UPDATE_AND_SEND_U8(field, value, state_ptr)                   \
   do {                                                                \
     uint8_t _nv = (uint8_t)(value);                                   \
@@ -261,7 +261,7 @@ static void IRAM_ATTR recompute_soc_percent(vehicle_state_t *state) {
 }
 
 // ============================================================================
-// Mapping signaux -> vehicle_state_t
+// Signal mapping -> vehicle_state_t
 // ============================================================================
 
 // Callback for scroll wheel events
@@ -337,7 +337,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // Etat drive system : ID118DriveSystemStatus
+  // Drive system state: ID118DriveSystemStatus
   //  - DI_gear
   //  - DI_brakePedalState
   // ---------------------------------------------------------------------
@@ -428,7 +428,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
 
-    // Feux de brouillard
+    // Fog lights
     if (strcmp(name, "VCFRONT_fogLeftStatus") == 0) { // || strcmp(name, "VCFRONT_fogRightStatus") == 0) {
       if(value != 3) { // SNA
         UPDATE_AND_SEND_U8(state->fog_lights, (uint8_t)(value + 0.5f) == 1 ? 1 : 0 , state);
@@ -464,7 +464,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // Batterie HV : ID132HVBattAmpVolt / BattVoltage132
+  // HV Battery: ID132HVBattAmpVolt / BattVoltage132
   // ---------------------------------------------------------------------
   if (id == 0x132) {
     if (strcmp(name, "BattVoltage132") == 0) {
@@ -475,7 +475,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // Batterie HV : ID261_12vBattStatus / v12vBattVoltage261
+  // HV Battery: ID261_12vBattStatus / v12vBattVoltage261
   // ---------------------------------------------------------------------
   if (id == 0x261) {
     if ((strcmp(name, "v12vBattVoltage261") == 0) && value > 10) {
@@ -701,10 +701,10 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   }
 
   // ---------------------------------------------------------------------
-  // Portes : ID102VCLEFT_doorStatus & ID103VCRIGHT_doorStatus
+  // Doors: ID102VCLEFT_doorStatus & ID103VCRIGHT_doorStatus
   // ---------------------------------------------------------------------
   else {
-    if (id == 0x102) { // gauche
+    if (id == 0x102) { // left
       if (strcmp(name, "VCLEFT_frontLatchStatus") == 0) {
         if(value != 0) { // SNA
           UPDATE_AND_SEND_U8(state->door_front_left_open, is_latch_open(value), state);
@@ -720,7 +720,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
 
-    if (id == 0x103) { // droite + trunk
+    if (id == 0x103) { // right + trunk
       if (strcmp(name, "VCRIGHT_frontLatchStatus") == 0) {
         if(value != 0) { // SNA
           UPDATE_AND_SEND_U8(state->door_front_right_open, is_latch_open(value), state);
@@ -743,7 +743,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
 
     // ---------------------------------------------------------------------
-    // Frunk : ID2E1VCFRONT_status / VCFRONT_frunkLatchStatus
+    // Frunk: ID2E1VCFRONT_status / VCFRONT_frunkLatchStatus
     // ---------------------------------------------------------------------
     if (id == 0x2E1) {
       if (strcmp(name, "VCFRONT_frunkLatchStatus") == 0) {
@@ -756,7 +756,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
 
     // ---------------------------------------------------------------------
-    // Etat BMS / charge : ID204PCS_chgStatus
+    // BMS state / charging: ID204PCS_chgStatus
     // ---------------------------------------------------------------------
     // if (id == 0x204) {
     //   if (strcmp(name, "PCS_hvChargeStatus") == 0) {
@@ -774,7 +774,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     // }
 
     // ---------------------------------------------------------------------
-    // Night mode : ID273UI_vehicleControl
+    // Night mode: ID273UI_vehicleControl
     // ---------------------------------------------------------------------
     if (id == 0x273) {
       if (strcmp(name, "UI_ambientLightingEnabled") == 0) {
@@ -791,7 +791,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       }
       if (strcmp(name, "UI_lockRequest") == 0) {
         int v = (int)(value + 0.5f);
-        // 1 = LOCK, 2 = UNLOCK (voir mapping dans JSON)
+        // 1 = LOCK, 2 = UNLOCK (see mapping in JSON)
         if(value != 7) { // SNA
           if (v == 1) {
             UPDATE_AND_SEND_U8(state->locked, 1, state);
@@ -844,8 +844,8 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       }
       if (strcmp(name, "CP_chargeCableState") == 0) {
         int v = (int)(value + 0.5f);
-        // 1 = NOT_CONNECTED, 2 = CONNECTED (voir mapping
-        // dans JSON)
+        // 1 = NOT_CONNECTED, 2 = CONNECTED (see mapping
+        // in JSON)
         if (v == 1) {
           UPDATE_AND_SEND_U8(state->charging_cable, 0, state);
         } else if (v == 2) {

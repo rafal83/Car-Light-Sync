@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define TAG_BLE_API "BLE_API"
-#define BLE_API_DEVICE_NAME "CarLightSync" // Sera remplacé par g_device_name_with_suffix
+#define BLE_API_DEVICE_NAME "CarLightSync" // Will be replaced by g_device_name_with_suffix
 #define BLE_HTTP_LOCAL_BASE_URL "http://127.0.0.1"
 #define BLE_MAX_REQUEST_LEN 16384
 #define BLE_MAX_RESPONSE_BODY 8192
@@ -18,24 +18,24 @@ extern "C" {
 #endif
 
 /**
- * @brief Initialise le service BLE exposant les API HTTP.
+ * @brief Initializes the BLE service exposing HTTP APIs.
  *
- * @return ESP_OK en cas de succès, code d'erreur sinon.
+ * @return ESP_OK on success, error code otherwise.
  */
 esp_err_t ble_api_service_init(void);
 
 /**
- * @brief Démarre la publicité BLE (à appeler après l'initialisation WiFi/Web).
+ * @brief Starts BLE advertising (to be called after WiFi/Web initialization).
  */
 esp_err_t ble_api_service_start(void);
 
 /**
- * @brief Arrête la publicité BLE et libère les ressources si nécessaire.
+ * @brief Stops BLE advertising and frees resources if necessary.
  */
 esp_err_t ble_api_service_stop(void);
 
 /**
- * @brief Indique si un client BLE est actuellement connecté.
+ * @brief Indicates if a BLE client is currently connected.
  */
 bool ble_api_service_is_connected(void);
 
@@ -43,9 +43,9 @@ bool ble_api_service_config_ack_received(void);
 void ble_api_service_clear_config_ack(void);
 
 /**
- * @brief Envoie l'état du véhicule via BLE (pour le mode dashboard).
- * @param state Pointeur vers la structure vehicle_state_t.
- * @return ESP_OK en cas de succès, code d'erreur sinon.
+ * @brief Sends vehicle state via BLE (for dashboard mode).
+ * @param state Pointer to vehicle_state_t structure.
+ * @return ESP_OK on success, error code otherwise.
  */
 esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size);
 

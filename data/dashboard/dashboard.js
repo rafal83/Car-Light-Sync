@@ -78,7 +78,7 @@ function decodeVehicleStateConfig(dataView) {
     const readInt8 = () => { const val = dataView.getInt8(offset); offset += 1; return val; };
     const readUint32 = () => { const val = dataView.getUint32(offset, true); offset += 4; return val; };
 
-    // Dynamique de conduite
+    // Driving dynamics
     rearPowerMax_kw = readUint16() / 10;
     frontPowerMax_kw = readUint16() / 10;
     maxRegen_kw = readUint16() / 10;
@@ -111,10 +111,10 @@ function decodeVehicleStateDrive(dataView) {
     const readInt8 = () => { const val = dataView.getInt8(offset); offset += 1; return val; };
     const readUint32 = () => { const val = dataView.getUint32(offset, true); offset += 4; return val; };
 
-    // Dynamique de conduite
+    // Driving dynamics
     const speed_kph = readUint8();
-    const rear_power_kw = readInt16() / 10.0;  // Peut être négatif (régén)
-    const front_power_kw = readInt16() / 10.0; // Peut être négatif (régén)
+    const rear_power_kw = readInt16() / 10.0;  // Can be negative (regen)
+    const front_power_kw = readInt16() / 10.0; // Can be negative (regen)
     const soc_percent = readUint8();
     const odometer_km = readUint32();
     // Valeurs uint8
@@ -209,7 +209,7 @@ function decodeVehicleStatePark(dataView) {
     const readInt8 = () => { const val = dataView.getInt8(offset); offset += 1; return val; };
     const readUint32 = () => { const val = dataView.getUint32(offset, true); offset += 4; return val; };
 
-    // Energie
+    // Energy
     const soc_percent = readUint8();
     const charge_power_kw = readInt16() / 10.0;
     const battery_voltage_LV = readUint8() / 10.0;

@@ -140,9 +140,9 @@ static void log_file_writer_task(void *arg) {
   }
 }
 
-// Custom log handler qui intercepte tous les logs ESP-IDF
+// Custom log handler that intercepts all ESP-IDF logs
 static int custom_log_handler(const char *fmt, va_list args) {
-  // Appeler le handler original pour garder les logs USB/UART
+  // Call original handler to keep USB/UART logs
   int ret = 0;
   if (original_log_handler) {
     va_list args_copy;
@@ -177,17 +177,17 @@ static int custom_log_handler(const char *fmt, va_list args) {
   }
 
   if (client_count > 0) {
-    // Parser le format ESP-IDF: "X (12345) TAG: message"
+    // Parse ESP-IDF format: "X (12345) TAG: message"
     // where X = E/W/I/D/V for Error/Warning/Info/Debug/Verbose
     char level_char = 'I'; // Default INFO
     char tag[32]    = "APP";
     char *message   = log_line_buffer;
 
-    // Format typique: "I (12345) TAG: message"
+    // Typical format: "I (12345) TAG: message"
     if (log_line_buffer[0] && log_line_buffer[1] == ' ' && log_line_buffer[2] == '(') {
       level_char      = log_line_buffer[0];
 
-      // Trouver le tag (entre ") " et ": ")
+      // Find tag (between ") " and ": ")
       char *tag_start = strstr(log_line_buffer, ") ");
       if (tag_start) {
         tag_start += 2;
@@ -228,7 +228,7 @@ static int custom_log_handler(const char *fmt, va_list args) {
       message[msg_len - 1] = '\0';
     }
 
-    // Envoyer aux clients SSE
+    // Send to SSE clients
     log_stream_send(message, level_str, tag);
   }
 
@@ -361,7 +361,7 @@ esp_err_t log_stream_init(void) {
     return ESP_FAIL;
   }
 
-  // Installer le hook de log pour intercepter tous les logs ESP-IDF
+  // Install log hook to intercept all ESP-IDF logs
   original_log_handler = esp_log_set_vprintf(custom_log_handler);
 
   ESP_LOGI(TAG, "Log streaming initialized (max %d clients, watchdog running)", MAX_SSE_CLIENTS);

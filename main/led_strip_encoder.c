@@ -22,14 +22,14 @@ static size_t rmt_encode_led_strip(rmt_encoder_t *encoder, rmt_channel_handle_t 
   case 0: // Send RGB data
     encoded_symbols += bytes_encoder->encode(bytes_encoder, channel, primary_data, data_size, &session_state);
     if (session_state & RMT_ENCODING_COMPLETE) {
-      led_encoder->state = 1; // passer au reset
+      led_encoder->state = 1; // proceed to reset
     }
     if (session_state & RMT_ENCODING_MEM_FULL) {
       state |= RMT_ENCODING_MEM_FULL;
       goto out;
     }
   // fall-through
-  case 1: // Envoyer le code de reset
+  case 1: // Send reset code
     encoded_symbols += copy_encoder->encode(copy_encoder, channel, &led_encoder->reset_code, sizeof(led_encoder->reset_code), &session_state);
     if (session_state & RMT_ENCODING_COMPLETE) {
       led_encoder->state = RMT_ENCODING_RESET;
@@ -73,7 +73,7 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rm
   led_encoder->base.del                           = rmt_del_led_strip_encoder;
   led_encoder->base.reset                         = rmt_led_strip_encoder_reset;
 
-  // Configuration pour WS2812B
+  // Configuration for WS2812B
   // Bit 0: 0.4us high, 0.85us low (total 1.25us)
   // Bit 1: 0.8us high, 0.45us low (total 1.25us)
   rmt_bytes_encoder_config_t bytes_encoder_config = {
@@ -91,14 +91,14 @@ esp_err_t rmt_new_led_strip_encoder(const led_strip_encoder_config_t *config, rm
               .level1    = 0,
               .duration1 = 0.45 * config->resolution / 1000000, // 0.45us
           },
-      .flags.msb_first = 1 // WS2812B utilise MSB first
+      .flags.msb_first = 1 // WS2812B uses MSB first
   };
   ESP_GOTO_ON_ERROR(rmt_new_bytes_encoder(&bytes_encoder_config, &led_encoder->bytes_encoder), err, TAG_LED_ENCODER, "create bytes encoder failed");
 
   rmt_copy_encoder_config_t copy_encoder_config = {};
   ESP_GOTO_ON_ERROR(rmt_new_copy_encoder(&copy_encoder_config, &led_encoder->copy_encoder), err, TAG_LED_ENCODER, "create copy encoder failed");
 
-  // Code de reset : niveau bas pendant >50us
+  // Reset code: low level for >50us
   uint32_t reset_ticks    = config->resolution / 1000000 * 50; // 50us
   led_encoder->reset_code = (rmt_symbol_word_t){
       .level0    = 0,

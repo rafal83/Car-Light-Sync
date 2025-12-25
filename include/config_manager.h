@@ -8,10 +8,10 @@
 #include <stdint.h>
 
 #define TAG_CONFIG "ConfigMgr"
-#define MAX_PROFILE_SCAN_LIMIT 100 // Limite de scan pour éviter une boucle infinie
+#define MAX_PROFILE_SCAN_LIMIT 100 // Scan limit to avoid infinite loop
 #define PROFILE_NAME_MAX_LEN 32
 
-// IDs alphanumériques stables pour les événements CAN (ne changent jamais)
+// Stable alphanumeric IDs for CAN events (never change)
 #define EVENT_ID_NONE "NONE"
 #define EVENT_ID_TURN_LEFT "TURN_LEFT"
 #define EVENT_ID_TURN_RIGHT "TURN_RIGHT"
@@ -53,8 +53,8 @@
 #define EVENT_ID_SENTRY_MODE_OFF "SENTRY_MODE_OFF"
 #define EVENT_ID_SENTRY_ALERT "SENTRY_ALERT"
 
-// Types d'événements CAN qui peuvent déclencher des effets (enum interne, peut
-// changer)
+// CAN event types that can trigger effects (internal enum, may
+// change)
 typedef enum {
   CAN_EVENT_NONE = 0,
   CAN_EVENT_TURN_LEFT,
@@ -85,32 +85,32 @@ typedef enum {
   CAN_EVENT_LANE_DEPARTURE_LEFT_LV2,
   CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1,
   CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2,
-  CAN_EVENT_SPEED_THRESHOLD, // Déclenché quand vitesse > seuil
+  CAN_EVENT_SPEED_THRESHOLD, // Triggered when speed > threshold
   CAN_EVENT_AUTOPILOT_ENGAGED,
   CAN_EVENT_AUTOPILOT_DISENGAGED,
   CAN_EVENT_AUTOPILOT_ALERT_LV1,
   CAN_EVENT_AUTOPILOT_ALERT_LV2,
-  CAN_EVENT_GEAR_DRIVE,      // Passage en mode Drive
-  CAN_EVENT_GEAR_REVERSE,    // Passage en marche arrière
-  CAN_EVENT_GEAR_PARK,       // Passage en mode Park
-  CAN_EVENT_SENTRY_MODE_ON,  // Mode sentry armé
-  CAN_EVENT_SENTRY_MODE_OFF, // Mode sentry désarmé
-  CAN_EVENT_SENTRY_ALERT,    // Détection/alarme sentry
+  CAN_EVENT_GEAR_DRIVE,      // Shift to Drive mode
+  CAN_EVENT_GEAR_REVERSE,    // Shift to reverse
+  CAN_EVENT_GEAR_PARK,       // Shift to Park mode
+  CAN_EVENT_SENTRY_MODE_ON,  // Sentry mode armed
+  CAN_EVENT_SENTRY_MODE_OFF, // Sentry mode disarmed
+  CAN_EVENT_SENTRY_ALERT,    // Sentry detection/alarm
   CAN_EVENT_MAX
 } can_event_type_t;
 
-// Type d'action pour un événement CAN
+// Action type for a CAN event
 typedef enum {
-  EVENT_ACTION_APPLY_EFFECT = 0, // Applique un effet LED
-  EVENT_ACTION_SWITCH_PROFILE    // Change de profil
+  EVENT_ACTION_APPLY_EFFECT = 0, // Apply an LED effect
+  EVENT_ACTION_SWITCH_PROFILE    // Switch profile
 } event_action_type_t;
 
 /**
- * @brief Configuration d'un effet pour un événement CAN spécifique
+ * @brief Configuration of an effect for a specific CAN event
  *
- * Exemple d'usage:
+ * Usage example:
  * @code
- * // Configurer clignotant gauche sur événement CAN
+ * // Configure left turn signal on CAN event
  * effect_config_t turn_config = {
  *   .effect = EFFECT_TURN_SIGNAL,
  *   .brightness = 255,
@@ -133,135 +133,135 @@ typedef enum {
  */
 typedef struct {
   can_event_type_t event;
-  event_action_type_t action_type; // Type d'action à effectuer
+  event_action_type_t action_type; // Type of action to perform
   effect_config_t effect_config;
-  uint16_t duration_ms; // Durée de l'effet (0 = permanent jusqu'à nouvel événement)
-  uint8_t priority;     // Priorité (0-255, plus haut = prioritaire)
-  int8_t profile_id;    // ID du profil à activer (-1 = aucun)
-  bool enabled;         // Actif ou non
+  uint16_t duration_ms; // Effect duration (0 = permanent until new event)
+  uint8_t priority;     // Priority (0-255, higher = higher priority)
+  int8_t profile_id;    // Profile ID to activate (-1 = none)
+  bool enabled;         // Active or not
 } can_event_effect_t;
 
-// Profil de configuration complet
-// NOTE: Profils stockés en SPIFFS (176KB) au lieu de NVS (limite 1984 bytes)
+// Complete configuration profile
+// NOTE: Profiles stored in SPIFFS (176KB) instead of NVS (1984 bytes limit)
 typedef struct {
   char name[PROFILE_NAME_MAX_LEN];
-  // Métadonnées
-  bool active; // Profil actif
-  effect_config_t default_effect; // Effet par défaut
+  // Metadata
+  bool active; // Active profile
+  effect_config_t default_effect; // Default effect
 
-  can_event_effect_t event_effects[CAN_EVENT_MAX]; // Effets par événement
+  can_event_effect_t event_effects[CAN_EVENT_MAX]; // Effects by event
 
-  // Paramètres généraux - Luminosité dynamique
-  bool dynamic_brightness_enabled; // Active la luminosité dynamique liée au brightness de la voiture
-  uint8_t dynamic_brightness_rate; // Taux d'application du brightness voiture (0-100%)
-  uint64_t dynamic_brightness_exclude_mask; // Masque des événements exclus de la luminosité dynamique
+  // General parameters - Dynamic brightness
+  bool dynamic_brightness_enabled; // Enable dynamic brightness linked to vehicle brightness
+  uint8_t dynamic_brightness_rate; // Vehicle brightness application rate (0-100%)
+  uint64_t dynamic_brightness_exclude_mask; // Mask of events excluded from dynamic brightness
 
 } config_profile_t;
 
-// Format de fichier binaire pour stockage SPIFFS (avec versioning)
+// Binary file format for SPIFFS storage (with versioning)
 #define PROFILE_FILE_MAGIC 0x50524F46  // "PROF" en ASCII
 #define PROFILE_FILE_VERSION 1
 #define PROFILE_FILE_MIN_VERSION 1
 
 typedef struct __attribute__((packed)) {
-  uint32_t magic;           // 0x50524F46 ("PROF") pour validation
-  uint16_t version;         // Version du format (1 pour v1)
-  uint16_t data_size;       // Taille de config_profile_t (pour vérification)
-  config_profile_t data;    // Données du profil
-  uint32_t checksum;        // Checksum simple de data pour intégrité
+  uint32_t magic;           // 0x50524F46 ("PROF") for validation
+  uint16_t version;         // Format version (1 for v1)
+  uint16_t data_size;       // Size of config_profile_t (for verification)
+  config_profile_t data;    // Profile data
+  uint32_t checksum;        // Simple checksum of data for integrity
 } profile_file_t;
 
 /**
- * @brief Initialise le gestionnaire de configuration
- * @return true si succès
+ * @brief Initializes the configuration manager
+ * @return true if successful
  */
 bool config_manager_init(void);
 
 /**
- * @brief Sauvegarde un profil en NVS
- * @param profile_id ID du profil (0-999)
- * @param profile Profil à sauvegarder
- * @return true si succès
+ * @brief Saves a profile to NVS
+ * @param profile_id Profile ID (0-999)
+ * @param profile Profile to save
+ * @return true if successful
  */
 bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile);
 
 /**
- * @brief Charge un profil depuis NVS
- * @param profile_id ID du profil
- * @param profile Pointeur vers le profil
- * @return true si succès
+ * @brief Loads a profile from NVS
+ * @param profile_id Profile ID
+ * @param profile Pointer to profile
+ * @return true if successful
  */
 bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile);
 
 /**
- * @brief Supprime un profil
- * @param profile_id ID du profil
- * @return true si succès
+ * @brief Deletes a profile
+ * @param profile_id Profile ID
+ * @return true if successful
  */
 bool config_manager_delete_profile(uint16_t profile_id);
 
 /**
- * @brief Active un profil
- * @param profile_id ID du profil
- * @return true si succès
+ * @brief Activates a profile
+ * @param profile_id Profile ID
+ * @return true if successful
  */
 bool config_manager_activate_profile(uint16_t profile_id);
 
 /**
- * @brief Renomme un profil
- * @param profile_id ID du profil
- * @param new_name Nouveau nom du profil
- * @return true si succès
+ * @brief Renames a profile
+ * @param profile_id Profile ID
+ * @param new_name New profile name
+ * @return true if successful
  */
 bool config_manager_rename_profile(uint16_t profile_id, const char *new_name);
 
 /**
- * @brief Obtient le profil actif
- * @param profile Pointeur vers le profil
- * @return true si un profil est actif
+ * @brief Gets the active profile
+ * @param profile Pointer to profile
+ * @return true if a profile is active
  */
 bool config_manager_get_active_profile(config_profile_t *profile);
 
 /**
- * @brief Obtient le cache d'événements du profil actif
- * @return Pointeur vers le tableau d'événements (ou NULL si pas de profil actif)
+ * @brief Gets the event cache of the active profile
+ * @return Pointer to event array (or NULL if no active profile)
  */
 can_event_effect_t *config_manager_get_active_events(void);
 
 /**
- * @brief Obtient l'ID du profil actif
- * @return ID du profil actif (-1 si aucun)
+ * @brief Gets the ID of the active profile
+ * @return Active profile ID (-1 if none)
  */
 int config_manager_get_active_profile_id(void);
 
 /**
- * @brief Change le profil actif vers le précédent/suivant disponible
- * @param direction +1 = suivant, -1 = précédent
- * @return true si un profil a été activé
+ * @brief Cycles the active profile to the previous/next available
+ * @param direction +1 = next, -1 = previous
+ * @return true if a profile was activated
  */
 bool config_manager_cycle_active_profile(int direction);
 
 /**
- * @brief Obtient les paramètres de luminosité dynamique du profil actif
- * @param enabled Pointeur pour stocker si la luminosité dynamique est activée
- * @param rate Pointeur pour stocker le taux d'application (0-100%)
- * @return true si le profil actif existe
+ * @brief Gets dynamic brightness parameters of the active profile
+ * @param enabled Pointer to store if dynamic brightness is enabled
+ * @param rate Pointer to store the application rate (0-100%)
+ * @return true if active profile exists
  */
 bool config_manager_get_dynamic_brightness(bool *enabled, uint8_t *rate);
 bool config_manager_is_dynamic_brightness_excluded(can_event_type_t event);
 
 /**
- * @brief Liste tous les profils disponibles
- * @param profiles Array pour stocker les profils
- * @param max_profiles Taille max du array
- * @return Nombre de profils trouvés
+ * @brief Lists all available profiles
+ * @param profiles Array to store profiles
+ * @param max_profiles Max size of array
+ * @return Number of profiles found
  */
 int config_manager_list_profiles(config_profile_t *profiles, int max_profiles);
 
 /**
- * @brief Crée un profil par défaut
- * @param profile Pointeur vers le profil
- * @param name Nom du profil
+ * @brief Creates a default profile
+ * @param profile Pointer to profile
+ * @param name Profile name
  */
 void config_manager_create_default_profile(config_profile_t *profile, const char *name);
 void config_manager_create_off_profile(config_profile_t *profile, const char *name);
@@ -273,152 +273,152 @@ int config_manager_get_wheel_control_speed_limit(void);
 bool config_manager_set_wheel_control_speed_limit(int speed_kph);
 
 /**
- * @brief Charge un événement depuis SPIFFS
- * @param profile_id ID du profil
- * @param event Type d'événement
- * @param event_effect Pointeur vers la structure à remplir
- * @return true si succès
+ * @brief Loads an event from SPIFFS
+ * @param profile_id Profile ID
+ * @param event Event type
+ * @param event_effect Pointer to structure to fill
+ * @return true if successful
  */
 bool config_manager_load_event(uint16_t profile_id, can_event_type_t event, can_event_effect_t *event_effect);
 
 /**
- * @brief Sauvegarde un événement vers SPIFFS
- * @param profile_id ID du profil
- * @param event Type d'événement
- * @param event_effect Pointeur vers la structure d'événement
- * @return true si succès
+ * @brief Saves an event to SPIFFS
+ * @param profile_id Profile ID
+ * @param event Event type
+ * @param event_effect Pointer to event structure
+ * @return true if successful
  */
 bool config_manager_save_event(uint16_t profile_id, can_event_type_t event, const can_event_effect_t *event_effect);
 
 /**
- * @brief Associe un effet à un événement CAN
- * @param profile_id ID du profil
- * @param event Type d'événement
- * @param effect_config Configuration de l'effet
- * @param duration_ms Durée de l'effet
- * @param priority Priorité
- * @return true si succès
+ * @brief Associates an effect with a CAN event
+ * @param profile_id Profile ID
+ * @param event Event type
+ * @param effect_config Effect configuration
+ * @param duration_ms Effect duration
+ * @param priority Priority
+ * @return true if successful
  */
 bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority);
 
 /**
- * @brief Active ou désactive un événement
- * @param profile_id ID du profil
- * @param event Type d'événement
- * @param enabled true pour activer, false pour désactiver
- * @return true si succès
+ * @brief Enables or disables an event
+ * @param profile_id Profile ID
+ * @param event Event type
+ * @param enabled true to enable, false to disable
+ * @return true if successful
  */
 bool config_manager_set_event_enabled(uint16_t profile_id, can_event_type_t event, bool enabled);
 
 /**
- * @brief Traite un événement CAN et applique l'effet correspondant
- * @param event Type d'événement
- * @return true si un effet a été appliqué
+ * @brief Processes a CAN event and applies the corresponding effect
+ * @param event Event type
+ * @return true if an effect was applied
  */
 bool config_manager_process_can_event(can_event_type_t event);
 
 /**
- * @brief Arrête manuellement un événement actif
- * @param event Type d'événement à arrêter
+ * @brief Manually stops an active event
+ * @param event Event type to stop
  */
 void config_manager_stop_event(can_event_type_t event);
 void config_manager_stop_all_events(void);
 
 /**
- * @brief Met à jour les effets en fonction du temps
- * Gère les effets temporaires et retourne à l'effet par défaut
+ * @brief Updates effects based on time
+ * Manages temporary effects and returns to default effect
  */
 void config_manager_update(void);
 
 /**
- * @brief Indique si des événements actifs overrident l'effet par défaut
- * @return true si des événements sont actifs
+ * @brief Indicates if active events override the default effect
+ * @return true if events are active
  */
 bool config_manager_has_active_events(void);
 
 /**
- * @brief Exporte un profil en JSON
- * @param profile_id ID du profil
- * @param json_buffer Buffer pour le JSON
- * @param buffer_size Taille du buffer
- * @return true si succès
+ * @brief Exports a profile to JSON
+ * @param profile_id Profile ID
+ * @param json_buffer Buffer for JSON
+ * @param buffer_size Buffer size
+ * @return true if successful
  */
 bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size);
 
 /**
- * @brief Importe un profil depuis JSON et sauve en binaire
- * @param profile_id ID du profil (0-99)
- * @param json_string JSON du profil
- * @return true si succès
+ * @brief Imports a profile from JSON and saves in binary
+ * @param profile_id Profile ID (0-99)
+ * @param json_string Profile JSON
+ * @return true if successful
  */
 bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_string);
 
 /**
- * @brief Obtient la configuration d'effet pour un événement spécifique
- * @param event Type d'événement
- * @param event_effect Pointeur vers la structure d'effet
- * @return true si succès (profil actif existe)
+ * @brief Gets the effect configuration for a specific event
+ * @param event Event type
+ * @param event_effect Pointer to effect structure
+ * @return true if successful (active profile exists)
  */
 bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t *event_effect);
 
 /**
- * @brief Obtient le nombre de LEDs configuré
- * @return Nombre de LEDs
+ * @brief Gets the configured number of LEDs
+ * @return Number of LEDs
  */
 uint16_t config_manager_get_led_count(void);
 
 /**
- * @brief Définit le nombre de LEDs
- * @param led_count Nombre de LEDs (1-200)
- * @return true si succès et sauvegardé en NVS
+ * @brief Sets the number of LEDs
+ * @param led_count Number of LEDs (1-200)
+ * @return true if successful and saved to NVS
  */
 bool config_manager_set_led_count(uint16_t led_count);
 
 /**
- * @brief Convertit un enum d'événement en ID alphanumérique
- * @param event Type d'événement
- * @return ID alphanumérique (constante statique)
+ * @brief Converts an event enum to alphanumeric ID
+ * @param event Event type
+ * @return Alphanumeric ID (static constant)
  */
 const char *config_manager_enum_to_id(can_event_type_t event);
 
 /**
- * @brief Convertit un ID alphanumérique en enum d'événement
- * @param id ID alphanumérique
- * @return Type d'événement (CAN_EVENT_NONE si ID inconnu)
+ * @brief Converts an alphanumeric ID to event enum
+ * @param id Alphanumeric ID
+ * @return Event type (CAN_EVENT_NONE if ID unknown)
  */
 can_event_type_t config_manager_id_to_enum(const char *id);
 
 /**
- * @brief Vérifie si un événement peut déclencher un changement de profil
- * @param event Type d'événement
- * @return true si l'événement peut changer de profil
+ * @brief Checks if an event can trigger a profile change
+ * @param event Event type
+ * @return true if the event can change profile
  */
 bool config_manager_event_can_switch_profile(can_event_type_t event);
 
 /**
- * @brief Réinitialise tous les paramètres aux valeurs d'usine
- * Supprime tous les profils et crée un profil par défaut
- * @return true si succès
+ * @brief Resets all settings to factory defaults
+ * Deletes all profiles and creates a default profile
+ * @return true if successful
  */
 bool config_manager_factory_reset(void);
 
 /**
- * @brief Réapplique l'effet par défaut du profil actif
- * Utile après l'initialisation du module audio pour activer les effets audio
+ * @brief Reapplies the default effect of the active profile
+ * Useful after audio module initialization to enable audio effects
  */
 void config_manager_reapply_default_effect(void);
 
 /**
- * @brief Vérifie si l'espace NVS permet de créer un nouveau profil
- * @return true si suffisamment d'espace disponible
+ * @brief Checks if NVS space allows creating a new profile
+ * @return true if sufficient space available
  */
 bool config_manager_can_create_profile(void);
 
 /**
- * @brief Importe un profil depuis une chaîne JSON dans une structure config_profile_t
- * @param json_string String JSON du preset
- * @param profile Pointeur vers la structure à remplir
- * @return true si succès, false sinon
+ * @brief Imports a profile from a JSON string into a config_profile_t structure
+ * @param json_string JSON string of preset
+ * @param profile Pointer to structure to fill
+ * @return true if successful, false otherwise
  */
 bool config_manager_import_profile_from_json(const char *json_string, config_profile_t *profile);
 

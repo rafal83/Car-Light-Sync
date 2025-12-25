@@ -142,7 +142,7 @@ extern const uint8_t style_css_gz_end[] asm("_binary_style_css_gz_end");
 extern const uint8_t carlightsync64_png_start[] asm("_binary_carlightsync64_png_start");
 extern const uint8_t carlightsync64_png_end[] asm("_binary_carlightsync64_png_end");
 
-// Structure pour les handler des fichiers statiques
+// Structure for static file handlers
 typedef struct {
   const char *uri;
   const uint8_t *start;
@@ -317,7 +317,7 @@ static esp_err_t captive_portal_404_handler(httpd_req_t *req, httpd_err_code_t e
   return ESP_FAIL;
 }
 
-// Handler pour obtenir le statut
+// Handler to get status
 static esp_err_t status_handler(httpd_req_t *req) {
   cJSON *root = cJSON_CreateObject();
 
@@ -487,7 +487,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
         if (cpu_usage > 100)
           cpu_usage = 100; // Clamp to 100%
 
-        // Filtre simple pour lisser les variations
+        // Simple filter to smooth variations
         cpu_usage_filtered = (cpu_usage_filtered * 3 + cpu_usage) / 4;
       } else {
         // If deltas are inconsistent, keep the last value
@@ -998,7 +998,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
     cJSON_AddStringToObject(root, "an", "None");
   }
 
-  // Ajouter les statistiques SPIFFS
+  // Add SPIFFS statistics
   size_t spiffs_total = 0, spiffs_used = 0;
   esp_err_t err = spiffs_get_stats(&spiffs_total, &spiffs_used);
   if (err == ESP_OK) {
@@ -1023,7 +1023,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour activer un profil
+// Handler to activate a profile
 static esp_err_t profile_activate_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
@@ -1116,7 +1116,7 @@ static esp_err_t profile_create_handler(httpd_req_t *req) {
   return ESP_FAIL;
 }
 
-// Handler pour supprimer un profil
+// Handler to delete a profile
 static esp_err_t profile_delete_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
@@ -1148,7 +1148,7 @@ static esp_err_t profile_delete_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour renommer un profil
+// Handler to rename a profile
 static esp_err_t profile_rename_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL];
   cJSON *root = NULL;
@@ -1175,7 +1175,7 @@ static esp_err_t profile_rename_handler(httpd_req_t *req) {
   return success ? ESP_OK : ESP_FAIL;
 }
 
-// Handler pour factory reset
+// Handler for factory reset
 static esp_err_t factory_reset_handler(httpd_req_t *req) {
   bool success    = config_manager_factory_reset();
 
@@ -1509,7 +1509,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour obtenir les informations OTA
+// Handler to get OTA information
 static esp_err_t ota_info_handler(httpd_req_t *req) {
   cJSON *root = cJSON_CreateObject();
 
@@ -1733,7 +1733,7 @@ static esp_err_t gvret_stop_handler(httpd_req_t *req) {
   return handle_server_stop(req, gvret_tcp_server_stop, "GVRET");
 }
 
-// Handler pour obtenir le statut du serveur GVRET TCP
+// Handler to get GVRET TCP server status
 static esp_err_t gvret_status_handler(httpd_req_t *req) {
   return handle_server_status(req, gvret_tcp_server_is_running, gvret_tcp_server_get_client_count, gvret_tcp_server_get_autostart, 23);
 }
@@ -1757,7 +1757,7 @@ static esp_err_t canserver_stop_handler(httpd_req_t *req) {
   return handle_server_stop(req, canserver_udp_server_stop, "CANServer");
 }
 
-// Handler pour obtenir le statut du serveur CANServer UDP
+// Handler to get CANServer UDP server status
 static esp_err_t canserver_status_handler(httpd_req_t *req) {
   return handle_server_status(req, canserver_udp_server_is_running, canserver_udp_server_get_client_count, canserver_udp_server_get_autostart, 1338);
 }
@@ -1783,7 +1783,7 @@ static int sse_recv_override(httpd_handle_t hd, int sockfd, char *buf, size_t bu
   return -1; // Tell httpd "no data to read, try again later"
 }
 
-// Handler pour le streaming de logs via Server-Sent Events (SSE)
+// Handler for log streaming via Server-Sent Events (SSE)
 static esp_err_t log_stream_handler(httpd_req_t *req) {
   int fd = httpd_req_to_sockfd(req);
   ESP_LOGI(TAG_WEBSERVER, "SSE client connecting (fd=%d)", fd);
@@ -1986,12 +1986,12 @@ static esp_err_t stop_event_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
-// Handler pour obtenir la liste des effets disponibles
+// Handler to get available effects list
 static esp_err_t effects_list_handler(httpd_req_t *req) {
   cJSON *root    = cJSON_CreateObject();
   cJSON *effects = cJSON_CreateArray();
 
-  // Parcourir tous les effets disponibles
+  // Iterate through all available effects
   for (int i = 0; i < EFFECT_MAX; i++) {
     cJSON *effect = cJSON_CreateObject();
     cJSON_AddStringToObject(effect, "id", led_effects_enum_to_id((led_effect_t)i));
@@ -2433,7 +2433,7 @@ static esp_err_t audio_data_handler(httpd_req_t *req) {
     // Create an FFT object
     cJSON *fft_obj     = cJSON_CreateObject();
 
-    // Ajouter les bandes FFT
+    // Add FFT bands
     cJSON *bands_array = cJSON_CreateArray();
     for (int i = 0; i < AUDIO_FFT_BANDS; i++) {
       cJSON_AddItemToArray(bands_array, cJSON_CreateNumber(fft_data.bands[i]));
@@ -2528,7 +2528,7 @@ esp_err_t web_server_start(void) {
     httpd_uri_t status_uri = {.uri = "/api/status", .method = HTTP_GET, .handler = status_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &status_uri);
 
-    // Routes pour les profils
+    // Routes for profiles
     httpd_uri_t profiles_uri = {.uri = "/api/profiles", .method = HTTP_GET, .handler = profiles_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &profiles_uri);
 

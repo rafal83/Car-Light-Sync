@@ -58,8 +58,8 @@ let initialDataLoaded = false;
 let initialDataLoadPromise = null;
 let activeTabName = 'vehicle';
 let statusIntervalHandle = null;
-let isApMode = false; // Mode AP de l'ESP32 (plus lent)
-let maxLeds = 300; // Par défaut, sera mis à jour depuis /api/config
+let isApMode = false; // ESP32 AP mode (slower)
+let maxLeds = 300; // Default, will be updated from /api/config
 let isMasterRole = true;
 let currentEspnowRole = 'master';
 let lastEspnowTestUs = 0;
@@ -98,7 +98,7 @@ function registerBleAutoConnectGestureHandler() {
         return;
     }
     bleAutoConnectGestureHandlerRegistered = true;
-    // Mettre à jour l'overlay de chargement pour afficher le message BLE et le bouton
+    // Update loading overlay to show BLE message and button
     updateLoadingProgress(0, t('ble.tapToAuthorize'));
     updateLoadingBleButton();
 
@@ -109,7 +109,7 @@ function registerBleAutoConnectGestureHandler() {
         bleAutoConnectGestureCaptured = true;
         bleAutoConnectAwaitingGesture = false;
 
-        // Feedback immédiat : changer le message et masquer le bouton
+        // Immediate feedback: change message and hide button
         updateLoadingProgress(0, t('ble.connecting'));
         const bleButton = $('loading-ble-button');
         if (bleButton) {
@@ -160,7 +160,7 @@ function maybeAutoConnectBle(fromGesture = false) {
     bleAutoConnectAwaitingGesture = false;
     bleAutoConnectInProgress = true;
 
-    // Feedback immédiat : la connexion démarre
+    // Immediate feedback: connection starting
     updateLoadingProgress(0, t('ble.connecting'));
     const bleButton = $('loading-ble-button');
     if (bleButton) {
@@ -178,19 +178,19 @@ function maybeAutoConnectBle(fromGesture = false) {
             registerBleAutoConnectGestureHandler();
         } else if (error && (error.message === 'AutoConnectDeviceNotFound')) {
             console.log('BLE auto-connect: last device not found, user will need to select manually');
-            // Device pas trouvé lors de l'auto-reconnect - ne rien faire, l'utilisateur devra cliquer manuellement
+            // Device not found during auto-reconnect - do nothing, user will need to click manually
             bleAutoConnectGestureCaptured = true;
             updateLoadingProgress(0, t('loading.connecting'));
             updateLoadingBleButton();
         } else if (error && (error.name === 'NotFoundError' || /User cancelled/i.test(error.message || ''))) {
             console.warn('BLE connection cancelled by user');
-            // L'utilisateur a annulé - afficher le bouton pour lui permettre de réessayer
+            // User cancelled - show button to allow retry
             bleAutoConnectGestureCaptured = true;
             updateLoadingProgress(0, t('loading.connecting'));
             updateLoadingBleButton();
         } else {
             console.warn('BLE auto-connect failed', error);
-            // Autres erreurs - afficher aussi le bouton
+            // Other errors - also show the button
             updateLoadingBleButton();
         }
     }).finally(() => {
@@ -608,10 +608,10 @@ class BleTransport {
         return next;
     }
     clearQueue() {
-        // Réinitialise la queue pour éviter l'accumulation
-        console.log('[BLE] Queue vidée pour éviter l\'accumulation');
+        // Reset queue to avoid accumulation
+        console.log('[BLE] Queue cleared to avoid accumulation');
 
-        // Annuler la requête en attente si elle existe
+        // Cancel pending request if it exists
         if (this.pending && this.pending.reject) {
             this.pending.reject(new Error('Queue cleared'));
             this.pending = null;
@@ -620,10 +620,10 @@ class BleTransport {
         this.requestQueue = Promise.resolve();
     }
     async waitForQueue() {
-        // Attend que la queue soit vide sans annuler les requêtes en cours
-        console.log('[BLE] Attente de la fin de la queue...');
+        // Wait for queue to be empty without cancelling ongoing requests
+        console.log('[BLE] Waiting for queue to complete...');
         await this.requestQueue.catch(() => {});
-        console.log('[BLE] Queue vide, prêt pour la prochaine requête');
+        console.log('[BLE] Queue empty, ready for next request');
     }
 }
 
@@ -632,7 +632,7 @@ bleTransportInstance = bleTransport;
 if (!wifiOnline) {
     maybeAutoConnectBle();
 }
-// Mettre à jour la visibilité de l'onglet Logs après init BLE
+// Update Logs tab visibility after BLE init
 updateLogsTabVisibility();
 const nativeFetch = window.fetch.bind(window);
 function shouldUseBleForRequest(url, isApiCallOverride) {

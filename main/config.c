@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-// Variables globales pour stocker les noms avec suffixe
+// Global variables to store names with suffix
 char g_device_name_with_suffix[32] = "CarLightSync";
 char g_wifi_ssid_with_suffix[32]   = "CarLightSync";
 

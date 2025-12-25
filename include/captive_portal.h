@@ -8,26 +8,26 @@
 #define TAG_CAPTIVE_PORTAL "CaptivePortal"
 
 /**
- * @brief Initialise le portail captif (serveur DNS)
- * @return ESP_OK si succès
+ * @brief Initializes the captive portal (DNS server)
+ * @return ESP_OK if successful
  */
 esp_err_t captive_portal_init(void);
 
 /**
- * @brief Démarre le portail captif
- * @return ESP_OK si succès
+ * @brief Starts the captive portal
+ * @return ESP_OK if successful
  */
 esp_err_t captive_portal_start(void);
 
 /**
- * @brief Arrête le portail captif
- * @return ESP_OK si succès
+ * @brief Stops the captive portal
+ * @return ESP_OK if successful
  */
 esp_err_t captive_portal_stop(void);
 
 /**
- * @brief Vérifie si le portail captif est actif
- * @return true si actif, false sinon
+ * @brief Checks if the captive portal is active
+ * @return true if active, false otherwise
  */
 bool captive_portal_is_running(void);
 

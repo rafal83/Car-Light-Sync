@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script pour créer un package de release avec tous les fichiers nécessaires
-pour l'installation et la mise à jour OTA
+Script to create a release package with all necessary files
+for installation and OTA updates
 """
 
 import os
@@ -38,17 +38,17 @@ def get_version_string():
 FIRMWARE_VERSION = get_version_string()
 
 def create_release_package():
-    """Crée le package de release avec tous les fichiers nécessaires"""
+    """Creates the release package with all necessary files"""
 
-    # Créer le dossier de release
+    # Create release folder
     if os.path.exists(RELEASE_DIR):
         shutil.rmtree(RELEASE_DIR)
     os.makedirs(RELEASE_DIR)
 
-    print(f"📦 Création du package de release dans '{RELEASE_DIR}'...\n")
+    print(f"Creating release package in '{RELEASE_DIR}'...\n")
 
-    # 1. Fichier pour l'installation complète (flash initial)
-    print("1️⃣  Copie des fichiers pour l'installation complète...")
+    # 1. Files for complete installation (initial flash)
+    print("1. Copying files for complete installation...")
     flash_dir = os.path.join(RELEASE_DIR, "flash-complete")
     os.makedirs(flash_dir)
 
@@ -63,12 +63,12 @@ def create_release_package():
         if os.path.exists(src):
             dst = os.path.join(flash_dir, filename)
             shutil.copy2(src, dst)
-            print(f"   ✓ {filename} (offset: {offset})")
+            print(f"   - {filename} (offset: {offset})")
         else:
-            print(f"   ✗ {filename} non trouvé!")
+            print(f"   x {filename} not found!")
 
-    # 2. Fichier pour la mise à jour OTA
-    print("\n2️⃣  Copie du fichier pour la mise à jour OTA...")
+    # 2. File for OTA update
+    print("\n2. Copying file for OTA update...")
     ota_dir = os.path.join(RELEASE_DIR, "ota-update")
     os.makedirs(ota_dir)
 
@@ -78,28 +78,28 @@ def create_release_package():
         firmware_dst = os.path.join(ota_dir, f"{PROJECT_NAME}-ota.bin")
         shutil.copy2(firmware_src, firmware_dst)
         size_mb = os.path.getsize(firmware_src) / (1024 * 1024)
-        print(f"   ✓ {PROJECT_NAME}-ota.bin ({size_mb:.2f} MB)")
+        print(f"   - {PROJECT_NAME}-ota.bin ({size_mb:.2f} MB)")
     else:
-        print(f"   ✗ firmware.bin non trouvé!")
+        print(f"   x firmware.bin not found!")
 
-    # 3. Créer un fichier README avec les instructions
-    print("\n3️⃣  Création du fichier README...")
+    # 3. Create README file with instructions
+    print("\n3. Creating README file...")
 
-    readme_flash = f"""# Installation Complète (Flash Initial)
+    readme_flash = f"""# Complete Installation (Initial Flash)
 
-Ce dossier contient tous les fichiers nécessaires pour flasher l'ESP32 depuis zéro.
+This folder contains all the necessary files to flash the ESP32 from scratch.
 
-## Fichiers inclus:
-- **bootloader.bin** (offset: 0x1000) - Bootloader ESP32
-- **partitions.bin** (offset: 0x8000) - Table des partitions
-- **firmware.bin** (offset: 0x10000) - Application principale
+## Included files:
+- **bootloader.bin** (offset: 0x1000) - ESP32 Bootloader
+- **partitions.bin** (offset: 0x8000) - Partition table
+- **firmware.bin** (offset: 0x10000) - Main application
 
-## Méthode 1: Via PlatformIO
+## Method 1: Via PlatformIO
 ```bash
 pio run -t upload
 ```
 
-## Méthode 2: Via esptool.py
+## Method 2: Via esptool.py
 ```bash
 esptool.py --chip esp32 --port COM_PORT --baud 921600 \\
   --before default_reset --after hard_reset write_flash -z \\
@@ -109,85 +109,85 @@ esptool.py --chip esp32 --port COM_PORT --baud 921600 \\
   0x10000 firmware.bin
 ```
 
-Remplacez `COM_PORT` par votre port série (ex: COM3, /dev/ttyUSB0)
+Replace `COM_PORT` with your serial port (e.g. COM3, /dev/ttyUSB0)
 
-## Méthode 3: Via ESP Flash Download Tool
-1. Ouvrir ESP Flash Download Tool
-2. Sélectionner ESP32
-3. Ajouter les fichiers avec leurs offsets:
+## Method 3: Via ESP Flash Download Tool
+1. Open ESP Flash Download Tool
+2. Select ESP32
+3. Add files with their offsets:
    - bootloader.bin @ 0x1000
    - partitions.bin @ 0x8000
    - firmware.bin @ 0x10000
-4. Sélectionner le port COM
-5. Cliquer sur START
+4. Select COM port
+5. Click START
 
 ---
-Généré le: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Generated on: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
 
     firmware_size_display = f"{size_mb:.2f}" if size_mb is not None else "N/A"
 
-    readme_ota = f"""# Mise à Jour OTA (Over-The-Air)
+    readme_ota = f"""# OTA Update (Over-The-Air)
 
-Ce dossier contient le fichier firmware pour une mise à jour sans fil.
+This folder contains the firmware file for wireless update.
 
-## Fichier inclus:
-- **{PROJECT_NAME}-ota.bin** - Firmware pour mise à jour OTA
+## Included file:
+- **{PROJECT_NAME}-ota.bin** - Firmware for OTA update
 
 ## Instructions:
 
-### Via l'interface Web:
-1. Connectez-vous au WiFi de l'ESP32 (SSID: CarLightSync)
-2. Ouvrez un navigateur et allez à: http://192.168.4.1
-3. Allez dans la section "🔄 Mise à Jour OTA"
-4. Sélectionnez le fichier `{PROJECT_NAME}-ota.bin`
-5. Cliquez sur "Téléverser"
-6. Attendez la fin de l'upload (progression affichée)
-7. Cliquez sur "Redémarrer" pour appliquer la mise à jour
+### Via Web Interface:
+1. Connect to ESP32 WiFi (SSID: CarLightSync)
+2. Open a browser and go to: http://192.168.4.1
+3. Go to "OTA Update" section
+4. Select the file `{PROJECT_NAME}-ota.bin`
+5. Click "Upload"
+6. Wait for upload completion (progress displayed)
+7. Click "Restart" to apply the update
 
-### Via cURL (ligne de commande):
+### Via cURL (command line):
 ```bash
 curl -F "firmware=@{PROJECT_NAME}-ota.bin" http://192.168.4.1/api/ota/upload
 curl -X POST http://192.168.4.1/api/ota/restart
 ```
 
 ## Notes:
-- Taille du firmware: ~{firmware_size_display} MB
-- Durée estimée de l'upload: 30-60 secondes
-- L'ESP32 redémarrera automatiquement après la mise à jour
-- En cas d'échec, l'ESP32 reviendra automatiquement à la version précédente (rollback)
+- Firmware size: ~{firmware_size_display} MB
+- Estimated upload time: 30-60 seconds
+- ESP32 will restart automatically after update
+- In case of failure, ESP32 will automatically rollback to previous version
 
-## Vérification de la version:
+## Version check:
 ```bash
 curl http://192.168.4.1/api/ota/info
 ```
 
 ---
-Généré le: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+Generated on: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
 
     with open(os.path.join(flash_dir, "README.md"), "w", encoding="utf-8") as f:
         f.write(readme_flash)
-    print(f"   ✓ README.md créé dans flash-complete/")
+    print(f"   - README.md created in flash-complete/")
 
     with open(os.path.join(ota_dir, "README.md"), "w", encoding="utf-8") as f:
         f.write(readme_ota)
-    print(f"   ✓ README.md créé dans ota-update/")
+    print(f"   - README.md created in ota-update/")
 
-    # 4. Créer un script de flash automatique
-    print("\n4️⃣  Création des scripts de flash...")
+    # 4. Create automatic flash scripts
+    print("\n4. Creating flash scripts...")
 
-    # Script Windows
+    # Windows script
     flash_script_win = f"""@echo off
 echo ================================
-echo Installation ESP32 Car Light Sync
+echo ESP32 Car Light Sync Installation
 echo ================================
 echo.
 
-set /p PORT="Entrez le port COM (ex: COM3): "
+set /p PORT="Enter COM port (e.g. COM3): "
 
 echo.
-echo Flashage en cours...
+echo Flashing in progress...
 esptool.py --chip esp32 --port %PORT% --baud 921600 ^
   --before default_reset --after hard_reset write_flash -z ^
   --flash_mode dio --flash_freq 40m --flash_size detect ^
@@ -198,30 +198,30 @@ esptool.py --chip esp32 --port %PORT% --baud 921600 ^
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ================================
-    echo Flash termine avec succes!
+    echo Flash completed successfully!
     echo ================================
 ) else (
     echo.
     echo ================================
-    echo Erreur lors du flash!
+    echo Flash error!
     echo ================================
 )
 
 pause
 """
 
-    # Script Linux/Mac
+    # Linux/Mac script
     flash_script_unix = f"""#!/bin/bash
 
 echo "================================"
-echo "Installation ESP32 Car Light Sync"
+echo "ESP32 Car Light Sync Installation"
 echo "================================"
 echo ""
 
-read -p "Entrez le port série (ex: /dev/ttyUSB0): " PORT
+read -p "Enter serial port (e.g. /dev/ttyUSB0): " PORT
 
 echo ""
-echo "Flashage en cours..."
+echo "Flashing in progress..."
 esptool.py --chip esp32 --port $PORT --baud 921600 \\
   --before default_reset --after hard_reset write_flash -z \\
   --flash_mode dio --flash_freq 40m --flash_size detect \\
@@ -232,74 +232,74 @@ esptool.py --chip esp32 --port $PORT --baud 921600 \\
 if [ $? -eq 0 ]; then
     echo ""
     echo "================================"
-    echo "Flash terminé avec succès!"
+    echo "Flash completed successfully!"
     echo "================================"
 else
     echo ""
     echo "================================"
-    echo "Erreur lors du flash!"
+    echo "Flash error!"
     echo "================================"
 fi
 """
 
     with open(os.path.join(flash_dir, "flash.bat"), "w", encoding="utf-8") as f:
         f.write(flash_script_win)
-    print(f"   ✓ flash.bat créé (Windows)")
+    print(f"   - flash.bat created (Windows)")
 
     with open(os.path.join(flash_dir, "flash.sh"), "w", encoding="utf-8") as f:
         f.write(flash_script_unix)
-    # Rendre le script exécutable sous Unix
+    # Make script executable on Unix
     try:
         os.chmod(os.path.join(flash_dir, "flash.sh"), 0o755)
     except:
         pass
-    print(f"   ✓ flash.sh créé (Linux/Mac)")
+    print(f"   - flash.sh created (Linux/Mac)")
 
-    # 5. Créer un fichier de version
-    print("\n5️⃣  Création du fichier de version...")
+    # 5. Create version file
+    print("\n5. Creating version file...")
 
-    version_info = f"""Car Light Sync - Package de Release
+    version_info = f"""Car Light Sync - Release Package
 =============================================
 
 Version: {FIRMWARE_VERSION}
 Date: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-Contenu:
+Contents:
 --------
-- flash-complete/  : Fichiers pour l'installation complète (flash initial)
-- ota-update/      : Fichier pour la mise à jour OTA (sans fil)
+- flash-complete/  : Files for complete installation (initial flash)
+- ota-update/      : File for OTA update (wireless)
 
 Configuration:
 --------------
 - WiFi AP SSID    : CarLightSync
-- WiFi AP Password: 
-- Interface Web   : http://192.168.4.1
-- Nombre de LEDs  : Configurable dans config.h
+- WiFi AP Password:
+- Web Interface   : http://192.168.4.1
+- Number of LEDs  : Configurable in config.h
 
-Fonctionnalités:
+Features:
 ----------------
-✓ Contrôle de bande LED WS2812B
-✓ 16 effets lumineux différents
-✓ Interface web de configuration
-✓ Mise à jour OTA (Over-The-Air)
-✓ Support CAN bus véhicule (Tesla et autres)
-✓ Profils de configuration
-✓ Événements CAN personnalisables
+- WS2812B LED strip control
+- 16 different light effects
+- Web configuration interface
+- OTA updates (Over-The-Air)
+- Vehicle CAN bus support (Tesla and others)
+- Configuration profiles
+- Customizable CAN events
 
-Pour plus d'informations:
+For more information:
 -------------------------
-Consultez les fichiers README.md dans chaque dossier.
+See README.md files in each folder.
 """
 
     with open(os.path.join(RELEASE_DIR, "VERSION.txt"), "w", encoding="utf-8") as f:
         f.write(version_info)
-    print(f"   ✓ VERSION.txt créé")
+    print(f"   - VERSION.txt created")
 
-    # Résumé
+    # Summary
     print("\n" + "="*50)
-    print("✅ Package de release créé avec succès!")
+    print("Release package created successfully!")
     print("="*50)
-    print(f"\n📁 Dossier: {RELEASE_DIR}/")
+    print(f"\nFolder: {RELEASE_DIR}/")
     print(f"   ├── flash-complete/")
     print(f"   │   ├── bootloader.bin")
     print(f"   │   ├── partitions.bin")
@@ -317,6 +317,6 @@ if __name__ == "__main__":
     try:
         create_release_package()
     except Exception as e:
-        print(f"\n❌ Erreur: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()

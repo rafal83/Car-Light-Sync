@@ -84,7 +84,7 @@ esp_err_t boot_loop_guard_init(void) {
     // Trigger factory reset
     reset_button_factory_reset();
 
-    // Ne devrait jamais arriver ici
+    // Should never reach here
     return ESP_FAIL;
   }
 

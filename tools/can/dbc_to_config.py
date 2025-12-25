@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Générateur de configuration Car Light Sync depuis fichier DBC
+Car Light Sync configuration generator from DBC file
 
 Usage:
     python dbc_to_config.py tesla_model3.dbc --output model3_2021.json
     python dbc_to_config.py tesla_model3.dbc --interactive
 
-Auteur: Car Light Sync Team
-Licence: MIT
+Author: Car Light Sync Team
+License: MIT
 """
 
 import argparse
@@ -25,17 +25,17 @@ if sys.platform == 'win32':
 try:
     import cantools
 except ImportError:
-    print("ERROR: cantools n'est pas installé")
-    print("Installez-le avec: pip install cantools")
+    print("ERROR: cantools is not installed")
+    print("Install it with: pip install cantools")
     sys.exit(1)
 
-# Mapping des noms de signaux connus vers événements CAN
+# Mapping of known signal names to CAN events
 KNOWN_SIGNAL_EVENTS = {
     'gear': {
         'PARK': 'GEAR_PARK',
         'REVERSE': 'GEAR_REVERSE',
         'DRIVE': 'GEAR_DRIVE',
-        'NEUTRAL': None  # Pas d'événement
+        'NEUTRAL': None  # No event
     },
     'turn_signal': {
         'OFF': None,
@@ -84,7 +84,7 @@ KNOWN_SIGNAL_EVENTS = {
         'CHARGE_STANDBY': 'CHARGING_STOPPED'
     },
     'night_mode': {
-        # Boolean signal pour ambient lighting
+        # Boolean signal for ambient lighting
     },
     'sentry_mode': {
         'ON': 'SENTRY_MODE_ON',
@@ -107,10 +107,10 @@ KNOWN_SIGNAL_EVENTS = {
 }
 
 def detect_signal_type(signal):
-    """Détecte le type de signal et les événements potentiels"""
+    """Detects signal type and potential events"""
     name_lower = signal.name.lower()
 
-    # Sentry / alarm modes avant tout
+    # Sentry / alarm modes first
     if 'sentry' in name_lower:
         return 'sentry_mode', KNOWN_SIGNAL_EVENTS['sentry_mode']
 
@@ -122,18 +122,18 @@ def detect_signal_type(signal):
             if 'sentry' in choice.name.lower():
                 return 'sentry_mode', KNOWN_SIGNAL_EVENTS['sentry_mode']
 
-    # Détection par nom (ordre important - du plus spécifique au plus général)
+    # Detection by name (important order - from most specific to most general)
     if 'gear' in name_lower or 'prnd' in name_lower or 'shifter' in name_lower:
         return 'gear', KNOWN_SIGNAL_EVENTS['gear']
 
-    # Hazard lights (avant turn signal car peut contenir 'turn')
+    # Hazard lights (before turn signal as it may contain 'turn')
     if 'hazard' in name_lower:
         return 'hazard', KNOWN_SIGNAL_EVENTS['hazard']
 
     if 'turn' in name_lower or 'blinker' in name_lower or 'indicator' in name_lower:
         return 'turn_signal', KNOWN_SIGNAL_EVENTS['turn_signal']
 
-    # Blindspot detection (avant door car certains signaux contiennent les deux)
+    # Blindspot detection (before door as some signals contain both)
     if 'blindspot' in name_lower or 'blind_spot' in name_lower or 'bsd' in name_lower:
         return 'blindspot', KNOWN_SIGNAL_EVENTS['blindspot']
 
@@ -147,11 +147,11 @@ def detect_signal_type(signal):
     if 'ambientlighting' in name_lower.replace('_', '') and 'enabled' in name_lower:
         return 'night_mode', KNOWN_SIGNAL_EVENTS['night_mode']
 
-    # Door status (après blindspot)
+    # Door status (after blindspot)
     if 'door' in name_lower and 'status' in name_lower:
         return 'door', KNOWN_SIGNAL_EVENTS['door']
 
-    # Lock status (vérifier que ce n'est pas door_lock)
+    # Lock status (check it's not door_lock)
     if 'lock' in name_lower and ('request' in name_lower or 'unlock' in name_lower):
         return 'lock', KNOWN_SIGNAL_EVENTS['lock']
 
@@ -166,11 +166,11 @@ def detect_signal_type(signal):
     return None, None
 
 def normalize_choice_name(choice_name):
-    """Normalise un nom de choix pour la comparaison (retire préfixes/suffixes)"""
-    # Retire les préfixes courants (DI_GEAR_, VCFRONT_, etc.)
+    """Normalizes choice name for comparison (removes prefixes/suffixes)"""
+    # Remove common prefixes (DI_GEAR_, VCFRONT_, etc.)
     name = choice_name.upper()
 
-    # Patterns de préfixes à retirer (ordre important - plus spécifique en premier)
+    # Prefix patterns to remove (important order - more specific first)
     prefixes = ['UI_LOCK_REQUEST_', 'DI_GEAR_', 'GEAR_', 'TURN_SIGNAL_', 'TURN_', 'DOOR_',
                 'LOCK_', 'BRAKE_', 'BLINDSPOT_', 'AUTOPILOT_', 'VCFRONT_', 'VCLEFT_',
                 'VCRIGHT_', 'DAS_', 'UI_', 'CP_', 'PCS_', 'HAZARD_REQUEST_', 'HAZARD_',
@@ -180,7 +180,7 @@ def normalize_choice_name(choice_name):
         if name.startswith(prefix):
             name = name[len(prefix):]
 
-    # Mapping des noms normalisés vers noms standards
+    # Mapping of normalized names to standard names
     normalize_map = {
         'P': 'PARK',
         'R': 'REVERSE',
@@ -191,9 +191,9 @@ def normalize_choice_name(choice_name):
         'PRESSED': 'PRESSED',
         'RELEASED': 'RELEASED',
         'ON': 'ON',
-        'OFF': None,  # OFF n'est pas un événement
-        'ACTIVE_LOW': 'ACTIVE',  # Turn signal actif
-        'ACTIVE_HIGH': 'ACTIVE',  # Turn signal actif
+        'OFF': None,  # OFF is not an event
+        'ACTIVE_LOW': 'ACTIVE',  # Active turn signal
+        'ACTIVE_HIGH': 'ACTIVE',  # Active turn signal
         'ACTIVE': 'ACTIVE',
         'LEFT': 'LEFT',
         'RIGHT': 'RIGHT',
@@ -221,11 +221,11 @@ def normalize_choice_name(choice_name):
     return normalize_map.get(name, name)
 
 def byte_order_to_string(byte_order):
-    """Convertit l'ordre des bytes en string"""
+    """Converts byte order to string"""
     return "little_endian" if byte_order == "little_endian" else "big_endian"
 
 def signal_to_json(signal, message):
-    """Convertit un signal CAN en format JSON"""
+    """Converts a CAN signal to JSON format"""
     signal_json = {
         "name": signal.name,
         "start_bit": signal.start,
@@ -237,17 +237,17 @@ def signal_to_json(signal, message):
         "unit": signal.unit or ""
     }
 
-    # Ajouter min/max si disponibles
+    # Add min/max if available
     if hasattr(signal, 'minimum') and signal.minimum is not None:
         signal_json["min"] = signal.minimum
     if hasattr(signal, 'maximum') and signal.maximum is not None:
         signal_json["max"] = signal.maximum
 
-    # Ajouter le mapping si disponible
+    # Add mapping if available
     if signal.choices:
         signal_json["mapping"] = {str(k): v.name for k, v in signal.choices.items()}
 
-    # Multiplexage (mux)
+    # Multiplexing (mux)
     if getattr(signal, 'is_multiplexer', False):
         signal_json["mux"] = "M"
     else:
@@ -259,18 +259,18 @@ def signal_to_json(signal, message):
             if mux_signal:
                 signal_json["mux_signal"] = mux_signal.name if hasattr(mux_signal, 'name') else str(mux_signal)
 
-    # Détecter automatiquement les événements
+    # Automatically detect events
     signal_type, event_mapping = detect_signal_type(signal)
     events = []
 
     if event_mapping is not None:
         if signal.choices:
-            # Signal avec choix (enum)
+            # Signal with choices (enum)
             for value, choice in signal.choices.items():
-                # Normaliser le nom du choix pour matcher avec le mapping
+                # Normalize choice name to match with mapping
                 normalized = normalize_choice_name(choice.name)
 
-                # Cas spécial pour les turn signals : indicatorLeft + ACTIVE = LEFT
+                # Special case for turn signals: indicatorLeft + ACTIVE = LEFT
                 if signal_type == 'turn_signal' and normalized == 'ACTIVE':
                     if 'left' in signal.name.lower():
                         trigger = 'TURN_LEFT'
@@ -290,9 +290,9 @@ def signal_to_json(signal, message):
                         "trigger": event_mapping[normalized]
                     })
         elif signal.length == 1:
-            # Signal booléen - gérer les rising/falling edges
+            # Boolean signal - handle rising/falling edges
             if signal_type == 'night_mode':
-                # Night mode: ON quand 1, OFF quand 0
+                # Night mode: ON when 1, OFF when 0
                 events.append({
                     "condition": "rising_edge",
                     "trigger": "NIGHT_MODE_ON"
@@ -337,7 +337,7 @@ def signal_to_json(signal, message):
                 })
 
     if events:
-        # Filtrer les événements None
+        # Filter None events
         events = [e for e in events if e.get('trigger')]
         if events:
             signal_json["events"] = events
@@ -345,15 +345,15 @@ def signal_to_json(signal, message):
     return signal_json
 
 def message_to_json(message, bus_mapping):
-    """Convertit un message CAN en format JSON"""
-    # Déterminer le bus selon l'ID du message (heuristique)
-    bus = "chassis"  # Par défaut
+    """Converts a CAN message to JSON format"""
+    # Determine bus based on message ID (heuristic)
+    bus = "chassis"  # Default
     if message.frame_id >= 0x300:
         bus = "body"
     elif message.frame_id >= 0x200:
         bus = "powertrain"
 
-    # Override si mapping fourni
+    # Override if mapping provided
     if message.frame_id in bus_mapping:
         bus = bus_mapping[message.frame_id]
 
@@ -371,26 +371,26 @@ def message_to_json(message, bus_mapping):
     return message_json
 
 def parse_dbc(dbc_file, output_file, vehicle_info=None, bus_mapping=None, interactive=False):
-    """Parse un fichier DBC et génère la configuration JSON"""
+    """Parses a DBC file and generates JSON configuration"""
 
-    print(f"📖 Lecture du fichier DBC: {dbc_file}")
+    print(f"Reading DBC file: {dbc_file}")
 
     try:
         db = cantools.database.load_file(dbc_file)
     except Exception as e:
-        print(f"❌ Erreur lors de la lecture du DBC: {e}")
+        print(f"Error reading DBC: {e}")
         return False
 
-    print(f"✅ {len(db.messages)} messages trouvés")
+    print(f"{len(db.messages)} messages found")
 
-    # Informations sur le véhicule
+    # Vehicle information
     if not vehicle_info:
         if interactive:
-            print("\n📝 Informations sur le véhicule:")
-            make = input("  Constructeur (ex: Tesla): ").strip() or "Unknown"
-            model = input("  Modèle (ex: Model 3): ").strip() or "Unknown"
-            year = input("  Année (ex: 2021): ").strip() or "0"
-            variant = input("  Variante (ex: Long Range): ").strip() or ""
+            print("\nVehicle information:")
+            make = input("  Make (e.g. Tesla): ").strip() or "Unknown"
+            model = input("  Model (e.g. Model 3): ").strip() or "Unknown"
+            year = input("  Year (e.g. 2021): ").strip() or "0"
+            variant = input("  Variant (e.g. Long Range): ").strip() or ""
         else:
             make = "Unknown"
             model = "Unknown"
@@ -407,7 +407,7 @@ def parse_dbc(dbc_file, output_file, vehicle_info=None, bus_mapping=None, intera
             "model": model,
             "year": int(year) if year.isdigit() else 0,
             "variant": variant,
-            "description": f"Configuration CAN pour {make} {model} {year}"
+            "description": f"CAN configuration for {make} {model} {year}"
         },
         "can_config": {
             "buses": {
@@ -420,67 +420,67 @@ def parse_dbc(dbc_file, output_file, vehicle_info=None, bus_mapping=None, intera
         "messages": []
     }
 
-    # Mapping des bus (par défaut)
+    # Bus mapping (default)
     if not bus_mapping:
         bus_mapping = {}
 
-    # Convertir tous les messages
+    # Convert all messages
     for message in db.messages:
         config["messages"].append(message_to_json(message, bus_mapping))
 
-    # Sauvegarder
-    print(f"\n💾 Sauvegarde dans: {output_file}")
+    # Save
+    print(f"\nSaving to: {output_file}")
     try:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
-        print(f"✅ Configuration générée avec succès!")
-        print(f"\n📊 Statistiques:")
-        print(f"  - Messages CAN: {len(config['messages'])}")
+        print(f"Configuration generated successfully!")
+        print(f"\nStatistics:")
+        print(f"  - CAN messages: {len(config['messages'])}")
         total_signals = sum(len(msg['signals']) for msg in config['messages'])
-        print(f"  - Signaux: {total_signals}")
+        print(f"  - Signals: {total_signals}")
 
-        # Compter les événements
+        # Count events
         total_events = 0
         for msg in config['messages']:
             for signal in msg['signals']:
                 if 'events' in signal:
                     total_events += len(signal['events'])
-        print(f"  - Événements auto-détectés: {total_events}")
+        print(f"  - Auto-detected events: {total_events}")
 
         return True
     except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde: {e}")
+        print(f"Error saving: {e}")
         return False
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convertir un fichier DBC en configuration JSON pour Car Light Sync",
+        description="Convert a DBC file to JSON configuration for Car Light Sync",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Exemples:
+Examples:
   %(prog)s tesla.dbc --output model3_2021.json
   %(prog)s tesla.dbc --output model3.json --make Tesla --model "Model 3" --year 2021
   %(prog)s custom.dbc --interactive
         """
     )
 
-    parser.add_argument('dbc_file', help='Fichier DBC source')
-    parser.add_argument('-o', '--output', help='Fichier JSON de sortie', required=False)
-    parser.add_argument('--make', help='Constructeur du véhicule')
-    parser.add_argument('--model', help='Modèle du véhicule')
-    parser.add_argument('--year', help='Année du véhicule')
-    parser.add_argument('--variant', help='Variante du véhicule', default='')
+    parser.add_argument('dbc_file', help='Source DBC file')
+    parser.add_argument('-o', '--output', help='Output JSON file', required=False)
+    parser.add_argument('--make', help='Vehicle make')
+    parser.add_argument('--model', help='Vehicle model')
+    parser.add_argument('--year', help='Vehicle year')
+    parser.add_argument('--variant', help='Vehicle variant', default='')
     parser.add_argument('-i', '--interactive', action='store_true',
-                       help='Mode interactif pour saisir les informations')
+                       help='Interactive mode to enter information')
 
     args = parser.parse_args()
 
-    # Déterminer le fichier de sortie
+    # Determine output file
     if not args.output:
         dbc_path = Path(args.dbc_file)
         args.output = dbc_path.with_suffix('.json').name
 
-    # Informations véhicule
+    # Vehicle information
     vehicle_info = None
     if args.make or args.model or args.year:
         vehicle_info = (
@@ -499,12 +499,12 @@ Exemples:
     )
 
     if success:
-        print(f"\n🎉 Configuration créée: {args.output}")
-        print(f"\n📝 Prochaines étapes:")
-        print(f"  1. Vérifier le fichier {args.output}")
-        print(f"  2. Ajuster les événements si nécessaire")
-        print(f"  3. Copier vers vehicle_configs/")
-        print(f"  4. Flasher l'ESP32")
+        print(f"\nConfiguration created: {args.output}")
+        print(f"\nNext steps:")
+        print(f"  1. Review file {args.output}")
+        print(f"  2. Adjust events if necessary")
+        print(f"  3. Copy to vehicle_configs/")
+        print(f"  4. Flash the ESP32")
     else:
         sys.exit(1)
 

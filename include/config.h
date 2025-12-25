@@ -12,7 +12,7 @@
 // Configuration ESP32-C6
 #define LED_PIN 5
 
-// Pins I2S pour microphone INMP441
+// I2S pins for INMP441 microphone
 #define I2S_WS_PIN 20
 #define I2S_SCK_PIN 19
 #define I2S_SD_PIN 18
@@ -29,7 +29,7 @@
 // Configuration ESP32-S3 (défaut)
 #define LED_PIN 5
 
-// Pins I2S pour microphone INMP441
+// I2S pins for INMP441 microphone
 #define I2S_WS_PIN 13
 #define I2S_SCK_PIN 12
 #define I2S_SD_PIN 11
@@ -44,15 +44,15 @@
 
 // Configuration WiFi
 #define WIFI_AP_SSID_BASE "CarLightSync"
-#define WIFI_AP_SSID "CarLightSync" // Sera remplacé dynamiquement
-#define WIFI_AP_PASSWORD ""         // Réseau ouvert (pas de mot de passe)
+#define WIFI_AP_SSID "CarLightSync" // Will be replaced dynamically
+#define WIFI_AP_PASSWORD ""         // Open network (no password)
 #define WIFI_MAX_CLIENTS 4
 
-// Buffer pour les noms avec suffixe MAC
+// Buffer for names with MAC suffix
 extern char g_device_name_with_suffix[32];
 extern char g_wifi_ssid_with_suffix[32];
 
-// Fonction pour initialiser les noms avec suffixe MAC
+// Function to initialize names with MAC suffix
 void config_init_device_names(void);
 
 // Configuration CAN

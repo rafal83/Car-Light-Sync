@@ -134,12 +134,12 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
 
     messages = data.get("messages", [])
     if not messages:
-        raise SystemExit("Aucun message dans JSON (can_config.messages est vide)")
+        raise SystemExit("No messages in JSON (can_config.messages is empty)")
 
     keep_ids = normalize_keep_ids(KEEP_MESSAGE_IDS)
 
     lines = []
-    lines.append("// Auto-généré depuis %s" % config_json_path.name)
+    lines.append("// Auto-generated from %s" % config_json_path.name)
     veh = data.get("vehicle", {})
     desc = veh.get("description", "")
     lines.append("// Description: %s" % desc)
@@ -182,7 +182,7 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
         message_defs.append((msg_ident, msg_name, msg_id, sig_array_name, len(expanded_sigs)))
 
     for sig_array_name, sigs in signal_arrays:
-        lines.append(f"// Signaux pour {sig_array_name}")
+        lines.append(f"// Signals for {sig_array_name}")
         lines.append(f"static const can_signal_def_t {sig_array_name}[] = {{")
         for sig in sigs:
             s_name = sig.get("name", "NONAME")
@@ -208,7 +208,7 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
         lines.append("};")
         lines.append("")
 
-    lines.append("// Tableau global des messages CAN gérés")
+    lines.append("// Global array of managed CAN messages")
     lines.append("const can_message_def_t g_can_messages[] = {")
     for msg_ident, msg_name, msg_id, sig_array_name, sig_count in message_defs:
         lines.append("    {")
@@ -225,7 +225,7 @@ def generate(config_json_path: Path, out_header_path: Path) -> None:
     lines.append("")
 
     out_header_path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Header généré: {out_header_path}")
+    print(f"Header generated: {out_header_path}")
 
 
 def main(argv=None) -> None:
@@ -237,7 +237,7 @@ def main(argv=None) -> None:
     src = Path(argv[0])
     dst = Path(argv[1])
     if not src.is_file():
-        raise SystemExit(f"JSON introuvable: {src}")
+        raise SystemExit(f"JSON not found: {src}")
 
     generate(src, dst)
 

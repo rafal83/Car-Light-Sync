@@ -25,7 +25,7 @@ typedef struct {
   volatile bool running;
   volatile bool initialized;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
-  twai_handle_t bus_handle; // Handle pour TWAI v2
+  twai_handle_t bus_handle; // Handle for TWAI v2
 #endif
 } can_bus_context_t;
 
@@ -102,7 +102,7 @@ static void can_rx_task(void *pvParameters) {
   vTaskDelete(NULL);
 }
 
-// ---- API publique ----
+// ---- Public API ----
 
 esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   if (bus_type >= CAN_BUS_COUNT) {
@@ -128,7 +128,7 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
   // General config: NORMAL mode (allows TX/RX for GVRET, Car Light Sync uses RX only)
   twai_general_config_t g_config              = TWAI_GENERAL_CONFIG_DEFAULT(tx_gpio, rx_gpio, TWAI_MODE_NORMAL);
 
-  // Vitesse 500 kbit/s (Tesla)
+  // Speed 500 kbit/s (Tesla)
   twai_timing_config_t t_config               = TWAI_TIMING_CONFIG_500KBITS();
 
   // Filter: accept all frames by default
@@ -302,8 +302,8 @@ esp_err_t can_bus_send(can_bus_type_t bus_type, const can_frame_t *frame) {
   if (msg.data_length_code > 8)
     msg.data_length_code = 8;
 
-  msg.extd = 0; // Tesla = ID standard 11 bits
-  msg.rtr  = 0; // pas de Remote Transmission Request
+  msg.extd = 0; // Tesla = standard 11-bit ID
+  msg.rtr  = 0; // no Remote Transmission Request
 
   for (int i = 0; i < msg.data_length_code; i++) {
     msg.data[i] = frame->data[i];

@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Script pour minifier et compresser les fichiers web en GZIP avant le build"""
+"""Script to minify and compress web files to GZIP before build"""
 
 import gzip
 import os
 import subprocess
 import sys
 
-# Fix pour l'encodage sur Windows
+# Fix for encoding on Windows
 if sys.platform == 'win32':
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-# Liste des fichiers à minifier et compresser
+# List of files to minify and compress
 files_to_compress = [
     "data/index.html",
     "data/i18n.js",
@@ -22,12 +22,12 @@ files_to_compress = [
 ]
 
 def run_minification():
-    """Exécute le script de minification Node.js"""
+    """Runs the Node.js minification script"""
     print("\n" + "="*70)
     print("STEP 1: WEB FILES MINIFICATION")
     print("="*70 + "\n")
 
-    # Vérifier si Node.js est disponible
+    # Check if Node.js is available
     try:
         subprocess.run(["node", "--version"], check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -36,7 +36,7 @@ def run_minification():
         print("   Continuing with compression only...\n")
         return False
 
-    # Vérifier si node_modules existe
+    # Check if node_modules exists
     if not os.path.exists("node_modules"):
         print("Installing npm dependencies...")
         try:
@@ -46,7 +46,7 @@ def run_minification():
             print("   Continuing with compression only...\n")
             return False
 
-    # Exécuter le script de minification
+    # Run minification script
     minify_script = os.path.join("scripts", "minify.js")
     if not os.path.exists(minify_script):
         print(f"WARNING: Minify script not found at {minify_script}")
@@ -63,8 +63,8 @@ def run_minification():
         return False
 
 def compress_file(source_file, use_minified=True):
-    """Compresse un fichier en GZIP si nécessaire"""
-    # Déterminer quel fichier compresser
+    """Compresses a file to GZIP if necessary"""
+    # Determine which file to compress
     file_to_compress = source_file
     if use_minified:
         minified_file = source_file + ".min"
@@ -75,10 +75,10 @@ def compress_file(source_file, use_minified=True):
     gz_file = source_file + ".gz"
 
     if not os.path.exists(file_to_compress):
-        print("WARN Fichier {} introuvable".format(file_to_compress))
+        print("WARN File {} not found".format(file_to_compress))
         return
 
-    # Vérifier si le fichier .gz existe et est à jour
+    # Check if .gz file exists and is up-to-date
     needs_compression = True
     if os.path.exists(gz_file):
         source_mtime = os.path.getmtime(file_to_compress)
@@ -88,7 +88,7 @@ def compress_file(source_file, use_minified=True):
             print("Skip {} (already up-to-date)".format(source_file))
 
     if needs_compression:
-        print("Compression de {}...".format(file_to_compress))
+        print("Compressing {}...".format(file_to_compress))
 
         with open(file_to_compress, 'rb') as f_in:
             with gzip.open(gz_file, 'wb', compresslevel=9) as f_out:
@@ -98,13 +98,13 @@ def compress_file(source_file, use_minified=True):
         compressed_size = os.path.getsize(gz_file)
         ratio = (1 - compressed_size / original_size) * 100
 
-        print("OK {} ({} octets) -> {} ({} octets)".format(file_to_compress, original_size, gz_file, compressed_size))
+        print("OK {} ({} bytes) -> {} ({} bytes)".format(file_to_compress, original_size, gz_file, compressed_size))
         print("  Compression: {:.1f}%".format(ratio))
 
-# Étape 1: Minification
+# Step 1: Minification
 minification_success = run_minification()
 
-# Étape 2: Compression GZIP
+# Step 2: GZIP Compression
 print("="*70)
 print("STEP 2: GZIP COMPRESSION")
 print("="*70 + "\n")

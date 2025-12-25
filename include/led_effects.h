@@ -8,7 +8,7 @@
 
 #define TAG_LED "LED"
 
-// IDs alphanumériques stables pour les effets (ne changent jamais)
+// Stable alphanumeric IDs for effects (never change)
 #define EFFECT_ID_OFF "OFF"
 #define EFFECT_ID_SOLID "SOLID"
 #define EFFECT_ID_BREATHING "BREATHING"
@@ -43,9 +43,9 @@
 #define EFFECT_ID_POWER_METER "POWER_METER"
 #define EFFECT_ID_POWER_METER_CENTER "POWER_METER_CENTER"
 
-#define EFFECT_ID_MAX_LEN 32 // Longueur max d'un ID d'effet
+#define EFFECT_ID_MAX_LEN 32 // Max length of an effect ID
 
-// Types d'effets (enum interne, peut changer)
+// Effect types (internal enum, may change)
 typedef enum {
   EFFECT_OFF = 0,
   EFFECT_SOLID,
@@ -57,50 +57,50 @@ typedef enum {
   EFFECT_TWINKLE,
   EFFECT_FIRE,
   EFFECT_SCAN,
-  EFFECT_KNIGHT_RIDER, // K2000 - traînée nette sans fade
+  EFFECT_KNIGHT_RIDER, // K2000 - clean trail without fade
   EFFECT_FADE,
   EFFECT_STROBE,
-  EFFECT_VEHICLE_SYNC,    // Synchronisé avec l'état du véhicule
-  EFFECT_TURN_SIGNAL,     // Clignotants
-  EFFECT_BRAKE_LIGHT,     // Feux de stop
-  EFFECT_CHARGE_STATUS,   // Indicateur de charge
-  EFFECT_HAZARD,          // Warnings (les deux côtés)
-  EFFECT_BLINDSPOT_FLASH, // Flash directionnel pour angle mort
-  EFFECT_AUDIO_REACTIVE,  // Effet réactif au son
-  EFFECT_AUDIO_BPM,       // Effet synchronisé au BPM
-  EFFECT_FFT_SPECTRUM,    // Spectre FFT en temps réel (égaliseur)
-  EFFECT_FFT_BASS_PULSE,  // Pulse sur les basses (kick)
-  EFFECT_FFT_VOCAL_WAVE,  // Vague réactive aux voix
-  EFFECT_FFT_ENERGY_BAR,  // Barre d'énergie spectrale
-  EFFECT_COMET,           // Comete avec trainee
-  EFFECT_METEOR_SHOWER,   // Pluie de meteores
-  EFFECT_RIPPLE_WAVE,     // Onde concentrique depuis le centre
-  EFFECT_DUAL_GRADIENT,   // Double degrade qui respire
-  EFFECT_SPARKLE_OVERLAY, // Fond doux + scintilles rares
-  EFFECT_CENTER_OUT_SCAN, // Double scan centre -> bords
-  EFFECT_POWER_METER,     // Power bar combinee (front + rear)
-  EFFECT_POWER_METER_CENTER, // Power bar centre (zero au milieu)
+  EFFECT_VEHICLE_SYNC,    // Synchronized with vehicle state
+  EFFECT_TURN_SIGNAL,     // Turn signals
+  EFFECT_BRAKE_LIGHT,     // Brake lights
+  EFFECT_CHARGE_STATUS,   // Charge indicator
+  EFFECT_HAZARD,          // Hazards (both sides)
+  EFFECT_BLINDSPOT_FLASH, // Directional flash for blind spot
+  EFFECT_AUDIO_REACTIVE,  // Sound reactive effect
+  EFFECT_AUDIO_BPM,       // BPM synchronized effect
+  EFFECT_FFT_SPECTRUM,    // Real-time FFT spectrum (equalizer)
+  EFFECT_FFT_BASS_PULSE,  // Pulse on bass (kick)
+  EFFECT_FFT_VOCAL_WAVE,  // Wave reactive to vocals
+  EFFECT_FFT_ENERGY_BAR,  // Spectral energy bar
+  EFFECT_COMET,           // Comet with trail
+  EFFECT_METEOR_SHOWER,   // Meteor shower
+  EFFECT_RIPPLE_WAVE,     // Concentric wave from center
+  EFFECT_DUAL_GRADIENT,   // Double gradient that breathes
+  EFFECT_SPARKLE_OVERLAY, // Soft background + rare sparkles
+  EFFECT_CENTER_OUT_SCAN, // Double scan center -> edges
+  EFFECT_POWER_METER,     // Combined power bar (front + rear)
+  EFFECT_POWER_METER_CENTER, // Center power bar (zero in middle)
   EFFECT_MAX
 } led_effect_t;
 
-// Modes de synchronisation véhicule
+// Vehicle synchronization modes
 typedef enum {
   SYNC_OFF = 0,
-  SYNC_DOORS,        // Réagit à l'ouverture des portes
-  SYNC_SPEED,        // Change selon la vitesse
-  SYNC_TURN_SIGNALS, // Suit les clignotants
-  SYNC_BRAKE,        // Feux de stop
-  SYNC_CHARGE,       // État de charge
-  SYNC_LOCKED,       // État verrouillage
-  SYNC_ALL           // Tous les événements
+  SYNC_DOORS,        // Reacts to door opening
+  SYNC_SPEED,        // Changes with speed
+  SYNC_TURN_SIGNALS, // Follows turn signals
+  SYNC_BRAKE,        // Brake lights
+  SYNC_CHARGE,       // Charge state
+  SYNC_LOCKED,       // Lock state
+  SYNC_ALL           // All events
 } sync_mode_t;
 
 /**
- * @brief Configuration d'un effet LED
+ * @brief Configuration of an LED effect
  *
- * Exemple d'usage:
+ * Usage example:
  * @code
- * // Effet rainbow sur toute la bande, animé de gauche à droite
+ * // Rainbow effect on entire strip, animated left to right
  * effect_config_t cfg = {
  *   .effect = EFFECT_RAINBOW,
  *   .brightness = 200,
@@ -113,7 +113,7 @@ typedef enum {
  * };
  * led_effects_set_config(&cfg);
  *
- * // Clignotant gauche (première moitié, animation vers la gauche)
+ * // Left turn signal (first half, animation to the left)
  * effect_config_t turn_left = {
  *   .effect = EFFECT_TURN_SIGNAL,
  *   .brightness = 255,
@@ -133,12 +133,12 @@ typedef struct {
   uint32_t color2;
   uint32_t color3;
   sync_mode_t sync_mode;
-  bool reverse;                 // Direction de l'animation : false = gauche->droite, true = droite->gauche
-  bool audio_reactive;          // L'effet réagit au micro si activé
-  uint16_t segment_start;       // Index de départ (toujours depuis la gauche, 0-based)
-  uint16_t segment_length;      // Longueur du segment (0 = auto/full strip)
-  bool accel_pedal_pos_enabled; // Active la modulation de segment_length par accel_pedal_pos
-  uint8_t accel_pedal_offset;   // Offset minimum pour segment_length (0-100%)
+  bool reverse;                 // Animation direction: false = left->right, true = right->left
+  bool audio_reactive;          // Effect reacts to microphone if enabled
+  uint16_t segment_start;       // Starting index (always from left, 0-based)
+  uint16_t segment_length;      // Segment length (0 = auto/full strip)
+  bool accel_pedal_pos_enabled; // Enable segment_length modulation by accel_pedal_pos
+  uint8_t accel_pedal_offset;   // Minimum offset for segment_length (0-100%)
 } effect_config_t;
 
 typedef struct {
@@ -148,13 +148,13 @@ typedef struct {
 } led_rgb_t;
 
 /**
- * @brief Initialise le système LED
- * @return true si succès
+ * @brief Initializes the LED system
+ * @return true if successful
  */
 bool led_effects_init(void);
 
 /**
- * @brief Désinitialise le système LED et libère les ressources
+ * @brief Deinitializes the LED system and frees resources
  */
 void led_effects_deinit(void);
 
@@ -165,132 +165,132 @@ void led_effects_deinit(void);
 void led_effects_set_config(const effect_config_t *config);
 
 /**
- * @brief Obtient la configuration actuelle
- * @param config Pointeur vers la structure de configuration
+ * @brief Gets the current configuration
+ * @param config Pointer to configuration structure
  */
 void led_effects_get_config(effect_config_t *config);
 
 /**
- * @brief Met à jour les LEDs (à appeler régulièrement)
+ * @brief Updates the LEDs (call regularly)
  */
 void led_effects_update(void);
 
 /**
- * @brief Met à jour avec l'état du véhicule
- * @param state État du véhicule
+ * @brief Updates with vehicle state
+ * @param state Vehicle state
  */
 void led_effects_update_vehicle_state(const vehicle_state_t *state);
 
 /**
- * @brief Définit le contexte d'événement actif pour le rendu (0 = aucun)
- * @param event_id ID numérique de l'événement CAN
+ * @brief Sets the active event context for rendering (0 = none)
+ * @param event_id Numeric ID of CAN event
  */
 void led_effects_set_event_context(uint16_t event_id);
 
 /**
- * @brief Obtient le nom d'un effet
- * @param effect Type d'effet
- * @return Nom de l'effet
+ * @brief Gets the name of an effect
+ * @param effect Effect type
+ * @return Effect name
  */
 const char *led_effects_get_name(led_effect_t effect);
 
 /**
- * @brief Réinitialise la configuration par défaut
+ * @brief Resets to default configuration
  */
 void led_effects_reset_config(void);
 
 /**
- * @brief Obtient l'état du mode nuit
- * @return true si le mode nuit est actif
+ * @brief Gets the night mode state
+ * @return true if night mode is active
  */
 bool led_effects_get_night_mode(void);
 
 /**
- * @brief Obtient la luminosité du mode nuit
- * @return Luminosité (0-255)
+ * @brief Gets the night mode brightness
+ * @return Brightness (0-255)
  */
 uint8_t led_effects_get_night_brightness(void);
 
 /**
- * @brief Convertit un enum d'effet en ID alphanumérique
- * @param effect Type d'effet
- * @return ID alphanumérique (constante statique)
+ * @brief Converts an effect enum to alphanumeric ID
+ * @param effect Effect type
+ * @return Alphanumeric ID (static constant)
  */
 const char *led_effects_enum_to_id(led_effect_t effect);
 
 /**
- * @brief Convertit un ID alphanumérique en enum d'effet
- * @param id ID alphanumérique
- * @return Type d'effet (EFFECT_OFF si ID inconnu)
+ * @brief Converts an alphanumeric ID to effect enum
+ * @param id Alphanumeric ID
+ * @return Effect type (EFFECT_OFF if ID unknown)
  */
 led_effect_t led_effects_id_to_enum(const char *id);
 
 /**
- * @brief Vérifie si un effet nécessite des données CAN pour fonctionner
- * @param effect Type d'effet
- * @return true si l'effet nécessite le CAN bus, false sinon
+ * @brief Checks if an effect requires CAN data to function
+ * @param effect Effect type
+ * @return true if effect requires CAN bus, false otherwise
  */
 bool led_effects_requires_can(led_effect_t effect);
 
 /**
- * @brief Vérifie si un effet nécessite le FFT audio
- * @param effect Type d'effet
- * @return true si l'effet nécessite le FFT, false sinon
+ * @brief Checks if an effect requires audio FFT
+ * @param effect Effect type
+ * @return true if effect requires FFT, false otherwise
  */
 bool led_effects_requires_fft(led_effect_t effect);
 
 /**
- * @brief Vérifie si un effet est audio-réactif (donc non sélectionnable dans
- * les événements CAN)
- * @param effect Type d'effet
- * @return true si l'effet est audio-réactif, false sinon
+ * @brief Checks if an effect is audio-reactive (thus not selectable in
+ * CAN events)
+ * @param effect Effect type
+ * @return true if effect is audio-reactive, false otherwise
  */
 bool led_effects_is_audio_effect(led_effect_t effect);
 
 /**
- * @brief Active l'affichage de progression OTA sur la strip
+ * @brief Enables OTA progress display on the strip
  */
 void led_effects_start_progress_display(void);
 
 /**
- * @brief Met à jour le pourcentage de progression OTA affiché
- * @param percent Pourcentage 0-100
+ * @brief Updates the displayed OTA progress percentage
+ * @param percent Percentage 0-100
  */
 void led_effects_update_progress(uint8_t percent);
 
 /**
- * @brief Désactive l'affichage de progression OTA
+ * @brief Disables OTA progress display
  */
 void led_effects_stop_progress_display(void);
 
 bool led_effects_is_ota_display_active(void);
 
 /**
- * @brief Affiche un effet indiquant que l'appareil est prêt à redémarrer
- *        après une mise à jour OTA réussie.
+ * @brief Shows an effect indicating the device is ready to restart
+ *        after a successful OTA update.
  */
 void led_effects_show_upgrade_ready(void);
 
 /**
- * @brief Affiche un effet indiquant qu'une mise à jour OTA a échoué
- *        mais que l'appareil redémarrera automatiquement.
+ * @brief Shows an effect indicating an OTA update failed
+ *        but the device will restart automatically.
  */
 void led_effects_show_upgrade_error(void);
 
 /**
- * @brief Modifie le nombre de LEDs
- * @param led_count Nombre de LEDs
- * @return true si la modification a réussi
+ * @brief Changes the number of LEDs
+ * @param led_count Number of LEDs
+ * @return true if change was successful
  */
 bool led_effects_set_led_count(uint16_t led_count);
 
 /**
- * @brief Rendu d'un effet dans un buffer sans l'envoyer aux LEDs
+ * @brief Renders an effect to a buffer without sending to LEDs
  */
 void led_effects_render_to_buffer(const effect_config_t *config, uint16_t segment_start, uint16_t segment_length, uint32_t frame_counter, led_rgb_t *out_buffer);
 
 /**
- * @brief Affiche un buffer déjà calculé
+ * @brief Displays a pre-calculated buffer
  */
 void led_effects_show_buffer(const led_rgb_t *buffer);
 
@@ -300,19 +300,19 @@ uint16_t led_effects_get_led_count(void);
 uint8_t led_effects_get_accel_pedal_pos(void);
 
 /**
- * @brief Applique la modulation accel_pedal_pos à une longueur de segment
- * @param original_length Longueur originale du segment
- * @param accel_pedal_pos Position de la pédale (0-100)
- * @param offset_percent Offset minimum (0-100%)
- * @return Longueur modulée (minimum 1)
+ * @brief Applies accel_pedal_pos modulation to a segment length
+ * @param original_length Original segment length
+ * @param accel_pedal_pos Pedal position (0-100)
+ * @param offset_percent Minimum offset (0-100%)
+ * @return Modulated length (minimum 1)
  */
 uint16_t led_effects_apply_accel_modulation(uint16_t original_length, uint8_t accel_pedal_pos, uint8_t offset_percent);
 
 /**
- * @brief Normalise un segment (start, length) pour qu'il soit dans les limites de la strip
- * @param segment_start Pointeur vers le start (sera modifié)
- * @param segment_length Pointeur vers la length (sera modifié, 0 = full strip)
- * @param total_leds Nombre total de LEDs
+ * @brief Normalizes a segment (start, length) to be within strip limits
+ * @param segment_start Pointer to start (will be modified)
+ * @param segment_length Pointer to length (will be modified, 0 = full strip)
+ * @param total_leds Total number of LEDs
  */
 void led_effects_normalize_segment(uint16_t *segment_start, uint16_t *segment_length, uint16_t total_leds);
 

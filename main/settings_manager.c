@@ -59,7 +59,7 @@ esp_err_t settings_manager_load(system_settings_t *settings) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  // Charger le JSON depuis SPIFFS
+  // Load JSON from SPIFFS
   char *json_buffer = (char *)malloc(2048);
   if (json_buffer == NULL) {
     ESP_LOGE(TAG_SETTINGS, "Buffer allocation error");
@@ -72,7 +72,7 @@ esp_err_t settings_manager_load(system_settings_t *settings) {
     return err;
   }
 
-  // Parser le JSON
+  // Parse JSON
   cJSON *root = cJSON_Parse(json_buffer);
   free(json_buffer);
 
@@ -132,7 +132,7 @@ esp_err_t settings_manager_save(const system_settings_t *settings) {
   cJSON_AddNumberToObject(root, "espnow_role", settings->espnow_role);
   cJSON_AddNumberToObject(root, "espnow_type", settings->espnow_type);
 
-  // Convertir en string
+  // Convert to string
   char *json_str = cJSON_PrintUnformatted(root);
   esp_err_t err = ESP_FAIL;
 
@@ -155,7 +155,7 @@ esp_err_t settings_manager_save(const system_settings_t *settings) {
   return err;
 }
 
-// Fonctions utilitaires pour get/set individuels
+// Utility functions for individual get/set
 int32_t settings_get_i32(const char *key, int32_t default_value) {
   if (!s_settings_loaded) {
     return default_value;
