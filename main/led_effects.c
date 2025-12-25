@@ -656,10 +656,10 @@ static void effect_fire(void) {
 
   // Random ignition of new "flames" across the strip
   // Create multiple ignition points for a uniform effect
-  int num_sparks = 3 + (current_config.speed / 50); // Plus rapide = plus de flammes
+  int num_sparks = 3 + (current_config.speed / 50); // Faster = more flames
   for (int s = 0; s < num_sparks; s++) {
     if (esp_random() % 255 < 120) {
-      int pos       = esp_random() % led_count; // Sur toute la strip
+      int pos       = esp_random() % led_count; // Across entire strip
       heat_map[pos] = heat_map[pos] + (esp_random() % 160) + 95;
       if (heat_map[pos] > 255)
         heat_map[pos] = 255;
@@ -839,7 +839,7 @@ static void effect_strobe(void) {
 
   // Flash period based on the speed parameter
   // speed: 0-255, converted to a 10-50 frame period (higher speed = shorter period
-  // courte = rapide)
+  // short = fast)
   int period  = 50 - ((current_config.speed * 40) / 255); // Range: 50 (slow) to 10 (fast)
   if (period < 10)
     period = 10;
@@ -870,7 +870,7 @@ static void effect_blindspot_flash(void) {
 
   // Fast flash period based on the speed parameter
   // speed: 0-255, converted to a 15-100 frame period (higher speed = shorter period
-  // courte = rapide)
+  // short = fast)
   int period    = 100 - ((current_config.speed * 85) / 255); // Range: 100 (slow) to 15 (fast)
   if (period < 15)
     period = 15;
@@ -879,7 +879,7 @@ static void effect_blindspot_flash(void) {
   // Flash active for 60% of cycle (longer than turn signal for urgency)
   int animation_duration = (period * 60) / 100;
 
-  // Effacer tout le ruban
+  // Clear entire strip
   fill_solid((rgb_t){0, 0, 0});
 
   if (cycle < animation_duration) {
@@ -954,7 +954,7 @@ static void effect_hazard(void) {
 
   // Full animation period based on the speed parameter
   // speed: 0-255, converted to a 20-120 frame period (higher speed = shorter period
-  // courte = rapide)
+  // short = fast)
   int period    = 120 - ((current_config.speed * 100) / 255); // Range: 120 (slow) to 20 (fast)
   if (period < 20)
     period = 20;
@@ -963,7 +963,7 @@ static void effect_hazard(void) {
   // Phase 1: Progressive scroll (70% of the cycle)
   int animation_duration = (period * 70) / 100;
 
-  // Effacer tout le ruban
+  // Clear entire strip
   fill_solid((rgb_t){0, 0, 0});
 
   if (cycle < animation_duration) {
@@ -1343,28 +1343,28 @@ static void effect_charge_status(void) {
 
   // Animated pixel coming from the end (smooth stacking)
   // Animation speed based on CAN charge power
-  float speed_factor; // Pixels par frame (plus = plus rapide)
+  float speed_factor; // Pixels per frame (more = faster)
 
   if (last_vehicle_state.charging && last_vehicle_state.charge_power_kw > 0.1f) {
     // With real charging: speed proportional to power
     // Supercharger V3 max = 250 kW, V2 = 150 kW, AC = 11 kW
     float power  = last_vehicle_state.charge_power_kw;
 
-    // Normaliser :
-    // 3 kW (prise) -> 0.017 px/frame (lent)
-    // 150 kW (V2)  -> 0.5 px/frame (rapide)
+    // Normalize:
+    // 3 kW (plug) -> 0.017 px/frame (slow)
+    // 150 kW (V2)  -> 0.5 px/frame (fast)
     // 250 kW (V3)  -> 1.0 px/frame (very fast)
-    speed_factor = power / 250.0f; // Max 1 pixel par frame
+    speed_factor = power / 250.0f; // Max 1 pixel per frame
 
-    // Limites
+    // Limits
     if (speed_factor < 0.017f)
       speed_factor = 0.017f;
     if (speed_factor > 1.0f)
       speed_factor = 1.0f;
   } else {
     // Simulation mode: speed based on the speed parameter
-    // speed 0 -> 0.017 px/frame (lent)
-    // speed 255 -> 1.0 px/frame (rapide)
+    // speed 0 -> 0.017 px/frame (slow)
+    // speed 255 -> 1.0 px/frame (fast)
     speed_factor = 0.017f + (current_config.speed / 255.0f) * 0.983f;
   }
 
@@ -1405,7 +1405,7 @@ static void effect_charge_status(void) {
 
       // Display trail only if:
       // 1. It is in visible zone (< led_count)
-      // 2. Elle has not yet been "consumed" by the charge bar
+      // 2. It has not yet been "consumed" by the charge bar
       bool in_visible_zone = current_config.reverse ? (trail_pos >= 0 && trail_pos < target_led) : (trail_pos >= target_led && trail_pos < led_count);
 
       if (in_visible_zone) {
@@ -1599,11 +1599,11 @@ static void effect_vehicle_sync(void) {
   if (last_vehicle_state.door_front_left_open + last_vehicle_state.door_front_right_open + last_vehicle_state.door_rear_left_open + last_vehicle_state.door_rear_right_open > 0) {
     base_color = (rgb_t){255, 0, 0};
   }
-  // En charge = vert
+  // Charging = green
   else if (last_vehicle_state.charging) {
     base_color = (rgb_t){0, 255, 0};
   }
-  // En mouvement = bleu
+  // In motion = blue
   else if (last_vehicle_state.speed_kph > 5.0f) {
     uint16_t intensity = (uint8_t)(last_vehicle_state.speed_kph * 2);
     if (intensity > 255)
@@ -1773,7 +1773,7 @@ static void effect_fft_vocal_wave(void) {
 
   // Wave position based on the spectral centroid
   // The higher the centroid (treble), the further the wave moves
-  float wave_pos    = (fft_data.spectral_centroid - 500.0f) / 3500.0f; // Normaliser 500-4000 Hz
+  float wave_pos    = (fft_data.spectral_centroid - 500.0f) / 3500.0f; // Normalize 500-4000 Hz
   if (wave_pos < 0.0f)
     wave_pos = 0.0f;
   if (wave_pos > 1.0f)
@@ -2028,12 +2028,12 @@ void led_effects_normalize_segment(uint16_t *segment_start, uint16_t *segment_le
     return;
   }
 
-  // Normaliser length (0 = full strip)
+  // Normalize length (0 = full strip)
   if (*segment_length == 0 || *segment_length > total_leds) {
     *segment_length = total_leds;
   }
 
-  // Normaliser start
+  // Normalize start
   if (*segment_start >= total_leds) {
     *segment_start = 0;
   }
@@ -2048,7 +2048,7 @@ void led_effects_set_config(const effect_config_t *config) {
   if (config != NULL) {
     memcpy(&current_config, config, sizeof(effect_config_t));
 
-    // Normaliser le segment
+    // Normalize segment
     led_effects_normalize_segment(&current_config.segment_start, &current_config.segment_length, led_count);
 
     // Automatically enable/disable FFT based on the effect
@@ -2122,7 +2122,7 @@ void led_effects_update(void) {
     uint16_t segment_start  = current_config.segment_start;
     uint16_t segment_length = current_config.segment_length;
 
-    // Normaliser le segment
+    // Normalize segment
     led_effects_normalize_segment(&segment_start, &segment_length, led_count);
 
     // Calculate dynamic length based on accel_pedal_pos if enabled
