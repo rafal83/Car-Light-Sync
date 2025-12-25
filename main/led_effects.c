@@ -552,7 +552,7 @@ static void effect_rainbow_cycle(void) {
 
   uint16_t hue = ((effect_counter * speed_factor) / 50) % 256;
   rgb_t color  = hsv_to_rgb(hue, 255, 255);                          // Use maximum brightness for HSV
-  color        = apply_brightness(color, current_config.brightness); // Appliquer brightness ET mode nuit
+  color        = apply_brightness(color, current_config.brightness); // Apply brightness AND night mode
   fill_solid(color);
 }
 
@@ -2317,7 +2317,7 @@ void led_effects_render_to_buffer(const effect_config_t *config, uint16_t segmen
     segment_length = led_count - segment_start;
   }
 
-  // Sauvegarder l'etat courant
+  // Save current state
   effect_config_t saved_config = current_config;
   uint16_t saved_led_count     = led_count;
   uint32_t saved_counter       = effect_counter;

@@ -991,7 +991,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
 
   cJSON_AddItemToObject(root, "profiles", profiles_array);
 
-  // Charger le nom du profil actif
+  // Load active profile name
   if (active_id >= 0 && config_manager_load_profile(active_id, profile)) {
     cJSON_AddStringToObject(root, "an", profile->name);
   } else {
@@ -1324,7 +1324,7 @@ static esp_err_t profile_update_handler(httpd_req_t *req) {
     profile->dynamic_brightness_exclude_mask = exclude_mask;
   }
 
-  // Sauvegarder le profil
+  // Save profile
   bool success = config_manager_save_profile(profile_id, profile);
 
   // If it is the active profile, update the configuration
@@ -2329,7 +2329,7 @@ static esp_err_t audio_config_handler(httpd_req_t *req) {
     audio_input_set_fft_enabled(config.fft_enabled);
   }
 
-  // Sauvegarder la configuration
+  // Save configuration
   audio_input_save_config();
 
   cJSON_Delete(root);

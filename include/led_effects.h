@@ -119,7 +119,7 @@ typedef enum {
  *   .brightness = 255,
  *   .speed = 80,
  *   .color1 = 0xFF8000,  // Orange
- *   .reverse = true,     // Animation vers la gauche
+ *   .reverse = true,     // Animation to the left
  *   .segment_start = 0,
  *   .segment_length = 61  // First half (0-60)
  * };
@@ -129,7 +129,7 @@ typedef struct {
   led_effect_t effect;
   uint8_t brightness; // 0-255
   uint8_t speed;      // 0-100 (animation speed)
-  uint32_t color1;    // RGB au format 0xRRGGBB
+  uint32_t color1;    // RGB in 0xRRGGBB format
   uint32_t color2;
   uint32_t color3;
   sync_mode_t sync_mode;

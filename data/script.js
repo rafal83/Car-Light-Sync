@@ -2931,7 +2931,7 @@ function showImportDialog() {
     };
     input.click();
 }
-// Fonction unifiée pour sauvegarder le profil (settings + effet par défaut)
+// Unified function to save profile (settings + default effect)
 async function saveProfile(params = {}) {
     if (bleTransportInstance && bleTransportInstance.waitForQueue) {
         await bleTransportInstance.waitForQueue();
@@ -3709,7 +3709,7 @@ function startAudioDataPolling() {
         return;
     }
 
-    // En mode BLE, désactiver complètement le polling audio pour économiser la bande passante
+    // In BLE mode, completely disable audio polling to save bandwidth
     if (bleTransportInstance && bleTransportInstance.shouldUseBle()) {
         const audioDataBox = $('audio-data');
         const audioFFTDataBox = $('audio-fft-data');
@@ -3720,7 +3720,7 @@ function startAudioDataPolling() {
             audioFFTDataBox.style.display = 'none';
         }
 
-        console.log('[Audio] Polling désactivé en mode BLE (économie bande passante)');
+        console.log('[Audio] Polling disabled in BLE mode (bandwidth saving)');
         return;
     }
 

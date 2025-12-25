@@ -17,12 +17,12 @@ typedef struct {
   uint8_t dlc;
   uint8_t data[8];
   uint32_t timestamp_ms;
-  uint8_t bus_id; // ID du bus CAN (0=CAN0, 1=CAN1, etc.)
+  uint8_t bus_id; // CAN bus ID (0=CAN0, 1=CAN1, etc.)
 } can_frame_t;
 
 // Vehicle "business" state: to be enriched as needed
 typedef struct {
-  // Dynamique de base
+  // Basic dynamics
   float speed_kph;
   float speed_limit;
   int8_t pedal_map;
@@ -30,7 +30,7 @@ typedef struct {
   uint8_t accel_pedal_pos;
   uint8_t brake_pressed; // 0/1
 
-  // Verrouillage / ouvertures
+  // Locking / openings
   uint8_t locked;           // 0/1
   uint8_t door_front_left_open;
   uint8_t door_rear_left_open;
@@ -40,7 +40,7 @@ typedef struct {
   uint8_t frunk_open; // 0/1
   uint8_t trunk_open; // 0/1
 
-  // Bouttons volant
+  // Steering wheel buttons
   uint8_t left_btn_scroll_up;
   uint8_t left_btn_scroll_down;
   uint8_t left_btn_press;
@@ -64,7 +64,7 @@ typedef struct {
   uint8_t fog_lights; // 0/1
 
   // Energy
-  float soc_percent;      // niveau de batterie (%)
+  float soc_percent;      // battery level (%)
   float pack_energy;
   float remaining_energy;
   uint8_t charging_cable; // 0/1
@@ -79,7 +79,7 @@ typedef struct {
   float max_regen;
   uint8_t train_type; // 1 RWD, 0 AWD
 
-  // Divers
+  // Miscellaneous
   uint8_t sentry_mode;  // 0/1
   uint8_t sentry_alert; // 0/1
 
@@ -111,7 +111,7 @@ typedef struct {
   uint32_t last_update_ms;
 } vehicle_state_t;
 
-// Structure compacte BLE pour mode CONFIG
+// Compact BLE structure for CONFIG mode
 // Total: ~22 bytes
 typedef struct __attribute__((packed)) {
   // Driving dynamics
@@ -136,14 +136,14 @@ typedef struct __attribute__((packed)) {
   uint8_t soc_percent;         // battery %
   uint32_t odometer_km;            // odometer (uint32 = max 4,294,967 km)
 
-  // Valeurs uint8
+  // uint8 values
   int8_t gear;                     // P=1, R=2, N=3, D=4
   int8_t pedal_map;                // driving mode (Chill/Standard/Sport)
   uint8_t accel_pedal_pos;         // 0-100%
   uint8_t brightness;              // 0-100%
   uint8_t autopilot;               // autopilot state
 
-  // Bit-packed flags pour sécurité et indicateurs
+  // Bit-packed flags for safety and indicators
   // Byte 0 (8 bits): turn signals & brake
   uint8_t flags0;  // bits: turn_left, turn_right, hazard, brake_pressed, high_beams, headlights, fog_lights, unused
 
@@ -168,7 +168,7 @@ typedef struct __attribute__((packed)) {
   int16_t battery_voltage_HV_x10;  // HV voltage * 10
   uint32_t odometer_km;            // odometer
 
-  // Valeurs uint8
+  // uint8 values
   uint8_t charge_status;           // charge status
   uint8_t brightness;              // 0-100%
 
