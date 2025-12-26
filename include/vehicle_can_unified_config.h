@@ -25,7 +25,7 @@ typedef enum {
   SIGNAL_MUX_MULTIPLEXED  = 2
 } signal_mux_type_t;
 
-// Définition d'un signal DBC (ex: DI_vehicleSpeed, UI_turnSignalLeft, etc.)
+// DBC signal definition (e.g.: DI_vehicleSpeed, UI_turnSignalLeft, etc.)
 typedef struct can_signal_def_t {
   const char *name;
   uint8_t start_bit;
@@ -38,7 +38,7 @@ typedef struct can_signal_def_t {
   uint16_t mux_value;
 } can_signal_def_t;
 
-// Définition d'un message CAN DBC (ex: ID118DriveSystemStatus)
+// DBC CAN message definition (e.g.: ID118DriveSystemStatus)
 typedef struct can_message_def_t {
   uint32_t id;
   const char *name;
@@ -46,7 +46,7 @@ typedef struct can_message_def_t {
   uint8_t signal_count;
 } can_message_def_t;
 
-// Tableau global généré à partir de Model3CAN.json
+// Global array generated from Model3CAN.json
 extern const can_message_def_t g_can_messages[];
 extern const uint16_t g_can_message_count;
 

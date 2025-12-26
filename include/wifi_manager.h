@@ -8,7 +8,7 @@
 
 #define TAG_WIFI "WiFi"
 
-// État de la connexion
+// Connection status
 typedef struct {
   bool ap_started;
   bool sta_connected;

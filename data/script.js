@@ -944,7 +944,7 @@ function updateLogsTabVisibility() {
     const useBle = bleTransport && typeof bleTransport.shouldUseBle === 'function'
         ? bleTransport.shouldUseBle()
         : false;
-    // Afficher l'onglet Logs uniquement si on n'utilise PAS BLE (donc WiFi)
+    // Display the Logs tab only if NOT using BLE (so WiFi)
     logsTabButton.style.display = useBle ? 'none' : 'block';
     if (useBle && activeTabName === 'logs') {
         switchTab('profiles');
@@ -1266,7 +1266,7 @@ async function getSimulationEventDuration(eventType) {
     return config && typeof config.dur === 'number' ? config.dur : 0;
 }
 // renderSimulationSections removed - simulation is now integrated into events config tab
-// Conversion pourcentage <-> 0-255
+// Conversion percentage <-> 0-255
 function percentTo255(percent) {
     return Math.round((percent * 255) / 100);
 }
@@ -1492,7 +1492,7 @@ if (defaultAccelPedalOffsetSlider) {
 }
 const SEGMENT_MIN_LENGTH = 10;
 
-// Normalise une plage de segment (min/max) pour garantir une longueur minimale et borne max
+// Normalize a segment range (min/max) to ensure minimum length and max bound
 function normalizeSegmentRange(minSlider, maxSlider, minLength = SEGMENT_MIN_LENGTH, maxValue = maxLeds) {
     let min = parseInt(minSlider.value);
     let max = parseInt(maxSlider.value);
@@ -1563,7 +1563,7 @@ function getDefaultSegmentRange() {
     }
     const start = parseInt(minSlider.value);
     const length = parseInt(maxSlider.value) - start;
-    // 0 signifie pleine longueur
+    // 0 means full length
     return { start, length: length === maxLeds ? 0 : length };
 }
 
@@ -1964,7 +1964,7 @@ function filterEvents(searchText) {
         }
     });
 
-    // Afficher un message si aucun résultat
+    // Display a message if no results
     let noResultsMsg = container.querySelector('.events-no-results');
     if (visibleCount === 0 && searchLower !== '') {
         if (!noResultsMsg) {
@@ -2034,11 +2034,11 @@ function toggleEventAccordion(index) {
     const isActive = header.classList.contains('active');
 
     if (isActive) {
-        // Fermer l'accordéon
+        // Close the accordion
         header.classList.remove('active');
         content.classList.remove('active');
     } else {
-        // Fermer tous les autres accordéons
+        // Close all other accordions
         headers.forEach((h, i) => {
             if (i !== index) {
                 h.classList.remove('active');
@@ -2049,11 +2049,11 @@ function toggleEventAccordion(index) {
             }
         });
 
-        // Ouvrir l'accordéon sélectionné
+        // Open the selected accordion
         header.classList.add('active');
         content.classList.add('active');
 
-        // Initialiser le segment range slider visuellement
+        // Initialize the segment range slider visually
         setTimeout(() => updateSegmentRange(index), 10);
     }
 }
@@ -2066,7 +2066,7 @@ function toggleEventFormFields(index) {
         return;
     }
 
-    // Désactiver/activer tous les champs sauf la checkbox "enabled"
+    // Disable/enable all fields except the "enabled" checkbox
     const inputs = form.querySelectorAll('input:not(#event-enabled-' + index + '), select');
     inputs.forEach(input => {
         input.disabled = !enabled;
@@ -2229,7 +2229,7 @@ async function loadHardwareConfig() {
             $('wheel-speed-limit').value = config.wheel_spd;
         }
 
-        // Charger la config ESP-NOW
+        // Load ESP-NOW config
         await loadEspnowConfig();
     } catch (e) {
         console.error('Error:', e);
@@ -2253,7 +2253,7 @@ async function saveHardwareConfig() {
     }, HARDWARE_SAVE_DEBOUNCE_MS);
 }
 
-// Fonction interne pour sauvegarder immédiatement
+// Internal function to save immediately
 async function saveHardwareConfigImmediate() {
     const config = {
         lc: parseInt($('led-count').value),
@@ -2367,7 +2367,7 @@ async function startEspnowPairing() {
                 showNotification(ESPNOW_NOTIFICATION_PAIRING, errorMsg, 'error');
             }
         } catch (e) {
-            console.error('Erreur:', e);
+            console.error('Error:', e);
             showNotification(ESPNOW_NOTIFICATION_PAIRING, t('config.espnowPairingError'), 'error');
         }
     } else if (role === 'slave') {
@@ -2384,7 +2384,7 @@ async function startEspnowPairing() {
                 showNotification(ESPNOW_NOTIFICATION_PAIRING, errorMsg, 'error');
             }
         } catch (e) {
-            console.error('Erreur:', e);
+            console.error('Error:', e);
             showNotification(ESPNOW_NOTIFICATION_PAIRING, t('config.espnowSlavePairingError'), 'error');
         }
     }
@@ -2402,7 +2402,7 @@ async function disconnectEspnow() {
             showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectError'), 'error');
         }
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
         showNotification(ESPNOW_NOTIFICATION_DISCONNECT, t('espnow.disconnectError'), 'error');
     }
 }
@@ -2634,7 +2634,7 @@ async function performFactoryReset() {
         const data = await response.json();
         if (response.ok && data.st === 'ok') {
             showNotification('config-notification', t('config.factoryResetSuccess'), 'success');
-            // L'ESP32 va redémarrer, afficher un message
+            // ESP32 will restart, display a message
             setTimeout(() => {
                 alert(t('config.deviceRestarting'));
                 location.reload();
@@ -2647,7 +2647,7 @@ async function performFactoryReset() {
         showNotification('config-notification', t('config.factoryResetError'), 'error');
     }
 }
-// Gestion des profils
+// Profile management
 async function loadProfiles() {
     try {
         const response = await fetch(API_BASE + '/api/profiles');
@@ -2675,7 +2675,7 @@ async function loadProfiles() {
             }
         }
 
-        // Afficher les statistiques de stockage
+        // Display storage statistics
         if (data.storage) {
             const storageInfo = $('storage-info');
             const storageText = $('storage-text');
@@ -2686,14 +2686,14 @@ async function loadProfiles() {
             const totalBytes = data.storage.total || 0;
             const freeBytes = data.storage.free || 0;
 
-            // Convertir bytes en KB pour affichage
+            // Convert bytes to KB for display
             const usedKB = Math.round(usedBytes / 1024);
             const totalKB = Math.round(totalBytes / 1024);
 
             storageText.textContent = t('profiles.storageUsage', usagePct, usedKB, totalKB);
             storageBar.style.width = usagePct + '%';
 
-            // Changer la couleur selon l'utilisation
+            // Change color based on usage
             if (usagePct < 50) {
                 storageBar.style.background = '#4CAF50';
             } else if (usagePct < 80) {
@@ -2702,8 +2702,8 @@ async function loadProfiles() {
                 storageBar.style.background = '#F44336';
             }
 
-            // Désactiver les boutons si espace insuffisant (< 12KB pour un profil)
-            const canCreate = freeBytes >= 12288; // 12KB minimum (2.5KB données binaires + 8KB overhead SPIFFS)
+            // Disable buttons if insufficient space (< 12KB for a profile)
+            const canCreate = freeBytes >= 12288; // 12KB minimum (2.5KB binary data + 8KB SPIFFS overhead)
             const newButton = $('profile-new-button');
             const importButton = $('profile-import-button');
             if (newButton) {
@@ -2718,7 +2718,7 @@ async function loadProfiles() {
             storageInfo.style.display = 'block';
         }
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
     }
 }
 async function activateProfile() {
@@ -2736,7 +2736,7 @@ async function activateProfile() {
         loadProfiles();
         loadConfig();
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
     }
 }
 function showNewProfileDialog() {
@@ -2766,7 +2766,7 @@ async function createProfile() {
             showNotification('profiles-notification', message, 'error');
         }
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
         showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
     }
 }
@@ -2789,7 +2789,7 @@ async function deleteProfile() {
             showNotification('profiles-notification', message, 'error');
         }
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
         showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
     }
 }
@@ -2834,7 +2834,7 @@ async function renameProfile() {
             showNotification('profiles-notification', message, 'error');
         }
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
         showNotification('profiles-notification', e.message || t('profiles.renameError'), 'error');
     }
 }
@@ -2862,7 +2862,7 @@ async function exportProfile() {
             showNotification('profiles-notification', t('profiles.exportError'), 'error');
         }
     } catch (e) {
-        console.error('Erreur export:', e);
+        console.error('Export error:', e);
         showNotification('profiles-notification', t('profiles.exportError'), 'error');
     }
 }
@@ -2870,7 +2870,7 @@ function showImportDialog() {
     const input = doc.createElement('input');
     input.type = 'file';
     input.accept = '.json';
-    input.multiple = true; // Permettre la sélection multiple
+    input.multiple = true; // Allow multiple selection
     input.onchange = async (e) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
@@ -2917,7 +2917,7 @@ function showImportDialog() {
                     break; 
                 }
             } catch (err) {
-                console.error('Erreur import:', err);
+                console.error('Import error:', err);
                 showNotification('profiles-notification', t('profiles.importErrorFile', file.name), 'error');
                 // Stop queue on error
                 break;
@@ -2940,14 +2940,14 @@ async function saveProfile(params = {}) {
     const profileId = parseInt($('profile-select').value);
     const payload = { pid: profileId };
 
-    // Paramètres profil (luminosité dynamique)
+    // Profile parameters (dynamic brightness)
     if (params.settings !== false) {
         payload.dbe = $('dynamic-brightness-enabled').checked;
         payload.dbr = parseInt($('dynamic-brightness-rate').value);
         payload.dbe_ex = getDynamicBrightnessExcludedEvents();
     }
 
-    // Effet par défaut
+    // Default effect
     if (params.defaultEffect !== false) {
         payload.fx = effectIdToEnum($('default-effect-select').value);
         payload.br = percentTo255(parseInt($('default-brightness-slider').value));
@@ -3002,14 +3002,14 @@ async function saveProfile(params = {}) {
         showNotification('profiles-notification', e.message || t('config.saveError'), 'error');
     }
 }
-// Appliquer l'effet
+// Apply the effect
 // Update status
 async function updateStatus() {
     try {
         const response = await fetch(API_BASE + '/api/status');
         const data = await response.json();
 
-        // Détecter le mode AP (pas de connexion WiFi station)
+        // Detect AP mode (no WiFi station connection)
         isApMode = !data.wc;
 
         $('wifi-status').textContent = data.wc ? t('status.connected') : t('status.ap');
@@ -3045,7 +3045,7 @@ async function updateStatus() {
         // CPU usage
         if (data.cpu !== undefined) {
             $('cpu-status').textContent = data.cpu + '%';
-            // Couleur selon la charge: vert <50%, orange 50-80%, rouge >80%
+            // Color based on load: green <50%, orange 50-80%, red >80%
             const cpuClass = data.cpu < 50 ? 'status-online' : (data.cpu < 80 ? 'status-warning' : 'status-offline');
             const cpuBarClass = data.cpu < 50 ? 'bar-online' : (data.cpu < 80 ? 'bar-warning' : 'bar-offline');
             $('cpu-status').className = 'status-percentage status-value ' + cpuClass;
@@ -3060,7 +3060,7 @@ async function updateStatus() {
         // Memory used
         if (data.mem !== undefined) {
             $('memory-status').textContent = data.mem + '%';
-            // Couleur selon la mémoire consommée: vert <70%, orange 70-90%, rouge >90%
+            // Color based on memory usage: green <70%, orange 70-90%, red >90%
             const memClass = data.mem < 70 ? 'status-online' : (data.mem < 90 ? 'status-warning' : 'status-offline');
             const memBarClass = data.mem < 70 ? 'bar-online' : (data.mem < 90 ? 'bar-warning' : 'bar-offline');
             $('memory-status').className = 'status-percentage status-value ' + memClass;
@@ -3094,16 +3094,16 @@ async function updateStatus() {
         if (data.pn) {
             $('profile-status').textContent = data.pn;
         }
-        // Données véhicule complètes
+        // Complete vehicle data
         if (data.vehicle && data.va) {
             const v = data.vehicle;
-            // État général
+            // General status
             $('v-speed').textContent = v.s.toFixed(1) + ' km/h';
             $('v-gear').textContent = ['--', 'P', 'R', 'N', 'D'][v.g] || '--';
             $('v-brake').textContent = v.bp ? t('status.active') : t('status.inactive');
             $('v-accel-pedal').textContent = (v.ap !== undefined ? v.ap : 0) + '%';
             $('v-locked').textContent = v.lk ? t('vehicle.locked') : t('vehicle.unlocked');
-            // Portes
+            // Doors
             if (v.doors) {
                 $('v-door-fl').textContent = v.doors.fl ? t('vehicle.open') : t('vehicle.closed');
                 $('v-door-fr').textContent = v.doors.fr ? t('vehicle.open') : t('vehicle.closed');
@@ -3148,7 +3148,7 @@ async function updateStatus() {
                 $("v-front-power").textContent = formatPowerPair(v.fp, v.fpl);
             }
             $("v-max-regen").textContent = formatNumber(v.mr, "kW");
-            // Lumières
+            // Lights
             if (v.lights) {
                 $('v-headlights').textContent = v.lights.h ? t('status.active') : t('status.inactive');
                 $('v-high-beams').textContent = v.lights.hb ? t('status.active') : t('status.inactive');
@@ -3159,11 +3159,11 @@ async function updateStatus() {
                   $('v-turn-signal').textContent = v.lights.tl ? t('vehicle.left'): v.lights.tr ? t('vehicle.right'): t('vehicle.off')
                 }
             }
-            // Batterie et autres
+            // Battery and others
             $('v-battery-lv').textContent = v.blv?.toFixed(2) + ' V';
             $('v-battery-hv').textContent = v.bhv?.toFixed(2) + ' V';
             $('v-odometer').textContent = v.odo.toLocaleString() + ' km';
-            // Sécurité
+            // Safety
             if (v.safety) {
                 $('v-night').textContent = v.safety.nm ? t('status.active') : t('status.inactive');
                 $('v-brightness').textContent = v.safety.bri + '%';
@@ -3220,7 +3220,7 @@ async function updateStatus() {
                 }
             }
         } else {
-            // Afficher des tirets quand il n'y a pas de données
+            // Display dashes when there is no data
             const fields = [
                 'v-speed', 'v-gear', 'v-brake', 'v-locked',
                 'v-door-fl', 'v-door-fr', 'v-door-rl', 'v-door-rr', 'v-trunk', 'v-frunk',
@@ -3241,11 +3241,11 @@ async function updateStatus() {
             });
         }
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
     } finally {
-        // Planifier le prochain appel après avoir terminé (évite les bouchons)
+        // Schedule the next call after completion (avoid bottlenecks)
         if (statusIntervalHandle !== null && statusIntervalHandle !== 'stopped') {
-            // Annuler le précédent timeout s'il existe
+            // Cancel previous timeout if it exists
             if (typeof statusIntervalHandle === 'number') {
                 clearTimeout(statusIntervalHandle);
             }
@@ -3253,7 +3253,7 @@ async function updateStatus() {
         }
     }
 }
-// Chargement de la config
+// Loading config
 async function loadConfig() {
     try {
         const response = await fetch(API_BASE + '/api/config');
@@ -3264,13 +3264,13 @@ async function loadConfig() {
             maxLeds = config.lc;
         }
 
-        // Charger l'effet par défaut et les paramètres du profil actif
+        // Load the default effect and active profile parameters
         loadActiveProfileDefaultEffect();
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
     }
 }
-// Charger l'effet par défaut du profil actif
+// Load the default effect of the active profile
 async function loadActiveProfileDefaultEffect() {
     try {
         const response = await fetch(API_BASE + '/api/profiles');
@@ -3323,7 +3323,7 @@ async function loadActiveProfileDefaultEffect() {
                 }
             }
 
-            // Luminosité dynamique
+            // Dynamic brightness
             const dynBrightEnabled = $('dynamic-brightness-enabled');
             if (dynBrightEnabled && activeProfile.dbe !== undefined) {
                 dynBrightEnabled.checked = activeProfile.dbe;
@@ -3423,7 +3423,7 @@ function applyAudioCalibrationState(calibration) {
     }
 }
 
-// Charger le statut audio
+// Load audio status
 async function loadAudioStatus() {
     try {
         const response = await fetch(API_BASE + '/api/audio/status');
@@ -3460,12 +3460,12 @@ async function startAudioCalibration() {
         btn.textContent = t('audio.calibrating');
     }
 
-    // Feedback utilisateur sur les phases (silence puis musique)
+    // User feedback on phases (silence then music)
     showNotification('config-notification', t('audio.calibPhaseSilence'), 'info', 3000);
     const phaseTimers = [];
     phaseTimers.push(setTimeout(() => {
         showNotification('config-notification', t('audio.calibPhaseMusic'), 'info', 3000);
-    }, 3200)); // après ~3s passer à la musique
+    }, 3200)); // after ~3s switch to music
 
     try {
         const response = await fetch(API_BASE + '/api/audio/calibrate', {
@@ -3494,7 +3494,7 @@ async function startAudioCalibration() {
     }
 }
 
-// Activer/désactiver le micro
+// Enable/disable microphone
 async function toggleAudio(enabled) {
     try {
         const response = await fetch(API_BASE + '/api/audio/enable', {
@@ -3543,13 +3543,13 @@ async function saveAudioConfig() {
     }, AUDIO_SAVE_DEBOUNCE_MS);
 }
 
-// Fonction interne pour sauvegarder immédiatement
+// Internal function to save immediately
 async function saveAudioConfigImmediate() {
     const config = {
         sensitivity: parseInt($('audio-sensitivity').value),
         gain: parseInt($('audio-gain').value),
         autoGain: $('audio-auto-gain').checked
-        // fftEnabled est géré automatiquement selon l'effet sélectionné
+        // fftEnabled is managed automatically based on the selected effect
     };
 
     try {
@@ -3568,10 +3568,10 @@ async function saveAudioConfigImmediate() {
     }
 }
 
-// Récupérer les données audio et FFT en temps réel (un seul appel)
+// Get audio and FFT data in real time (single call)
 async function updateAudioData() {
     try {
-        // Un seul appel qui retourne audio + FFT
+        // Single call that returns audio + FFT
         const response = await fetch(API_BASE + '/api/audio/data');
         const data = await response.json();
 
@@ -3616,10 +3616,10 @@ async function updateAudioData() {
     } catch (error) {
         console.error('Failed to update audio data:', error);
     } finally {
-        // Planifier le prochain appel seulement après avoir terminé celui-ci
-        // Évite les bouchons si une requête prend du temps
+        // Schedule the next call only after completing this one
+        // Avoid bottlenecks if a request takes time
         if (audioUpdateInterval !== null && audioUpdateInterval !== 'stopped') {
-            // Annuler le précédent timeout s'il existe
+            // Cancel previous timeout if it exists
             if (typeof audioUpdateInterval === 'number') {
                 clearTimeout(audioUpdateInterval);
             }
@@ -3636,7 +3636,7 @@ let audioFFTEnabled = false;
 
 // Draw FFT spectrum on canvas
 function drawFFTSpectrum(bands) {
-    // Affiche une bande sur deux (0,2,4...) et limite aux 8 premières
+    // Display every other band (0,2,4...) and limit to the first 8
     const displayBands = bands
         ? bands.filter((_, idx) => idx % 2 === 0).slice(0, 8)
         : [];
@@ -3687,13 +3687,13 @@ function drawFFTSpectrum(bands) {
 // Initialise FFT status from backend (called on page load)
 async function loadFFTStatus() {
     try {
-        // Charger l'état FFT du backend
+        // Load FFT state from backend
         const audioResponse = await fetch(API_BASE + '/api/audio/status');
         const audioData = await audioResponse.json();
         audioFFTEnabled = audioData.ffe || false;
 
-        // Le backend décide si le FFT doit être activé selon l'effet
-        // Afficher la section FFT uniquement si le FFT est activé
+        // The backend decides if FFT should be enabled based on the effect
+        // Display the FFT section only if FFT is enabled
         const fftBox = $('fftStatusBox');
         if (fftBox) {
             fftBox.style.display = audioFFTEnabled ? 'block' : 'none';
@@ -3704,7 +3704,7 @@ async function loadFFTStatus() {
 }
 
 function startAudioDataPolling() {
-    // Ne démarrer le polling que si on est sur l'onglet config ET que le micro est activé
+    // Only start polling if on the config tab AND the microphone is enabled
     if (!audioEnabled || activeTabName !== 'config') {
         return;
     }
@@ -3741,7 +3741,7 @@ function stopAudioDataPolling() {
             clearTimeout(audioUpdateInterval);
         }
         audioUpdateInterval = null;
-        // Réinitialiser l'affichage
+        // Reset display
         $('audio-amplitude-value').textContent = '-';
         $('audio-bpm-value').textContent = '-';
         $('audio-bass-value').textContent = '-';
@@ -3783,7 +3783,7 @@ async function loadOTAInfo() {
             const progressValue = Math.max(0, Math.min(100, Number(data.pg) || 0));
             if (showProgress || stateKey === 'success' || stateKey === 'error') {
                 progressContainer.style.display = 'block';
-                // Ne mettre à jour le progress que si on n'est pas en train d'uploader (XHR gère le progress)
+                // Only update progress if not currently uploading (XHR handles progress)
                 if (!otaManualUploadRunning) {
                     progressBar.style.width = progressValue + '%';
                     progressPercent.textContent = progressValue + '%';
@@ -3851,14 +3851,14 @@ async function loadOTAInfo() {
             }
         }
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
         $('ota-version').innerHTML = '<span data-i18n="ota.loading">' + t('ota.loading') + '</span>';
         const rebootCountdownEl = $('ota-reboot-countdown');
         if (rebootCountdownEl) {
             rebootCountdownEl.style.display = 'none';
         }
     } finally {
-        // Toujours mettre à jour la note BLE après le chargement des infos OTA
+        // Always update BLE note after loading OTA info
         updateOtaBleNote();
     }
 }
@@ -3894,11 +3894,11 @@ async function uploadFirmware() {
     }
     statusMessage.textContent = t('ota.states.receiving');
     statusMessage.style.color = 'var(--color-muted)';
-    // Nettoyer l'ancien intervalle s'il existe
+    // Clean up old interval if it exists
     if (otaPollingInterval) {
         clearInterval(otaPollingInterval);
     }
-    // Démarrer le polling OTA pendant l'upload (moins fréquent pour ne pas surcharger l'ESP32)
+    // Start OTA polling during upload (less frequent to avoid overloading the ESP32)
     otaPollingInterval = setInterval(loadOTAInfo, 3000);
     try {
         await waitForApiConnection();
@@ -3919,7 +3919,7 @@ async function uploadFirmware() {
                 statusMessage.style.color = 'var(--color-muted)';
                 restartBtn.style.display = 'inline-block';
                 uploadBtn.style.display = 'none';
-                // L'intervalle continue pour suivre l'écriture en flash
+                // The interval continues to track flash write
             } else {
                 statusMessage.textContent = t('ota.states.err');
                 statusMessage.style.color = '#f87171';
@@ -3954,7 +3954,7 @@ async function uploadFirmware() {
         xhr.open('POST', API_BASE + '/api/ota/upload');
         xhr.send(file);
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
         statusMessage.textContent = t('ota.err') + ': ' + e.message;
         statusMessage.style.color = '#E82127';
         uploadBtn.disabled = false;
@@ -3989,7 +3989,7 @@ async function restartDevice() {
             location.reload();
         }, 10000);
     } catch (e) {
-        console.error('Erreur:', e);
+        console.error('Error:', e);
     }
 }
 // Night mode has been removed and replaced by dynamic brightness
@@ -3998,7 +3998,7 @@ async function restartDevice() {
 async function toggleEventTest(eventId, isEnabled) {
     try {
         if (isEnabled) {
-            // Vérifier que l'événement est activé dans la config
+            // Check that the event is enabled in the config
             try {
                 await ensureEventsConfigData();
             } catch (error) {
@@ -4054,7 +4054,7 @@ async function toggleEventTest(eventId, isEnabled) {
             }
         }
     } catch (e) {
-        console.error('Erreur test:', e);
+        console.error('Test error:', e);
         const checkbox = $('toggle-' + eventId);
         if (checkbox) checkbox.checked = !isEnabled;
         showNotification('events-notification', t('test.testError', t('test.error')), 'error');
@@ -4062,7 +4062,7 @@ async function toggleEventTest(eventId, isEnabled) {
     }
 }
 
-// Mapping des événements vers les clés commonEvents
+// Mapping events to commonEvents keys
 const EVENT_TO_COMMON = {
     'TURN_LEFT': 'turnLeft', 
     'TURN_RIGHT': 'turnRight', 
@@ -4120,12 +4120,12 @@ function translateEventId(eventId) {
     if (!eventId) return null;
     const lang = translations[currentLang];
     if (!lang) return null;
-    // Chercher d'abord dans commonEvents
+    // Search in commonEvents first
     const commonKey = EVENT_TO_COMMON[eventId];
     if (commonKey && lang.commonEvents && lang.commonEvents[commonKey]) {
         return lang.commonEvents[commonKey];
     }
-    // Sinon dans eventNames
+    // Otherwise in eventNames
     if (lang.eventNames && lang.eventNames[eventId]) {
         return lang.eventNames[eventId];
     }
@@ -4139,7 +4139,7 @@ function translateEffectId(effectId) {
     }
     return null;
 }
-// Helper pour obtenir le nom d'un événement (depuis API uniquement)
+// Helper to get event name (from API only)
 function getEventName(eventId) {
     const translated = translateEventId(typeof eventId === 'string' ? eventId : String(eventId));
     if (translated) {
@@ -4158,7 +4158,7 @@ function getEventName(eventId) {
     }
     return t('eventNames.unknown', eventId);
 }
-// Helper pour obtenir le nom d'un effet (depuis API uniquement)
+// Helper to get effect name (from API only)
 function getEffectName(effectId) {
     const translated = translateEffectId(effectId);
     if (translated) {
@@ -4170,7 +4170,7 @@ function getEffectName(effectId) {
     }
     return t('effectNames.unknown', effectId);
 }
-// Charger la liste des effets depuis l'API
+// Load effects list from API
 let effectsList = [];
 function effectDisplayName(effect) {
     return (translateEffectId(effect.id) || effect.n || effect.id || '').toString().toLowerCase();
@@ -4184,14 +4184,14 @@ function sortEffectsByName(effects) {
         return 0;
     });
 }
-// Helper: Convertir enum numérique en ID string
+// Helper: Convert numeric enum to string ID
 function effectEnumToId(enumValue) {
     if (effectsList[enumValue]) {
         return effectsList[enumValue].id;
     }
     return effectsList[0]?.id || 'OFF';
 }
-// Helper: Convertir ID string en enum numérique
+// Helper: Convert string ID to numeric enum
 function effectIdToEnum(id) {
     const index = effectsList.findIndex(e => e.id === id);
     return index >= 0 ? index : 0;
@@ -4221,20 +4221,20 @@ async function loadEffects() {
                 select.setAttribute('data-effect-options', 'true');
                 const currentValue = select.value;
                 select.innerHTML = '';
-                // Pour les sélecteurs d'effet par défaut et d'effet manuel,
-                // filtrer les effets qui nécessitent le CAN bus
-                // Pour le sélecteur d'événement, filtrer aussi les effets audio
+                // For default effect and manual effect selectors,
+                // filter effects that require CAN bus
+                // For the event selector, also filter audio effects
                 const isEventSelector = select.id === 'event-effect-select';
                 const isDefaultEffectSelector = select.id === 'default-effect-select';
                 let separatorInserted = false;
                 displayEffects.forEach(effect => {
-                    // Filtrer les effets CAN pour tout sauf 'default-effect-select'
+                    // Filter CAN effects for everything except 'default-effect-select'
                     if (!isDefaultEffectSelector && effect.cr) {
-                        return; // Skip cet effet
+                        return; // Skip this effect
                     }
-                    // Filtrer les effets audio si c'est le sélecteur d'événement
+                    // Filter audio effects if this is the event selector
                     if (isEventSelector && effect.ae) {
-                        return; // Skip cet effet audio
+                        return; // Skip this audio effect
                     }
                     if (effect.ae && !separatorInserted) {
                         separatorInserted = true;
@@ -4268,7 +4268,7 @@ async function loadEffects() {
         console.error('Failed to load effects:', error);
     }
 }
-// Charger la liste des types d'événements depuis l'API
+// Load event types list from API
 let eventTypesList = [];
 async function loadEventTypes() {
     try {
@@ -4282,7 +4282,7 @@ async function loadEventTypes() {
     }
 }
 
-// Gestion de l'écran de chargement
+// Loading screen management
 function updateLoadingProgress(percentage, message) {
     const progressBar = $('loading-progress-bar');
     const statusText = $('loading-status');
@@ -4292,7 +4292,7 @@ function updateLoadingProgress(percentage, message) {
     if (statusText && message) {
         statusText.textContent = message;
     }
-    // Si on est en attente d'un geste BLE, afficher un message explicite
+    // If waiting for BLE gesture, display an explicit message
     if (bleAutoConnectAwaitingGesture && statusText) {
         statusText.textContent = t('ble.tapToAuthorize');
         statusText.dataset.i18n = 'ble.tapToAuthorize';
@@ -4314,14 +4314,14 @@ function showLoadingOverlay() {
     if (overlay) {
         overlay.style.display = 'flex';
         overlay.classList.remove('hidden');
-        // Réinitialiser la barre de progression
+        // Reset progress bar
         updateLoadingProgress(0, t('loading.connecting'));
-        // Masquer l'erreur si elle était affichée
+        // Hide error if it was displayed
         const errorEl = $('loading-error');
         if (errorEl) {
             errorEl.style.display = 'none';
         }
-        // Afficher le bouton BLE si nécessaire
+        // Display BLE button if necessary
         updateLoadingBleButton();
     }
 }
@@ -4331,10 +4331,10 @@ function updateLoadingBleButton() {
     if (!bleButton) {
         return;
     }
-    // Afficher le bouton BLE si:
-    // 1. BLE est supporté
-    // 2. Pas de WiFi
-    // 3. BLE n'est ni connecté ni en cours de connexion
+    // Display BLE button if:
+    // 1. BLE is supported
+    // 2. No WiFi
+    // 3. BLE is neither connected nor connecting
     const status = bleTransport.getStatus();
     const shouldShow = bleTransport.isSupported() &&
                       !wifiOnline &&
@@ -4881,7 +4881,7 @@ async function loadInitialData() {
     };
 
     try {
-        // Détecter le mode AP dès le début
+        // Detect AP mode from the start
         try {
             const statusResponse = await fetch(API_BASE + '/api/status');
             const statusData = await statusResponse.json();
@@ -4890,52 +4890,52 @@ async function loadInitialData() {
             console.log('Failed to detect AP mode, assuming normal mode');
         }
 
-        // Adapter les délais selon le mode
+        // Adapt delays based on mode
         const baseDelay = isApMode ? 300 : 100;
         const longDelay = isApMode ? 500 : 150;
 
-        // Étape 1-3: Chargement des données essentielles
+        // Step 1-3: Loading essential data
         updateProgress(1, t('loading.loadingEffects'));
         await loadEffects();
         await delay(baseDelay);
         await loadEventTypes();
         await delay(baseDelay);
 
-        // Étape 4: Rendu des sections
+        // Step 4: Rendering sections
         updateProgress(4, t('loading.loadingConfig'));
         await delay(baseDelay);
 
-        // Étape 5: Profils
+        // Step 5: Profiles
         updateProgress(5, t('loading.loadingProfiles'));
         await loadProfiles();
         await delay(longDelay);
 
-        // Étape 6: Configuration
+        // Step 6: Configuration
         updateProgress(6, t('loading.loadingConfig'));
         await loadConfig();
         await delay(longDelay);
 
-        // Étape 7: Configuration matérielle
+        // Step 7: Hardware configuration
         updateProgress(7, t('loading.loadingConfig'));
         await loadHardwareConfig();
         await delay(baseDelay);
 
-        // Étape 8: Audio et FFT
+        // Step 8: Audio and FFT
         updateProgress(8, t('loading.loadingConfig'));
         await loadAudioStatus();
         await delay(baseDelay);
         await loadFFTStatus();
         await delay(baseDelay);
 
-        // Étape 9: OTA
+        // Step 9: OTA
         updateProgress(9, t('loading.loadingConfig'));
         await loadOTAInfo();
         await updateLogFileStatus();
 
-        // Masquer l'écran de chargement
+        // Hide loading screen
         hideLoadingOverlay();
 
-        // Démarrer le polling de status
+        // Start status polling
         if (!statusIntervalHandle) {
             statusIntervalHandle = 'active';
             updateStatus();
@@ -4971,20 +4971,20 @@ function stopAllTimers() {
 function resumeAllTimers() {
     console.log('[Cleanup] Reprise des timers');
 
-    // Reprendre le polling de status si on est connecté
+    // Resume status polling if connected
     if (statusIntervalHandle === 'stopped' && initialDataLoaded) {
         statusIntervalHandle = 'active';
         updateStatus();
     }
 
-    // Reprendre le polling audio s'il était actif
+    // Resume audio polling if it was active
     if (audioUpdateInterval === 'stopped' && audioEnabled) {
         audioUpdateInterval = 'active';
         updateAudioData();
     }
 }
 
-// Gérer la visibilité de la page pour économiser les ressources
+// Handle page visibility to save resources
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         stopAllTimers();
@@ -4993,7 +4993,7 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// Nettoyer avant de quitter la page
+// Clean up before leaving the page
 window.addEventListener('beforeunload', () => {
     stopAllTimers();
 });

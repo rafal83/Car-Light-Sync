@@ -1392,7 +1392,7 @@ static void effect_charge_status(void) {
     rgb_t trail_color    = color_to_rgb(current_config.color1);
 
     // Bright main pixel (configured color)
-    // Afficher seulement si dans la zone visible
+    // Display only if in visible zone
     if (moving_pixel_pos >= 0 && moving_pixel_pos < led_count) {
       leds[moving_pixel_pos] = apply_brightness(trail_color, current_config.brightness);
     }
@@ -2141,7 +2141,7 @@ void led_effects_update(void) {
       // Set everything to black first
       fill_solid((rgb_t){0, 0, 0});
 
-      // Travailler sur le segment uniquement
+      // Work on segment only
       led_count = segment_length;
       effect_functions[current_config.effect]();
 
@@ -2322,7 +2322,7 @@ void led_effects_render_to_buffer(const effect_config_t *config, uint16_t segmen
   uint16_t saved_led_count     = led_count;
   uint32_t saved_counter       = effect_counter;
 
-  // Travailler sur un segment uniquement
+  // Work on segment only
   led_count                    = segment_length;
   effect_counter               = frame_counter;
   current_config               = *config;

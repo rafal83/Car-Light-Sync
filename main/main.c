@@ -707,7 +707,7 @@ void app_main(void) {
   esp_log_level_set(TAG_LED, ESP_LOG_INFO);
   esp_log_level_set(TAG_CONFIG, ESP_LOG_INFO);
   // esp_log_level_set(TAG_OTA, ESP_LOG_INFO);
-  // esp_log_level_set(TAG_AUDIO, ESP_LOG_INFO);
+  esp_log_level_set(TAG_AUDIO, ESP_LOG_INFO);
   esp_log_level_set(TAG_BLE_API, ESP_LOG_INFO);
   esp_log_level_set(TAG_ESP_NOW, ESP_LOG_INFO);
 

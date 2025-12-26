@@ -1,5 +1,5 @@
-// Auto-généré depuis Model3CAN.json
-// Description: Configuration CAN pour Unknown Unknown 0
+// Auto-generated from Model3CAN.json
+// Description: CAN configuration for Unknown Unknown 0
 
 #ifndef VEHICLE_CAN_UNIFIED_CONFIG_GENERATED_H
 #define VEHICLE_CAN_UNIFIED_CONFIG_GENERATED_H
@@ -6193,7 +6193,7 @@ static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
     },
 };
 
-// Tableau global des messages CAN gérés
+// Global array of managed CAN messages
 const can_message_def_t g_can_messages[] = {
     {
         .id           = 0x102,
