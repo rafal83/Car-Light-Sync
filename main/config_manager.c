@@ -25,7 +25,9 @@
 #include "settings_manager.h"
 #include "spiffs_storage.h"
 
+#include <dirent.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 
 // Buffer for JSON export/import (full profile with all events)
@@ -113,21 +115,33 @@ static inline bool profile_registry_exists(uint16_t profile_id) {
 static void profile_registry_rebuild(void) {
   memset(profile_registry, 0, PROFILE_REGISTRY_SIZE);
 
-  // Scan all possible profile IDs once to build the registry
-  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
-    char path[64];
-    snprintf(path, sizeof(path), "/spiffs/profiles/%d.bin", i);
-
-    // Check if file exists (lightweight check)
-    FILE *f = fopen(path, "rb");
-    if (f != NULL) {
-      fclose(f);
-      profile_registry_set(i);
-    }
+  // OPTIMIZATION: Use SPIFFS directory listing instead of 100x fopen()
+  DIR *dir = opendir("/spiffs/profiles");
+  if (dir == NULL) {
+    ESP_LOGW(TAG_CONFIG, "Profile directory not found, creating...");
+    mkdir("/spiffs/profiles", 0755);
+    profile_registry_initialized = true;
+    return;
   }
 
+  struct dirent *entry;
+  int count = 0;
+  while ((entry = readdir(dir)) != NULL) {
+    // Parse profile ID from filename (e.g., "42.bin" -> 42)
+    if (entry->d_type == DT_REG) { // Regular file only
+      int profile_id = -1;
+      if (sscanf(entry->d_name, "%d.bin", &profile_id) == 1) {
+        if (profile_id >= 0 && profile_id < MAX_PROFILE_SCAN_LIMIT) {
+          profile_registry_set(profile_id);
+          count++;
+        }
+      }
+    }
+  }
+  closedir(dir);
+
   profile_registry_initialized = true;
-  ESP_LOGI(TAG_CONFIG, "Profile registry built");
+  ESP_LOGI(TAG_CONFIG, "Profile registry built (%d profiles found)", count);
 }
 
 static void load_wheel_control_settings(void) {

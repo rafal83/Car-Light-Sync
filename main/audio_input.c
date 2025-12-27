@@ -59,7 +59,11 @@ static QueueHandle_t fft_queue           = NULL;
 typedef struct {
   int32_t samples[AUDIO_FFT_SIZE]; // 256 samples for LED-optimized FFT
   int num_samples;
-} fft_queue_item_t; // Allocated on heap (~1KB per item)
+} fft_queue_item_t;
+
+// OPTIMIZATION: Pre-allocated ring buffer for FFT queue items (eliminates malloc/free)
+static fft_queue_item_t fft_ring_buffer[FFT_QUEUE_LENGTH];
+static uint8_t fft_ring_write_idx = 0;
 
 // Variables for BPM detection
 static float bpm_history[AUDIO_BPM_HISTORY_SIZE] = {0};
@@ -270,9 +274,7 @@ static void fft_task(void *pvParameters) {
         group_fft_into_bands(&current_fft_data);
         fft_data_ready = true;
 
-        // Free the allocated memory
-        free(item);
-        item = NULL;
+        // Note: No free() needed - using pre-allocated ring buffer
       }
     }
     // Throttle FFT to 25Hz for LED animations (40ms period)
@@ -367,21 +369,20 @@ static void audio_task(void *pvParameters) {
 
     // If FFT enabled, send audio samples to FFT task (non-blocking)
     if (current_config.fft_enabled && fft_queue != NULL) {
-      // Allocate on heap to avoid stack overflow (item is ~1KB, optimized for LEDs)
-      fft_queue_item_t *item = (fft_queue_item_t *)malloc(sizeof(fft_queue_item_t));
-      if (item != NULL) {
-        // Copy only the samples needed for FFT (256 for LED animations)
-        int fft_samples = samples < AUDIO_FFT_SIZE ? samples : AUDIO_FFT_SIZE;
-        item->num_samples = fft_samples;
-        memcpy(item->samples, audio_buffer, fft_samples * sizeof(int32_t));
+      // Use pre-allocated ring buffer instead of malloc (eliminates heap fragmentation)
+      fft_queue_item_t *item = &fft_ring_buffer[fft_ring_write_idx];
 
-        // Try to send to queue (non-blocking to avoid delaying audio)
-        if (xQueueSend(fft_queue, &item, 0) != pdTRUE) {
-          // Queue full, skip this FFT frame and free memory
-          free(item);
-        }
-        // Note: FFT task will free the item after processing
+      // Copy only the samples needed for FFT (256 for LED animations)
+      int fft_samples = samples < AUDIO_FFT_SIZE ? samples : AUDIO_FFT_SIZE;
+      item->num_samples = fft_samples;
+      memcpy(item->samples, audio_buffer, fft_samples * sizeof(int32_t));
+
+      // Try to send to queue (non-blocking to avoid delaying audio)
+      if (xQueueSend(fft_queue, &item, 0) == pdTRUE) {
+        // Advance ring buffer write index
+        fft_ring_write_idx = (fft_ring_write_idx + 1) % FFT_QUEUE_LENGTH;
       }
+      // Note: If queue full, skip this FFT frame (no free() needed)
     }
 
     // Small delay to avoid saturating the CPU
@@ -930,19 +931,46 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
   }
   fft_data->spectral_centroid = (magnitude_sum > 0.0f) ? (weighted_sum / magnitude_sum) : 0.0f;
 
-  // Compute energy per frequency range
-  fft_data->bass_energy       = 0.0f;
-  fft_data->mid_energy        = 0.0f;
-  fft_data->treble_energy     = 0.0f;
+  // OPTIMIZATION: Single-pass computation of all frequency-based features
+  // Instead of 5 separate loops, compute all energies in one pass
+  fft_data->bass_energy   = 0.0f;
+  fft_data->mid_energy    = 0.0f;
+  fft_data->treble_energy = 0.0f;
+  float kick_energy       = 0.0f;
+  float snare_energy      = 0.0f;
+  float vocal_energy      = 0.0f;
 
+  // Single loop for all frequency-based calculations (5x to 1x scan)
   for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
-    float freq = i * freq_resolution;
+    float freq      = i * freq_resolution;
+    float magnitude = fft_output[i];
+
+    // Bass energy (20-250 Hz)
     if (freq >= FREQ_BASS_LOW && freq < FREQ_BASS_HIGH) {
-      fft_data->bass_energy += fft_output[i];
-    } else if (freq >= FREQ_MID_LOW && freq < FREQ_MID_HIGH) {
-      fft_data->mid_energy += fft_output[i];
-    } else if (freq >= FREQ_TREBLE_LOW && freq < FREQ_TREBLE_HIGH) {
-      fft_data->treble_energy += fft_output[i];
+      fft_data->bass_energy += magnitude;
+    }
+    // Mid energy (250-2000 Hz)
+    else if (freq >= FREQ_MID_LOW && freq < FREQ_MID_HIGH) {
+      fft_data->mid_energy += magnitude;
+    }
+    // Treble energy (2000-8000 Hz)
+    else if (freq >= FREQ_TREBLE_LOW && freq < FREQ_TREBLE_HIGH) {
+      fft_data->treble_energy += magnitude;
+    }
+
+    // Kick detection (20-120 Hz)
+    if (freq >= 20.0f && freq < 120.0f) {
+      kick_energy += magnitude;
+    }
+
+    // Snare detection (150-250 Hz)
+    if (freq >= 150.0f && freq < 250.0f) {
+      snare_energy += magnitude;
+    }
+
+    // Vocal detection (500-2000 Hz)
+    if (freq >= 500.0f && freq < 2000.0f) {
+      vocal_energy += magnitude;
     }
   }
 
@@ -954,35 +982,10 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
     fft_data->treble_energy /= total_energy;
   }
 
-  // Kick detection (20-120 Hz, sudden high energy)
-  float kick_energy = 0.0f;
-  for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
-    float freq = i * freq_resolution;
-    if (freq >= 20.0f && freq < 120.0f) {
-      kick_energy += fft_output[i];
-    }
-  }
-  fft_data->kick_detected = (kick_energy > 0.5f); // Arbitrary threshold
-
-  // Snare detection (150-250 Hz)
-  float snare_energy      = 0.0f;
-  for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
-    float freq = i * freq_resolution;
-    if (freq >= 150.0f && freq < 250.0f) {
-      snare_energy += fft_output[i];
-    }
-  }
-  fft_data->snare_detected = (snare_energy > 0.3f); // Arbitrary threshold
-
-  // Vocal detection (500-2000 Hz, concentrated energy)
-  float vocal_energy       = 0.0f;
-  for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {
-    float freq = i * freq_resolution;
-    if (freq >= 500.0f && freq < 2000.0f) {
-      vocal_energy += fft_output[i];
-    }
-  }
-  fft_data->vocal_detected = (vocal_energy > 0.4f); // Arbitrary threshold
+  // Apply detection thresholds
+  fft_data->kick_detected  = (kick_energy > 0.5f);
+  fft_data->snare_detected = (snare_energy > 0.3f);
+  fft_data->vocal_detected = (vocal_energy > 0.4f);
 }
 
 // ============================================================================
@@ -1003,13 +1006,11 @@ void audio_input_set_fft_enabled(bool enable) {
     fft_data_ready = false;
     memset(&current_fft_data, 0, sizeof(audio_fft_data_t));
 
-    // Flush FFT queue and free any pending items to avoid memory leaks
+    // Flush FFT queue (no free() needed - using pre-allocated ring buffer)
     if (fft_queue != NULL) {
       fft_queue_item_t *item = NULL;
       while (xQueueReceive(fft_queue, &item, 0) == pdTRUE) {
-        if (item != NULL) {
-          free(item);
-        }
+        // Just drain the queue
       }
     }
   }
