@@ -1464,12 +1464,22 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
+  // Free memory early - we don't need the original request anymore
+  // This is CRITICAL to free memory before calling config_manager_import_profile_direct
+  // which will parse the JSON again and needs substantial heap space
+  cJSON_Delete(root);
+  root = NULL;
+  free(content);
+  content = NULL;
+
+  size_t profile_json_len = strlen(profile_json);
+  size_t free_heap = esp_get_free_heap_size();
+  ESP_LOGI(TAG_WEBSERVER, "Profile JSON prepared: %d bytes, free heap: %d bytes", profile_json_len, free_heap);
+
   int target_id = find_free_profile_slot(preferred_id);
   if (target_id < 0) {
     ESP_LOGE(TAG_WEBSERVER, "Import failed: no free profile slot (preferred_id=%d)", preferred_id);
     free(profile_json);
-    cJSON_Delete(root);
-    free(content);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, "{\"st\":\"error\",\"msg\":\"Insufficient storage space or no free profile slots\"}");
     return ESP_FAIL;
@@ -1486,8 +1496,7 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   }
 
   free(profile_json);
-  cJSON_Delete(root);
-  free(content);
+  profile_json = NULL;
 
   httpd_resp_set_type(req, "application/json");
   if (success) {

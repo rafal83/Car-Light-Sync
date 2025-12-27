@@ -1397,11 +1397,38 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
     return false;
   }
 
+  size_t json_len = strlen(json_string);
+  size_t free_heap_before = esp_get_free_heap_size();
+  ESP_LOGI(TAG_CONFIG, "Parsing JSON: size=%d bytes, free heap=%d bytes", json_len, free_heap_before);
+
+  // Estimate memory needed: roughly 3x JSON size for cJSON tree
+  size_t estimated_needed = json_len * 3;
+  if (free_heap_before < estimated_needed) {
+    ESP_LOGW(TAG_CONFIG, "Low memory: free=%d, estimated needed=%d bytes", free_heap_before, estimated_needed);
+  }
+
   cJSON *root = cJSON_Parse(json_string);
   if (!root) {
-    ESP_LOGE(TAG_CONFIG, "JSON parsing error");
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if (error_ptr != NULL) {
+      // Calculate position of error in JSON
+      size_t error_pos = error_ptr - json_string;
+      ESP_LOGE(TAG_CONFIG, "JSON parsing error at position %d (heap before: %d bytes)", error_pos, free_heap_before);
+      // Show a snippet of JSON around the error
+      if (error_pos >= 20) {
+        char snippet[41];
+        strncpy(snippet, error_ptr - 20, 40);
+        snippet[40] = '\0';
+        ESP_LOGE(TAG_CONFIG, "Error near: ...%s", snippet);
+      }
+    } else {
+      ESP_LOGE(TAG_CONFIG, "JSON parsing error (likely out of memory, free heap: %d bytes)", free_heap_before);
+    }
     return false;
   }
+
+  size_t free_heap_after = esp_get_free_heap_size();
+  ESP_LOGI(TAG_CONFIG, "JSON parsed successfully, heap used=%d bytes", free_heap_before - free_heap_after);
 
   memset(profile, 0, sizeof(config_profile_t));
 
