@@ -211,8 +211,10 @@ static void can_event_task(void *pvParameters) {
     if (curr->locked != prev->locked) {
       if (curr->locked) {
         config_manager_process_can_event(CAN_EVENT_LOCKED);
+        config_manager_stop_event(CAN_EVENT_UNLOCKED);
       } else {
         config_manager_process_can_event(CAN_EVENT_UNLOCKED);
+        config_manager_stop_event(CAN_EVENT_LOCKED);
       }
     }
 
@@ -294,8 +296,10 @@ static void can_event_task(void *pvParameters) {
     if (curr->charging_cable != prev->charging_cable) {
       if (curr->charging_cable) {
         config_manager_process_can_event(CAN_EVENT_CHARGING_CABLE_CONNECTED);
+        config_manager_stop_event(CAN_EVENT_CHARGING_CABLE_DISCONNECTED);
       } else {
         config_manager_process_can_event(CAN_EVENT_CHARGING_CABLE_DISCONNECTED);
+        config_manager_stop_event(CAN_EVENT_CHARGING_CABLE_CONNECTED);
       }
     }
     CHECK_BOOLEAN_EVENT_NO_OFF(charging_port, CAN_EVENT_CHARGING_PORT_OPENED);
