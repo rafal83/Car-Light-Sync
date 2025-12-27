@@ -614,6 +614,27 @@ bool audio_input_run_calibration(uint32_t duration_ms, audio_calibration_t *resu
   return true;
 }
 
+bool audio_input_reset_calibration(void) {
+  if (!initialized) {
+    ESP_LOGE(TAG_AUDIO, "Audio module not initialized");
+    return false;
+  }
+
+  // Reset calibration to default uncalibrated state
+  calibration.calibrated  = false;
+  calibration.noise_floor = 0.0f;
+  calibration.peak_level  = 0.0f;
+
+  // Save the reset calibration
+  if (!audio_input_save_calibration()) {
+    ESP_LOGE(TAG_AUDIO, "Failed to save reset calibration");
+    return false;
+  }
+
+  ESP_LOGI(TAG_AUDIO, "Calibration reset successfully");
+  return true;
+}
+
 void audio_input_get_calibration(audio_calibration_t *out_calibration) {
   if (out_calibration) {
     memcpy(out_calibration, &calibration, sizeof(audio_calibration_t));

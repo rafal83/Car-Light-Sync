@@ -3494,6 +3494,33 @@ async function startAudioCalibration() {
     }
 }
 
+// Reset audio calibration
+async function resetAudioCalibration() {
+    if (!confirm(t('audio.resetCalibrationConfirm'))) {
+        return;
+    }
+
+    try {
+        const response = await fetch(API_BASE + '/api/audio/reset-calibration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.ok) {
+            // Update UI to show not calibrated state
+            applyAudioCalibrationState({ calibrated: false, noise_floor: 0, peak_level: 0 });
+            showNotification('config-notification', t('audio.calibrationReset'), 'success');
+        } else {
+            showNotification('config-notification', t('audio.resetCalibrationFailed'), 'error');
+        }
+    } catch (error) {
+        console.error('Failed to reset calibration:', error);
+        showNotification('config-notification', t('audio.resetCalibrationFailed'), 'error');
+    }
+}
+
 // Enable/disable microphone
 async function toggleAudio(enabled) {
     try {

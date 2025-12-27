@@ -759,8 +759,12 @@
                       <span data-i18n="audio.calibrationPeak"></span>: <strong id="audio-calibration-peak">-</strong>
                     </div>
                   </div>
-                  <button id="audio-calibrate-btn" class="btn-primary" onclick="startAudioCalibration()"
-                    data-i18n="audio.calibrate"></button>
+                  <div class="button-group">
+                    <button id="audio-calibrate-btn" class="btn-primary" onclick="startAudioCalibration()"
+                      data-i18n="audio.calibrate"></button>
+                    <button id="audio-reset-calibration-btn" class="btn-danger" onclick="resetAudioCalibration()"
+                      data-i18n="audio.resetCalibration"></button>
+                  </div>
                 </div>
                 <p class="audio-calibration-hint"
                   data-i18n="audio.calibrationHint">

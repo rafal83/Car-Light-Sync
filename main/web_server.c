@@ -2404,6 +2404,33 @@ static esp_err_t audio_calibrate_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+// Handler POST /api/audio/reset-calibration - Reset audio calibration
+static esp_err_t audio_reset_calibration_handler(httpd_req_t *req) {
+  if (!audio_input_is_enabled()) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Microphone disabled");
+    return ESP_FAIL;
+  }
+
+  // Reset calibration
+  if (!audio_input_reset_calibration()) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to reset calibration");
+    return ESP_FAIL;
+  }
+
+  cJSON *response = cJSON_CreateObject();
+  cJSON_AddBoolToObject(response, "ok", true);
+
+  const char *json_str = cJSON_PrintUnformatted(response);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+
+  cJSON_free((void *)json_str);
+  cJSON_Delete(response);
+
+  ESP_LOGI(TAG_WEBSERVER, "Audio calibration reset");
+  return ESP_OK;
+}
+
 // Handler GET /api/audio/data - Real-time audio data (with FFT if enabled)
 static esp_err_t audio_data_handler(httpd_req_t *req) {
   audio_data_t audio_data;
@@ -2602,6 +2629,9 @@ esp_err_t web_server_start(void) {
 
     httpd_uri_t audio_calibrate_uri = {.uri = "/api/audio/calibrate", .method = HTTP_POST, .handler = audio_calibrate_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_calibrate_uri);
+
+    httpd_uri_t audio_reset_calibration_uri = {.uri = "/api/audio/reset-calibration", .method = HTTP_POST, .handler = audio_reset_calibration_handler, .user_ctx = NULL};
+    httpd_register_uri_handler(server, &audio_reset_calibration_uri);
 
     httpd_uri_t audio_data_uri = {.uri = "/api/audio/data", .method = HTTP_GET, .handler = audio_data_handler, .user_ctx = NULL};
     httpd_register_uri_handler(server, &audio_data_uri);

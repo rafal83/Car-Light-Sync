@@ -184,6 +184,12 @@ bool audio_input_is_fft_enabled(void);
 bool audio_input_run_calibration(uint32_t duration_ms, audio_calibration_t *result);
 
 /**
+ * @brief Resets the audio calibration to default uncalibrated state
+ * @return true if successful (reset calibration saved to NVS)
+ */
+bool audio_input_reset_calibration(void);
+
+/**
  * @brief Gets the current calibration state
  * @param calibration Pointer to receive calibration
  */
