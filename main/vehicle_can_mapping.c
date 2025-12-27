@@ -47,15 +47,15 @@ static uint64_t s_frontAlertHoldUntilUs = 0;
 static volatile bool s_vehicle_state_dirty = false;
 
 // Debounce tracking for vehicle_state fields
-// Uses field address as unique ID
+// Uses field OFFSET as unique ID for O(1) lookup instead of O(n) search
 #define MAX_DEBOUNCE_FIELDS 128
 typedef struct {
-  void *field_addr;
   uint64_t last_update_us;
+  bool initialized;
 } field_debounce_t;
 
+// Direct-indexed array by field offset for O(1) access
 static field_debounce_t s_field_debounce[MAX_DEBOUNCE_FIELDS] = {0};
-static uint8_t s_field_debounce_count = 0;
 
 // Default debounce: 0 (no debounce)
 // Debounce is only enabled for specific fields
@@ -85,7 +85,7 @@ static uint64_t get_field_debounce_us(void *field_addr, vehicle_state_t *state) 
   return DEFAULT_DEBOUNCE_US; // 0 by default (no debounce)
 }
 
-// Checks if debounce is OK to update a field
+// Checks if debounce is OK to update a field (O(1) lookup by offset)
 static inline bool IRAM_ATTR check_field_debounce(void *field_addr, vehicle_state_t *state) {
   uint64_t now_us = esp_timer_get_time();
   uint64_t debounce_us = get_field_debounce_us(field_addr, state);
@@ -95,45 +95,46 @@ static inline bool IRAM_ATTR check_field_debounce(void *field_addr, vehicle_stat
     return true;
   }
 
-  // Search for the field in the debounce table
-  for (uint8_t i = 0; i < s_field_debounce_count; i++) {
-    if (s_field_debounce[i].field_addr == field_addr) {
-      if (now_us - s_field_debounce[i].last_update_us >= debounce_us) {
-        s_field_debounce[i].last_update_us = now_us;
-        return true; // Debounce OK
-      }
-      return false; // Still debouncing
+  // Calculate field offset as array index (O(1) direct access)
+  ptrdiff_t offset = (uint8_t*)field_addr - (uint8_t*)state;
+
+  // Bounds check
+  if (offset < 0 || offset >= MAX_DEBOUNCE_FIELDS) {
+    return true; // Out of range, allow it
+  }
+
+  field_debounce_t *entry = &s_field_debounce[offset];
+
+  // Check if initialized and debounce period elapsed
+  if (entry->initialized) {
+    if (now_us - entry->last_update_us >= debounce_us) {
+      entry->last_update_us = now_us;
+      return true; // Debounce OK
     }
+    return false; // Still debouncing
   }
 
-  // Field not yet in table, add it
-  if (s_field_debounce_count < MAX_DEBOUNCE_FIELDS) {
-    s_field_debounce[s_field_debounce_count].field_addr = field_addr;
-    s_field_debounce[s_field_debounce_count].last_update_us = now_us;
-    s_field_debounce_count++;
-  }
-
-  return true; // First access, allow it
+  // First access, initialize
+  entry->initialized = true;
+  entry->last_update_us = now_us;
+  return true;
 }
 
-// Reset debounce counter for a field (called when value is stable)
-static inline void IRAM_ATTR reset_field_debounce(void *field_addr) {
+// Reset debounce counter for a field (called when value is stable) - O(1) direct access
+static inline void IRAM_ATTR reset_field_debounce(void *field_addr, vehicle_state_t *state) {
   uint64_t now_us = esp_timer_get_time();
 
-  // Search for field in table and reset its timer
-  for (uint8_t i = 0; i < s_field_debounce_count; i++) {
-    if (s_field_debounce[i].field_addr == field_addr) {
-      s_field_debounce[i].last_update_us = now_us;
-      return;
-    }
+  // Calculate field offset as array index (O(1) direct access)
+  ptrdiff_t offset = (uint8_t*)field_addr - (uint8_t*)state;
+
+  // Bounds check
+  if (offset < 0 || offset >= MAX_DEBOUNCE_FIELDS) {
+    return; // Out of range, ignore
   }
 
-  // If not found, add it with current timestamp
-  if (s_field_debounce_count < MAX_DEBOUNCE_FIELDS) {
-    s_field_debounce[s_field_debounce_count].field_addr = field_addr;
-    s_field_debounce[s_field_debounce_count].last_update_us = now_us;
-    s_field_debounce_count++;
-  }
+  field_debounce_t *entry = &s_field_debounce[offset];
+  entry->initialized = true;
+  entry->last_update_us = now_us;
 }
 
 void vehicle_can_state_dirty_set(void) {
@@ -159,7 +160,7 @@ void vehicle_can_state_dirty_clear(void) {
         vehicle_can_state_dirty_set();                                \
       }                                                               \
     } else {                                                          \
-      reset_field_debounce(&(field));                                 \
+      reset_field_debounce(&(field), state_ptr);                      \
       (field) = _nv;                                                  \
     }                                                                 \
   } while (0)
@@ -173,7 +174,7 @@ void vehicle_can_state_dirty_clear(void) {
         vehicle_can_state_dirty_set();                                \
       }                                                               \
     } else {                                                          \
-      reset_field_debounce(&(field));                                 \
+      reset_field_debounce(&(field), state_ptr);                      \
       (field) = _nv;                                                  \
     }                                                                 \
   } while (0)
@@ -187,7 +188,7 @@ void vehicle_can_state_dirty_clear(void) {
         vehicle_can_state_dirty_set();                                \
       }                                                               \
     } else {                                                          \
-      reset_field_debounce(&(field));                                 \
+      reset_field_debounce(&(field), state_ptr);                      \
       (field) = _nv;                                                  \
     }                                                                 \
   } while (0)

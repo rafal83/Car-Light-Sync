@@ -128,13 +128,38 @@ static void led_task(void *pvParameters) {
   }
 }
 
+// Macro to reduce code duplication for event detection
+#define CHECK_BOOLEAN_EVENT(field, on_event, off_event) \
+  do { \
+    if (prev->field != curr->field) { \
+      if (curr->field) { \
+        config_manager_process_can_event(on_event); \
+      } else { \
+        config_manager_stop_event(off_event); \
+      } \
+    } \
+  } while (0)
+
+#define CHECK_BOOLEAN_EVENT_NO_OFF(field, on_event) \
+  do { \
+    if (prev->field != curr->field) { \
+      if (curr->field) { \
+        config_manager_process_can_event(on_event); \
+      } else { \
+        config_manager_stop_event(on_event); \
+      } \
+    } \
+  } while (0)
+
 // CAN event processing task
 static void can_event_task(void *pvParameters) {
   ESP_LOGI(TAG_MAIN, "CAN events task started");
 
-  // Use static to avoid stack pressure
-  static vehicle_state_t current_state;
-  static vehicle_state_t previous_state = {0};
+  // Use double buffer with pointer swapping to avoid memcpy
+  static vehicle_state_t state_buffer_a = {0};
+  static vehicle_state_t state_buffer_b = {0};
+  vehicle_state_t *curr = &state_buffer_a;
+  vehicle_state_t *prev = &state_buffer_b;
 
   // Counter for periodic BLE dashboard updates (send every 200ms = 4 iterations)
   uint8_t ble_send_counter = 0;
@@ -144,8 +169,8 @@ static void can_event_task(void *pvParameters) {
   const TickType_t config_send_period = pdMS_TO_TICKS(2000);
 
   while (1) {
-    // Copy current state
-    memcpy(&current_state, &last_vehicle_state, sizeof(vehicle_state_t));
+    // Copy current state (still needed once to get latest data)
+    memcpy(curr, &last_vehicle_state, sizeof(vehicle_state_t));
 
     // Note: handle_wheel_profile_control is called directly in vehicle_can_callback
     // to avoid missing scroll events that bounce quickly back to 0
@@ -153,38 +178,15 @@ static void can_event_task(void *pvParameters) {
     // Detect state changes and generate events
     // Turn signals - IMPORTANT: separate if blocks to detect each change independently
 
-    if (previous_state.hazard != current_state.hazard) {
-      ESP_LOGI(TAG_MAIN, "Hazard changed: %d -> %d", previous_state.hazard, current_state.hazard);
-      if (current_state.hazard) {
-        config_manager_process_can_event(CAN_EVENT_TURN_HAZARD);
-      } else {
-        config_manager_stop_event(CAN_EVENT_TURN_HAZARD);
-      }
-    }
-
-    if (previous_state.turn_left != current_state.turn_left) {
-      ESP_LOGI(TAG_MAIN, "Turn left changed: %d -> %d", previous_state.turn_left, current_state.turn_left);
-      if (current_state.turn_left) {
-        config_manager_process_can_event(CAN_EVENT_TURN_LEFT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_TURN_LEFT);
-      }
-    }
-
-    if (previous_state.turn_right != current_state.turn_right) {
-      ESP_LOGI(TAG_MAIN, "Turn right changed: %d -> %d", previous_state.turn_right, current_state.turn_right);
-      if (current_state.turn_right) {
-        config_manager_process_can_event(CAN_EVENT_TURN_RIGHT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_TURN_RIGHT);
-      }
-    }
+    CHECK_BOOLEAN_EVENT_NO_OFF(hazard, CAN_EVENT_TURN_HAZARD);
+    CHECK_BOOLEAN_EVENT_NO_OFF(turn_left, CAN_EVENT_TURN_LEFT);
+    CHECK_BOOLEAN_EVENT_NO_OFF(turn_right, CAN_EVENT_TURN_RIGHT);
 
     // Doors
-    bool doors_open_left_now    = current_state.door_front_left_open + current_state.door_rear_left_open > 0;
-    bool doors_open_left_before = previous_state.door_front_left_open + previous_state.door_rear_left_open > 0;
-    bool doors_open_right_now   = current_state.door_front_right_open + current_state.door_rear_right_open > 0;
-    bool doors_open_right_before = previous_state.door_front_right_open + previous_state.door_rear_right_open > 0;
+    bool doors_open_left_now    = curr->door_front_left_open + curr->door_rear_left_open > 0;
+    bool doors_open_left_before = prev->door_front_left_open + prev->door_rear_left_open > 0;
+    bool doors_open_right_now   = curr->door_front_right_open + curr->door_rear_right_open > 0;
+    bool doors_open_right_before = prev->door_front_right_open + prev->door_rear_right_open > 0;
 
     if (doors_open_left_now != doors_open_left_before) {
       if (doors_open_left_now) {
@@ -206,8 +208,8 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Locking
-    if (current_state.locked != previous_state.locked) {
-      if (current_state.locked) {
+    if (curr->locked != prev->locked) {
+      if (curr->locked) {
         config_manager_process_can_event(CAN_EVENT_LOCKED);
       } else {
         config_manager_process_can_event(CAN_EVENT_UNLOCKED);
@@ -215,17 +217,17 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Transmission
-    if (current_state.gear != previous_state.gear) {
-      if (current_state.gear == 1) {
+    if (curr->gear != prev->gear) {
+      if (curr->gear == 1) {
         config_manager_process_can_event(CAN_EVENT_GEAR_PARK);
         config_manager_stop_event(CAN_EVENT_GEAR_REVERSE);
         config_manager_stop_event(CAN_EVENT_GEAR_DRIVE);
-      } else if (current_state.gear == 2) {
+      } else if (curr->gear == 2) {
         config_manager_process_can_event(CAN_EVENT_GEAR_REVERSE);
         config_manager_stop_event(CAN_EVENT_GEAR_PARK);
         config_manager_stop_event(CAN_EVENT_GEAR_DRIVE);
-      } else if (current_state.gear == 3) {
-      } else if (current_state.gear == 4) {
+      } else if (curr->gear == 3) {
+      } else if (curr->gear == 4) {
         config_manager_process_can_event(CAN_EVENT_GEAR_DRIVE);
         config_manager_stop_event(CAN_EVENT_GEAR_PARK);
         config_manager_stop_event(CAN_EVENT_GEAR_REVERSE);
@@ -233,108 +235,35 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Brakes
-    if (current_state.brake_pressed != previous_state.brake_pressed) {
-      ESP_LOGI(TAG_MAIN, "Brake changed: %d -> %d", previous_state.brake_pressed, current_state.brake_pressed);
-      if (current_state.brake_pressed) {
-        config_manager_process_can_event(CAN_EVENT_BRAKE_ON);
-      } else {
-        config_manager_stop_event(CAN_EVENT_BRAKE_ON);
-      }
-    }
+    CHECK_BOOLEAN_EVENT_NO_OFF(brake_pressed, CAN_EVENT_BRAKE_ON);
 
-    // Blindspot
-    if (current_state.blindspot_left != previous_state.blindspot_left) {
-      if (current_state.blindspot_left) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_LEFT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_LEFT);
-      }
-    }
-    if (current_state.blindspot_right != previous_state.blindspot_right) {
-      if (current_state.blindspot_right) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_RIGHT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_RIGHT);
-      }
-    }
-    if (current_state.blindspot_left_alert != previous_state.blindspot_left_alert) {
-      if (current_state.blindspot_left_alert) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_LEFT_ALERT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_LEFT_ALERT);
-      }
-    }
-    if (current_state.blindspot_right_alert != previous_state.blindspot_right_alert) {
-      if (current_state.blindspot_right_alert) {
-        config_manager_process_can_event(CAN_EVENT_BLINDSPOT_RIGHT_ALERT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_BLINDSPOT_RIGHT_ALERT);
-      }
-    }
+    // Blindspot - use macros to reduce duplication
+    CHECK_BOOLEAN_EVENT_NO_OFF(blindspot_left, CAN_EVENT_BLINDSPOT_LEFT);
+    CHECK_BOOLEAN_EVENT_NO_OFF(blindspot_right, CAN_EVENT_BLINDSPOT_RIGHT);
+    CHECK_BOOLEAN_EVENT_NO_OFF(blindspot_left_alert, CAN_EVENT_BLINDSPOT_LEFT_ALERT);
+    CHECK_BOOLEAN_EVENT_NO_OFF(blindspot_right_alert, CAN_EVENT_BLINDSPOT_RIGHT_ALERT);
 
-    // Sidecollision
-    if (current_state.side_collision_left != previous_state.side_collision_left) {
-      if (current_state.side_collision_left) {
-        config_manager_process_can_event(CAN_EVENT_SIDE_COLLISION_LEFT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_SIDE_COLLISION_LEFT);
-      }
-    }
-    if (current_state.side_collision_right != previous_state.side_collision_right) {
-      if (current_state.side_collision_right) {
-        config_manager_process_can_event(CAN_EVENT_SIDE_COLLISION_RIGHT);
-      } else {
-        config_manager_stop_event(CAN_EVENT_SIDE_COLLISION_RIGHT);
-      }
-    }
-    if (current_state.forward_collision != previous_state.forward_collision) {
-      if (current_state.forward_collision) {
-        config_manager_process_can_event(CAN_EVENT_FORWARD_COLLISION);
-      } else {
-        config_manager_stop_event(CAN_EVENT_FORWARD_COLLISION);
-      }
-    }
-    if (current_state.lane_departure_left_lv1 != previous_state.lane_departure_left_lv1) {
-      if (current_state.lane_departure_left_lv1) {
-        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_LEFT_LV1);
-      } else {
-        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_LEFT_LV1);
-      }
-    }
-    if (current_state.lane_departure_left_lv2 != previous_state.lane_departure_left_lv2) {
-      if (current_state.lane_departure_left_lv2) {
-        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_LEFT_LV2);
-      } else {
-        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_LEFT_LV2);
-      }
-    }
-    if (current_state.lane_departure_right_lv1 != previous_state.lane_departure_right_lv1) {
-      if (current_state.lane_departure_right_lv1) {
-        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1);
-      } else {
-        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1);
-      }
-    }
-    if (current_state.lane_departure_right_lv2 != previous_state.lane_departure_right_lv2) {
-      if (current_state.lane_departure_right_lv2) {
-        config_manager_process_can_event(CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2);
-      } else {
-        config_manager_stop_event(CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2);
-      }
-    }
+    // Side collision
+    CHECK_BOOLEAN_EVENT_NO_OFF(side_collision_left, CAN_EVENT_SIDE_COLLISION_LEFT);
+    CHECK_BOOLEAN_EVENT_NO_OFF(side_collision_right, CAN_EVENT_SIDE_COLLISION_RIGHT);
+    CHECK_BOOLEAN_EVENT_NO_OFF(forward_collision, CAN_EVENT_FORWARD_COLLISION);
 
-    if (current_state.sentry_mode != previous_state.sentry_mode) {
-      if (current_state.sentry_mode) {
+    // Lane departure
+    CHECK_BOOLEAN_EVENT_NO_OFF(lane_departure_left_lv1, CAN_EVENT_LANE_DEPARTURE_LEFT_LV1);
+    CHECK_BOOLEAN_EVENT_NO_OFF(lane_departure_left_lv2, CAN_EVENT_LANE_DEPARTURE_LEFT_LV2);
+    CHECK_BOOLEAN_EVENT_NO_OFF(lane_departure_right_lv1, CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1);
+    CHECK_BOOLEAN_EVENT_NO_OFF(lane_departure_right_lv2, CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2);
+
+    if (curr->sentry_mode != prev->sentry_mode) {
+      if (curr->sentry_mode) {
         config_manager_process_can_event(CAN_EVENT_SENTRY_MODE_ON);
       } else {
         config_manager_stop_event(CAN_EVENT_SENTRY_MODE_OFF);
       }
     }
-    if (current_state.sentry_alert != previous_state.sentry_alert) {
-      if (current_state.sentry_alert) {
-        config_manager_process_can_event(CAN_EVENT_SENTRY_ALERT);
-      }
-    }
+
+    CHECK_BOOLEAN_EVENT_NO_OFF(sentry_alert, CAN_EVENT_SENTRY_ALERT);
+
     // Autopilot
     // 0 "DISABLED"
     // 1 "UNAVAILABLE"
@@ -346,62 +275,39 @@ static void can_event_task(void *pvParameters) {
     // 9 "ABORTED"
     // 14 "FAULT"
     // 15 "SNA"
-    if (current_state.autopilot != previous_state.autopilot) {
-      if (current_state.autopilot >= 3 && current_state.autopilot <= 5) {
+    if (curr->autopilot != prev->autopilot) {
+      if (curr->autopilot >= 3 && curr->autopilot <= 5) {
         config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ENGAGED);
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
-      } else if (current_state.autopilot == 9) {
+      } else if (curr->autopilot == 9) {
         config_manager_process_can_event(CAN_EVENT_AUTOPILOT_DISENGAGED);
         config_manager_stop_event(CAN_EVENT_AUTOPILOT_ENGAGED);
       }
     }
 
-    if (current_state.autopilot_alert_lv1 != previous_state.autopilot_alert_lv1) {
-      if (current_state.autopilot_alert_lv1) {
-        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ALERT_LV1);
-      } else {
-        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ALERT_LV1);
-      }
-    }
-    if (current_state.autopilot_alert_lv2 != previous_state.autopilot_alert_lv2) {
-      if (current_state.autopilot_alert_lv2) {
-        config_manager_process_can_event(CAN_EVENT_AUTOPILOT_ALERT_LV2);
-      } else {
-        config_manager_stop_event(CAN_EVENT_AUTOPILOT_ALERT_LV2);
-      }
-    }
+    CHECK_BOOLEAN_EVENT_NO_OFF(autopilot_alert_lv1, CAN_EVENT_AUTOPILOT_ALERT_LV1);
+    CHECK_BOOLEAN_EVENT_NO_OFF(autopilot_alert_lv2, CAN_EVENT_AUTOPILOT_ALERT_LV2);
 
     // Charging
-    if (current_state.charging != previous_state.charging) {
-      if (current_state.charging) {
-        config_manager_process_can_event(CAN_EVENT_CHARGING);
-      } else {
-        config_manager_stop_event(CAN_EVENT_CHARGING);
-      }
-    }
-    if (current_state.charging_cable != previous_state.charging_cable) {
-      if (current_state.charging_cable) {
+    CHECK_BOOLEAN_EVENT_NO_OFF(charging, CAN_EVENT_CHARGING);
+
+    if (curr->charging_cable != prev->charging_cable) {
+      if (curr->charging_cable) {
         config_manager_process_can_event(CAN_EVENT_CHARGING_CABLE_CONNECTED);
       } else {
         config_manager_process_can_event(CAN_EVENT_CHARGING_CABLE_DISCONNECTED);
       }
     }
-    if (current_state.charging_port != previous_state.charging_port) {
-      if (current_state.charging_port) {
-        config_manager_process_can_event(CAN_EVENT_CHARGING_PORT_OPENED);
-      } else {
-        config_manager_stop_event(CAN_EVENT_CHARGING_PORT_OPENED);
-      }
-    }
+    CHECK_BOOLEAN_EVENT_NO_OFF(charging_port, CAN_EVENT_CHARGING_PORT_OPENED);
 
-    if (current_state.charge_status != previous_state.charge_status) {
-      if (current_state.charge_status == 3) {
+    if (curr->charge_status != prev->charge_status) {
+      if (curr->charge_status == 3) {
         // config_manager_process_can_event(CAN_EVENT_CHARGING);
-      } else if (current_state.charge_status == 4) {
+      } else if (curr->charge_status == 4) {
         config_manager_process_can_event(CAN_EVENT_CHARGE_COMPLETE);
-      } else if (current_state.charge_status == 5) {
+      } else if (curr->charge_status == 5) {
         config_manager_process_can_event(CAN_EVENT_CHARGING_STARTED);
-      } else if (current_state.charge_status == 1) {
+      } else if (curr->charge_status == 1) {
         config_manager_process_can_event(CAN_EVENT_CHARGING_STOPPED);
       } else {
         config_manager_stop_event(CAN_EVENT_CHARGING);
@@ -412,16 +318,18 @@ static void can_event_task(void *pvParameters) {
     }
 
     // Speed threshold
-    if (current_state.speed_kph != previous_state.speed_kph || current_state.speed_limit != previous_state.speed_limit) {
-      if (current_state.speed_kph > current_state.speed_limit) {
+    if (curr->speed_kph != prev->speed_kph || curr->speed_limit != prev->speed_limit) {
+      if (curr->speed_kph > curr->speed_limit) {
         config_manager_process_can_event(CAN_EVENT_SPEED_THRESHOLD);
       } else {
         config_manager_stop_event(CAN_EVENT_SPEED_THRESHOLD);
       }
     }
 
-    // Save previous state
-    memcpy(&previous_state, &current_state, sizeof(vehicle_state_t));
+    // Swap buffers instead of memcpy (much faster!)
+    vehicle_state_t *temp = prev;
+    prev = curr;
+    curr = temp;
 
     // Periodic BLE dashboard updates (every 200ms)
     ble_send_counter++;
@@ -431,11 +339,11 @@ static void can_event_task(void *pvParameters) {
       // Send current vehicle state to BLE dashboard if connected
       // Use mode-specific packet format based on gear (Drive vs Park)
       if (ble_api_service_is_connected()) {
-        // Determine mode based on gear: P=1, R=2, N=3, D=4
-        bool is_drive_mode = (current_state.gear == 2 || current_state.gear == 3 || current_state.gear == 4);
+        // Determine mode based on gear: P=1, R=2, N=3, D=4 (use prev since we swapped)
+        bool is_drive_mode = (prev->gear == 2 || prev->gear == 3 || prev->gear == 4);
 
         vehicle_state_ble_config_t ble_config_state;
-        vehicle_state_to_ble_config(&current_state, &ble_config_state);
+        vehicle_state_to_ble_config(prev, &ble_config_state);
         size_t config_compare_size = offsetof(vehicle_state_ble_config_t, last_update_ms);
         TickType_t now_ticks = xTaskGetTickCount();
         bool config_ack = ble_api_service_config_ack_received();
@@ -466,7 +374,7 @@ static void can_event_task(void *pvParameters) {
         if (is_drive_mode) {
           // Send DRIVE mode packet (smaller, focused on driving metrics)
           static vehicle_state_ble_drive_t ble_drive_state;
-          vehicle_state_to_ble_drive(&current_state, &ble_drive_state);
+          vehicle_state_to_ble_drive(prev, &ble_drive_state);
           static uint8_t ble_drive_packet[1 + sizeof(vehicle_state_ble_drive_t)];
           ble_drive_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_DRIVE, 0);
           memcpy(ble_drive_packet + 1, &ble_drive_state, sizeof(vehicle_state_ble_drive_t));
@@ -477,7 +385,7 @@ static void can_event_task(void *pvParameters) {
         } else {
           // Send PARK mode packet (focused on battery, charging, doors)
           static vehicle_state_ble_park_t ble_park_state;
-          vehicle_state_to_ble_park(&current_state, &ble_park_state);
+          vehicle_state_to_ble_park(prev, &ble_park_state);
           static uint8_t ble_park_packet[1 + sizeof(vehicle_state_ble_park_t)];
           ble_park_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_PARK, 0);
           memcpy(ble_park_packet + 1, &ble_park_state, sizeof(vehicle_state_ble_park_t));
@@ -494,7 +402,7 @@ static void can_event_task(void *pvParameters) {
     TickType_t now = xTaskGetTickCount();
     if (vehicle_can_state_dirty_get() && (now - last_state_send_ticks) >= min_state_send_period) {
       vehicle_can_state_dirty_clear();
-      espnow_link_send_vehicle_state(&current_state);
+      espnow_link_send_vehicle_state(prev); // Use prev since we swapped
       last_state_send_ticks = now;
     }
 

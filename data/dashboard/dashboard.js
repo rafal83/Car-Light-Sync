@@ -28,6 +28,52 @@ const gearMap = { 1: 'P', 2: 'R', 3: 'N', 4: 'D' };
 // Language state
 let currentLang = 'fr';
 
+// Cached DOM references (initialized on DOM ready for performance)
+const domCache = {
+  // Park mode elements
+  parkMode: null,
+  batteryValuePark: null,
+  batteryVoltagePark: null,
+  batteryFillPark: null,
+  chargingGaugePark: null,
+  chargePowerPark: null,
+  odometerValuePark: null,
+  batteryLvPark: null,
+  gearDisplayPark: null,
+  trainType: null,
+
+  // Drive mode elements
+  driveMode: null,
+  speedValueDrive: null,
+  gearDisplayDrive: null,
+  pedalArcFill: null,
+  batteryDriveCompact: null,
+  odometerDriveCompact: null,
+  indTurnLeftDrive: null,
+  indTurnRightDrive: null,
+  blindspotArcsLeft: null,
+  blindspotArcsRight: null,
+  driveWarningBar: null,
+  warningBar: null,
+  warningBarLabel: null,
+
+  // Power indicators
+  powerArcRearPos: null,
+  powerArcRearNeg: null,
+  powerRearValue: null,
+  powerArcFrontPos: null,
+  powerArcFrontNeg: null,
+  powerFrontValue: null,
+  powerArcFront: null,
+  powerFrontIndicator: null,
+  pedalMapLabel: null,
+
+  // Common elements
+  dashboardHeader: null,
+  statusDot: null,
+  statusText: null
+};
+
 // BLE packet sizes for different modes (payload sizes only)
 const BLE_PACKET_HEADER_SIZE = 1;
 const BLE_PACKET_TYPE_CONFIG = 0;
@@ -290,6 +336,54 @@ function decodeVehicleStatePark(dataView) {
 }
 
 /**
+ * Initialize DOM cache for performance (called once on startup)
+ */
+function initDOMCache() {
+    // Park mode elements
+    domCache.parkMode = document.getElementById('park-mode');
+    domCache.batteryValuePark = document.getElementById('battery-value-park');
+    domCache.batteryVoltagePark = document.getElementById('battery-voltage-park');
+    domCache.batteryFillPark = document.getElementById('battery-fill-park');
+    domCache.chargingGaugePark = document.getElementById('charging-gauge-park');
+    domCache.chargePowerPark = document.getElementById('charge-power-park');
+    domCache.odometerValuePark = document.getElementById('odometer-value-park');
+    domCache.batteryLvPark = document.getElementById('battery-lv-park');
+    domCache.gearDisplayPark = document.getElementById('gear-display-park');
+    domCache.trainType = document.getElementById('train-type');
+
+    // Drive mode elements
+    domCache.driveMode = document.getElementById('drive-mode');
+    domCache.speedValueDrive = document.getElementById('speed-value-drive');
+    domCache.gearDisplayDrive = document.getElementById('gear-display-drive');
+    domCache.pedalArcFill = document.getElementById('pedal-arc-fill');
+    domCache.batteryDriveCompact = document.getElementById('battery-drive-compact');
+    domCache.odometerDriveCompact = document.getElementById('odometer-drive-compact');
+    domCache.indTurnLeftDrive = document.getElementById('ind-turn-left-drive');
+    domCache.indTurnRightDrive = document.getElementById('ind-turn-right-drive');
+    domCache.blindspotArcsLeft = document.getElementById('blindspot-arcs-left');
+    domCache.blindspotArcsRight = document.getElementById('blindspot-arcs-right');
+    domCache.driveWarningBar = document.getElementById('drive-warning-bar');
+    domCache.warningBar = document.getElementById('warning-bar');
+    domCache.warningBarLabel = document.getElementById('warning-bar-label');
+
+    // Power indicators
+    domCache.powerArcRearPos = document.getElementById('power-arc-rear-pos');
+    domCache.powerArcRearNeg = document.getElementById('power-arc-rear-neg');
+    domCache.powerRearValue = document.getElementById('power-rear-value');
+    domCache.powerArcFrontPos = document.getElementById('power-arc-front-pos');
+    domCache.powerArcFrontNeg = document.getElementById('power-arc-front-neg');
+    domCache.powerFrontValue = document.getElementById('power-front-value');
+    domCache.powerArcFront = document.getElementById('power-arc-front');
+    domCache.powerFrontIndicator = document.getElementById('power-front-indicator');
+    domCache.pedalMapLabel = document.querySelector('.pedal-map-label');
+
+    // Common elements
+    domCache.dashboardHeader = document.getElementById('dashboard-header');
+    domCache.statusDot = document.getElementById('status-dot');
+    domCache.statusText = document.getElementById('status-text');
+}
+
+/**
  * Switch dashboard mode based on gear
  */
 function switchMode(gear) {
@@ -300,24 +394,23 @@ function switchMode(gear) {
         console.log('[Dashboard] Switching to mode:', currentMode, '(gear:', gearMap[gear] || 'P', ')');
 
         // Hide all modes
-        document.getElementById('park-mode').classList.remove('active');
-        document.getElementById('drive-mode').classList.remove('active');
+        if (domCache.parkMode) domCache.parkMode.classList.remove('active');
+        if (domCache.driveMode) domCache.driveMode.classList.remove('active');
 
         // Hide/show header based on mode
-        const header = document.getElementById('dashboard-header');
-        if (header) {
+        if (domCache.dashboardHeader) {
             if (currentMode === 'drive') {
-                header.classList.add('hidden');
+                domCache.dashboardHeader.classList.add('hidden');
             } else {
-                header.classList.remove('hidden');
+                domCache.dashboardHeader.classList.remove('hidden');
             }
         }
 
         // Show current mode
         if (currentMode === 'park') {
-            document.getElementById('park-mode').classList.add('active');
+            if (domCache.parkMode) domCache.parkMode.classList.add('active');
         } else {
-            document.getElementById('drive-mode').classList.add('active');
+            if (domCache.driveMode) domCache.driveMode.classList.add('active');
         }
     }
 }
@@ -343,45 +436,45 @@ function updateDashboard(state) {
     if (currentMode === 'park') {
         // Battery
         const batteryPercent = Math.round(state.soc_percent);
-        document.getElementById('battery-value-park').textContent = batteryPercent;
-        document.getElementById('battery-voltage-park').textContent = state.battery_voltage_HV.toFixed(1) + 'V';
+        if (domCache.batteryValuePark) domCache.batteryValuePark.textContent = batteryPercent;
+        if (domCache.batteryVoltagePark) domCache.batteryVoltagePark.textContent = state.battery_voltage_HV.toFixed(1) + 'V';
 
         // Update battery progress bar
-        const batteryFill = document.getElementById('battery-fill-park');
-        if (batteryFill) {
+        if (domCache.batteryFillPark) {
             // Calculate width (max 74px as per SVG)
             const maxWidth = 74;
             const fillWidth = (batteryPercent / 100) * maxWidth;
-            batteryFill.setAttribute('width', fillWidth);
+            domCache.batteryFillPark.setAttribute('width', fillWidth);
 
             // Update color based on battery level
-            batteryFill.classList.remove('low', 'medium', 'high', 'charging');
+            domCache.batteryFillPark.classList.remove('low', 'medium', 'high', 'charging');
             if (state.charging) {
-                batteryFill.classList.add('charging');
+                domCache.batteryFillPark.classList.add('charging');
             }
             if (batteryPercent <= 20) {
-                batteryFill.classList.add('low');
+                domCache.batteryFillPark.classList.add('low');
             } else if (batteryPercent <= 50) {
-                batteryFill.classList.add('medium');
+                domCache.batteryFillPark.classList.add('medium');
             } else {
-                batteryFill.classList.add('high');
+                domCache.batteryFillPark.classList.add('high');
             }
         }
 
         // Charging gauge
-        const chargingGauge = document.getElementById('charging-gauge-park');
-        if (state.charging) {
-            chargingGauge.style.display = 'flex';
-            document.getElementById('charge-power-park').textContent = state.charge_power_kw.toFixed(1);
-        } else {
-            chargingGauge.style.display = 'none';
+        if (domCache.chargingGaugePark) {
+            if (state.charging) {
+                domCache.chargingGaugePark.style.display = 'flex';
+                if (domCache.chargePowerPark) domCache.chargePowerPark.textContent = state.charge_power_kw.toFixed(1);
+            } else {
+                domCache.chargingGaugePark.style.display = 'none';
+            }
         }
 
         // Vehicle info
-        document.getElementById('odometer-value-park').textContent = Math.round(state.odometer_km) + ' km';
-        document.getElementById('battery-lv-park').textContent = state.battery_voltage_LV.toFixed(1) + 'V';
-        document.getElementById('gear-display-park').textContent = gearText;
-        document.getElementById('train-type').textContent = train_type === -1 ? '--' : (train_type ? 'RWD' : 'AWD');
+        if (domCache.odometerValuePark) domCache.odometerValuePark.textContent = Math.round(state.odometer_km) + ' km';
+        if (domCache.batteryLvPark) domCache.batteryLvPark.textContent = state.battery_voltage_LV.toFixed(1) + 'V';
+        if (domCache.gearDisplayPark) domCache.gearDisplayPark.textContent = gearText;
+        if (domCache.trainType) domCache.trainType.textContent = train_type === -1 ? '--' : (train_type ? 'RWD' : 'AWD');
 
         // Update vehicle top view visualization
         updateVehicleView(state);
@@ -390,32 +483,31 @@ function updateDashboard(state) {
     // Update DRIVE MODE elements
     else {
         // Speed (large display)
-        document.getElementById('speed-value-drive').textContent = state.speed_kph;
+        if (domCache.speedValueDrive) domCache.speedValueDrive.textContent = state.speed_kph;
 
         // Gear display
-        document.getElementById('gear-display-drive').textContent = gearText;
+        if (domCache.gearDisplayDrive) domCache.gearDisplayDrive.textContent = gearText;
 
         // Pedal arc (0-100% maps to stroke-dashoffset 377 to 0) - 240° arc
-        const pedalArcFill = document.getElementById('pedal-arc-fill');
-        if (pedalArcFill) {
+        if (domCache.pedalArcFill) {
             const dashOffset = 340 - (340 * state.accel_pedal_pos / 100);
-            pedalArcFill.style.strokeDashoffset = dashOffset;
+            domCache.pedalArcFill.style.strokeDashoffset = dashOffset;
         }
 
         // Compact info below speedometer
-        document.getElementById('battery-drive-compact').textContent = Math.round(state.soc_percent) + '%';
-        document.getElementById('odometer-drive-compact').textContent = Math.round(state.odometer_km) + 'km';
+        if (domCache.batteryDriveCompact) domCache.batteryDriveCompact.textContent = Math.round(state.soc_percent) + '%';
+        if (domCache.odometerDriveCompact) domCache.odometerDriveCompact.textContent = Math.round(state.odometer_km) + 'km';
 
         // Power & pedal map indicators
         updatePowerIndicators(state.rear_power_kw, state.front_power_kw, state.pedal_map, train_type);
 
         // Show/hide indicators (only when active)
-        updateDriveIndicator('ind-turn-left-drive', state.turn_left);
-        updateDriveIndicator('ind-turn-right-drive', state.turn_right);
+        if (domCache.indTurnLeftDrive) domCache.indTurnLeftDrive.style.display = state.turn_left ? 'flex' : 'none';
+        if (domCache.indTurnRightDrive) domCache.indTurnRightDrive.style.display = state.turn_right ? 'flex' : 'none';
 
         // Blindspot arcs with progressive intensity (level 1 and level 2)
-        updateBlindspotArcs('blindspot-arcs-left', state.blindspot_left, state.blindspot_left_alert);
-        updateBlindspotArcs('blindspot-arcs-right', state.blindspot_right, state.blindspot_right_alert);
+        updateBlindspotArcs(domCache.blindspotArcsLeft, state.blindspot_left, state.blindspot_left_alert);
+        updateBlindspotArcs(domCache.blindspotArcsRight, state.blindspot_right, state.blindspot_right_alert);
 
         updateDriveWarningBar(state);
     }
@@ -438,12 +530,9 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
 
     // Update rear power arc (left side)
     // Two arcs: positive (upwards) and negative (downwards)
-    const rearArcPos = document.getElementById('power-arc-rear-pos');
-    const rearArcNeg = document.getElementById('power-arc-rear-neg');
-    const rearValue = document.getElementById('power-rear-value');
-    if (rearArcPos && rearArcNeg && rearValue) {
+    if (domCache.powerArcRearPos && domCache.powerArcRearNeg && domCache.powerRearValue) {
         const rearRounded = Math.round(rearPower || 0);
-        rearValue.textContent = rearRounded;
+        domCache.powerRearValue.textContent = rearRounded;
 
         // Half arc length: 79.5 (55° in units)
         const halfArc = 79.5;
@@ -454,59 +543,53 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
 
         if (rearPower >= 0) {
             // Positive power: show positive arc, hide negative arc
-            rearArcPos.style.display = 'block';
-            rearArcNeg.style.display = 'none';
-            rearArcPos.style.strokeDasharray = `${halfArc} ${159}`;
-            rearArcPos.style.strokeDashoffset = rearDashOffset;
+            domCache.powerArcRearPos.style.display = 'block';
+            domCache.powerArcRearNeg.style.display = 'none';
+            domCache.powerArcRearPos.style.strokeDasharray = `${halfArc} ${159}`;
+            domCache.powerArcRearPos.style.strokeDashoffset = rearDashOffset;
 
             if (Math.abs(rearRounded) > 5) {
-                rearArcPos.classList.add('active');
+                domCache.powerArcRearPos.classList.add('active');
             } else {
-                rearArcPos.classList.remove('active');
+                domCache.powerArcRearPos.classList.remove('active');
             }
         } else {
             // Negative power (regen): show negative arc, hide positive arc
-            rearArcPos.style.display = 'none';
-            rearArcNeg.style.display = 'block';
-            rearArcNeg.style.strokeDasharray = `${halfArc} ${159}`;
-            rearArcNeg.style.strokeDashoffset = rearDashOffset;
+            domCache.powerArcRearPos.style.display = 'none';
+            domCache.powerArcRearNeg.style.display = 'block';
+            domCache.powerArcRearNeg.style.strokeDasharray = `${halfArc} ${159}`;
+            domCache.powerArcRearNeg.style.strokeDashoffset = rearDashOffset;
 
             if (Math.abs(rearRounded) > 5) {
-                rearArcNeg.classList.add('active');
+                domCache.powerArcRearNeg.classList.add('active');
             } else {
-                rearArcNeg.classList.remove('active');
+                domCache.powerArcRearNeg.classList.remove('active');
             }
         }
 
         // Update text color
-        rearValue.classList.remove('positive', 'negative', 'zero');
+        domCache.powerRearValue.classList.remove('positive', 'negative', 'zero');
         if (rearRounded > 5) {
-            rearValue.classList.add('positive');
+            domCache.powerRearValue.classList.add('positive');
         } else if (rearRounded < -5) {
-            rearValue.classList.add('negative');
+            domCache.powerRearValue.classList.add('negative');
         } else {
-            rearValue.classList.add('zero');
+            domCache.powerRearValue.classList.add('zero');
         }
     }
 
     // Update front power arc (right side)
     // Two arcs: positive (upwards) and negative (downwards)
-    const frontArcPos = document.getElementById('power-arc-front-pos');
-    const frontArcNeg = document.getElementById('power-arc-front-neg');
-    const frontValue = document.getElementById('power-front-value');
-    if (frontArcPos && frontArcNeg && frontValue) {
-      const frontArc = document.getElementById('power-arc-front');
-      const frontIndicator = document.getElementById('power-front-indicator');
-
+    if (domCache.powerArcFrontPos && domCache.powerArcFrontNeg && domCache.powerFrontValue) {
       if (isRwd) { // 1 = RWD, no front motor
-        if (frontArc) frontArc.style.display = 'none';
-        if (frontIndicator) frontIndicator.style.display = 'none';
+        if (domCache.powerArcFront) domCache.powerArcFront.style.display = 'none';
+        if (domCache.powerFrontIndicator) domCache.powerFrontIndicator.style.display = 'none';
       } else {
-        if (frontArc) frontArc.style.display = '';
-        if (frontIndicator) frontIndicator.style.display = '';
+        if (domCache.powerArcFront) domCache.powerArcFront.style.display = '';
+        if (domCache.powerFrontIndicator) domCache.powerFrontIndicator.style.display = '';
 
         const frontRounded = Math.round(frontPower || 0);
-        frontValue.textContent = frontRounded;
+        domCache.powerFrontValue.textContent = frontRounded;
 
         // Half arc length: 79.5 (55° in units)
         const halfArc = 79.5;
@@ -517,49 +600,48 @@ function updatePowerIndicators(rearPower, frontPower, pedalMap, trainType) {
 
         if (frontPower >= 0) {
             // Positive power: show positive arc, hide negative arc
-            frontArcPos.style.display = 'block';
-            frontArcNeg.style.display = 'none';
-            frontArcPos.style.strokeDasharray = `${halfArc} ${159}`;
-            frontArcPos.style.strokeDashoffset = frontDashOffset;
+            domCache.powerArcFrontPos.style.display = 'block';
+            domCache.powerArcFrontNeg.style.display = 'none';
+            domCache.powerArcFrontPos.style.strokeDasharray = `${halfArc} ${159}`;
+            domCache.powerArcFrontPos.style.strokeDashoffset = frontDashOffset;
 
             if (Math.abs(frontRounded) > 5) {
-                frontArcPos.classList.add('active');
+                domCache.powerArcFrontPos.classList.add('active');
             } else {
-                frontArcPos.classList.remove('active');
+                domCache.powerArcFrontPos.classList.remove('active');
             }
         } else {
             // Negative power (regen): show negative arc, hide positive arc
-            frontArcPos.style.display = 'none';
-            frontArcNeg.style.display = 'block';
-            frontArcNeg.style.strokeDasharray = `${halfArc} ${159}`;
-            frontArcNeg.style.strokeDashoffset = frontDashOffset;
+            domCache.powerArcFrontPos.style.display = 'none';
+            domCache.powerArcFrontNeg.style.display = 'block';
+            domCache.powerArcFrontNeg.style.strokeDasharray = `${halfArc} ${159}`;
+            domCache.powerArcFrontNeg.style.strokeDashoffset = frontDashOffset;
 
             if (Math.abs(frontRounded) > 5) {
-                frontArcNeg.classList.add('active');
+                domCache.powerArcFrontNeg.classList.add('active');
             } else {
-                frontArcNeg.classList.remove('active');
+                domCache.powerArcFrontNeg.classList.remove('active');
             }
         }
 
         // Update text color
-        frontValue.classList.remove('positive', 'negative', 'zero');
+        domCache.powerFrontValue.classList.remove('positive', 'negative', 'zero');
         if (frontRounded > 5) {
-            frontValue.classList.add('positive');
+            domCache.powerFrontValue.classList.add('positive');
         } else if (frontRounded < -5) {
-            frontValue.classList.add('negative');
+            domCache.powerFrontValue.classList.add('negative');
         } else {
-            frontValue.classList.add('zero');
-        } 
+            domCache.powerFrontValue.classList.add('zero');
+        }
       }
     }
 
     // Update pedal map label
-    const pedalMapLabel = document.querySelector('.pedal-map-label');
-    if (pedalMapLabel) {
+    if (domCache.pedalMapLabel) {
         const pedalMapText = pedalMap === -1 ? 'Chill' :
                             pedalMap === 1 ? 'Sport' :
                             'Standard';
-        pedalMapLabel.textContent = pedalMapText;
+        domCache.pedalMapLabel.textContent = pedalMapText;
     }
 }
 
@@ -648,6 +730,7 @@ function updateIndicator(elementId, active, className = null) {
 
 /**
  * Update drive mode indicator (show/hide based on state)
+ * @deprecated Use direct domCache access instead
  */
 function updateDriveIndicator(elementId, active) {
     const el = document.getElementById(elementId);
@@ -661,10 +744,7 @@ function updateDriveIndicator(elementId, active) {
 }
 
 function updateDriveWarningBar(state) {
-    const container = document.getElementById('drive-warning-bar');
-    const bar = document.getElementById('warning-bar');
-    const label = document.getElementById('warning-bar-label');
-    if (!container || !bar || !label) {
+    if (!domCache.driveWarningBar || !domCache.warningBar || !domCache.warningBarLabel) {
         return;
     }
 
@@ -694,24 +774,23 @@ function updateDriveWarningBar(state) {
     }
 
     if (!type) {
-        container.style.display = 'none';
+        domCache.driveWarningBar.style.display = 'none';
         return;
     }
 
-    container.style.display = 'flex';
-    bar.classList.remove('warning-bar-collision', 'warning-bar-brake', 'warning-bar-autopilot');
-    bar.classList.add(`warning-bar-${type}`);
-    label.textContent = text;
+    domCache.driveWarningBar.style.display = 'flex';
+    domCache.warningBar.classList.remove('warning-bar-collision', 'warning-bar-brake', 'warning-bar-autopilot');
+    domCache.warningBar.classList.add(`warning-bar-${type}`);
+    domCache.warningBarLabel.textContent = text;
 }
 
 /**
  * Update blindspot arcs with progressive intensity based on level
- * @param {string} elementId - ID of the SVG container
+ * @param {HTMLElement} el - Cached DOM element (not ID)
  * @param {boolean} level1 - Level 1 detection (blindspot_left/right)
  * @param {boolean} level2 - Level 2 alert (blindspot_left_alert/right_alert)
  */
-function updateBlindspotArcs(elementId, level1, level2) {
-    const el = document.getElementById(elementId);
+function updateBlindspotArcs(el, level1, level2) {
     if (!el) return;
 
     const arcs = el.querySelectorAll('path');
@@ -748,15 +827,17 @@ function updateBlindspotArcs(elementId, level1, level2) {
  */
 function updateConnectionStatus(connected) {
     isConnected = connected;
-    const statusDot = document.getElementById('status-dot');
-    const statusText = document.getElementById('status-text');
 
-    if (connected) {
-        statusDot.classList.add('connected');
-        statusText.textContent = t('dashboard.connected');
-    } else {
-        statusDot.classList.remove('connected');
-        statusText.textContent = t('dashboard.disconnected');
+    if (domCache.statusDot) {
+        if (connected) {
+            domCache.statusDot.classList.add('connected');
+        } else {
+            domCache.statusDot.classList.remove('connected');
+        }
+    }
+
+    if (domCache.statusText) {
+        domCache.statusText.textContent = connected ? t('dashboard.connected') : t('dashboard.disconnected');
     }
 }
 
@@ -1762,6 +1843,10 @@ window.simulateParkMode = function() {
 async function init() {
     console.log('[Dashboard] Initializing...');
     console.log('[Dashboard] Platform:', usingCapacitor ? 'Capacitor' : 'Web');
+
+    // Initialize DOM cache for performance
+    initDOMCache();
+    console.log('[Dashboard] DOM cache initialized');
 
     // Load auto brightness preference
     const savedAutoBrightness = localStorage.getItem('autoBrightness');

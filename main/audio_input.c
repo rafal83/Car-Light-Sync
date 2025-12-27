@@ -21,6 +21,9 @@ static TaskHandle_t audio_task_handle    = NULL;
 // Configuration
 static audio_config_t current_config     = {.enabled = false, .sensitivity = 128, .gain = 128, .auto_gain = true, .fft_enabled = false};
 static audio_calibration_t calibration   = {.calibrated = false, .noise_floor = 0.0f, .peak_level = 1.0f};
+// Pre-computed reciprocals for performance (avoid division in hot path)
+static float sensitivity_reciprocal = 1.0f / 128.0f;
+static float gain_reciprocal = 1.0f / 128.0f;
 static audio_calibration_t calib_result  = {0};
 static volatile bool calibration_running = false;
 static volatile bool calibration_ready   = false;
@@ -264,10 +267,9 @@ static void audio_task(void *pvParameters) {
     // Compute RMS amplitude
     float rms                = calculate_rms(audio_buffer, samples);
 
-    // Apply sensitivity and gain
-    float sensitivity_factor = (float)current_config.sensitivity / 128.0f;
-    float gain_factor        = (float)current_config.gain / 128.0f;
-    float amplitude_raw      = rms * sensitivity_factor * gain_factor * 10.0f;
+    // Apply sensitivity and gain (use pre-computed reciprocals for speed)
+    float amplitude_raw      = rms * ((float)current_config.sensitivity * sensitivity_reciprocal) *
+                                     ((float)current_config.gain * gain_reciprocal) * 10.0f;
 
     // Clamp to 0.0-1.0
     if (amplitude_raw > 1.0f)
@@ -488,11 +490,13 @@ bool audio_input_get_data(audio_data_t *data) {
 
 void audio_input_set_sensitivity(uint8_t sensitivity) {
   current_config.sensitivity = sensitivity;
+  // Pre-compute reciprocal is constant, no need to update
   ESP_LOGI(TAG_AUDIO, "Sensitivity: %d", sensitivity);
 }
 
 void audio_input_set_gain(uint8_t gain) {
   current_config.gain = gain;
+  // Pre-compute reciprocal is constant, no need to update
   ESP_LOGI(TAG_AUDIO, "Gain: %d", gain);
 }
 
