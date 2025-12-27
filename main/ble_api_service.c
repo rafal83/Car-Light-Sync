@@ -527,15 +527,20 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
     chunk_count++;
     offset += chunk;
 
-    // Delay between chunks to avoid saturating the BLE buffer
-    // Bigger transfers wait longer to let the client process
+    // OPTIMIZATION: Delay between chunks to avoid saturating the BLE buffer
+    // Only delay for multi-chunk transfers; single-chunk responses don't need delay
     if (offset < len) { // No delay after the last chunk
-      if (len > 2000) {
-        vTaskDelay(pdMS_TO_TICKS(30)); // 30ms for very large transfers
-      } else if (len > 500) {
-        vTaskDelay(pdMS_TO_TICKS(20)); // 20ms for medium transfers
-      } else {
-        vTaskDelay(pdMS_TO_TICKS(10)); // 10ms for small transfers
+      size_t total_chunks = (len + max_payload - 1) / max_payload;
+
+      // No delay for single-chunk transfers (fast response)
+      if (total_chunks > 1) {
+        if (len > 2000) {
+          vTaskDelay(pdMS_TO_TICKS(30)); // 30ms for very large transfers
+        } else if (len > 500) {
+          vTaskDelay(pdMS_TO_TICKS(20)); // 20ms for medium transfers
+        } else {
+          vTaskDelay(pdMS_TO_TICKS(5)); // 5ms for small multi-chunk transfers (reduced from 10ms)
+        }
       }
     }
   }
@@ -747,9 +752,12 @@ esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size) {
 
     offset += chunk;
 
-    // Small delay between chunks if needed
+    // OPTIMIZATION: Only delay for multi-chunk vehicle state (typically fits in 1 chunk)
     if (offset < size) {
-      vTaskDelay(pdMS_TO_TICKS(5));
+      size_t total_chunks = (size + max_payload - 1) / max_payload;
+      if (total_chunks > 1) {
+        vTaskDelay(pdMS_TO_TICKS(3)); // Reduced from 5ms (vehicle state is high-frequency)
+      }
     }
   }
 

@@ -68,18 +68,23 @@ static uint64_t get_field_debounce_us(void *field_addr, vehicle_state_t *state) 
   // Calculate field offset in the structure
   ptrdiff_t offset = (uint8_t*)field_addr - (uint8_t*)state;
 
-  // Blindspot: 200ms debounce to avoid false positives
+  // Blindspot: 500ms debounce to avoid false positives
   if (offset == offsetof(vehicle_state_t, blindspot_left) ||
       offset == offsetof(vehicle_state_t, blindspot_left_alert) ||
       offset == offsetof(vehicle_state_t, blindspot_right) ||
       offset == offsetof(vehicle_state_t, blindspot_right_alert)) {
-    return 200 * 1000ULL;
+    return 500 * 1000ULL;
   }
 
   // Turn signals: 10ms debounce to smooth transitions
   if (offset == offsetof(vehicle_state_t, turn_left) ||
       offset == offsetof(vehicle_state_t, turn_right)) {
     return 10 * 1000ULL;
+  }
+
+  if (offset == offsetof(vehicle_state_t, autopilot) ||
+      offset == offsetof(vehicle_state_t, turn_right)) {
+    return 1000 * 1000ULL;
   }
 
   return DEFAULT_DEBOUNCE_US; // 0 by default (no debounce)
@@ -197,23 +202,31 @@ static void IRAM_ATTR recompute_blindspot_alert(vehicle_state_t *state) {
   if (!state)
     return;
 
+  // OPTIMIZATION: Pre-compute shared condition
+  bool is_reverse = (state->gear == 2);
+
   if(state->blindspot_left) {
-    if(state->gear == 2) { // Reverse
-      UPDATE_AND_SEND_U8(state->blindspot_left_alert, s_blindspotLeftCm < 200 && s_blindspotLeftCm > 1 ? 1 : 0, state);
+    uint8_t new_alert;
+    if(is_reverse) {
+      new_alert = (s_blindspotLeftCm < 200 && s_blindspotLeftCm > 1) ? 1 : 0;
     } else if(state->turn_left) {
-      UPDATE_AND_SEND_U8(state->blindspot_left_alert, s_blindspotLeftCm < 250 && s_blindspotLeftCm > 1 ? 1 : 0, state);
+      new_alert = (s_blindspotLeftCm < 250 && s_blindspotLeftCm > 1) ? 1 : 0;
     } else {
-      UPDATE_AND_SEND_U8(state->blindspot_left_alert, 0, state);
+      new_alert = 0;
     }
+    UPDATE_AND_SEND_U8(state->blindspot_left_alert, new_alert, state);
   }
+
   if(state->blindspot_right) {
-    if(state->gear == 2) { // Reverse
-      UPDATE_AND_SEND_U8(state->blindspot_right_alert, s_blindspotRightCm < 200 && s_blindspotRightCm > 1 ? 1 : 0, state);
+    uint8_t new_alert;
+    if(is_reverse) {
+      new_alert = (s_blindspotRightCm < 200 && s_blindspotRightCm > 1) ? 1 : 0;
     } else if(state->turn_right) {
-      UPDATE_AND_SEND_U8(state->blindspot_right_alert, s_blindspotRightCm < 250 && s_blindspotRightCm > 1 ? 1 : 0, state);
+      new_alert = (s_blindspotRightCm < 250 && s_blindspotRightCm > 1) ? 1 : 0;
     } else {
-      UPDATE_AND_SEND_U8(state->blindspot_right_alert, 0, state);
-    }    
+      new_alert = 0;
+    }
+    UPDATE_AND_SEND_U8(state->blindspot_right_alert, new_alert, state);
   }
 }
 
@@ -600,7 +613,7 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
     }
 
     if (id == 0x368) {
-      if(strcmp(name, "") == 0) {
+      if(strcmp(name, "DI_cruiseState") == 0) {
         /*
         2 "ENABLED" 
         5 "FAULT" 
