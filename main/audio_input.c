@@ -17,6 +17,7 @@ static bool enabled                      = false;
 // Note: fft_enabled now lives in current_config.fft_enabled
 static i2s_chan_handle_t rx_handle       = NULL;
 static TaskHandle_t audio_task_handle    = NULL;
+static TaskHandle_t fft_task_handle      = NULL;
 
 // Configuration
 static audio_config_t current_config     = {.enabled = false, .sensitivity = 128, .gain = 128, .auto_gain = true, .fft_enabled = false};
@@ -49,6 +50,17 @@ static bool fft_data_ready               = false;
 static int32_t audio_buffer[AUDIO_BUFFER_SIZE];
 static float fft_output[AUDIO_FFT_SIZE]; // To store FFT magnitudes
 
+// Pre-computed Hann window coefficients (eliminates AUDIO_FFT_SIZE cosf() calls per FFT)
+static float hann_window[AUDIO_FFT_SIZE];
+
+// FFT task queue: holds pointers to audio samples for async FFT computation
+#define FFT_QUEUE_LENGTH 2
+static QueueHandle_t fft_queue           = NULL;
+typedef struct {
+  int32_t samples[AUDIO_FFT_SIZE]; // 256 samples for LED-optimized FFT
+  int num_samples;
+} fft_queue_item_t; // Allocated on heap (~1KB per item)
+
 // Variables for BPM detection
 static float bpm_history[AUDIO_BPM_HISTORY_SIZE] = {0};
 static uint8_t bpm_history_index                 = 0;
@@ -59,6 +71,7 @@ static uint8_t energy_index                      = 0;
 // Forward declarations for FFT functions
 static void compute_fft_magnitude(int32_t *audio_samples, int num_samples);
 static void group_fft_into_bands(audio_fft_data_t *fft_data);
+static void init_hann_window(void);
 // Calibration helpers
 static void calibration_reset_state(uint32_t duration_ms);
 static void calibration_process_sample(float amplitude);
@@ -242,6 +255,32 @@ static float calculate_bpm(uint32_t current_time_ms) {
   return avg_bpm;
 }
 
+// FFT processing task (lower priority to avoid blocking audio)
+static void fft_task(void *pvParameters) {
+  ESP_LOGI(TAG_AUDIO, "FFT task started (priority 3, 25Hz update for LED animations)");
+
+  fft_queue_item_t *item = NULL;
+
+  while (1) {
+    // Wait for audio samples pointer from the queue (with timeout to avoid watchdog)
+    if (xQueueReceive(fft_queue, &item, pdMS_TO_TICKS(100)) == pdTRUE) {
+      if (item != NULL) {
+        // Compute FFT magnitude and group into bands
+        compute_fft_magnitude(item->samples, item->num_samples);
+        group_fft_into_bands(&current_fft_data);
+        fft_data_ready = true;
+
+        // Free the allocated memory
+        free(item);
+        item = NULL;
+      }
+    }
+    // Throttle FFT to 25Hz for LED animations (40ms period)
+    // LEDs don't need high-frequency updates - saves CPU
+    vTaskDelay(pdMS_TO_TICKS(40));
+  }
+}
+
 // Audio processing task
 static void audio_task(void *pvParameters) {
   ESP_LOGI(TAG_AUDIO, "Audio task started");
@@ -326,11 +365,23 @@ static void audio_task(void *pvParameters) {
 
     audio_data_ready                        = true;
 
-    // If FFT enabled, compute the FFT spectrum
-    if (current_config.fft_enabled) {
-      compute_fft_magnitude(audio_buffer, samples);
-      group_fft_into_bands(&current_fft_data);
-      fft_data_ready = true;
+    // If FFT enabled, send audio samples to FFT task (non-blocking)
+    if (current_config.fft_enabled && fft_queue != NULL) {
+      // Allocate on heap to avoid stack overflow (item is ~1KB, optimized for LEDs)
+      fft_queue_item_t *item = (fft_queue_item_t *)malloc(sizeof(fft_queue_item_t));
+      if (item != NULL) {
+        // Copy only the samples needed for FFT (256 for LED animations)
+        int fft_samples = samples < AUDIO_FFT_SIZE ? samples : AUDIO_FFT_SIZE;
+        item->num_samples = fft_samples;
+        memcpy(item->samples, audio_buffer, fft_samples * sizeof(int32_t));
+
+        // Try to send to queue (non-blocking to avoid delaying audio)
+        if (xQueueSend(fft_queue, &item, 0) != pdTRUE) {
+          // Queue full, skip this FFT frame and free memory
+          free(item);
+        }
+        // Note: FFT task will free the item after processing
+      }
     }
 
     // Small delay to avoid saturating the CPU
@@ -387,10 +438,37 @@ bool audio_input_init(void) {
     return false;
   }
 
-  // Create the audio processing task
+  // Pre-compute Hann window coefficients (one-time initialization)
+  init_hann_window();
+
+  // Create FFT queue for async FFT processing (stores pointers, not full structures)
+  fft_queue = xQueueCreate(FFT_QUEUE_LENGTH, sizeof(fft_queue_item_t *));
+  if (fft_queue == NULL) {
+    ESP_LOGE(TAG_AUDIO, "Error creating FFT queue");
+    i2s_del_channel(rx_handle);
+    rx_handle = NULL;
+    return false;
+  }
+
+  // Create the FFT processing task (priority 3 - lower than audio)
+  BaseType_t fft_task_ret = xTaskCreate(fft_task, "fft_task", 6144, NULL, 3, &fft_task_handle);
+  if (fft_task_ret != pdPASS) {
+    ESP_LOGE(TAG_AUDIO, "Error creating FFT task");
+    vQueueDelete(fft_queue);
+    fft_queue = NULL;
+    i2s_del_channel(rx_handle);
+    rx_handle = NULL;
+    return false;
+  }
+
+  // Create the audio processing task (priority 5 - higher than FFT)
   BaseType_t task_ret = xTaskCreate(audio_task, "audio_task", 4096, NULL, 5, &audio_task_handle);
   if (task_ret != pdPASS) {
     ESP_LOGE(TAG_AUDIO, "Error creating audio task");
+    vTaskDelete(fft_task_handle);
+    fft_task_handle = NULL;
+    vQueueDelete(fft_queue);
+    fft_queue = NULL;
     i2s_del_channel(rx_handle);
     rx_handle = NULL;
     return false;
@@ -417,6 +495,16 @@ void audio_input_deinit(void) {
   if (audio_task_handle != NULL) {
     vTaskDelete(audio_task_handle);
     audio_task_handle = NULL;
+  }
+
+  if (fft_task_handle != NULL) {
+    vTaskDelete(fft_task_handle);
+    fft_task_handle = NULL;
+  }
+
+  if (fft_queue != NULL) {
+    vQueueDelete(fft_queue);
+    fft_queue = NULL;
   }
 
   if (rx_handle != NULL) {
@@ -649,6 +737,14 @@ void audio_input_get_calibration(audio_calibration_t *out_calibration) {
 // FFT IMPLEMENTATION (Cooley-Tukey radix-2 DIT)
 // ============================================================================
 
+// Initialize pre-computed Hann window coefficients (called once during init)
+static void init_hann_window(void) {
+  for (int i = 0; i < AUDIO_FFT_SIZE; i++) {
+    hann_window[i] = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (AUDIO_FFT_SIZE - 1)));
+  }
+  ESP_LOGI(TAG_AUDIO, "Hann window pre-computed (%d samples, optimized for LED animations)", AUDIO_FFT_SIZE);
+}
+
 // FFT radix-2 in-place (Cooley-Tukey algorithm)
 // data contains [real0, imag0, real1, imag1, ...]
 static void fft_radix2(float *data, int size, bool inverse) {
@@ -739,10 +835,9 @@ static void compute_fft_magnitude(int32_t *audio_samples, int num_samples) {
     fft_complex[i * 2 + 1] = 0.0f;
   }
 
-  // Apply Hann window to reduce spectral leakage
+  // Apply pre-computed Hann window to reduce spectral leakage
   for (int i = 0; i < AUDIO_FFT_SIZE; i++) {
-    float multiplier = 0.5f * (1.0f - cosf(2.0f * M_PI * i / (AUDIO_FFT_SIZE - 1)));
-    fft_complex[i * 2] *= multiplier;
+    fft_complex[i * 2] *= hann_window[i];
   }
 
   // Compute the FFT
@@ -902,11 +997,21 @@ void audio_input_set_fft_enabled(bool enable) {
   current_config.fft_enabled = enable;
 
   if (enable) {
-    ESP_LOGI(TAG_AUDIO, "FFT mode enabled (cost: ~20KB RAM, ~20%% CPU)");
+    ESP_LOGI(TAG_AUDIO, "FFT mode enabled (async task, priority 3)");
   } else {
     ESP_LOGI(TAG_AUDIO, "FFT mode disabled");
     fft_data_ready = false;
     memset(&current_fft_data, 0, sizeof(audio_fft_data_t));
+
+    // Flush FFT queue and free any pending items to avoid memory leaks
+    if (fft_queue != NULL) {
+      fft_queue_item_t *item = NULL;
+      while (xQueueReceive(fft_queue, &item, 0) == pdTRUE) {
+        if (item != NULL) {
+          free(item);
+        }
+      }
+    }
   }
 }
 

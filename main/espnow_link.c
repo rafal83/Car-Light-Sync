@@ -65,6 +65,7 @@ static espnow_test_rx_cb_t s_test_rx_cb = NULL;
 static uint64_t s_last_peer_hb_us       = 0;
 static esp_timer_handle_t s_discovery_timer = NULL;
 static int s_discovery_retries = 0;
+static uint64_t s_next_discovery_interval_us = 2000000; // Start at 2s, exponential backoff
 static bool s_broadcast_peer_added = false;
 static bool s_slave_pairing_active = false;
 static uint64_t s_last_test_rx_us = 0;
@@ -462,7 +463,7 @@ static void espnow_send_discovery_request(void *arg) {
     status_manager_update_led_now();
     return;
   }
-  
+
   if (s_discovery_retries * 2 > DISCOVERY_TIMEOUT_S) {
     esp_timer_stop(s_discovery_timer);
     ESP_LOGW(TAG_ESP_NOW, "Slave discovery timed out, no master found");
@@ -483,6 +484,19 @@ static void espnow_send_discovery_request(void *arg) {
   esp_err_t err = esp_now_send(bcast, (uint8_t *)&req, payload_len);
   if (err != ESP_OK) {
     ESP_LOGW(TAG_ESP_NOW, "esp_now_send discovery failed: %s", esp_err_to_name(err));
+  }
+
+  // Exponential backoff: double the interval (max 16s)
+  s_next_discovery_interval_us *= 2;
+  if (s_next_discovery_interval_us > 16000000) {
+    s_next_discovery_interval_us = 16000000; // Cap at 16s
+  }
+
+  // Reprogram timer with new interval (one-shot)
+  esp_timer_stop(s_discovery_timer);
+  esp_err_t start_err = esp_timer_start_once(s_discovery_timer, s_next_discovery_interval_us);
+  if (start_err != ESP_OK) {
+    ESP_LOGW(TAG_ESP_NOW, "Failed to restart discovery timer: %s", esp_err_to_name(start_err));
   }
 }
 
@@ -639,16 +653,15 @@ esp_err_t espnow_link_trigger_slave_pairing(void) {
     esp_wifi_get_channel(&primary_channel, &second_channel);
 
     s_discovery_retries = 0;
+    s_next_discovery_interval_us = 2000000; // Reset to 2s
     s_slave_pairing_active = true;
     status_led_set_state(STATUS_LED_ESPNOW_PAIRING);
 
-    // Start broadcasting immediately, then every 2 seconds
+    // Start broadcasting immediately, then use exponential backoff (2s, 4s, 8s, 16s)
     espnow_send_discovery_request(NULL);
-    esp_err_t start_err = esp_timer_start_periodic(s_discovery_timer, 2000000);
-    if (start_err != ESP_OK) {
-      s_slave_pairing_active = false;
-    }
-    return start_err;
+
+    // No need to start timer here, espnow_send_discovery_request will schedule next retry
+    return ESP_OK;
 }
 
 esp_err_t espnow_link_register_peer(const uint8_t mac[6]) {

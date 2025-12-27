@@ -22,6 +22,10 @@
 static system_settings_t s_settings;
 static bool s_settings_loaded = false;
 
+// Batch mode: defer saves until explicit commit
+static bool s_batch_mode = false;
+static bool s_batch_dirty = false;
+
 // Default values
 static const system_settings_t DEFAULT_SETTINGS = {
     .active_profile_id = -1,
@@ -175,6 +179,13 @@ esp_err_t settings_set_i32(const char *key, int32_t value) {
 
   if (strcmp(key, "active_profile_id") == 0) {
     s_settings.active_profile_id = value;
+
+    // In batch mode, defer save
+    if (s_batch_mode) {
+      s_batch_dirty = true;
+      return ESP_OK;
+    }
+
     return settings_manager_save(&s_settings);
   }
 
@@ -212,6 +223,12 @@ esp_err_t settings_set_u8(const char *key, uint8_t value) {
     return ESP_ERR_NOT_FOUND;
   }
 
+  // In batch mode, defer save
+  if (s_batch_mode) {
+    s_batch_dirty = true;
+    return ESP_OK;
+  }
+
   return settings_manager_save(&s_settings);
 }
 
@@ -234,6 +251,13 @@ esp_err_t settings_set_u16(const char *key, uint16_t value) {
 
   if (strcmp(key, "led_count") == 0) {
     s_settings.led_count = value;
+
+    // In batch mode, defer save
+    if (s_batch_mode) {
+      s_batch_dirty = true;
+      return ESP_OK;
+    }
+
     return settings_manager_save(&s_settings);
   }
 
@@ -271,6 +295,12 @@ esp_err_t settings_set_bool(const char *key, bool value) {
     return ESP_ERR_NOT_FOUND;
   }
 
+  // In batch mode, defer save
+  if (s_batch_mode) {
+    s_batch_dirty = true;
+    return ESP_OK;
+  }
+
   return settings_manager_save(&s_settings);
 }
 
@@ -284,4 +314,39 @@ esp_err_t settings_manager_clear(void) {
   }
 
   return err;
+}
+
+void settings_begin_batch(void) {
+  s_batch_mode = true;
+  s_batch_dirty = false;
+  ESP_LOGD(TAG_SETTINGS, "Batch mode started (saves deferred)");
+}
+
+esp_err_t settings_commit_batch(void) {
+  if (!s_batch_mode) {
+    ESP_LOGW(TAG_SETTINGS, "Commit called but not in batch mode");
+    return ESP_ERR_INVALID_STATE;
+  }
+
+  s_batch_mode = false;
+
+  if (!s_batch_dirty) {
+    ESP_LOGD(TAG_SETTINGS, "No changes to commit");
+    return ESP_OK;
+  }
+
+  s_batch_dirty = false;
+  esp_err_t err = settings_manager_save(&s_settings);
+
+  if (err == ESP_OK) {
+    ESP_LOGI(TAG_SETTINGS, "Batch committed to SPIFFS");
+  } else {
+    ESP_LOGE(TAG_SETTINGS, "Batch commit failed (err=%s)", esp_err_to_name(err));
+  }
+
+  return err;
+}
+
+bool settings_is_batch_mode(void) {
+  return s_batch_mode;
 }

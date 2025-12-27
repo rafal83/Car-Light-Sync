@@ -17,7 +17,7 @@
 #define AUDIO_DMA_BUFFER_COUNT 2      // Number of DMA buffers
 
 // Audio processing parameters
-#define AUDIO_FFT_SIZE 512
+#define AUDIO_FFT_SIZE 256 // Reduced from 512 for LED animations (sufficient for 16 bands)
 #define AUDIO_FFT_BANDS 16 // Number of FFT bands (power of 2)
 #define AUDIO_BPM_MIN 60
 #define AUDIO_BPM_MAX 180
@@ -165,7 +165,8 @@ bool audio_input_get_fft_data(audio_fft_data_t *fft_data);
 /**
  * @brief Enables/disables advanced FFT mode
  * @param enable true to enable FFT
- * @note FFT consumes more CPU (~20%) and RAM (~20KB)
+ * @note FFT optimized for LED animations: 256-point FFT @ 25Hz
+ *       Consumes ~10% CPU and ~3KB RAM (reduced from 512pt @ 50Hz)
  */
 void audio_input_set_fft_enabled(bool enable);
 

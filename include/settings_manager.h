@@ -97,4 +97,22 @@ esp_err_t settings_set_bool(const char *key, bool value);
  */
 esp_err_t settings_manager_clear(void);
 
+/**
+ * @brief Begins a batch update session (defers saves until commit)
+ * @note Improves performance when updating multiple settings
+ */
+void settings_begin_batch(void);
+
+/**
+ * @brief Commits all pending batch changes to SPIFFS
+ * @return ESP_OK if successful
+ */
+esp_err_t settings_commit_batch(void);
+
+/**
+ * @brief Checks if currently in batch mode
+ * @return true if batch mode is active
+ */
+bool settings_is_batch_mode(void);
+
 #endif // SETTINGS_MANAGER_H

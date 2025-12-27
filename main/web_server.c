@@ -2515,7 +2515,8 @@ esp_err_t web_server_start(void) {
   config.server_port      = WEB_SERVER_PORT;
   config.max_uri_handlers = HTTP_MAX_URI_HANDLERS;
   config.max_open_sockets = HTTP_MAX_OPEN_SOCKETS;
-  config.lru_purge_enable = true; 
+  config.lru_purge_enable = true;
+  config.stack_size       = 6144;    // Increased from default 4096 to avoid stack overflow
   // config.core_id          = 1;    // Serveur web sur core 1 (WiFi sur core 0)
 
   ESP_LOGI(TAG_WEBSERVER, "Web server started on port %d", config.server_port);

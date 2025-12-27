@@ -66,6 +66,11 @@ static config_profile_t active_profile;
 static int active_profile_id             = -1;
 static bool active_profile_loaded        = false;
 
+// Profile ID registry for O(1) profile existence checks (128 bytes for 1000 profiles)
+#define PROFILE_REGISTRY_SIZE ((MAX_PROFILE_SCAN_LIMIT + 7) / 8) // Bitmap: 100 profiles = 13 bytes
+static uint8_t profile_registry[PROFILE_REGISTRY_SIZE] = {0};
+static bool profile_registry_initialized = false;
+
 // Steering wheel control (opt-in)
 static bool wheel_control_enabled        = false;
 static uint8_t wheel_control_speed_limit = 5; // km/h
@@ -88,6 +93,42 @@ static bool effect_override_active = false;
 static led_rgb_t composed_buffer[MAX_LED_COUNT];
 static led_rgb_t temp_buffer[MAX_LED_COUNT];
 static uint8_t priority_buffer[MAX_LED_COUNT];
+
+// Profile registry helper functions for O(1) lookup
+static inline void profile_registry_set(uint16_t profile_id) {
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return;
+  profile_registry[profile_id / 8] |= (1 << (profile_id % 8));
+}
+
+static inline void profile_registry_clear(uint16_t profile_id) {
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return;
+  profile_registry[profile_id / 8] &= ~(1 << (profile_id % 8));
+}
+
+static inline bool profile_registry_exists(uint16_t profile_id) {
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return false;
+  return (profile_registry[profile_id / 8] & (1 << (profile_id % 8))) != 0;
+}
+
+static void profile_registry_rebuild(void) {
+  memset(profile_registry, 0, PROFILE_REGISTRY_SIZE);
+
+  // Scan all possible profile IDs once to build the registry
+  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
+    char path[64];
+    snprintf(path, sizeof(path), "/spiffs/profiles/%d.bin", i);
+
+    // Check if file exists (lightweight check)
+    FILE *f = fopen(path, "rb");
+    if (f != NULL) {
+      fclose(f);
+      profile_registry_set(i);
+    }
+  }
+
+  profile_registry_initialized = true;
+  ESP_LOGI(TAG_CONFIG, "Profile registry built");
+}
 
 static void load_wheel_control_settings(void) {
   uint8_t enabled_u8        = settings_get_bool("wheel_control_enabled", 0);
@@ -112,6 +153,9 @@ bool config_manager_init(void) {
     ESP_LOGE(TAG_CONFIG, "Temporary profile allocation error");
     return false;
   }
+
+  // Build profile registry for O(1) existence checks
+  profile_registry_rebuild();
 
   // Load steering wheel control settings (opt-in)
   load_wheel_control_settings();
@@ -211,6 +255,10 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
 
   ESP_LOGI(TAG_CONFIG, "Profile %d saved (binary, %d bytes): %s", profile_id, sizeof(profile_file_t), profile->name);
   free(file_data);
+
+  // Update registry
+  profile_registry_set(profile_id);
+
   return true;
 }
 
@@ -328,9 +376,13 @@ bool config_manager_delete_profile(uint16_t profile_id) {
     return false;
   }
 
-  // Scan all profiles to check dependencies
+  // Use registry to scan only existing profiles (O(1) existence check)
   for (int p = 0; p < MAX_PROFILE_SCAN_LIMIT; p++) {
     if (p == profile_id)
+      continue;
+
+    // Skip non-existent profiles using registry
+    if (!profile_registry_exists(p))
       continue;
 
     if (config_manager_load_profile(p, temp_profile)) {
@@ -358,10 +410,14 @@ bool config_manager_delete_profile(uint16_t profile_id) {
     active_profile_id     = -1;
     active_profile_loaded = false;
 
-    // Dynamically scan all profiles
+    // Use registry to find next available profile
     config_profile_t *search_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
     if (search_profile != NULL) {
       for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
+        // Skip non-existent profiles using registry
+        if (!profile_registry_exists(i))
+          continue;
+
         if (config_manager_load_profile(i, search_profile)) {
           memcpy(&active_profile, search_profile, sizeof(config_profile_t));
           active_profile_id     = i;
@@ -382,6 +438,10 @@ bool config_manager_delete_profile(uint16_t profile_id) {
   }
 
   ESP_LOGI(TAG_CONFIG, "Profile %d deleted successfully from SPIFFS", profile_id);
+
+  // Update registry
+  profile_registry_clear(profile_id);
+
   return true;
 }
 
@@ -535,12 +595,19 @@ int config_manager_list_profiles(config_profile_t *profile_list, int max_profile
     return 0;
   }
 
+  // Rebuild registry if not initialized
+  if (!profile_registry_initialized) {
+    profile_registry_rebuild();
+  }
+
   int count = 0;
 
-  // Dynamically scan all profiles SPIFFS
+  // Use registry for O(1) existence check instead of O(n) file reads
   for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT && count < max_profiles; i++) {
-    if (config_manager_load_profile(i, &profile_list[count])) {
-      count++;
+    if (profile_registry_exists(i)) {
+      if (config_manager_load_profile(i, &profile_list[count])) {
+        count++;
+      }
     }
   }
 
