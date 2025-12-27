@@ -67,6 +67,7 @@ typedef struct {
   float soc_percent;      // battery level (%)
   float pack_energy;
   float remaining_energy;
+  float buffer_energy;
   uint8_t charging_cable; // 0/1
   uint8_t charging;       // 0/1
   uint8_t charge_status;

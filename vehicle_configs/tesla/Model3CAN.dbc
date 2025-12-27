@@ -2608,23 +2608,16 @@ BO_ 280 ID118DriveSystemStatus: 8 VehicleBus
  SG_ DI_trackModeState : 48|2@1+ (1,0) [0|2] ""  Receiver
  SG_ DI_tractionControlMode : 40|3@1+ (1,0) [0|6] ""  Receiver
 
+
 BO_ 850 ID352_BMS_EnergyStatusMux: 8 VehicleBus
- SG_ MUX M : 0|8@1+ (1,0) [0|255] "" Receiver
-
- SG_ BMS_packEnergy_kWh        m0 : 16|16@1+ (0.025,0) [0|200] "kWh" Receiver
- SG_ BMS_remainingEnergy_kWh   m0 : 32|16@1+ (0.025,0) [0|200] "kWh" Receiver
- SG_ BMS_usableEnergy_kWh      m0 : 48|16@1+ (0.025,0) [0|200] "kWh" Receiver
-
- SG_ BMS_bufferLow_kWh         m1 : 16|16@1+ (0.025,0) [0|50] "kWh" Receiver
- SG_ BMS_remainingEnergy2_kWh  m1 : 32|16@1+ (0.025,0) [0|200] "kWh" Receiver
- SG_ BMS_bufferHigh_kWh        m1 : 48|16@1+ (0.025,0) [0|50] "kWh" Receiver
-
- SG_ BMS_remainingEnergy3_kWh  m2 : 8|16@1+  (0.025,0) [0|200] "kWh" Receiver
- SG_ BMS_usableEnergy2_kWh     m2 : 24|16@1+ (0.025,0) [0|200] "kWh" Receiver
-
- SG_ BMS_packParam_const       m2 : 40|8@1+  (1,0) [0|255] "" Receiver
- SG_ BMS_status_counter        m2 : 48|8@1+  (1,0) [0|255] "" Receiver
- SG_ BMS_checksum              m2 : 56|8@1+  (1,0) [0|255] "" Receiver
+ SG_ BMS_energyStatusIndex M : 0|2@1+ (1,0) [0|0] "" Receiver
+ SG_ BMS_nominalFullPackEnergy m0 : 16|16@1+ (0.02,0) [0|0] "kWh" Receiver
+ SG_ BMS_nominalEnergyRemaining m0 : 32|16@1+ (0.02,0) [0|0] "kWh" Receiver
+ SG_ BMS_idealEnergyRemaining m0 : 48|16@1+ (0.02,0) [0|0] "kWh" Receiver
+ SG_ BMS_fullyCharged m1 : 15|1@1+ (1,0) [0|1] "" Receiver
+ SG_ BMS_energyBuffer m1 : 16|16@1+ (0.01,0) [0|0] "kWh" Receiver
+ SG_ BMS_expectedEnergyRemaining m1 : 32|16@1+ (0.02,0) [0|0] "kWh" Receiver
+ SG_ BMS_energyToChargeComplete m1 : 48|16@1+ (0.02,0) [0|0] "kWh" Receiver
 
 BO_ 872 ID368DI_state: 8 VehicleBus
  SG_ DI_systemState : 0|3@1+ (1,0) [0|0] ""  Receiver

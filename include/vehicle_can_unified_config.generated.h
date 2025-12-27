@@ -6,7 +6,7 @@
 
 #include "vehicle_can_unified_config.h"
 
-// Signaux pour signals_MSG_ID102VCLEFT_doorStatus
+// Signals for signals_MSG_ID102VCLEFT_doorStatus
 static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
     {
         .name       = "VCLEFT_frontLatchStatus",
@@ -230,7 +230,7 @@ static const can_signal_def_t signals_MSG_ID102VCLEFT_doorStatus[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID103VCRIGHT_doorStatus
+// Signals for signals_MSG_ID103VCRIGHT_doorStatus
 static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
     {
         .name       = "VCRIGHT_frontLatchStatus",
@@ -465,7 +465,7 @@ static const can_signal_def_t signals_MSG_ID103VCRIGHT_doorStatus[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID20EPARK_sdiFront
+// Signals for signals_MSG_ID20EPARK_sdiFront
 static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
     {
         .name       = "PARK_sdiSensor1RawDistData",
@@ -557,7 +557,7 @@ static const can_signal_def_t signals_MSG_ID20EPARK_sdiFront[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID204PCS_chgStatus
+// Signals for signals_MSG_ID204PCS_chgStatus
 static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
     {
         .name       = "PCS_chgMainState",
@@ -715,7 +715,7 @@ static const can_signal_def_t signals_MSG_ID204PCS_chgStatus[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID273UI_vehicleControl
+// Signals for signals_MSG_ID273UI_vehicleControl
 static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
     {
         .name       = "UI_accessoryPowerRequest",
@@ -1137,7 +1137,7 @@ static const can_signal_def_t signals_MSG_ID273UI_vehicleControl[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID22EPARK_sdiRear
+// Signals for signals_MSG_ID22EPARK_sdiRear
 static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
     {
         .name       = "PARK_sdiSensor7RawDistData",
@@ -1229,7 +1229,7 @@ static const can_signal_def_t signals_MSG_ID22EPARK_sdiRear[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID25DCP_status
+// Signals for signals_MSG_ID25DCP_status
 static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
     {
         .name       = "CP_type",
@@ -1552,7 +1552,7 @@ static const can_signal_def_t signals_MSG_ID25DCP_status[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID399DAS_status
+// Signals for signals_MSG_ID399DAS_status
 static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
     {
         .name       = "DAS_autopilotState",
@@ -1842,7 +1842,7 @@ static const can_signal_def_t signals_MSG_ID399DAS_status[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID39DIBST_status
+// Signals for signals_MSG_ID39DIBST_status
 static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
     {
         .name       = "IBST_statusChecksum",
@@ -1912,7 +1912,7 @@ static const can_signal_def_t signals_MSG_ID39DIBST_status[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID3F3UI_odo
+// Signals for signals_MSG_ID3F3UI_odo
 static const can_signal_def_t signals_MSG_ID3F3UI_odo[] = {
     {
         .name       = "UI_odometer",
@@ -1927,7 +1927,7 @@ static const can_signal_def_t signals_MSG_ID3F3UI_odo[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID3F5VCFRONT_lighting
+// Signals for signals_MSG_ID3F5VCFRONT_lighting
 static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
     {
         .name       = "VCFRONT_indicatorLeftRequest",
@@ -2239,7 +2239,7 @@ static const can_signal_def_t signals_MSG_ID3F5VCFRONT_lighting[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID212BMS_status
+// Signals for signals_MSG_ID212BMS_status
 static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
     {
         .name       = "BMS_hvacPowerRequest",
@@ -2485,7 +2485,7 @@ static const can_signal_def_t signals_MSG_ID212BMS_status[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID334UI_powertrainControl
+// Signals for signals_MSG_ID334UI_powertrainControl
 static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
     {
         .name       = "UI_systemPowerLimit",
@@ -2643,7 +2643,7 @@ static const can_signal_def_t signals_MSG_ID334UI_powertrainControl[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID284UIvehicleModes
+// Signals for signals_MSG_ID284UIvehicleModes
 static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
     {
         .name       = "UIfactoryMode284",
@@ -2779,7 +2779,7 @@ static const can_signal_def_t signals_MSG_ID284UIvehicleModes[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID2E1VCFRONT_status
+// Signals for signals_MSG_ID2E1VCFRONT_status
 static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
     {
         .name       = "VCFRONT_statusIndex",
@@ -3597,7 +3597,7 @@ static const can_signal_def_t signals_MSG_ID2E1VCFRONT_status[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID3C2VCLEFT_switchStatus
+// Signals for signals_MSG_ID3C2VCLEFT_switchStatus
 static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
     {
         .name       = "VCLEFT_switchStatusIndex",
@@ -4272,7 +4272,7 @@ static const can_signal_def_t signals_MSG_ID3C2VCLEFT_switchStatus[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID261_12vBattStatus
+// Signals for signals_MSG_ID261_12vBattStatus
 static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
     {
         .name       = "VCFRONT_12VBatteryStatusIndex",
@@ -4595,7 +4595,7 @@ static const can_signal_def_t signals_MSG_ID261_12vBattStatus[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID118DriveSystemStatus
+// Signals for signals_MSG_ID118DriveSystemStatus
 static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
     {
         .name       = "DI_systemStatusChecksum",
@@ -4753,12 +4753,12 @@ static const can_signal_def_t signals_MSG_ID118DriveSystemStatus[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID352_BMS_EnergyStatusMux
+// Signals for signals_MSG_ID352_BMS_EnergyStatusMux
 static const can_signal_def_t signals_MSG_ID352_BMS_EnergyStatusMux[] = {
     {
-        .name       = "MUX",
+        .name       = "BMS_energyStatusIndex",
         .start_bit  = 0,
-        .length     = 8,
+        .length     = 2,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
         .factor     = 1.000000f,
@@ -4767,129 +4767,85 @@ static const can_signal_def_t signals_MSG_ID352_BMS_EnergyStatusMux[] = {
         .mux_value  = 0,
     },
     {
-        .name       = "BMS_remainingEnergy3_kWh",
-        .start_bit  = 8,
-        .length     = 16,
+        .name       = "BMS_fullyCharged",
+        .start_bit  = 15,
+        .length     = 1,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
+        .value_type = SIGNAL_TYPE_BOOLEAN,
+        .factor     = 1.000000f,
         .offset     = 0.000000f,
         .mux_type   = SIGNAL_MUX_MULTIPLEXED,
-        .mux_value  = 2,
+        .mux_value  = 1,
     },
     {
-        .name       = "BMS_packEnergy_kWh",
+        .name       = "BMS_nominalFullPackEnergy",
         .start_bit  = 16,
         .length     = 16,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
+        .factor     = 0.020000f,
         .offset     = 0.000000f,
         .mux_type   = SIGNAL_MUX_MULTIPLEXED,
         .mux_value  = 0,
     },
     {
-        .name       = "BMS_bufferLow_kWh",
+        .name       = "BMS_energyBuffer",
         .start_bit  = 16,
         .length     = 16,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
+        .factor     = 0.010000f,
         .offset     = 0.000000f,
         .mux_type   = SIGNAL_MUX_MULTIPLEXED,
         .mux_value  = 1,
     },
     {
-        .name       = "BMS_usableEnergy2_kWh",
-        .start_bit  = 24,
-        .length     = 16,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
-        .offset     = 0.000000f,
-        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
-        .mux_value  = 2,
-    },
-    {
-        .name       = "BMS_remainingEnergy_kWh",
+        .name       = "BMS_nominalEnergyRemaining",
         .start_bit  = 32,
         .length     = 16,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
+        .factor     = 0.020000f,
         .offset     = 0.000000f,
         .mux_type   = SIGNAL_MUX_MULTIPLEXED,
         .mux_value  = 0,
     },
     {
-        .name       = "BMS_remainingEnergy2_kWh",
+        .name       = "BMS_expectedEnergyRemaining",
         .start_bit  = 32,
         .length     = 16,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
+        .factor     = 0.020000f,
         .offset     = 0.000000f,
         .mux_type   = SIGNAL_MUX_MULTIPLEXED,
         .mux_value  = 1,
     },
     {
-        .name       = "BMS_packParam_const",
-        .start_bit  = 40,
-        .length     = 8,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 1.000000f,
-        .offset     = 0.000000f,
-        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
-        .mux_value  = 2,
-    },
-    {
-        .name       = "BMS_usableEnergy_kWh",
+        .name       = "BMS_idealEnergyRemaining",
         .start_bit  = 48,
         .length     = 16,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
+        .factor     = 0.020000f,
         .offset     = 0.000000f,
         .mux_type   = SIGNAL_MUX_MULTIPLEXED,
         .mux_value  = 0,
     },
     {
-        .name       = "BMS_bufferHigh_kWh",
+        .name       = "BMS_energyToChargeComplete",
         .start_bit  = 48,
         .length     = 16,
         .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
         .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 0.025000f,
+        .factor     = 0.020000f,
         .offset     = 0.000000f,
         .mux_type   = SIGNAL_MUX_MULTIPLEXED,
         .mux_value  = 1,
-    },
-    {
-        .name       = "BMS_status_counter",
-        .start_bit  = 48,
-        .length     = 8,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 1.000000f,
-        .offset     = 0.000000f,
-        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
-        .mux_value  = 2,
-    },
-    {
-        .name       = "BMS_checksum",
-        .start_bit  = 56,
-        .length     = 8,
-        .byte_order = BYTE_ORDER_LITTLE_ENDIAN,
-        .value_type = SIGNAL_TYPE_UNSIGNED,
-        .factor     = 1.000000f,
-        .offset     = 0.000000f,
-        .mux_type   = SIGNAL_MUX_MULTIPLEXED,
-        .mux_value  = 2,
     },
 };
 
-// Signaux pour signals_MSG_ID368DI_state
+// Signals for signals_MSG_ID368DI_state
 static const can_signal_def_t signals_MSG_ID368DI_state[] = {
     {
         .name       = "DI_systemState",
@@ -5058,7 +5014,7 @@ static const can_signal_def_t signals_MSG_ID368DI_state[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID252BMS_powerAvailable
+// Signals for signals_MSG_ID252BMS_powerAvailable
 static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
     {
         .name       = "BMS_maxRegenPower",
@@ -5128,7 +5084,7 @@ static const can_signal_def_t signals_MSG_ID252BMS_powerAvailable[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID257DIspeed
+// Signals for signals_MSG_ID257DIspeed
 static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
     {
         .name       = "DI_speedChecksum",
@@ -5198,7 +5154,7 @@ static const can_signal_def_t signals_MSG_ID257DIspeed[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID266RearInverterPower
+// Signals for signals_MSG_ID266RearInverterPower
 static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
     {
         .name       = "RearPower266",
@@ -5268,7 +5224,7 @@ static const can_signal_def_t signals_MSG_ID266RearInverterPower[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID2E5FrontInverterPower
+// Signals for signals_MSG_ID2E5FrontInverterPower
 static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
     {
         .name       = "FrontPower2E5",
@@ -5338,7 +5294,7 @@ static const can_signal_def_t signals_MSG_ID2E5FrontInverterPower[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID132HVBattAmpVolt
+// Signals for signals_MSG_ID132HVBattAmpVolt
 static const can_signal_def_t signals_MSG_ID132HVBattAmpVolt[] = {
     {
         .name       = "BattVoltage132",
@@ -5386,7 +5342,7 @@ static const can_signal_def_t signals_MSG_ID132HVBattAmpVolt[] = {
     },
 };
 
-// Signaux pour signals_MSG_ID7FFcarConfig
+// Signals for signals_MSG_ID7FFcarConfig
 static const can_signal_def_t signals_MSG_ID7FFcarConfig[] = {
     {
         .name       = "GTW_carConfigMultiplexer",
@@ -6307,7 +6263,7 @@ const can_message_def_t g_can_messages[] = {
         .id           = 0x352,
         .name         = "ID352_BMS_EnergyStatusMux",
         .signals      = signals_MSG_ID352_BMS_EnergyStatusMux,
-        .signal_count = 12,
+        .signal_count = 8,
     },
     {
         .id           = 0x368,

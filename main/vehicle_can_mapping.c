@@ -270,7 +270,7 @@ static void IRAM_ATTR recompute_soc_percent(vehicle_state_t *state) {
     return;
 
   if(state->pack_energy && state->remaining_energy) {
-    UPDATE_AND_SEND_FLOAT(state->soc_percent, state->remaining_energy * 100 / state->pack_energy, state);
+    UPDATE_AND_SEND_FLOAT(state->soc_percent, (state->remaining_energy - state->buffer_energy) * 100 / (state->pack_energy - state->buffer_energy), state);
   }
 }
 
@@ -464,13 +464,18 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
   // SOC
   // ---------------------------------------------------------------------
   if (id == 0x352) {
-    if (strcmp(name, "BMS_packEnergy_kWh") == 0) {
+    if (strcmp(name, "BMS_nominalFullPackEnergy") == 0) {
       UPDATE_AND_SEND_FLOAT(state->pack_energy, value, state);
       recompute_soc_percent(state);
       return;
     }
-    if (strcmp(name, "BMS_remainingEnergy3_kWh") == 0) {
+    if (strcmp(name, "BMS_nominalEnergyRemaining") == 0) {
       UPDATE_AND_SEND_FLOAT(state->remaining_energy, value, state);
+      recompute_soc_percent(state);
+      return;
+    }
+    if (strcmp(name, "BMS_energyBuffer") == 0) {
+      UPDATE_AND_SEND_FLOAT(state->buffer_energy, value, state);
       recompute_soc_percent(state);
       return;
     }
