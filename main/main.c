@@ -335,10 +335,10 @@ static void can_event_task(void *pvParameters) {
     prev = curr;
     curr = temp;
 
-    // Periodic BLE dashboard updates (every 200ms)
-    ble_send_counter++;
-    if (ble_send_counter >= 4) {  // 4 iterations * 50ms = 200ms
-      ble_send_counter = 0;
+    // // Periodic BLE dashboard updates (every 200ms)
+    // ble_send_counter++;
+    // if (ble_send_counter >= 1) {  // 4 iterations * 50ms = 200ms
+    //   ble_send_counter = 0;
 
       // Send current vehicle state to BLE dashboard if connected
       // Use mode-specific packet format based on gear (Drive vs Park)
@@ -402,7 +402,7 @@ static void can_event_task(void *pvParameters) {
       } else {
         config_sended = false;
       }
-    }
+    // }
 
     TickType_t now = xTaskGetTickCount();
     if (vehicle_can_state_dirty_get() && (now - last_state_send_ticks) >= min_state_send_period) {

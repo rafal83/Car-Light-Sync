@@ -617,18 +617,8 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
 
-    if (id == 0x368) {
-      if(strcmp(name, "DI_cruiseState") == 0) {
-        /*
-        2 "ENABLED" 
-        5 "FAULT" 
-        0 "OFF" 
-        4 "OVERRIDE"
-        7 "PRE_CANCEL" 
-        6 "PRE_FAULT" 
-        1 "STANDBY" 
-        3 "STANDSTILL"
-        */
+    if (id == 0x3F8) {
+      if(strcmp(name, "UI_adaptiveSetSpeedEnable") == 0) {
         UPDATE_AND_SEND_U8(state->cruise, value, state);
         return;
       }

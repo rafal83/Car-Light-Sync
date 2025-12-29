@@ -45,7 +45,7 @@ KEEP_MESSAGE_IDS = {
     0x25D,
     0x252,
     0x352,
-    0x368
+    0x3F8
 }
 
 
