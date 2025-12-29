@@ -1,6 +1,6 @@
 /**
- * BleClient simple - Wrapper direct autour du plugin natif BluetoothLe
- * Pas de dépendances, pas d'imports, juste le plugin Capacitor natif
+ * BleClient simple - Direct wrapper around native BluetoothLe plugin
+ * No dependencies, no imports, just the native Capacitor plugin
  */
 
 (function() {
@@ -11,7 +11,7 @@
 
     const plugin = window.Capacitor.Plugins.BluetoothLe;
 
-    // Fonction pour normaliser les UUIDs (comme dans le vrai BleClient)
+    // Function to normalize UUIDs (like in the real BleClient)
     const parseUUID = (uuid) => {
         if (typeof uuid !== 'string') {
             throw new Error(`Invalid UUID type ${typeof uuid}. Expected string.`);
@@ -19,7 +19,7 @@
         return uuid.toLowerCase();
     };
 
-    // Wrapper minimal qui reproduit l'API BleClient
+    // Minimal wrapper that reproduces BleClient API
     window.BleClient = {
         initialize: (options) => plugin.initialize(options),
 
@@ -44,7 +44,7 @@
             characteristic = parseUUID(characteristic);
             return plugin.read({ deviceId, service, characteristic, ...options })
                 .then(result => {
-                    // Convertir hex string en DataView
+                    // Convert hex string to DataView
                     if (typeof result.value === 'string') {
                         const bytes = new Uint8Array(result.value.match(/.{1,2}/g).map(b => parseInt(b, 16)));
                         return new DataView(bytes.buffer);
@@ -57,7 +57,7 @@
             service = parseUUID(service);
             characteristic = parseUUID(characteristic);
 
-            // Convertir DataView en hex string (format attendu par le plugin Android)
+            // Convert DataView to hex string (format expected by Android plugin)
             let bytes;
             if (value instanceof DataView) {
                 bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
@@ -69,7 +69,7 @@
                 bytes = new Uint8Array(value);
             }
             const hexValue = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-            // Placer value en dernier pour eviter d'etre ecrase par options.value
+            // Place value last to avoid being overwritten by options.value
             return plugin.write({ deviceId, service, characteristic, ...options, value: hexValue });
         },
 
@@ -77,7 +77,7 @@
             service = parseUUID(service);
             characteristic = parseUUID(characteristic);
 
-            // Convertir DataView en hex string sans espaces (format attendu par le plugin Android)
+            // Convert DataView to hex string without spaces (format expected by Android plugin)
             let bytes;
             if (value instanceof DataView) {
                 bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
@@ -89,7 +89,7 @@
                 bytes = new Uint8Array(value);
             }
             const hexValue = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-            // Placer value en dernier pour eviter d'etre ecrase par options.value
+            // Place value last to avoid being overwritten by options.value
             return plugin.writeWithoutResponse({ deviceId, service, characteristic, ...options, value: hexValue });
         },
 
@@ -98,9 +98,9 @@
             characteristic = parseUUID(characteristic);
             const key = `notification|${deviceId}|${service}|${characteristic}`;
 
-            // Enregistrer le listener pour les notifications
+            // Register listener for notifications
             plugin.addListener(key, (event) => {
-                // Convertir hex string en DataView
+                // Convert hex string to DataView
                 let dataView;
                 if (typeof event.value === 'string') {
                     const bytes = new Uint8Array(event.value.match(/.{1,2}/g).map(b => parseInt(b, 16)));
@@ -111,7 +111,7 @@
                 callback(dataView);
             });
 
-            // Démarrer les notifications
+            // Start notifications
             return await plugin.startNotifications({ deviceId, service, characteristic, ...options });
         },
 
@@ -122,16 +122,16 @@
         },
 
         requestLEScan: async (options, callback) => {
-            // Le plugin utilise l'événement 'onScanResult' pour les résultats de scan
+            // Plugin uses 'onScanResult' event for scan results
             const key = 'onScanResult';
 
-            // Enregistrer le listener pour les résultats de scan
+            // Register listener for scan results
             plugin.addListener(key, (event) => {
                 console.log('🔍 [BleClient] onScanResult event:', event);
                 callback(event);
             });
 
-            // Démarrer le scan
+            // Start scanning
             return await plugin.requestLEScan(options);
         },
 

@@ -347,6 +347,7 @@ static void can_event_task(void *pvParameters) {
         bool is_drive_mode = (prev->gear == 2 || prev->gear == 3 || prev->gear == 4);
 
         vehicle_state_ble_config_t ble_config_state;
+        memset(&ble_config_state, 0, sizeof(ble_config_state));
         vehicle_state_to_ble_config(prev, &ble_config_state);
         size_t config_compare_size = offsetof(vehicle_state_ble_config_t, last_update_ms);
         TickType_t now_ticks = xTaskGetTickCount();

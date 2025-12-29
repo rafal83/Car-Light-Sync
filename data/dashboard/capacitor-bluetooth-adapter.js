@@ -1,28 +1,28 @@
 /**
  * Capacitor Bluetooth Adapter
  *
- * Ce module adapte l'API Bluetooth native de Capacitor pour qu'elle soit compatible
- * avec le code existant qui utilise Web Bluetooth API (navigator.bluetooth).
+ * This module adapts the native Capacitor Bluetooth API to be compatible
+ * with existing code that uses the Web Bluetooth API (navigator.bluetooth).
  *
- * L'adaptation se fait de manière transparente :
- * - Si on est sur le web : utilise Web Bluetooth API
- * - Si on est sur mobile : utilise Capacitor Bluetooth LE
+ * The adaptation is transparent:
+ * - If on web: uses Web Bluetooth API
+ * - If on mobile: uses Capacitor Bluetooth LE
  */
 
-// Accéder aux objets globaux Capacitor (injectés par le runtime)
+// Access global Capacitor objects (injected by the runtime)
 const Capacitor = window.Capacitor;
 const isNativePlatform = Capacitor?.isNativePlatform() || false;
 
-// Attendre que BleClient soit chargé (depuis le module ES6)
+// Wait for BleClient to be loaded (from ES6 module)
 let BleClient = window.BleClient;
 
-// Fonction helper pour attendre BleClient
+// Helper function to wait for BleClient
 async function waitForBleClient() {
     if (window.BleClient) {
         return window.BleClient;
     }
 
-    // Attendre jusqu'à 5 secondes
+    // Wait up to 5 seconds
     for (let i = 0; i < 50; i++) {
         await new Promise(resolve => setTimeout(resolve, 100));
         if (window.BleClient) {
@@ -33,7 +33,7 @@ async function waitForBleClient() {
     throw new Error('BleClient not loaded after 5 seconds');
 }
 
-// Classe qui simule un BluetoothDevice compatible avec Web Bluetooth API
+// Class that simulates a BluetoothDevice compatible with Web Bluetooth API
 class CapacitorBluetoothDevice {
     constructor(deviceId, name) {
         this.id = deviceId;
@@ -65,7 +65,7 @@ class CapacitorBluetoothDevice {
     }
 }
 
-// Classe qui simule un BluetoothRemoteGATTServer
+// Class that simulates a BluetoothRemoteGATTServer
 class CapacitorBluetoothRemoteGATTServer {
     constructor(deviceId, parentDevice) {
         this.deviceId = deviceId;
@@ -83,7 +83,7 @@ class CapacitorBluetoothRemoteGATTServer {
                 throw new Error('Device ID is null or undefined');
             }
 
-            // Définir le callback de déconnexion
+            // Define disconnect callback
             const onDisconnect = (deviceId) => {
                 console.log('🔍 [DEBUG] Device disconnected:', deviceId);
                 this.connected = false;
@@ -94,26 +94,26 @@ class CapacitorBluetoothRemoteGATTServer {
 
             console.log('🔍 [DEBUG] About to call BleClient.connect...');
 
-            // BleClient wrapper prend des paramètres séparés
+            // BleClient wrapper takes separate parameters
             await BleClient.connect(this.deviceId, onDisconnect, { timeout: 10000 });
 
             this.connected = true;
             console.log('✅ Connected to device:', this.deviceId);
 
-            // Forcer explicitement la découverte des services
+            // Explicitly force service discovery
             console.log('🔍 [DEBUG] Explicitly discovering services...');
             try {
                 await BleClient.discoverServices(this.deviceId);
                 console.log('✅ Services discovered');
 
-                // Vérifier les services découverts
+                // Check discovered services
                 const services = await BleClient.getServices(this.deviceId);
                 // console.log('🔍 [DEBUG] Available services:', JSON.stringify(services, null, 2));
             } catch (error) {
                 console.warn('⚠️ discoverServices failed (may not be needed):', error);
             }
 
-            // Attendre un peu pour que les descripteurs (CCCD) soient bien disponibles
+            // Wait a bit for descriptors (CCCD) to be ready
             console.log('⏳ Waiting 1s for descriptors to be ready...');
             await new Promise(resolve => setTimeout(resolve, 1000));
             console.log('✅ Ready for operations');
@@ -128,7 +128,7 @@ class CapacitorBluetoothRemoteGATTServer {
 
     async disconnect() {
         try {
-            // BleClient wrapper prend le deviceId en paramètre
+            // BleClient wrapper takes deviceId as parameter
             await BleClient.disconnect(this.deviceId);
             this.connected = false;
         } catch (error) {
@@ -143,7 +143,7 @@ class CapacitorBluetoothRemoteGATTServer {
     }
 }
 
-// Classe qui simule un BluetoothRemoteGATTService
+// Class that simulates a BluetoothRemoteGATTService
 class CapacitorBluetoothRemoteGATTService {
     constructor(deviceId, serviceUuid) {
         this.deviceId = deviceId;
@@ -160,7 +160,7 @@ class CapacitorBluetoothRemoteGATTService {
     }
 }
 
-// Classe qui simule une BluetoothRemoteGATTCharacteristic
+// Class that simulates a BluetoothRemoteGATTCharacteristic
 class CapacitorBluetoothRemoteGATTCharacteristic {
     constructor(deviceId, serviceUuid, characteristicUuid) {
         this.deviceId = deviceId;
@@ -175,14 +175,14 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
     }
 
     async writeValueWithResponse(value) {
-        // Dans Web Bluetooth API, writeValueWithResponse attend une confirmation
-        // BleClient.write attend déjà une confirmation par défaut
+        // In Web Bluetooth API, writeValueWithResponse waits for confirmation
+        // BleClient.write waits for confirmation by default
         try {
             let dataView;
             if (value instanceof DataView) {
                 dataView = value;
             } else if (value instanceof Uint8Array) {
-                // Créer DataView avec offset et length corrects
+                // Create DataView with correct offset and length
                 dataView = new DataView(value.buffer, value.byteOffset, value.byteLength);
             } else if (value.buffer) {
                 dataView = new DataView(value.buffer, value.byteOffset || 0, value.byteLength || value.buffer.byteLength);
@@ -192,7 +192,7 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
 
             // console.log('🔍 [Adapter] writeValueWithResponse:', dataView.byteLength, 'bytes');
 
-            // BleClient wrapper prend des paramètres séparés
+            // BleClient wrapper takes separate parameters
             await BleClient.write(this.deviceId, this.service.uuid, this.uuid, dataView);
         } catch (error) {
             console.error('Write value with response error:', error);
@@ -201,13 +201,13 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
     }
 
     async writeValueWithoutResponse(value) {
-        // Version sans attendre de confirmation (plus rapide)
+        // Version without waiting for confirmation (faster)
         try {
             let dataView;
             if (value instanceof DataView) {
                 dataView = value;
             } else if (value instanceof Uint8Array) {
-                // Créer DataView avec offset et length corrects
+                // Create DataView with correct offset and length
                 dataView = new DataView(value.buffer, value.byteOffset, value.byteLength);
             } else if (value.buffer) {
                 dataView = new DataView(value.buffer, value.byteOffset || 0, value.byteLength || value.buffer.byteLength);
@@ -217,7 +217,7 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
 
             console.log('🔍 [Adapter] writeValueWithoutResponse:', dataView.byteLength, 'bytes');
 
-            // BleClient wrapper prend des paramètres séparés
+            // BleClient wrapper takes separate parameters
             await BleClient.writeWithoutResponse(this.deviceId, this.service.uuid, this.uuid, dataView);
         } catch (error) {
             console.error('Write value without response error:', error);
@@ -227,7 +227,7 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
 
     async readValue() {
         try {
-            // BleClient wrapper prend des paramètres séparés et retourne directement le DataView
+            // BleClient wrapper takes separate parameters and returns DataView directly
             this.value = await BleClient.read(this.deviceId, this.service.uuid, this.uuid);
             return this.value;
         } catch (error) {
@@ -244,7 +244,7 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
                 characteristic: this.uuid
             });
 
-            // BleClient wrapper prend des paramètres séparés et un callback
+            // BleClient wrapper takes separate parameters and a callback
             await BleClient.startNotifications(
                 this.deviceId,
                 this.service.uuid,
@@ -270,7 +270,7 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
 
     async stopNotifications() {
         try {
-            // BleClient wrapper prend des paramètres séparés
+            // BleClient wrapper takes separate parameters
             await BleClient.stopNotifications(this.deviceId, this.service.uuid, this.uuid);
         } catch (error) {
             console.error('Stop notifications error:', error);
@@ -291,27 +291,60 @@ class CapacitorBluetoothRemoteGATTCharacteristic {
     }
 }
 
-// Adapter pour navigator.bluetooth
+// Adapter for navigator.bluetooth
 class CapacitorBluetoothNavigator {
     async getDevices() {
-        // Sur Capacitor, on ne peut pas récupérer la liste des devices autorisés
-        // On retourne un tableau vide et on utilisera le scan à la place
+        // On Capacitor, we cannot retrieve the list of authorized devices
+        // Return empty array and use scan instead
         return [];
     }
 
     async scanForDeviceByName(deviceName, timeoutMs = 5000) {
         try {
-            // Attendre que BleClient soit chargé
+            // Wait for BleClient to be loaded
             BleClient = await waitForBleClient();
 
-            // Initialiser le Bluetooth
+            // Initialize Bluetooth
             await BleClient.initialize();
+
+            // IMPORTANT: First, check if device is already connected at native level
+            // This avoids unnecessary scanning if we just changed pages
+            console.log('🔍 [Capacitor] Checking already connected devices first...');
+            const lastDeviceId = localStorage.getItem('ble-last-device-id');
+
+            if (lastDeviceId) {
+                try {
+                    // Check if this device is already connected
+                    const result = await BleClient.getConnectedDevices([]);
+                    console.log('🔍 [Capacitor] getConnectedDevices result:', result);
+
+                    // Plugin returns {devices: Array} not directly an array
+                    const connectedDevices = result.devices || result;
+                    console.log('🔍 [Capacitor] Connected devices array:', connectedDevices);
+
+                    if (Array.isArray(connectedDevices)) {
+                        const alreadyConnected = connectedDevices.find(d =>
+                            d.deviceId === lastDeviceId || d.name === deviceName
+                        );
+
+                        if (alreadyConnected) {
+                            console.log('✅ [Capacitor] Device already connected!', alreadyConnected);
+                            return new CapacitorBluetoothDevice(
+                                alreadyConnected.deviceId,
+                                alreadyConnected.name || deviceName
+                            );
+                        }
+                    }
+                } catch (e) {
+                    console.log('⚠️ [Capacitor] Could not check connected devices:', e.message);
+                }
+            }
 
             console.log('🔍 [Capacitor] Scanning for device with name:', deviceName);
 
             let foundDevice = null;
 
-            // Démarrer le scan
+            // Start scanning
             await BleClient.requestLEScan({}, (result) => {
                 console.log('🔍 [Capacitor] Found device:', result.device.name, result.device.deviceId);
                 if (result.device.name === deviceName) {
@@ -320,13 +353,13 @@ class CapacitorBluetoothNavigator {
                 }
             });
 
-            // Attendre jusqu'à trouver le device ou timeout
+            // Wait until device found or timeout
             const startTime = Date.now();
             while (!foundDevice && (Date.now() - startTime) < timeoutMs) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
 
-            // Arrêter le scan
+            // Stop scanning
             await BleClient.stopLEScan();
 
             if (foundDevice) {
@@ -347,13 +380,13 @@ class CapacitorBluetoothNavigator {
 
     async requestDevice(options) {
         try {
-            // Attendre que BleClient soit chargé
+            // Wait for BleClient to be loaded
             BleClient = await waitForBleClient();
 
-            // Initialiser le Bluetooth
+            // Initialize Bluetooth
             await BleClient.initialize();
 
-            // Chercher le nom et le préfixe dans tous les filtres
+            // Search for name and prefix in all filters
             let filterName = null;
             let filterNamePrefix = null;
 
@@ -367,11 +400,11 @@ class CapacitorBluetoothNavigator {
             console.log('🔍 [DEBUG] All filters received:', JSON.stringify(options.filters));
             console.log('🔍 [DEBUG] Extracted - name:', filterName, 'prefix:', filterNamePrefix);
 
-            // Utiliser requestDevice du plugin qui affiche un dialogue natif de sélection
-            // C'est la méthode recommandée par @capacitor-community/bluetooth-le
+            // Use plugin's requestDevice which displays a native selection dialog
+            // This is the recommended method by @capacitor-community/bluetooth-le
             const bleDevice = await BleClient.requestDevice({
                 namePrefix: filterNamePrefix || filterName || undefined,
-                // Ne pas filtrer par services car l'ESP32 ne les annonce pas toujours
+                // Don't filter by services because ESP32 doesn't always advertise them
                 optionalServices: options.optionalServices || []
             });
 
@@ -390,11 +423,11 @@ class CapacitorBluetoothNavigator {
     }
 }
 
-// Si on est sur une plateforme native, remplacer navigator.bluetooth
+// If on native platform, replace navigator.bluetooth
 if (isNativePlatform) {
     console.log('🔵 Using Capacitor Bluetooth LE (Native)');
 
-    // Créer un nouveau navigator.bluetooth compatible
+    // Create a compatible navigator.bluetooth
     if (!navigator.bluetooth) {
         Object.defineProperty(navigator, 'bluetooth', {
             value: new CapacitorBluetoothNavigator(),
@@ -403,33 +436,33 @@ if (isNativePlatform) {
         });
     }
 
-    // Sur mobile natif, simuler que le geste utilisateur a déjà été capturé
-    // Cela permet la connexion automatique sans intervention utilisateur
+    // On native mobile, simulate that user gesture was already captured
+    // This allows automatic connection without user intervention
     console.log('📱 Native platform detected: bypassing gesture requirement for BLE auto-connect');
 
-    // Fonction pour forcer le flag de geste capturé
+    // Function to force the captured gesture flag
     const forceGestureCaptured = () => {
-        // Essayer d'accéder aux variables globales de l'application
+        // Try to access application global variables
         if (typeof window.bleAutoConnectGestureCaptured !== 'undefined') {
             window.bleAutoConnectGestureCaptured = true;
             console.log('✅ BLE gesture flag set to true (native platform)');
         } else {
-            // Si la variable n'existe pas encore, la créer
+            // If variable doesn't exist yet, create it
             window.bleAutoConnectGestureCaptured = true;
             console.log('✅ BLE gesture flag created and set to true (native platform)');
         }
 
-        // Forcer aussi le flag d'auto-connect en cours à false
+        // Also force auto-connect in progress flag to false
         if (typeof window.bleAutoConnectInProgress !== 'undefined') {
             window.bleAutoConnectInProgress = false;
         }
 
-        // S'assurer que le flag "awaiting gesture" est à false
+        // Ensure "awaiting gesture" flag is false
         if (typeof window.bleAutoConnectAwaitingGesture !== 'undefined') {
             window.bleAutoConnectAwaitingGesture = false;
         }
 
-        // Debug: afficher l'état de bleTransport
+        // Debug: display bleTransport state
         if (window.bleTransport) {
             console.log('🔍 [DEBUG] bleTransport exists');
             console.log('🔍 [DEBUG] bleTransport.isSupported():', window.bleTransport.isSupported ? window.bleTransport.isSupported() : 'method not found');
@@ -438,7 +471,7 @@ if (isNativePlatform) {
             console.warn('⚠️ bleTransport not found yet');
         }
 
-        // Déclencher la tentative de connexion automatique si la fonction existe
+        // Trigger automatic connection attempt if function exists
         if (typeof window.maybeAutoConnectBle === 'function') {
             console.log('🔄 Triggering BLE auto-connect...');
             window.maybeAutoConnectBle(true);
@@ -447,10 +480,10 @@ if (isNativePlatform) {
         }
     };
 
-    // Essayer immédiatement
+    // Try immediately
     forceGestureCaptured();
 
-    // Réessayer après chargement du DOM
+    // Retry after DOM loading
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(forceGestureCaptured, 100);
@@ -463,8 +496,8 @@ if (isNativePlatform) {
         setTimeout(forceGestureCaptured, 1000);
     }
 
-    // Hook pour intercepter le check de wifiOnline et forcer offline sur mobile
-    // Cela force l'utilisation de BLE au lieu de WiFi
+    // Hook to intercept wifiOnline check and force offline on mobile
+    // This forces BLE usage instead of WiFi
     Object.defineProperty(window, 'isCapacitorNativeApp', {
         value: true,
         writable: false,
@@ -475,5 +508,5 @@ if (isNativePlatform) {
     console.log('🌐 Using Web Bluetooth API (Browser)');
 }
 
-// Exposer globalement pour debug
+// Expose globally for debugging
 window.__capacitorBleAdapter = { isNativePlatform, CapacitorBluetoothNavigator };

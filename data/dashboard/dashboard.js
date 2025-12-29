@@ -163,7 +163,7 @@ function decodeVehicleStateDrive(dataView) {
     const front_power_kw = readInt16() / 10.0; // Can be negative (regen)
     const soc_percent = readUint8();
     const odometer_km = readUint32();
-    // Valeurs uint8
+    // uint8 values
     const gear = readInt8();
     const pedal_map = readInt8();
     const accel_pedal_pos = readUint8();
@@ -177,7 +177,7 @@ function decodeVehicleStateDrive(dataView) {
     const last_update_ms = readUint32();
 
     const state = {
-        // Dynamique
+        // Dynamic values
         speed_kph,
         rear_power_kw,
         front_power_kw,
@@ -260,8 +260,8 @@ function decodeVehicleStatePark(dataView) {
     const charge_power_kw = readInt16() / 10.0;
     const battery_voltage_LV = readUint8() / 10.0;
     const battery_voltage_HV = readInt16() / 10.0;
-    const odometer_km = readUint32(); 
-    // Valeurs uint8
+    const odometer_km = readUint32();
+    // uint8 values
     const charge_status = readUint8();
     const brightness = readUint8();
 
@@ -272,7 +272,7 @@ function decodeVehicleStatePark(dataView) {
     const last_update_ms = readUint32();
 
     const state = {
-        // Energie
+        // Energy
         soc_percent,
         charge_power_kw,
         battery_voltage_LV,
@@ -1081,36 +1081,39 @@ async function switchToConfig() {
         }
     }
 
-    // Disconnect BLE and stop notifications
+    // Stop notifications but KEEP BLE connection alive for config page
     try {
         if (bleCharacteristicVehicleState) {
-            console.log('[Dashboard] Stopping notifications...');
+            console.log('[Dashboard] Stopping notifications (keeping connection alive)...');
             try {
                 await bleCharacteristicVehicleState.stopNotifications();
             } catch (e) {
                 console.log('[Dashboard] Could not stop notifications:', e.message);
             }
             bleCharacteristicVehicleState.removeEventListener('characteristicvaluechanged', handleVehicleStateNotification);
-            bleCharacteristicVehicleState = null;
-            bleCharacteristicCommand = null;
-            configAckKey = null;
-            configAckSent = false;
+            // Don't nullify characteristics - keep them for the config page
         }
 
+        // IMPORTANT: Keep BLE connection alive - don't disconnect!
+        // The config page (index.html) will reuse the same BLE connection
         if (bleDevice) {
-            console.log('[Dashboard] Disconnecting BLE device...');
-            try {
-                bleDevice.removeEventListener('gattserverdisconnected', onDisconnected);
-                if (bleDevice.gatt && bleDevice.gatt.connected) {
-                    bleDevice.gatt.disconnect();
-                }
-            } catch (e) {
-                console.log('[Dashboard] Could not disconnect:', e.message);
-            }
-            bleDevice = null;
+            console.log('[Dashboard] Keeping BLE connection alive for config page...');
+            // Remove event listener to avoid double handling
+            bleDevice.removeEventListener('gattserverdisconnected', onDisconnected);
 
-            // Wait a bit to ensure disconnection is processed
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Store device info in localStorage so index.html can reuse it
+            // Use localStorage (not sessionStorage) to persist across page reloads
+            if (bleDevice.name) {
+                localStorage.setItem('ble-last-device-name', bleDevice.name);
+            }
+            if (bleDevice.id) {
+                localStorage.setItem('ble-last-device-id', bleDevice.id);
+            }
+
+            console.log('[Dashboard] Saved device info:', { name: bleDevice.name, id: bleDevice.id });
+
+            // DO NOT disconnect or nullify bleDevice - let the connection persist
+            // The browser will maintain the GATT connection across page navigation
         }
     } catch (error) {
         console.error('[Dashboard] Error during BLE cleanup:', error);
@@ -1119,11 +1122,11 @@ async function switchToConfig() {
     // Mark that we're coming from dashboard to prevent redirect loop
     sessionStorage.setItem('from-dashboard', 'true');
 
-    // Wait a bit longer to ensure all BLE operations are fully stopped
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Small delay to ensure notifications are stopped
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Navigate to config page (use replace to ensure dashboard is fully unloaded)
-    console.log('[Dashboard] Navigating to config page...');
+    // Navigate to config page (connection stays alive)
+    console.log('[Dashboard] Navigating to config page (BLE connection maintained)...');
     window.location.replace(usingCapacitor ? '/index.html' : '../index.html');
 }
 

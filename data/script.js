@@ -1035,28 +1035,46 @@ function updateLanguageIcon() {
 async function switchToDashboard() {
     console.log('[Config] Switching to dashboard mode...');
 
-    // Disconnect BLE cleanly before switching
+    // Keep BLE connection alive for dashboard
     try {
         if (bleTransportInstance && bleTransportInstance.isConnected && bleTransportInstance.isConnected()) {
-            console.log('[Config] Disconnecting BLE before switching to dashboard...');
-            bleManualDisconnect = true; // Prevent auto-reconnect during transition
+            console.log('[Config] Keeping BLE connection alive for dashboard...');
+
+            // Wait for any pending operations to complete
             if (bleTransportInstance.waitForQueue) {
                 await bleTransportInstance.waitForQueue();
             }
-            await bleTransportInstance.disconnect(false); // Don't clear history
 
-            // Wait a bit to ensure disconnection is processed
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Store device info in localStorage so dashboard can reuse it
+            // Use localStorage (not sessionStorage) to persist across page reloads
+            if (bleTransportInstance.device) {
+                if (bleTransportInstance.device.name) {
+                    localStorage.setItem('ble-last-device-name', bleTransportInstance.device.name);
+                }
+                if (bleTransportInstance.device.id) {
+                    localStorage.setItem('ble-last-device-id', bleTransportInstance.device.id);
+                }
+
+                console.log('[Config] Saved device info:', {
+                    name: bleTransportInstance.device.name,
+                    id: bleTransportInstance.device.id
+                });
+            }
+
+            // Small delay to ensure any pending operations complete
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // DO NOT disconnect - let the connection persist for the dashboard
         }
     } catch (error) {
-        console.error('[Config] Error during BLE cleanup:', error);
+        console.error('[Config] Error during BLE preparation:', error);
     }
 
     // Clear the flag to allow redirect back to dashboard on next app open
     sessionStorage.removeItem('from-dashboard');
 
-    // Navigate to dashboard page (mobile only)
-    console.log('[Config] Navigating to dashboard...');
+    // Navigate to dashboard page (mobile only, BLE connection maintained)
+    console.log('[Config] Navigating to dashboard (BLE connection maintained)...');
     window.location.href = './dashboard.html';
 }
 

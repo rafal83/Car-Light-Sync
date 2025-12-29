@@ -91,7 +91,7 @@ const translations = {
       connecting: "Connexion...",
       gettingService: "Récupération du service BLE...",
       startingNotifications: "Démarrage des notifications...",
-      // Jauges
+      // Gauges
       battery: "Batterie",
       charge: "Charge",
       speed: "Vitesse",
@@ -101,12 +101,12 @@ const translations = {
       state: "État",
       accelPedal: "Pédale accél.",
       autopilotActive: "ACTIF",
-      // Groupes d'indicateurs
+      // Indicator groups
       doors: "Portes",
       lights: "Lumières",
       security: "Sécurité",
       alerts: "Alertes",
-      // Portes
+      // Doors
       doorFL: "AV-G",
       doorFR: "AV-D",
       doorRL: "AR-G",
