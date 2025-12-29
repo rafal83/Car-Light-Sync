@@ -7,7 +7,7 @@ const HTML_FILENAME = 'index.html';
 const REQUIRED_ASSETS = ['i18n.js', 'script.js', 'style.css', 'carlightsync.png', 'carlightsync64.png'];
 const OPTIONAL_ASSETS = [];
 const DASHBOARD_DIR = 'dashboard';
-const DASHBOARD_FILES = ['dashboard.html', 'dashboard.css', 'dashboard.js'];
+const DASHBOARD_FILES = ['dashboard.html', 'dashboard.css', 'dashboard.js', 'capacitor.js', 'ble-client-loader.js', 'capacitor-bluetooth-adapter.js'];
 const DASHBOARD_SVG_DIR = 'svg';
 
 function ensureFileExists(filePath, label) {
@@ -60,7 +60,7 @@ for (const asset of REQUIRED_ASSETS) {
 
 // Copy dashboard files
 const dashboardSourceDir = path.join(SOURCE_DIR, DASHBOARD_DIR);
-const dashboardDestDir = path.join(DEST_DIR, DASHBOARD_DIR);
+const dashboardDestDir = path.join(DEST_DIR);
 const dashboardSvgSourceDir = path.join(dashboardSourceDir, DASHBOARD_SVG_DIR);
 const dashboardSvgDestDir = path.join(dashboardDestDir, DASHBOARD_SVG_DIR);
 
@@ -79,9 +79,9 @@ if (fs.existsSync(dashboardSourceDir)) {
         let dashboardHtml = fs.readFileSync(sourcePath, 'utf8');
 
         const dashboardCapacitorInjection = [
-          '    <script src="../capacitor.js"></script>',
-          '    <script src="../ble-client-loader.js"></script>',
-          '    <script src="../capacitor-bluetooth-adapter.js"></script>',
+          '    <script src="capacitor.js"></script>',
+          '    <script src="ble-client-loader.js"></script>',
+          '    <script src="capacitor-bluetooth-adapter.js"></script>',
         ].join('\n');
 
         if (!dashboardHtml.includes('ble-client-loader.js')) {
