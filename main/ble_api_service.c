@@ -245,7 +245,7 @@ static void ble_handle_command_bytes(const uint8_t *data, size_t length) {
         continue;
       }
       incoming_buffer[incoming_length] = '\0';
-      ESP_LOGI(TAG_BLE_API, "Complete request: %s", incoming_buffer);
+      // ESP_LOGI(TAG_BLE_API, "Complete request: %s", incoming_buffer);
       ble_dispatch_request(incoming_buffer, incoming_length);
       incoming_length = 0;
       continue;

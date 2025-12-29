@@ -1057,7 +1057,7 @@ async function switchToDashboard() {
 
     // Navigate to dashboard page (mobile only)
     console.log('[Config] Navigating to dashboard...');
-    window.location.href = '/dashboard/dashboard.html';
+    window.location.href = './dashboard.html';
 }
 
 function applyTranslations() {
