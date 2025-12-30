@@ -1753,10 +1753,20 @@ function renderEventsTable() {
         if (allowedEvents.length > 0 && !allowedEvents.includes(event.ev)) {
             return;
         }
+        // Set default values for optional fields
+        event.c2 = event.c2 ?? 0;
+        event.c3 = event.c3 ?? 0;
+        event.rv = event.rv ?? false;
+        event.at = event.at ?? 0;
+        event.pid = event.pid ?? -1;
+        event.csp = event.csp ?? false;
+        event.st = event.st ?? 0;
+        event.ln = event.ln ?? 0;
+
         const eventName = getEventName(event.ev);
-        const actionType = event.at !== undefined ? event.at : 0;
-        const canSwitchProfile = event.csp || false;
-        const profileId = event.pid !== undefined ? event.pid : -1;
+        const actionType = event.at;
+        const canSwitchProfile = event.csp;
+        const profileId = event.pid;
 
         // Generate action options
         let actionOptions = '';

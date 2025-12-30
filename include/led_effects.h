@@ -42,6 +42,7 @@
 #define EFFECT_ID_CENTER_OUT_SCAN "CENTER_OUT_SCAN"
 #define EFFECT_ID_POWER_METER "POWER_METER"
 #define EFFECT_ID_POWER_METER_CENTER "POWER_METER_CENTER"
+#define EFFECT_ID_SEQUENTIAL_FADE "SEQUENTIAL_FADE"
 
 #define EFFECT_ID_MAX_LEN 32 // Max length of an effect ID
 
@@ -80,6 +81,7 @@ typedef enum {
   EFFECT_CENTER_OUT_SCAN, // Double scan center -> edges
   EFFECT_POWER_METER,     // Combined power bar (front + rear)
   EFFECT_POWER_METER_CENTER, // Center power bar (zero in middle)
+  EFFECT_SEQUENTIAL_FADE, // Sequential turn signal with fade
   EFFECT_MAX
 } led_effect_t;
 

@@ -527,22 +527,24 @@ static bool ble_send_notification(const uint8_t *data, size_t len) {
     chunk_count++;
     offset += chunk;
 
+    taskYIELD();
+
     // OPTIMIZATION: Delay between chunks to avoid saturating the BLE buffer
     // Only delay for multi-chunk transfers; single-chunk responses don't need delay
-    if (offset < len) { // No delay after the last chunk
-      size_t total_chunks = (len + max_payload - 1) / max_payload;
+    // if (offset < len) { // No delay after the last chunk
+    //   size_t total_chunks = (len + max_payload - 1) / max_payload;
 
-      // No delay for single-chunk transfers (fast response)
-      if (total_chunks > 1) {
-        if (len > 2000) {
-          vTaskDelay(pdMS_TO_TICKS(30)); // 30ms for very large transfers
-        } else if (len > 500) {
-          vTaskDelay(pdMS_TO_TICKS(20)); // 20ms for medium transfers
-        } else {
-          vTaskDelay(pdMS_TO_TICKS(5)); // 5ms for small multi-chunk transfers (reduced from 10ms)
-        }
-      }
-    }
+    //   // No delay for single-chunk transfers (fast response)
+    //   if (total_chunks > 1) {
+    //     if (len > 2000) {
+    //       vTaskDelay(pdMS_TO_TICKS(30)); // 30ms for very large transfers
+    //     } else if (len > 500) {
+    //       vTaskDelay(pdMS_TO_TICKS(20)); // 20ms for medium transfers
+    //     } else {
+    //       vTaskDelay(pdMS_TO_TICKS(5)); // 5ms for small multi-chunk transfers (reduced from 10ms)
+    //     }
+    //   }
+    // }
   }
 
   return true;

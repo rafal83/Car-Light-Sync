@@ -2203,17 +2203,47 @@ static esp_err_t events_get_handler(httpd_req_t *req) {
       cJSON_AddNumberToObject(event_obj, "br", event_effect.effect_config.brightness);
       cJSON_AddNumberToObject(event_obj, "sp", event_effect.effect_config.speed);
       cJSON_AddNumberToObject(event_obj, "c1", event_effect.effect_config.color1);
-      cJSON_AddNumberToObject(event_obj, "c2", event_effect.effect_config.color2);
-      cJSON_AddNumberToObject(event_obj, "c3", event_effect.effect_config.color3);
-      cJSON_AddBoolToObject(event_obj, "rv", event_effect.effect_config.reverse);
+
+      // Only add non-zero color2/color3 to save space
+      if (event_effect.effect_config.color2 != 0) {
+        cJSON_AddNumberToObject(event_obj, "c2", event_effect.effect_config.color2);
+      }
+      if (event_effect.effect_config.color3 != 0) {
+        cJSON_AddNumberToObject(event_obj, "c3", event_effect.effect_config.color3);
+      }
+
+      // Only add reverse if true
+      if (event_effect.effect_config.reverse) {
+        cJSON_AddBoolToObject(event_obj, "rv", true);
+      }
+
       cJSON_AddNumberToObject(event_obj, "dur", event_effect.duration_ms);
       cJSON_AddNumberToObject(event_obj, "pri", event_effect.priority);
       cJSON_AddBoolToObject(event_obj, "en", event_effect.enabled);
-      cJSON_AddNumberToObject(event_obj, "at", event_effect.action_type);
-      cJSON_AddNumberToObject(event_obj, "pid", event_effect.profile_id);
-      cJSON_AddBoolToObject(event_obj, "csp", config_manager_event_can_switch_profile(event_type));
-      cJSON_AddNumberToObject(event_obj, "st", event_effect.effect_config.segment_start);
-      cJSON_AddNumberToObject(event_obj, "ln", event_effect.effect_config.segment_length);
+
+      // Only add action_type if not default (0)
+      if (event_effect.action_type != 0) {
+        cJSON_AddNumberToObject(event_obj, "at", event_effect.action_type);
+      }
+
+      // Only add profile_id if not default (0)
+      if (event_effect.profile_id != 0) {
+        cJSON_AddNumberToObject(event_obj, "pid", event_effect.profile_id);
+      }
+
+      // Only add csp if true
+      bool can_switch = config_manager_event_can_switch_profile(event_type);
+      if (can_switch) {
+        cJSON_AddBoolToObject(event_obj, "csp", true);
+      }
+
+      // Only add segment info if not default (0)
+      if (event_effect.effect_config.segment_start != 0) {
+        cJSON_AddNumberToObject(event_obj, "st", event_effect.effect_config.segment_start);
+      }
+      if (event_effect.effect_config.segment_length != 0) {
+        cJSON_AddNumberToObject(event_obj, "ln", event_effect.effect_config.segment_length);
+      }
 
       cJSON_AddItemToArray(events_array, event_obj);
     }

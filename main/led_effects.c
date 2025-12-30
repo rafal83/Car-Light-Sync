@@ -1290,6 +1290,74 @@ static void effect_center_out_scan(void) {
   }
 }
 
+// Effect: Sequential fade (modern turn signal style)
+static void effect_sequential_fade(void) {
+  rgb_t base_color = color_to_rgb(current_config.color1);
+
+  if (led_count <= 0) {
+    fill_solid((rgb_t){0, 0, 0});
+    return;
+  }
+
+  // Period calculation based on speed (faster speed = shorter period)
+  int period = 120 - ((current_config.speed * 100) / 255);
+  if (period < 20)
+    period = 20;
+
+  int cycle = effect_counter % period;
+
+  // Phase durations
+  int fade_in_duration = (period * 50) / 100;  // 50% of period for sequential fade in
+  int hold_duration = (period * 20) / 100;     // 20% hold all LEDs lit
+  int fade_out_duration = (period * 20) / 100; // 20% for fade out
+  int pause_duration = period - fade_in_duration - hold_duration - fade_out_duration; // Rest is pause
+
+  fill_solid((rgb_t){0, 0, 0});
+
+  if (cycle < fade_in_duration) {
+    // Phase 1: Sequential fade in
+    for (int i = 0; i < led_count; i++) {
+      int led_index = current_config.reverse ? (led_count - 1 - i) : i;
+
+      // Calculate when this LED should start fading in
+      int led_start_time = (i * fade_in_duration) / led_count;
+
+      // Fade in takes a portion of the total fade_in_duration
+      int led_fade_duration = fade_in_duration / 4; // Each LED fades quickly
+      if (led_fade_duration < 5)
+        led_fade_duration = 5;
+
+      if (cycle >= led_start_time) {
+        int elapsed = cycle - led_start_time;
+        if (elapsed < led_fade_duration) {
+          // Fading in
+          float fade_progress = (float)elapsed / led_fade_duration;
+          uint8_t brightness = (uint8_t)(current_config.brightness * fade_progress);
+          leds[led_index] = apply_brightness(base_color, brightness);
+        } else {
+          // Fully lit
+          leds[led_index] = apply_brightness(base_color, current_config.brightness);
+        }
+      }
+    }
+  } else if (cycle < fade_in_duration + hold_duration) {
+    // Phase 2: Hold all LEDs lit
+    for (int i = 0; i < led_count; i++) {
+      leds[i] = apply_brightness(base_color, current_config.brightness);
+    }
+  } else if (cycle < fade_in_duration + hold_duration + fade_out_duration) {
+    // Phase 3: Fade out all together
+    int fade_cycle = cycle - (fade_in_duration + hold_duration);
+    float fade_progress = 1.0f - ((float)fade_cycle / fade_out_duration);
+    uint8_t brightness = (uint8_t)(current_config.brightness * fade_progress);
+
+    for (int i = 0; i < led_count; i++) {
+      leds[i] = apply_brightness(base_color, brightness);
+    }
+  }
+  // Phase 4: Pause (LEDs stay off)
+}
+
 // Effect: Brake lights
 static void effect_brake_light(void) {
   rgb_t color = last_vehicle_state.brake_pressed ? (rgb_t){255, 0, 0} : (rgb_t){64, 0, 0};
@@ -1886,6 +1954,7 @@ static const effect_func_t effect_functions[] = {
     [EFFECT_DUAL_GRADIENT]   = effect_dual_gradient,
     [EFFECT_SPARKLE_OVERLAY] = effect_sparkle_overlay,
     [EFFECT_CENTER_OUT_SCAN] = effect_center_out_scan,
+    [EFFECT_SEQUENTIAL_FADE] = effect_sequential_fade,
 };
 
 typedef struct {
@@ -1928,6 +1997,7 @@ static const led_effect_descriptor_t effect_descriptors[] = {
     {EFFECT_DUAL_GRADIENT, EFFECT_ID_DUAL_GRADIENT, "Dual Gradient"},
     {EFFECT_SPARKLE_OVERLAY, EFFECT_ID_SPARKLE_OVERLAY, "Sparkle Overlay"},
     {EFFECT_CENTER_OUT_SCAN, EFFECT_ID_CENTER_OUT_SCAN, "Center Out Scan"},
+    {EFFECT_SEQUENTIAL_FADE, EFFECT_ID_SEQUENTIAL_FADE, "Sequential Fade"},
 };
 
 #define EFFECT_DESCRIPTOR_COUNT (sizeof(effect_descriptors) / sizeof(effect_descriptors[0]))
