@@ -226,13 +226,6 @@ const char *led_effects_enum_to_id(led_effect_t effect);
 led_effect_t led_effects_id_to_enum(const char *id);
 
 /**
- * @brief Checks if an effect requires CAN data to function
- * @param effect Effect type
- * @return true if effect requires CAN bus, false otherwise
- */
-bool led_effects_requires_can(led_effect_t effect);
-
-/**
  * @brief Checks if an effect requires audio FFT
  * @param effect Effect type
  * @return true if effect requires FFT, false otherwise

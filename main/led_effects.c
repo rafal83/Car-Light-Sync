@@ -1892,43 +1892,42 @@ typedef struct {
   led_effect_t effect;
   const char *id;
   const char *name;
-  bool requires_can;
 } led_effect_descriptor_t;
 
 static const led_effect_descriptor_t effect_descriptors[] = {
-    {EFFECT_OFF, EFFECT_ID_OFF, "Off", false},
-    {EFFECT_SOLID, EFFECT_ID_SOLID, "Solid", false},
-    {EFFECT_BREATHING, EFFECT_ID_BREATHING, "Breathing", false},
-    {EFFECT_RAINBOW, EFFECT_ID_RAINBOW, "Rainbow", false},
-    {EFFECT_RAINBOW_CYCLE, EFFECT_ID_RAINBOW_CYCLE, "Rainbow Cycle", false},
-    {EFFECT_THEATER_CHASE, EFFECT_ID_THEATER_CHASE, "Theater Chase", false},
-    {EFFECT_RUNNING_LIGHTS, EFFECT_ID_RUNNING_LIGHTS, "Running Lights", false},
-    {EFFECT_TWINKLE, EFFECT_ID_TWINKLE, "Twinkle", false},
-    {EFFECT_FIRE, EFFECT_ID_FIRE, "Fire", false},
-    {EFFECT_SCAN, EFFECT_ID_SCAN, "Scan", false},
-    {EFFECT_KNIGHT_RIDER, EFFECT_ID_KNIGHT_RIDER, "Knight Rider", false},
-    {EFFECT_FADE, EFFECT_ID_FADE, "Fade", false},
-    {EFFECT_STROBE, EFFECT_ID_STROBE, "Strobe", false},
-    {EFFECT_VEHICLE_SYNC, EFFECT_ID_VEHICLE_SYNC, "Vehicle Sync", true},
-    {EFFECT_TURN_SIGNAL, EFFECT_ID_TURN_SIGNAL, "Turn Signal", true},
-    {EFFECT_BRAKE_LIGHT, EFFECT_ID_BRAKE_LIGHT, "Brake Light", true},
-    {EFFECT_CHARGE_STATUS, EFFECT_ID_CHARGE_STATUS, "Charge Status", true},
-    {EFFECT_HAZARD, EFFECT_ID_HAZARD, "Hazard", true},
-    {EFFECT_BLINDSPOT_FLASH, EFFECT_ID_BLINDSPOT_FLASH, "Blindspot Flash", true},
-    {EFFECT_POWER_METER, EFFECT_ID_POWER_METER, "Power Meter", true},
-    {EFFECT_POWER_METER_CENTER, EFFECT_ID_POWER_METER_CENTER, "Power Meter Center", true},
-    {EFFECT_AUDIO_REACTIVE, EFFECT_ID_AUDIO_REACTIVE, "Audio Reactive", false},
-    {EFFECT_AUDIO_BPM, EFFECT_ID_AUDIO_BPM, "Audio BPM", false},
-    {EFFECT_FFT_SPECTRUM, EFFECT_ID_FFT_SPECTRUM, "FFT Spectrum", false},
-    {EFFECT_FFT_BASS_PULSE, EFFECT_ID_FFT_BASS_PULSE, "FFT Bass Pulse", false},
-    {EFFECT_FFT_VOCAL_WAVE, EFFECT_ID_FFT_VOCAL_WAVE, "FFT Vocal Wave", false},
-    {EFFECT_FFT_ENERGY_BAR, EFFECT_ID_FFT_ENERGY_BAR, "FFT Energy Bar", false},
-    {EFFECT_COMET, EFFECT_ID_COMET, "Comet", false},
-    {EFFECT_METEOR_SHOWER, EFFECT_ID_METEOR_SHOWER, "Meteor Shower", false},
-    {EFFECT_RIPPLE_WAVE, EFFECT_ID_RIPPLE_WAVE, "Ripple Wave", false},
-    {EFFECT_DUAL_GRADIENT, EFFECT_ID_DUAL_GRADIENT, "Dual Gradient", false},
-    {EFFECT_SPARKLE_OVERLAY, EFFECT_ID_SPARKLE_OVERLAY, "Sparkle Overlay", false},
-    {EFFECT_CENTER_OUT_SCAN, EFFECT_ID_CENTER_OUT_SCAN, "Center Out Scan", false},
+    {EFFECT_OFF, EFFECT_ID_OFF, "Off"},
+    {EFFECT_SOLID, EFFECT_ID_SOLID, "Solid"},
+    {EFFECT_BREATHING, EFFECT_ID_BREATHING, "Breathing"},
+    {EFFECT_RAINBOW, EFFECT_ID_RAINBOW, "Rainbow"},
+    {EFFECT_RAINBOW_CYCLE, EFFECT_ID_RAINBOW_CYCLE, "Rainbow Cycle"},
+    {EFFECT_THEATER_CHASE, EFFECT_ID_THEATER_CHASE, "Theater Chase"},
+    {EFFECT_RUNNING_LIGHTS, EFFECT_ID_RUNNING_LIGHTS, "Running Lights"},
+    {EFFECT_TWINKLE, EFFECT_ID_TWINKLE, "Twinkle"},
+    {EFFECT_FIRE, EFFECT_ID_FIRE, "Fire"},
+    {EFFECT_SCAN, EFFECT_ID_SCAN, "Scan"},
+    {EFFECT_KNIGHT_RIDER, EFFECT_ID_KNIGHT_RIDER, "Knight Rider"},
+    {EFFECT_FADE, EFFECT_ID_FADE, "Fade"},
+    {EFFECT_STROBE, EFFECT_ID_STROBE, "Strobe"},
+    {EFFECT_VEHICLE_SYNC, EFFECT_ID_VEHICLE_SYNC, "Vehicle Sync"},
+    {EFFECT_TURN_SIGNAL, EFFECT_ID_TURN_SIGNAL, "Turn Signal"},
+    {EFFECT_BRAKE_LIGHT, EFFECT_ID_BRAKE_LIGHT, "Brake Light"},
+    {EFFECT_CHARGE_STATUS, EFFECT_ID_CHARGE_STATUS, "Charge Status"},
+    {EFFECT_HAZARD, EFFECT_ID_HAZARD, "Hazard"},
+    {EFFECT_BLINDSPOT_FLASH, EFFECT_ID_BLINDSPOT_FLASH, "Blindspot Flash"},
+    {EFFECT_POWER_METER, EFFECT_ID_POWER_METER, "Power Meter"},
+    {EFFECT_POWER_METER_CENTER, EFFECT_ID_POWER_METER_CENTER, "Power Meter Center"},
+    {EFFECT_AUDIO_REACTIVE, EFFECT_ID_AUDIO_REACTIVE, "Audio Reactive"},
+    {EFFECT_AUDIO_BPM, EFFECT_ID_AUDIO_BPM, "Audio BPM"},
+    {EFFECT_FFT_SPECTRUM, EFFECT_ID_FFT_SPECTRUM, "FFT Spectrum"},
+    {EFFECT_FFT_BASS_PULSE, EFFECT_ID_FFT_BASS_PULSE, "FFT Bass Pulse"},
+    {EFFECT_FFT_VOCAL_WAVE, EFFECT_ID_FFT_VOCAL_WAVE, "FFT Vocal Wave"},
+    {EFFECT_FFT_ENERGY_BAR, EFFECT_ID_FFT_ENERGY_BAR, "FFT Energy Bar"},
+    {EFFECT_COMET, EFFECT_ID_COMET, "Comet"},
+    {EFFECT_METEOR_SHOWER, EFFECT_ID_METEOR_SHOWER, "Meteor Shower"},
+    {EFFECT_RIPPLE_WAVE, EFFECT_ID_RIPPLE_WAVE, "Ripple Wave"},
+    {EFFECT_DUAL_GRADIENT, EFFECT_ID_DUAL_GRADIENT, "Dual Gradient"},
+    {EFFECT_SPARKLE_OVERLAY, EFFECT_ID_SPARKLE_OVERLAY, "Sparkle Overlay"},
+    {EFFECT_CENTER_OUT_SCAN, EFFECT_ID_CENTER_OUT_SCAN, "Center Out Scan"},
 };
 
 #define EFFECT_DESCRIPTOR_COUNT (sizeof(effect_descriptors) / sizeof(effect_descriptors[0]))
@@ -2238,12 +2237,6 @@ led_effect_t led_effects_id_to_enum(const char *id) {
   }
   ESP_LOGW(TAG_LED, "Unknown effect ID: %s", id ? id : "NULL");
   return EFFECT_OFF;
-}
-
-// Checks if an effect needs CAN data to run
-bool led_effects_requires_can(led_effect_t effect) {
-  const led_effect_descriptor_t *desc = find_effect_descriptor(effect);
-  return desc ? desc->requires_can : false;
 }
 
 bool led_effects_requires_fft(led_effect_t effect) {

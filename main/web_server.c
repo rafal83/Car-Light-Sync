@@ -2005,7 +2005,6 @@ static esp_err_t effects_list_handler(httpd_req_t *req) {
     cJSON *effect = cJSON_CreateObject();
     cJSON_AddStringToObject(effect, "id", led_effects_enum_to_id((led_effect_t)i));
     cJSON_AddStringToObject(effect, "n", led_effects_get_name((led_effect_t)i));
-    cJSON_AddBoolToObject(effect, "cr", led_effects_requires_can((led_effect_t)i));
     cJSON_AddBoolToObject(effect, "ae", led_effects_is_audio_effect((led_effect_t)i));
     cJSON_AddItemToArray(effects, effect);
   }

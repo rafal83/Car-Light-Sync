@@ -1642,11 +1642,7 @@ function getDefaultEffectId() {
     if (offEffect) {
         return offEffect.id;
     }
-    const nonCan = effectsList.find(effect => !effect.cr);
-    if (nonCan) {
-        return nonCan.id;
-    }
-    return effectsList[0].id;
+    return effectsList[0]?.id || 'OFF';
 }
 async function ensureEventsConfigData(forceRefresh = false) {
     if (!forceRefresh && eventsConfigNeedsRefresh) {
@@ -1724,10 +1720,7 @@ function renderEventsTable() {
     const allowedEvents = (currentRole === 'slave') ? getAllowedEventsForSlaveType(currentType) : [];
     // If no data from API, create default rows for all events
     if (eventsConfigData.length === 0) {
-        const defaultEffectId =
-            effectsList.find(effect => !effect.cr)?.id ||
-            effectsList[0]?.id ||
-            'OFF';
+        const defaultEffectId = 'OFF';
         if (eventTypesList.length > 0) {
             eventTypesList
                 .filter(evt => evt.id !== 'NONE')
@@ -4266,17 +4259,10 @@ async function loadEffects() {
                 select.setAttribute('data-effect-options', 'true');
                 const currentValue = select.value;
                 select.innerHTML = '';
-                // For default effect and manual effect selectors,
-                // filter effects that require CAN bus
-                // For the event selector, also filter audio effects
+                // For event selectors, filter audio effects (not selectable for CAN events)
                 const isEventSelector = select.id === 'event-effect-select';
-                const isDefaultEffectSelector = select.id === 'default-effect-select';
                 let separatorInserted = false;
                 displayEffects.forEach(effect => {
-                    // Filter CAN effects for everything except 'default-effect-select'
-                    if (!isDefaultEffectSelector && effect.cr) {
-                        return; // Skip this effect
-                    }
                     // Filter audio effects if this is the event selector
                     if (isEventSelector && effect.ae) {
                         return; // Skip this audio effect
