@@ -43,6 +43,18 @@
 #define EFFECT_ID_POWER_METER "POWER_METER"
 #define EFFECT_ID_POWER_METER_CENTER "POWER_METER_CENTER"
 #define EFFECT_ID_SEQUENTIAL_FADE "SEQUENTIAL_FADE"
+#define EFFECT_ID_WAVE_COLLISION "WAVE_COLLISION"
+#define EFFECT_ID_SNAKE_CHASE "SNAKE_CHASE"
+#define EFFECT_ID_LAVA_LAMP "LAVA_LAMP"
+#define EFFECT_ID_SPEED_PULSE "SPEED_PULSE"
+#define EFFECT_ID_THROTTLE_WAVE "THROTTLE_WAVE"
+#define EFFECT_ID_AURORA "AURORA"
+#define EFFECT_ID_DIGITAL_GLITCH "DIGITAL_GLITCH"
+#define EFFECT_ID_FIREWORKS "FIREWORKS"
+#define EFFECT_ID_BINARY_CODE "BINARY_CODE"
+#define EFFECT_ID_AUDIO_WATERFALL "AUDIO_WATERFALL"
+#define EFFECT_ID_BEAT_RIPPLE "BEAT_RIPPLE"
+#define EFFECT_ID_STEREO_VU_METER "STEREO_VU_METER"
 
 #define EFFECT_ID_MAX_LEN 32 // Max length of an effect ID
 
@@ -82,6 +94,18 @@ typedef enum {
   EFFECT_POWER_METER,     // Combined power bar (front + rear)
   EFFECT_POWER_METER_CENTER, // Center power bar (zero in middle)
   EFFECT_SEQUENTIAL_FADE, // Sequential turn signal with fade
+  EFFECT_WAVE_COLLISION,  // Two waves colliding at center
+  EFFECT_SNAKE_CHASE,     // Multiple colored segments chasing
+  EFFECT_LAVA_LAMP,       // Organic lava lamp bubbles
+  EFFECT_SPEED_PULSE,     // Pulse based on vehicle speed
+  EFFECT_THROTTLE_WAVE,   // Wave following throttle position
+  EFFECT_AURORA,          // Aurora borealis effect
+  EFFECT_DIGITAL_GLITCH,  // Digital glitch effect
+  EFFECT_FIREWORKS,       // Fireworks explosions
+  EFFECT_BINARY_CODE,     // Scrolling binary code
+  EFFECT_AUDIO_WATERFALL, // Audio FFT waterfall
+  EFFECT_BEAT_RIPPLE,     // Ripple on beat detection
+  EFFECT_STEREO_VU_METER, // Stereo VU meter
   EFFECT_MAX
 } led_effect_t;
 
