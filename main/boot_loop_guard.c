@@ -26,7 +26,7 @@ typedef struct {
 // Store in RTC Fast Memory (LP SRAM) with RTC_NOINIT_ATTR so data persists across reboots
 static RTC_NOINIT_ATTR boot_loop_data_t s_boot_data;
 
-#define BOOT_LOOP_MAGIC 0xB007C0DE  // Magic signature to validate data
+#define BOOT_LOOP_MAGIC 0xB007C0DE // Magic signature to validate data
 
 static TaskHandle_t watchdog_task_handle = NULL;
 
@@ -34,8 +34,7 @@ static TaskHandle_t watchdog_task_handle = NULL;
  * @brief Task that monitors successful boot and resets the counter
  */
 static void boot_watchdog_task(void *pvParameters) {
-  ESP_LOGI(TAG, "Boot watchdog started, waiting %d ms before marking boot successful",
-           BOOT_LOOP_SUCCESS_TIMEOUT_MS);
+  ESP_LOGI(TAG, "Boot watchdog started, waiting %d ms before marking boot successful", BOOT_LOOP_SUCCESS_TIMEOUT_MS);
 
   vTaskDelay(pdMS_TO_TICKS(BOOT_LOOP_SUCCESS_TIMEOUT_MS));
 
@@ -52,8 +51,8 @@ esp_err_t boot_loop_guard_init(void) {
   // Check if RTC data is valid
   if (s_boot_data.magic != BOOT_LOOP_MAGIC) {
     ESP_LOGI(TAG, "First initialization or full reset detected, initializing counter");
-    s_boot_data.magic = BOOT_LOOP_MAGIC;
-    s_boot_data.boot_count = 0;
+    s_boot_data.magic        = BOOT_LOOP_MAGIC;
+    s_boot_data.boot_count   = 0;
     s_boot_data.last_boot_us = current_time_us;
   }
 
@@ -62,10 +61,9 @@ esp_err_t boot_loop_guard_init(void) {
   uint64_t time_since_last_boot_us = current_time_us - s_boot_data.last_boot_us;
   uint32_t time_since_last_boot_ms = (uint32_t)(time_since_last_boot_us / 1000);
 
-  s_boot_data.last_boot_us = current_time_us;
+  s_boot_data.last_boot_us         = current_time_us;
 
-  ESP_LOGI(TAG, "Boot count: %lu (time since last boot: %lu ms)",
-           s_boot_data.boot_count, time_since_last_boot_ms);
+  ESP_LOGI(TAG, "Boot count: %lu (time since last boot: %lu ms)", s_boot_data.boot_count, time_since_last_boot_ms);
 
   // Check for boot loop
   if (s_boot_data.boot_count >= BOOT_LOOP_MAX_COUNT) {
@@ -95,14 +93,12 @@ esp_err_t boot_loop_guard_init(void) {
   }
 
   // Create a watchdog task to mark boot as successful after the timeout
-  BaseType_t task_created = xTaskCreate(
-    boot_watchdog_task,
-    "boot_watchdog",
-    2048,
-    NULL,
-    1,  // Low priority
-    &watchdog_task_handle
-  );
+  BaseType_t task_created = xTaskCreate(boot_watchdog_task,
+                                        "boot_watchdog",
+                                        2048,
+                                        NULL,
+                                        1, // Low priority
+                                        &watchdog_task_handle);
 
   if (task_created != pdPASS) {
     ESP_LOGE(TAG, "Error creating watchdog task");

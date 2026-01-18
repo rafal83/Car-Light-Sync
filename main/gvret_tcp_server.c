@@ -140,7 +140,7 @@ static void mark_client_inactive(gvret_client_t *client) {
   client->task_handle = NULL;
 
   // Update cached status
-  has_active_clients = false;
+  has_active_clients  = false;
   for (int i = 0; i < MAX_GVRET_CLIENTS; i++) {
     if (clients[i].active) {
       has_active_clients = true;

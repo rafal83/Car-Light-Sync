@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-static bool s_spiffs_initialized = false;
+static bool s_spiffs_initialized        = false;
 static const size_t SPIFFS_MIN_OVERHEAD = 8192; // Minimum headroom for metadata/allocation
 
 static void spiffs_delete_matching_files(const char *dir_path, const char *prefix, const char *suffix) {
@@ -30,7 +30,7 @@ static void spiffs_delete_matching_files(const char *dir_path, const char *prefi
     }
 
     if (suffix) {
-      size_t name_len = strlen(name);
+      size_t name_len   = strlen(name);
       size_t suffix_len = strlen(suffix);
       if (name_len < suffix_len || strcmp(name + name_len - suffix_len, suffix) != 0) {
         continue;
@@ -98,13 +98,12 @@ esp_err_t spiffs_storage_init(void) {
 
   ESP_LOGI(TAG_SPIFFS, "Initializing SPIFFS...");
 
-  esp_vfs_spiffs_conf_t conf = {
-      .base_path             = "/spiffs",
-      .partition_label       = "spiffs",
-      .max_files             = 10,  // Up to 10 files open simultaneously
-      .format_if_mount_failed = true};
+  esp_vfs_spiffs_conf_t conf = {.base_path              = "/spiffs",
+                                .partition_label        = "spiffs",
+                                .max_files              = 10, // Up to 10 files open simultaneously
+                                .format_if_mount_failed = true};
 
-  esp_err_t ret = esp_vfs_spiffs_register(&conf);
+  esp_err_t ret              = esp_vfs_spiffs_register(&conf);
   if (ret != ESP_OK) {
     if (ret == ESP_FAIL) {
       ESP_LOGE(TAG_SPIFFS, "Failed to mount SPIFFS");
@@ -118,14 +117,13 @@ esp_err_t spiffs_storage_init(void) {
 
   // Retrieve SPIFFS stats
   size_t total = 0, used = 0;
-  ret          = esp_spiffs_info("spiffs", &total, &used);
+  ret = esp_spiffs_info("spiffs", &total, &used);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG_SPIFFS, "Failed to read SPIFFS stats (%s)", esp_err_to_name(ret));
     return ret;
   }
 
-  ESP_LOGI(TAG_SPIFFS, "SPIFFS mounted: %d KB total, %d KB used (%d%% free)",
-           total / 1024, used / 1024, ((total - used) * 100) / total);
+  ESP_LOGI(TAG_SPIFFS, "SPIFFS mounted: %d KB total, %d KB used (%d%% free)", total / 1024, used / 1024, ((total - used) * 100) / total);
 
   // Create base directories if they are missing
   mkdir("/spiffs/config", 0755);
@@ -148,7 +146,7 @@ esp_err_t spiffs_save_json(const char *path, const char *json_string) {
     return ESP_ERR_INVALID_ARG;
   }
 
-  size_t len = strlen(json_string);
+  size_t len        = strlen(json_string);
 
   // If the file already exists, delete it before checking free space.
   // SPIFFS only frees blocks after explicit deletion, not merely after truncation.
@@ -174,8 +172,7 @@ esp_err_t spiffs_save_json(const char *path, const char *json_string) {
   }
 
   if (free < len + SPIFFS_MIN_OVERHEAD) {
-    ESP_LOGE(TAG_SPIFFS, "SPIFFS nearly full: need %d bytes + %d overhead, only %d available",
-             len, SPIFFS_MIN_OVERHEAD, free);
+    ESP_LOGE(TAG_SPIFFS, "SPIFFS nearly full: need %d bytes + %d overhead, only %d available", len, SPIFFS_MIN_OVERHEAD, free);
     return ESP_ERR_NO_MEM;
   }
 
@@ -188,19 +185,22 @@ esp_err_t spiffs_save_json(const char *path, const char *json_string) {
       retried = true;
       spiffs_cleanup_if_low_space(len);
       spiffs_get_stats(&total, &used);
-      f = fopen(path, "w");
+      f   = fopen(path, "w");
       err = errno;
     }
 
     if (f == NULL) {
       const char *err_msg = "Unknown";
-      if (err == ENOMEM) err_msg = "ENOMEM (out of memory)";
-      else if (err == EMFILE) err_msg = "EMFILE (too many open files)";
-      else if (err == ENOSPC) err_msg = "ENOSPC (no space left)";
-      else if (err == ENOENT) err_msg = "ENOENT (directory not found)";
+      if (err == ENOMEM)
+        err_msg = "ENOMEM (out of memory)";
+      else if (err == EMFILE)
+        err_msg = "EMFILE (too many open files)";
+      else if (err == ENOSPC)
+        err_msg = "ENOSPC (no space left)";
+      else if (err == ENOENT)
+        err_msg = "ENOENT (directory not found)";
 
-      ESP_LOGE(TAG_SPIFFS, "Failed to open %s: errno=%d (%s), SPIFFS: %d/%d bytes used (%.1f%%)",
-               path, err, err_msg, used, total, total > 0 ? (used * 100.0 / total) : 0);
+      ESP_LOGE(TAG_SPIFFS, "Failed to open %s: errno=%d (%s), SPIFFS: %d/%d bytes used (%.1f%%)", path, err, err_msg, used, total, total > 0 ? (used * 100.0 / total) : 0);
       return ESP_FAIL;
     }
   }
@@ -208,13 +208,12 @@ esp_err_t spiffs_save_json(const char *path, const char *json_string) {
   size_t written = fwrite(json_string, 1, len, f);
 
   if (written != len) {
-    ESP_LOGE(TAG_SPIFFS, "Write error %s: written=%d, expected=%d (ferror=%d, errno=%d)",
-             path, written, len, ferror(f), errno);
+    ESP_LOGE(TAG_SPIFFS, "Write error %s: written=%d, expected=%d (ferror=%d, errno=%d)", path, written, len, ferror(f), errno);
     fclose(f);
     return ESP_FAIL;
   }
 
-  fclose(f);  // fclose already performs a flush
+  fclose(f); // fclose already performs a flush
 
   ESP_LOGD(TAG_SPIFFS, "File saved: %s (%d bytes)", path, written);
   return ESP_OK;
@@ -240,12 +239,12 @@ esp_err_t spiffs_load_json(const char *path, char *buffer, size_t buffer_size) {
   size_t read = fread(buffer, 1, buffer_size - 1, f);
   fclose(f);
 
-  buffer[read] = '\0';  // Null-terminator
+  buffer[read] = '\0'; // Null-terminator
 
   if (read == 0) {
     ESP_LOGW(TAG_SPIFFS, "Empty file detected: %s - removing automatically", path);
-    unlink(path);  // Remove the empty file to free the slot
-    return ESP_ERR_NOT_FOUND;  // Behave as if the file does not exist
+    unlink(path);             // Remove the empty file to free the slot
+    return ESP_ERR_NOT_FOUND; // Behave as if the file does not exist
   }
 
   ESP_LOGD(TAG_SPIFFS, "File loaded: %s (%d bytes)", path, read);
@@ -311,7 +310,7 @@ esp_err_t spiffs_format(void) {
   }
 
   ESP_LOGI(TAG_SPIFFS, "SPIFFS formatted successfully");
-  return spiffs_storage_init();  // Mount again
+  return spiffs_storage_init(); // Mount again
 }
 
 esp_err_t spiffs_save_blob(const char *path, const void *data, size_t size) {
@@ -334,7 +333,7 @@ esp_err_t spiffs_save_blob(const char *path, const void *data, size_t size) {
     if (err == ENOSPC && !retried) {
       retried = true;
       spiffs_cleanup_if_low_space(size);
-      f = fopen(path, "wb");
+      f   = fopen(path, "wb");
       err = errno;
     }
     if (f == NULL) {
@@ -372,8 +371,8 @@ esp_err_t spiffs_load_blob(const char *path, void *buffer, size_t *buffer_size) 
 
   if (read == 0) {
     ESP_LOGW(TAG_SPIFFS, "Empty file detected: %s - removing automatically", path);
-    unlink(path);  // Remove the empty file to free the slot
-    return ESP_ERR_NOT_FOUND;  // Behave as if the file does not exist
+    unlink(path);             // Remove the empty file to free the slot
+    return ESP_ERR_NOT_FOUND; // Behave as if the file does not exist
   }
 
   *buffer_size = read; // Return the actual size read

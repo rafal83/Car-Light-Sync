@@ -5,8 +5,8 @@
 #include "vehicle_can_mapping.h"
 #include "vehicle_can_unified_config.h"
 
-#include <string.h>
 #include <math.h>
+#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Signal history (for managing events like RISING/FALLING EDGE)
@@ -34,7 +34,7 @@ void vehicle_can_unified_init(void) {
 // DBC message lookup by ID
 // ---------------------------------------------------------------------------
 // IRAM_ATTR: Called for every CAN frame received (~2000 times/s)
-static const can_message_def_t * IRAM_ATTR find_message_def(uint32_t id) {
+static const can_message_def_t *IRAM_ATTR find_message_def(uint32_t id) {
   for (uint16_t i = 0; i < g_can_message_count; i++) {
     if (g_can_messages[i].id == id) {
       return &g_can_messages[i];
@@ -124,7 +124,7 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
   }
 
   uint64_t mux_raw = 0;
-  bool has_mux = false;
+  bool has_mux     = false;
   for (uint8_t i = 0; i < msg->signal_count; i++) {
     const can_signal_def_t *sig = &msg->signals[i];
     if (sig->mux_type == SIGNAL_MUX_MULTIPLEXER) {
@@ -161,19 +161,19 @@ void vehicle_can_process_frame_static(const can_frame_t *frame, vehicle_state_t 
 // ---------------------------------------------------------------------------
 
 void vehicle_state_to_ble_config(const vehicle_state_t *src, vehicle_state_ble_config_t *dst) {
-  if (!src || !dst) return;
+  if (!src || !dst)
+    return;
 
   // Dynamique de conduite
-  dst->rear_power_limit_kw_x10 = (uint16_t)(src->rear_power_limit * 10.0f);
+  dst->rear_power_limit_kw_x10  = (uint16_t)(src->rear_power_limit * 10.0f);
   dst->front_power_limit_kw_x10 = (uint16_t)(src->front_power_limit * 10.0f);
-  dst->max_regen_x10 = (uint16_t)(src->max_regen * 10.0f);
+  dst->max_regen_x10            = (uint16_t)(src->max_regen * 10.0f);
 
   // Byte 0: turn signals & brake
-  dst->flags0 =
-    (src->train_type    ? (1<<0) : 0);
+  dst->flags0                   = (src->train_type ? (1 << 0) : 0);
 
   // Meta
-  dst->last_update_ms = src->last_update_ms;
+  dst->last_update_ms           = src->last_update_ms;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,52 +181,35 @@ void vehicle_state_to_ble_config(const vehicle_state_t *src, vehicle_state_ble_c
 // ---------------------------------------------------------------------------
 
 void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_drive_t *dst) {
-  if (!src || !dst) return;
+  if (!src || !dst)
+    return;
 
   // Dynamique de conduite
-  float speed_kph_abs = fabsf(src->speed_kph);
-  dst->speed_kph = (uint8_t)(speed_kph_abs);
-  dst->rear_power_kw_x10 = (int16_t)(src->rear_power * 10.0f);  // Can be negative (regen)
+  float speed_kph_abs     = fabsf(src->speed_kph);
+  dst->speed_kph          = (uint8_t)(speed_kph_abs);
+  dst->rear_power_kw_x10  = (int16_t)(src->rear_power * 10.0f);  // Can be negative (regen)
   dst->front_power_kw_x10 = (int16_t)(src->front_power * 10.0f); // Can be negative (regen)
-  dst->soc_percent = (uint8_t)(src->soc_percent);
-  dst->odometer_km = (uint32_t)src->odometer_km;
+  dst->soc_percent        = (uint8_t)(src->soc_percent);
+  dst->odometer_km        = (uint32_t)src->odometer_km;
 
   // Valeurs uint8
-  dst->gear = src->gear;
-  dst->pedal_map = src->pedal_map;
-  dst->accel_pedal_pos = src->accel_pedal_pos;
-  dst->brightness = (uint8_t)(src->brightness);
-  dst->autopilot = src->autopilot;
+  dst->gear               = src->gear;
+  dst->pedal_map          = src->pedal_map;
+  dst->accel_pedal_pos    = src->accel_pedal_pos;
+  dst->brightness         = (uint8_t)(src->brightness);
+  dst->autopilot          = src->autopilot;
 
   // Byte 0: turn signals & brake
-  dst->flags0 =
-    (src->turn_left    ? (1<<0) : 0) |
-    (src->turn_right   ? (1<<1) : 0) |
-    (src->hazard       ? (1<<2) : 0) |
-    (src->brake_pressed ? (1<<3) : 0) |
-    (src->high_beams   ? (1<<4) : 0) |
-    (src->headlights   ? (1<<5) : 0) |
-    (src->fog_lights   ? (1<<6) : 0);
+  dst->flags0             = (src->turn_left ? (1 << 0) : 0) | (src->turn_right ? (1 << 1) : 0) | (src->hazard ? (1 << 2) : 0) | (src->brake_pressed ? (1 << 3) : 0) | (src->high_beams ? (1 << 4) : 0) |
+                (src->headlights ? (1 << 5) : 0) | (src->fog_lights ? (1 << 6) : 0);
 
   // Byte 1: blindspots & collisions
-  dst->flags1 =
-    (src->blindspot_left        ? (1<<0) : 0) |
-    (src->blindspot_right       ? (1<<1) : 0) |
-    (src->blindspot_left_alert  ? (1<<2) : 0) |
-    (src->blindspot_right_alert ? (1<<3) : 0) |
-    (src->side_collision_left   ? (1<<4) : 0) |
-    (src->side_collision_right  ? (1<<5) : 0) |
-    (src->forward_collision     ? (1<<6) : 0) |
-    (src->night_mode            ? (1<<7) : 0);
+  dst->flags1 = (src->blindspot_left ? (1 << 0) : 0) | (src->blindspot_right ? (1 << 1) : 0) | (src->blindspot_left_alert ? (1 << 2) : 0) | (src->blindspot_right_alert ? (1 << 3) : 0) |
+                (src->side_collision_left ? (1 << 4) : 0) | (src->side_collision_right ? (1 << 5) : 0) | (src->forward_collision ? (1 << 6) : 0) | (src->night_mode ? (1 << 7) : 0);
 
   // Byte 2: autopilot alerts & lane departure
-  dst->flags2 =
-    (src->lane_departure_left_lv1  ? (1<<0) : 0) |
-    (src->lane_departure_left_lv2  ? (1<<1) : 0) |
-    (src->lane_departure_right_lv1 ? (1<<2) : 0) |
-    (src->lane_departure_right_lv2 ? (1<<3) : 0) |
-    (src->autopilot_alert_lv1      ? (1<<4) : 0) |
-    (src->autopilot_alert_lv2      ? (1<<5) : 0);
+  dst->flags2 = (src->lane_departure_left_lv1 ? (1 << 0) : 0) | (src->lane_departure_left_lv2 ? (1 << 1) : 0) | (src->lane_departure_right_lv1 ? (1 << 2) : 0) |
+                (src->lane_departure_right_lv2 ? (1 << 3) : 0) | (src->autopilot_alert_lv1 ? (1 << 4) : 0) | (src->autopilot_alert_lv2 ? (1 << 5) : 0);
 
   // Meta
   dst->last_update_ms = src->last_update_ms;
@@ -237,47 +220,31 @@ void vehicle_state_to_ble_drive(const vehicle_state_t *src, vehicle_state_ble_dr
 // ---------------------------------------------------------------------------
 
 void vehicle_state_to_ble_park(const vehicle_state_t *src, vehicle_state_ble_park_t *dst) {
-  if (!src || !dst) return;
+  if (!src || !dst)
+    return;
 
   // Energy
-  dst->soc_percent = (uint8_t)(src->soc_percent);
-  dst->charge_power_kw_x10 = (int16_t)(src->charge_power_kw * 10.0f);
+  dst->soc_percent            = (uint8_t)(src->soc_percent);
+  dst->charge_power_kw_x10    = (int16_t)(src->charge_power_kw * 10.0f);
   dst->battery_voltage_LV_x10 = (uint8_t)(src->battery_voltage_LV * 10.0f);
   dst->battery_voltage_HV_x10 = (int16_t)(src->battery_voltage_HV * 10.0f);
-  dst->odometer_km = (uint32_t)src->odometer_km;
+  dst->odometer_km            = (uint32_t)src->odometer_km;
 
   // Valeurs uint8
-  dst->charge_status = src->charge_status;
-  dst->brightness = (uint8_t)(src->brightness);
+  dst->charge_status          = src->charge_status;
+  dst->brightness             = (uint8_t)(src->brightness);
 
   // Byte 0: doors & locks
-  dst->flags0 =
-    (src->locked                ? (1<<0) : 0) |
-    (src->door_front_left_open  ? (1<<1) : 0) |
-    (src->door_rear_left_open   ? (1<<2) : 0) |
-    (src->door_front_right_open ? (1<<3) : 0) |
-    (src->door_rear_right_open  ? (1<<4) : 0) |
-    (src->frunk_open            ? (1<<5) : 0) |
-    (src->trunk_open            ? (1<<6) : 0) |
-    (src->brake_pressed         ? (1<<7) : 0);
+  dst->flags0                 = (src->locked ? (1 << 0) : 0) | (src->door_front_left_open ? (1 << 1) : 0) | (src->door_rear_left_open ? (1 << 2) : 0) | (src->door_front_right_open ? (1 << 3) : 0) |
+                (src->door_rear_right_open ? (1 << 4) : 0) | (src->frunk_open ? (1 << 5) : 0) | (src->trunk_open ? (1 << 6) : 0) | (src->brake_pressed ? (1 << 7) : 0);
 
   // Byte 1: lights
-  dst->flags1 =
-    (src->turn_left    ? (1<<0) : 0) |
-    (src->turn_right   ? (1<<1) : 0) |
-    (src->hazard       ? (1<<2) : 0) |
-    (src->headlights   ? (1<<3) : 0) |
-    (src->high_beams   ? (1<<4) : 0) |
-    (src->fog_lights   ? (1<<5) : 0);
+  dst->flags1 = (src->turn_left ? (1 << 0) : 0) | (src->turn_right ? (1 << 1) : 0) | (src->hazard ? (1 << 2) : 0) | (src->headlights ? (1 << 3) : 0) | (src->high_beams ? (1 << 4) : 0) |
+                (src->fog_lights ? (1 << 5) : 0);
 
   // Byte 2: charging & sentry
-  dst->flags2 =
-    (src->charging_cable ? (1<<0) : 0) |
-    (src->charging       ? (1<<1) : 0) |
-    (src->charging_port  ? (1<<2) : 0) |
-    (src->sentry_mode    ? (1<<3) : 0) |
-    (src->sentry_alert   ? (1<<4) : 0) |
-    (src->night_mode     ? (1<<5) : 0);
+  dst->flags2 = (src->charging_cable ? (1 << 0) : 0) | (src->charging ? (1 << 1) : 0) | (src->charging_port ? (1 << 2) : 0) | (src->sentry_mode ? (1 << 3) : 0) | (src->sentry_alert ? (1 << 4) : 0) |
+                (src->night_mode ? (1 << 5) : 0);
 
   // Meta
   dst->last_update_ms = src->last_update_ms;

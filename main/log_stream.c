@@ -1,11 +1,11 @@
 #include "log_stream.h"
 
 #include "esp_log.h"
-#include "spiffs_storage.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/message_buffer.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include "spiffs_storage.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -31,18 +31,18 @@ static char current_log_path[64]       = "/spiffs/logs/logs.1.txt";
 
 // SSE client list
 static int sse_clients[MAX_SSE_CLIENTS];
-static SemaphoreHandle_t clients_mutex     = NULL;
-static SemaphoreHandle_t log_file_mutex    = NULL;
+static SemaphoreHandle_t clients_mutex           = NULL;
+static SemaphoreHandle_t log_file_mutex          = NULL;
 static MessageBufferHandle_t log_file_msg_buffer = NULL;
 
 // Original log handler (for chaining)
-static vprintf_like_t original_log_handler = NULL;
+static vprintf_like_t original_log_handler       = NULL;
 
 // Watchdog thread handle
-static TaskHandle_t watchdog_task_handle   = NULL;
-static bool file_logging_enabled           = false;
-static uint32_t current_log_index          = 1;
-static TaskHandle_t log_file_task_handle   = NULL;
+static TaskHandle_t watchdog_task_handle         = NULL;
+static bool file_logging_enabled                 = false;
+static uint32_t current_log_index                = 1;
+static TaskHandle_t log_file_task_handle         = NULL;
 
 static char log_line_buffer[LOG_BUFFER_SIZE];
 
@@ -64,8 +64,7 @@ static void log_file_set_current_path(uint32_t index) {
     index = 1;
   }
   current_log_index = index;
-  snprintf(current_log_path, sizeof(current_log_path),
-           "/spiffs/logs/logs.%u.txt", (unsigned)index);
+  snprintf(current_log_path, sizeof(current_log_path), "/spiffs/logs/logs.%u.txt", (unsigned)index);
 }
 
 static void log_file_truncate_current(void) {
@@ -86,7 +85,7 @@ static void log_file_rotate_if_needed(size_t incoming_len) {
 
 static uint32_t log_boot_count_read(void) {
   uint32_t count = 0;
-  FILE *f = fopen(LOG_BOOT_COUNT_PATH, "rb");
+  FILE *f        = fopen(LOG_BOOT_COUNT_PATH, "rb");
   if (f == NULL) {
     return 0;
   }
@@ -157,7 +156,7 @@ static int custom_log_handler(const char *fmt, va_list args) {
   }
 
   bool file_logging = file_logging_enabled;
-  int client_count = log_stream_get_client_count();
+  int client_count  = log_stream_get_client_count();
   if (client_count == 0 && !file_logging) {
     return ret;
   }
@@ -167,7 +166,7 @@ static int custom_log_handler(const char *fmt, va_list args) {
   if (raw_len > 0 && raw_len < (int)sizeof(log_line_buffer)) {
     size_t len = (size_t)raw_len;
     if (log_line_buffer[len - 1] != '\n' && len + 1 < sizeof(log_line_buffer)) {
-      log_line_buffer[len] = '\n';
+      log_line_buffer[len]     = '\n';
       log_line_buffer[len + 1] = '\0';
       len += 1;
     }
@@ -344,12 +343,7 @@ esp_err_t log_stream_init(void) {
     return ESP_ERR_NO_MEM;
   }
 
-  ret = xTaskCreate(log_file_writer_task,
-                    "log_file_writer",
-                    4096,
-                    NULL,
-                    4,
-                    &log_file_task_handle);
+  ret = xTaskCreate(log_file_writer_task, "log_file_writer", 4096, NULL, 4, &log_file_task_handle);
   if (ret != pdPASS) {
     ESP_LOGE(TAG, "Failed to create log file writer task");
     vSemaphoreDelete(clients_mutex);

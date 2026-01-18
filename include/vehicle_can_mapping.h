@@ -2,9 +2,9 @@
 #define VEHICLE_CAN_MAPPING_H
 
 #include "can_bus.h"
+#include "esp_attr.h"
 #include "vehicle_can_unified.h"
 #include "vehicle_can_unified_config.h"
-#include "esp_attr.h"
 
 #include <stdbool.h>
 #include <stdint.h>

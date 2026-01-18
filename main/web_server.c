@@ -28,9 +28,9 @@
 #include "led_effects.h"
 #include "log_stream.h" // For real-time log streaming
 #include "nvs_flash.h"
+#include "ota_update.h"
 #include "settings_manager.h"
 #include "spiffs_storage.h"
-#include "ota_update.h"
 #include "vehicle_can_unified.h"
 #include "wifi_manager.h"
 
@@ -566,8 +566,8 @@ static esp_err_t config_handler(httpd_req_t *req) {
 static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
   espnow_role_t role             = espnow_link_get_role();
   espnow_slave_type_t slave_type = espnow_link_get_slave_type();
-  uint64_t now_us = esp_timer_get_time();
-  uint8_t self_mac[6] = {0};
+  uint64_t now_us                = esp_timer_get_time();
+  uint8_t self_mac[6]            = {0};
   espnow_link_get_mac(self_mac);
 
   cJSON *root = cJSON_CreateObject();
@@ -578,15 +578,14 @@ static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
   cJSON_AddBoolToObject(root, "pairing", espnow_link_is_pairing_active());
   cJSON *self = cJSON_CreateObject();
   char self_mac_str[18];
-  snprintf(self_mac_str, sizeof(self_mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
-           self_mac[0], self_mac[1], self_mac[2], self_mac[3], self_mac[4], self_mac[5]);
+  snprintf(self_mac_str, sizeof(self_mac_str), "%02X:%02X:%02X:%02X:%02X:%02X", self_mac[0], self_mac[1], self_mac[2], self_mac[3], self_mac[4], self_mac[5]);
   cJSON_AddStringToObject(self, "mac", self_mac_str);
   cJSON_AddNumberToObject(self, "device_id", espnow_link_get_device_id());
   cJSON_AddItemToObject(root, "self", self);
 
   cJSON *types = cJSON_CreateArray();
   for (int t = 0; t < ESP_NOW_SLAVE_MAX; t++) {
-    cJSON *item = cJSON_CreateObject();
+    cJSON *item      = cJSON_CreateObject();
     const char *name = espnow_link_slave_type_to_str((espnow_slave_type_t)t);
     cJSON_AddStringToObject(item, "id", name);
     cJSON_AddNumberToObject(item, "value", t);
@@ -599,16 +598,12 @@ static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
     if (espnow_link_get_master_info(&master_info)) {
       cJSON *master = cJSON_CreateObject();
       char mac_str[18];
-      snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
-               master_info.mac[0], master_info.mac[1], master_info.mac[2],
-               master_info.mac[3], master_info.mac[4], master_info.mac[5]);
+      snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X", master_info.mac[0], master_info.mac[1], master_info.mac[2], master_info.mac[3], master_info.mac[4], master_info.mac[5]);
       cJSON_AddStringToObject(master, "mac", mac_str);
       cJSON_AddStringToObject(master, "type", espnow_link_slave_type_to_str(master_info.type));
       cJSON_AddNumberToObject(master, "device_id", master_info.device_id);
       cJSON_AddNumberToObject(master, "last_seen_us", (double)master_info.last_seen_us);
-      uint64_t age_ms = (master_info.last_seen_us && now_us > master_info.last_seen_us)
-                            ? (now_us - master_info.last_seen_us) / 1000ULL
-                            : 0;
+      uint64_t age_ms = (master_info.last_seen_us && now_us > master_info.last_seen_us) ? (now_us - master_info.last_seen_us) / 1000ULL : 0;
       cJSON_AddNumberToObject(master, "age_ms", (double)age_ms);
       cJSON_AddNumberToObject(master, "channel", (double)master_info.channel);
       cJSON_AddItemToObject(root, "master", master);
@@ -626,18 +621,18 @@ static esp_err_t espnow_config_get_handler(httpd_req_t *req) {
 // POST ESP-NOW config (role/type) -> saves to SPIFFS, reboot required to apply
 static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL] = {0};
-  cJSON *root = NULL;
+  cJSON *root                     = NULL;
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
 
-  const cJSON *role_json = cJSON_GetObjectItem(root, "role");
-  const cJSON *type_json = cJSON_GetObjectItem(root, "type");
+  const cJSON *role_json             = cJSON_GetObjectItem(root, "role");
+  const cJSON *type_json             = cJSON_GetObjectItem(root, "type");
 
   espnow_role_t new_role             = espnow_link_get_role();
   espnow_slave_type_t new_slave_type = espnow_link_get_slave_type();
 
-  bool ok = true;
+  bool ok                            = true;
   if (role_json && cJSON_IsString(role_json)) {
     ok = espnow_link_role_from_str(role_json->valuestring, &new_role);
   }
@@ -664,9 +659,7 @@ static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  ESP_LOGI(TAG_WEBSERVER, "ESP-NOW config saved: role=%s type=%s (SPIFFS)",
-           espnow_link_role_to_str(new_role),
-           espnow_link_slave_type_to_str(new_slave_type));
+  ESP_LOGI(TAG_WEBSERVER, "ESP-NOW config saved: role=%s type=%s (SPIFFS)", espnow_link_role_to_str(new_role), espnow_link_slave_type_to_str(new_slave_type));
 
   cJSON *resp = cJSON_CreateObject();
   cJSON_AddStringToObject(resp, "st", "ok");
@@ -685,7 +678,7 @@ static esp_err_t espnow_config_post_handler(httpd_req_t *req) {
 // POST to enable ESP-NOW pairing mode on the master
 static esp_err_t espnow_pairing_post_handler(httpd_req_t *req) {
   char content[BUFFER_SIZE_SMALL] = {0};
-  cJSON *root = NULL;
+  cJSON *root                     = NULL;
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     // parse_json_request already sent an error response
     return ESP_FAIL;
@@ -698,8 +691,8 @@ static esp_err_t espnow_pairing_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  bool enable = cJSON_IsTrue(enable_json);
-  uint32_t duration_s = 60; // Default duration 60 seconds
+  bool enable                = cJSON_IsTrue(enable_json);
+  uint32_t duration_s        = 60; // Default duration 60 seconds
 
   const cJSON *duration_json = cJSON_GetObjectItem(root, "duration");
   if (cJSON_IsNumber(duration_json)) {
@@ -711,16 +704,16 @@ static esp_err_t espnow_pairing_post_handler(httpd_req_t *req) {
   esp_err_t err = espnow_link_set_pairing_mode(enable, duration_s);
 
   if (err == ESP_ERR_NOT_SUPPORTED) {
-      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Pairing mode is only available for master role");
-      return ESP_FAIL;
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Pairing mode is only available for master role");
+    return ESP_FAIL;
   } else if (err != ESP_OK) {
-      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to set pairing mode");
-      return ESP_FAIL;
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to set pairing mode");
+    return ESP_FAIL;
   }
-  
+
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
-  
+
   return ESP_OK;
 }
 
@@ -729,16 +722,16 @@ static esp_err_t espnow_slave_pairing_post_handler(httpd_req_t *req) {
   esp_err_t err = espnow_link_trigger_slave_pairing();
 
   if (err == ESP_ERR_NOT_SUPPORTED) {
-      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Pairing trigger is only available for slave role");
-      return ESP_FAIL;
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Pairing trigger is only available for slave role");
+    return ESP_FAIL;
   } else if (err != ESP_OK) {
-      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to trigger slave pairing");
-      return ESP_FAIL;
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to trigger slave pairing");
+    return ESP_FAIL;
   }
-  
+
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, "{\"st\":\"ok\"}");
-  
+
   return ESP_OK;
 }
 
@@ -746,11 +739,11 @@ static esp_err_t espnow_slave_pairing_post_handler(httpd_req_t *req) {
 static esp_err_t espnow_slave_disconnect_post_handler(httpd_req_t *req) {
   esp_err_t err = espnow_link_disconnect();
   if (err == ESP_ERR_NOT_SUPPORTED) {
-      httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Disconnect is only available for slave role");
-      return ESP_FAIL;
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Disconnect is only available for slave role");
+    return ESP_FAIL;
   } else if (err != ESP_OK) {
-      httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to disconnect ESP-NOW");
-      return ESP_FAIL;
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to disconnect ESP-NOW");
+    return ESP_FAIL;
   }
 
   httpd_resp_set_type(req, "application/json");
@@ -761,25 +754,21 @@ static esp_err_t espnow_slave_disconnect_post_handler(httpd_req_t *req) {
 // GET peers
 static esp_err_t espnow_peers_get_handler(httpd_req_t *req) {
   espnow_peer_info_t peers[ESPNOW_MAX_PEERS] = {0};
-  size_t count = 0;
+  size_t count                               = 0;
   espnow_link_get_peers(peers, ESPNOW_MAX_PEERS, &count);
   uint64_t now_us = esp_timer_get_time();
 
-  cJSON *root = cJSON_CreateArray();
+  cJSON *root     = cJSON_CreateArray();
   for (size_t i = 0; i < count; i++) {
     cJSON *p = cJSON_CreateObject();
     char mac_str[18];
-    snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
-             peers[i].mac[0], peers[i].mac[1], peers[i].mac[2],
-             peers[i].mac[3], peers[i].mac[4], peers[i].mac[5]);
+    snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X", peers[i].mac[0], peers[i].mac[1], peers[i].mac[2], peers[i].mac[3], peers[i].mac[4], peers[i].mac[5]);
     cJSON_AddStringToObject(p, "mac", mac_str);
     cJSON_AddStringToObject(p, "role", espnow_link_role_to_str(peers[i].role));
     cJSON_AddStringToObject(p, "type", espnow_link_slave_type_to_str(peers[i].type));
     cJSON_AddNumberToObject(p, "device_id", peers[i].device_id);
     cJSON_AddNumberToObject(p, "last_seen_us", (double)peers[i].last_seen_us);
-    uint64_t age_ms = (peers[i].last_seen_us && now_us > peers[i].last_seen_us)
-                          ? (now_us - peers[i].last_seen_us) / 1000ULL
-                          : 0;
+    uint64_t age_ms = (peers[i].last_seen_us && now_us > peers[i].last_seen_us) ? (now_us - peers[i].last_seen_us) / 1000ULL : 0;
     cJSON_AddNumberToObject(p, "age_ms", (double)age_ms);
     cJSON_AddNumberToObject(p, "channel", (double)peers[i].channel);
     cJSON_AddItemToArray(root, p);
@@ -800,22 +789,28 @@ static esp_err_t espnow_test_frame_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
   char content[BUFFER_SIZE_SMALL] = {0};
-  cJSON *root = NULL;
-  uint8_t mac_bytes[6] = {0};
-  bool has_mac = false;
+  cJSON *root                     = NULL;
+  uint8_t mac_bytes[6]            = {0};
+  bool has_mac                    = false;
   if (req->content_len > 0 && req->content_len < sizeof(content)) {
     if (parse_json_request(req, content, sizeof(content), &root) == ESP_OK) {
       const cJSON *mac_json = cJSON_GetObjectItem(root, "mac");
       if (cJSON_IsString(mac_json) && mac_json->valuestring) {
-        int a,b,c,d,e,f;
-        if (sscanf(mac_json->valuestring, "%x:%x:%x:%x:%x:%x", &a,&b,&c,&d,&e,&f) == 6) {
-          mac_bytes[0]=a; mac_bytes[1]=b; mac_bytes[2]=c; mac_bytes[3]=d; mac_bytes[4]=e; mac_bytes[5]=f;
-          has_mac = true;
+        int a, b, c, d, e, f;
+        if (sscanf(mac_json->valuestring, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f) == 6) {
+          mac_bytes[0] = a;
+          mac_bytes[1] = b;
+          mac_bytes[2] = c;
+          mac_bytes[3] = d;
+          mac_bytes[4] = e;
+          mac_bytes[5] = f;
+          has_mac      = true;
         }
       }
     }
   }
-  if (root) cJSON_Delete(root);
+  if (root)
+    cJSON_Delete(root);
 
   esp_err_t err = espnow_link_send_test_frame(has_mac ? mac_bytes : NULL);
   if (err == ESP_ERR_NOT_FOUND) {
@@ -837,8 +832,8 @@ static esp_err_t espnow_disconnect_peer_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
   char content[BUFFER_SIZE_SMALL] = {0};
-  cJSON *root = NULL;
-  uint8_t mac_bytes[6] = {0};
+  cJSON *root                     = NULL;
+  uint8_t mac_bytes[6]            = {0};
   if (parse_json_request(req, content, sizeof(content), &root) != ESP_OK) {
     return ESP_FAIL;
   }
@@ -848,13 +843,18 @@ static esp_err_t espnow_disconnect_peer_post_handler(httpd_req_t *req) {
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing mac");
     return ESP_FAIL;
   }
-  int a,b,c,d,e,f;
-  if (sscanf(mac_json->valuestring, "%x:%x:%x:%x:%x:%x", &a,&b,&c,&d,&e,&f) != 6) {
+  int a, b, c, d, e, f;
+  if (sscanf(mac_json->valuestring, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f) != 6) {
     cJSON_Delete(root);
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid mac format");
     return ESP_FAIL;
   }
-  mac_bytes[0]=a; mac_bytes[1]=b; mac_bytes[2]=c; mac_bytes[3]=d; mac_bytes[4]=e; mac_bytes[5]=f;
+  mac_bytes[0] = a;
+  mac_bytes[1] = b;
+  mac_bytes[2] = c;
+  mac_bytes[3] = d;
+  mac_bytes[4] = e;
+  mac_bytes[5] = f;
   cJSON_Delete(root);
 
   esp_err_t err = espnow_link_disconnect_peer(mac_bytes);
@@ -1004,7 +1004,7 @@ static esp_err_t profiles_handler(httpd_req_t *req) {
   if (err == ESP_OK) {
     size_t spiffs_free = spiffs_total - spiffs_used;
 
-    cJSON *storage = cJSON_CreateObject();
+    cJSON *storage     = cJSON_CreateObject();
     cJSON_AddNumberToObject(storage, "used", spiffs_used);
     cJSON_AddNumberToObject(storage, "free", spiffs_free);
     cJSON_AddNumberToObject(storage, "total", spiffs_total);
@@ -1470,10 +1470,10 @@ static esp_err_t profile_import_handler(httpd_req_t *req) {
   cJSON_Delete(root);
   root = NULL;
   free(content);
-  content = NULL;
+  content                 = NULL;
 
   size_t profile_json_len = strlen(profile_json);
-  size_t free_heap = esp_get_free_heap_size();
+  size_t free_heap        = esp_get_free_heap_size();
   ESP_LOGI(TAG_WEBSERVER, "Profile JSON prepared: %d bytes, free heap: %d bytes", profile_json_len, free_heap);
 
   int target_id = find_free_profile_slot(preferred_id);
@@ -1854,8 +1854,14 @@ static esp_err_t log_file_status_handler(httpd_req_t *req) {
   bool enabled  = log_stream_is_file_logging_enabled();
 
   char json[160];
-  snprintf(json, sizeof(json), "{\"st\":\"ok\",\"en\":%s,\"size\":%u,\"idx\":%u,\"max\":%u,\"sel\":%u}",
-           enabled ? "true" : "false", (unsigned)size, (unsigned)current, (unsigned)max_index, (unsigned)selected);
+  snprintf(json,
+           sizeof(json),
+           "{\"st\":\"ok\",\"en\":%s,\"size\":%u,\"idx\":%u,\"max\":%u,\"sel\":%u}",
+           enabled ? "true" : "false",
+           (unsigned)size,
+           (unsigned)current,
+           (unsigned)max_index,
+           (unsigned)selected);
   httpd_resp_set_type(req, "application/json");
   httpd_resp_sendstr(req, json);
   return ESP_OK;
@@ -1876,7 +1882,7 @@ static esp_err_t log_file_enable_handler(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  bool enable  = cJSON_IsTrue(en_item);
+  bool enable   = cJSON_IsTrue(en_item);
   esp_err_t ret = log_stream_enable_file_logging(enable);
   cJSON_Delete(json);
 
@@ -2545,7 +2551,7 @@ esp_err_t web_server_start(void) {
   config.max_uri_handlers = HTTP_MAX_URI_HANDLERS;
   config.max_open_sockets = HTTP_MAX_OPEN_SOCKETS;
   config.lru_purge_enable = true;
-  config.stack_size       = 6144;    // Increased from default 4096 to avoid stack overflow
+  config.stack_size       = 6144; // Increased from default 4096 to avoid stack overflow
   // config.core_id          = 1;    // Serveur web sur core 1 (WiFi sur core 0)
 
   ESP_LOGI(TAG_WEBSERVER, "Web server started on port %d", config.server_port);

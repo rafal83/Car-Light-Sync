@@ -60,7 +60,7 @@ static canserver_client_t clients[MAX_CANSERVER_CLIENTS];
 static SemaphoreHandle_t clients_mutex = NULL;
 static frame_buffer_t frame_buffer;
 static SemaphoreHandle_t buffer_mutex = NULL;
-static bool has_active_clients     = false; // Cached client status for fast check
+static bool has_active_clients        = false; // Cached client status for fast check
 
 // ============================================================================
 // Panda Protocol Frame Encoding
@@ -146,7 +146,7 @@ static void remove_stale_clients(void) {
         inet_ntop(AF_INET, &clients[i].addr.sin_addr, ip_str, sizeof(ip_str));
         ESP_LOGI(TAG, "Client %s:%d timed out (no ping for >5s), removing", ip_str, ntohs(clients[i].addr.sin_port));
         clients[i].active = false;
-        clients_changed = true;
+        clients_changed   = true;
       }
     }
   }

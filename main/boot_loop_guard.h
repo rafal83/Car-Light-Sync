@@ -2,6 +2,7 @@
 #define BOOT_LOOP_GUARD_H
 
 #include "esp_err.h"
+
 #include <stdbool.h>
 
 /**
@@ -12,7 +13,7 @@
 /**
  * @brief Time in ms after which the counter resets (successful boot)
  */
-#define BOOT_LOOP_SUCCESS_TIMEOUT_MS 30000  // 30 secondes
+#define BOOT_LOOP_SUCCESS_TIMEOUT_MS 30000 // 30 secondes
 
 /**
  * @brief Initialize boot loop protection

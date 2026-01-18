@@ -23,8 +23,8 @@ static TaskHandle_t fft_task_handle      = NULL;
 static audio_config_t current_config     = {.enabled = false, .sensitivity = 128, .gain = 128, .auto_gain = true, .fft_enabled = false};
 static audio_calibration_t calibration   = {.calibrated = false, .noise_floor = 0.0f, .peak_level = 1.0f};
 // Pre-computed reciprocals for performance (avoid division in hot path)
-static float sensitivity_reciprocal = 1.0f / 128.0f;
-static float gain_reciprocal = 1.0f / 128.0f;
+static float sensitivity_reciprocal      = 1.0f / 128.0f;
+static float gain_reciprocal             = 1.0f / 128.0f;
 static audio_calibration_t calib_result  = {0};
 static volatile bool calibration_running = false;
 static volatile bool calibration_ready   = false;
@@ -55,7 +55,7 @@ static float hann_window[AUDIO_FFT_SIZE];
 
 // FFT task queue: holds pointers to audio samples for async FFT computation
 #define FFT_QUEUE_LENGTH 2
-static QueueHandle_t fft_queue           = NULL;
+static QueueHandle_t fft_queue = NULL;
 typedef struct {
   int32_t samples[AUDIO_FFT_SIZE]; // 256 samples for LED-optimized FFT
   int num_samples;
@@ -63,7 +63,7 @@ typedef struct {
 
 // OPTIMIZATION: Pre-allocated ring buffer for FFT queue items (eliminates malloc/free)
 static fft_queue_item_t fft_ring_buffer[FFT_QUEUE_LENGTH];
-static uint8_t fft_ring_write_idx = 0;
+static uint8_t fft_ring_write_idx                = 0;
 
 // Variables for BPM detection
 static float bpm_history[AUDIO_BPM_HISTORY_SIZE] = {0};
@@ -113,7 +113,7 @@ static void calculate_frequency_bands(int32_t *buffer, size_t size, float *bass,
       }
     }
 
-  // Distribute energy by segment (frequency approximation)
+    // Distribute energy by segment (frequency approximation)
     if (seg < 2) {
       low_energy += seg_energy;
     } else if (seg < 5) {
@@ -303,14 +303,13 @@ static void audio_task(void *pvParameters) {
       continue;
     }
 
-    size_t samples           = bytes_read / sizeof(int32_t);
+    size_t samples      = bytes_read / sizeof(int32_t);
 
     // Compute RMS amplitude
-    float rms                = calculate_rms(audio_buffer, samples);
+    float rms           = calculate_rms(audio_buffer, samples);
 
     // Apply sensitivity and gain (use pre-computed reciprocals for speed)
-    float amplitude_raw      = rms * ((float)current_config.sensitivity * sensitivity_reciprocal) *
-                                     ((float)current_config.gain * gain_reciprocal) * 10.0f;
+    float amplitude_raw = rms * ((float)current_config.sensitivity * sensitivity_reciprocal) * ((float)current_config.gain * gain_reciprocal) * 10.0f;
 
     // Clamp to 0.0-1.0
     if (amplitude_raw > 1.0f)
@@ -373,8 +372,8 @@ static void audio_task(void *pvParameters) {
       fft_queue_item_t *item = &fft_ring_buffer[fft_ring_write_idx];
 
       // Copy only the samples needed for FFT (256 for LED animations)
-      int fft_samples = samples < AUDIO_FFT_SIZE ? samples : AUDIO_FFT_SIZE;
-      item->num_samples = fft_samples;
+      int fft_samples        = samples < AUDIO_FFT_SIZE ? samples : AUDIO_FFT_SIZE;
+      item->num_samples      = fft_samples;
       memcpy(item->samples, audio_buffer, fft_samples * sizeof(int32_t));
 
       // Try to send to queue (non-blocking to avoid delaying audio)
@@ -933,12 +932,12 @@ static void group_fft_into_bands(audio_fft_data_t *fft_data) {
 
   // OPTIMIZATION: Single-pass computation of all frequency-based features
   // Instead of 5 separate loops, compute all energies in one pass
-  fft_data->bass_energy   = 0.0f;
-  fft_data->mid_energy    = 0.0f;
-  fft_data->treble_energy = 0.0f;
-  float kick_energy       = 0.0f;
-  float snare_energy      = 0.0f;
-  float vocal_energy      = 0.0f;
+  fft_data->bass_energy       = 0.0f;
+  fft_data->mid_energy        = 0.0f;
+  fft_data->treble_energy     = 0.0f;
+  float kick_energy           = 0.0f;
+  float snare_energy          = 0.0f;
+  float vocal_energy          = 0.0f;
 
   // Single loop for all frequency-based calculations (5x to 1x scan)
   for (int i = 0; i < AUDIO_FFT_SIZE / 2; i++) {

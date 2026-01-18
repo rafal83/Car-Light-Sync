@@ -175,7 +175,8 @@ esp_err_t wifi_manager_start_ap(void) {
   // Copy SSID with MAC suffix (ensure null termination)
   size_t ssid_len = strlen(g_wifi_ssid_with_suffix);
   size_t max_len  = sizeof(ap_config.ap.ssid) - 1;
-  if (ssid_len > max_len) ssid_len = max_len;
+  if (ssid_len > max_len)
+    ssid_len = max_len;
   memcpy(ap_config.ap.ssid, g_wifi_ssid_with_suffix, ssid_len);
   ap_config.ap.ssid[ssid_len] = '\0';
   ap_config.ap.ssid_len       = ssid_len;

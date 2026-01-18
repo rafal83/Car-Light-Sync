@@ -29,13 +29,13 @@
 
 // UUIDs (128-bit) - NimBLE expects bytes in reverse order
 // Service: 4fafc201-1fb5-459e-8fcc-c5c9c331914b
-static const ble_uuid128_t ble_service_uuid  = BLE_UUID128_INIT(0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f, 0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
+static const ble_uuid128_t ble_service_uuid       = BLE_UUID128_INIT(0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f, 0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
 
 // Command: beb5483e-36e1-4688-b7f5-ea07361b26a8
-static const ble_uuid128_t ble_command_uuid  = BLE_UUID128_INIT(0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7, 0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
+static const ble_uuid128_t ble_command_uuid       = BLE_UUID128_INIT(0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7, 0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 // Response: 64a0990c-52eb-4c1b-aa30-ea826f4ba9dc
-static const ble_uuid128_t ble_response_uuid = BLE_UUID128_INIT(0xdc, 0xa9, 0x4b, 0x6f, 0x82, 0xea, 0x30, 0xaa, 0x1b, 0x4c, 0xeb, 0x52, 0x0c, 0x99, 0xa0, 0x64);
+static const ble_uuid128_t ble_response_uuid      = BLE_UUID128_INIT(0xdc, 0xa9, 0x4b, 0x6f, 0x82, 0xea, 0x30, 0xaa, 0x1b, 0x4c, 0xeb, 0x52, 0x0c, 0x99, 0xa0, 0x64);
 
 // Vehicle State: c5c9c331-914b-459e-8fcc-c5c91fb54fad
 static const ble_uuid128_t ble_vehicle_state_uuid = BLE_UUID128_INIT(0xad, 0x4f, 0xb5, 0x1f, 0xc9, 0xc5, 0xcc, 0x8f, 0x9e, 0x45, 0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5);
@@ -58,14 +58,14 @@ static uint16_t ble_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t ble_command_val_handle;
 static uint16_t ble_response_val_handle;
 static uint16_t ble_vehicle_state_val_handle;
-static bool ble_connected               = false;
-static bool notifications_enabled       = false;
+static bool ble_connected                       = false;
+static bool notifications_enabled               = false;
 static bool vehicle_state_notifications_enabled = false;
-static uint16_t negotiated_mtu          = 23;
-static bool ble_started                 = false;
-static bool config_ack_received         = false;
-static QueueHandle_t request_queue      = NULL;
-static TaskHandle_t request_task_handle = NULL;
+static uint16_t negotiated_mtu                  = 23;
+static bool ble_started                         = false;
+static bool config_ack_received                 = false;
+static QueueHandle_t request_queue              = NULL;
+static TaskHandle_t request_task_handle         = NULL;
 static char incoming_buffer[BLE_MAX_REQUEST_LEN];
 static size_t incoming_length = 0;
 
@@ -151,13 +151,13 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
   switch (event->type) {
   case BLE_GAP_EVENT_CONNECT:
     if (event->connect.status == 0) {
-      ble_conn_handle       = event->connect.conn_handle;
-      ble_connected         = true;
-      notifications_enabled = false;
+      ble_conn_handle                     = event->connect.conn_handle;
+      ble_connected                       = true;
+      notifications_enabled               = false;
       vehicle_state_notifications_enabled = false;
-      config_ack_received   = false;
-      negotiated_mtu        = 23;
-      incoming_length       = 0;
+      config_ack_received                 = false;
+      negotiated_mtu                      = 23;
+      incoming_length                     = 0;
       ESP_LOGI(TAG_BLE_API, "Client BLE connecte");
 
       struct ble_gap_upd_params params = {
@@ -185,12 +185,12 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     break;
 
   case BLE_GAP_EVENT_DISCONNECT:
-    ble_conn_handle       = BLE_HS_CONN_HANDLE_NONE;
-    ble_connected         = false;
-    notifications_enabled = false;
+    ble_conn_handle                     = BLE_HS_CONN_HANDLE_NONE;
+    ble_connected                       = false;
+    notifications_enabled               = false;
     vehicle_state_notifications_enabled = false;
-    config_ack_received   = false;
-    incoming_length       = 0;
+    config_ack_received                 = false;
+    incoming_length                     = 0;
     ESP_LOGI(TAG_BLE_API, "Client BLE deconnecte, raison=%d", event->disconnect.reason);
     {
       struct ble_gap_adv_params adv = {
@@ -410,7 +410,7 @@ static void ble_process_request_message(const char *json) {
 
   if (path && (strcmp(path, "/ble/config_ack") == 0 || strcmp(path, "/api/ble/config_ack") == 0)) {
     config_ack_received = true;
-    cJSON *response = cJSON_CreateObject();
+    cJSON *response     = cJSON_CreateObject();
     cJSON_AddNumberToObject(response, "status", 200);
     cJSON_AddStringToObject(response, "statusText", "OK");
     cJSON *headers_json = cJSON_CreateObject();
@@ -730,7 +730,7 @@ esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size) {
   while (offset < size) {
     size_t chunk = (size - offset) > max_payload ? max_payload : (size - offset);
 
-    om = ble_hs_mbuf_from_flat((const uint8_t *)state + offset, chunk);
+    om           = ble_hs_mbuf_from_flat((const uint8_t *)state + offset, chunk);
     if (!om) {
       ESP_LOGE(TAG_BLE_API, "mbuf allocation error for vehicle state");
       vTaskDelay(pdMS_TO_TICKS(10));
@@ -788,8 +788,7 @@ bool ble_api_service_config_ack_received(void) {
   return false;
 }
 
-void ble_api_service_clear_config_ack(void) {
-}
+void ble_api_service_clear_config_ack(void) {}
 
 esp_err_t ble_api_service_send_vehicle_state(const void *state, size_t size) {
   return ESP_ERR_NOT_SUPPORTED;

@@ -44,7 +44,7 @@ esp_err_t espnow_link_init(espnow_role_t role, espnow_slave_type_t slave_type);
 esp_err_t espnow_link_register_peer(const uint8_t mac[6]);
 esp_err_t espnow_link_get_peers(espnow_peer_info_t *out_peers, size_t max_peers, size_t *out_count);
 esp_err_t espnow_link_send_test_frame(const uint8_t mac[6]); // if mac==NULL, send to all
-esp_err_t espnow_link_disconnect(void); // slave disconnect from master
+esp_err_t espnow_link_disconnect(void);                      // slave disconnect from master
 esp_err_t espnow_link_disconnect_peer(const uint8_t mac[6]); // master disconnect specific peer
 esp_err_t espnow_link_send_vehicle_state(const vehicle_state_t *state);
 void espnow_link_register_vehicle_state_rx_callback(espnow_vehicle_state_rx_cb_t cb);

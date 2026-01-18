@@ -64,9 +64,9 @@
 
 static vehicle_state_t last_vehicle_state = {0};
 static void espnow_test_frame_log(void);
-static bool config_sended = false;
+static bool config_sended                         = false;
 static vehicle_state_ble_config_t last_ble_config = {0};
-static bool last_ble_config_valid = false;
+static bool last_ble_config_valid                 = false;
 
 // Callback for scroll wheel events (called from vehicle_state_apply_signal)
 static void on_wheel_scroll_event(float scroll_value, const vehicle_state_t *state) {
@@ -122,33 +122,33 @@ static void led_task(void *pvParameters) {
 
   while (1) {
     // Render event overlays first so led_effects_update can skip/allow base effect correctly.
-    config_manager_update();       // Handle temporary effects
+    config_manager_update(); // Handle temporary effects
     led_effects_update();
     vTaskDelay(pdMS_TO_TICKS(20)); // 50 FPS
   }
 }
 
 // Macro to reduce code duplication for event detection
-#define CHECK_BOOLEAN_EVENT(field, on_event, off_event) \
-  do { \
-    if (prev->field != curr->field) { \
-      if (curr->field) { \
-        config_manager_process_can_event(on_event); \
-      } else { \
-        config_manager_stop_event(off_event); \
-      } \
-    } \
+#define CHECK_BOOLEAN_EVENT(field, on_event, off_event)                                                                                                                                                \
+  do {                                                                                                                                                                                                 \
+    if (prev->field != curr->field) {                                                                                                                                                                  \
+      if (curr->field) {                                                                                                                                                                               \
+        config_manager_process_can_event(on_event);                                                                                                                                                    \
+      } else {                                                                                                                                                                                         \
+        config_manager_stop_event(off_event);                                                                                                                                                          \
+      }                                                                                                                                                                                                \
+    }                                                                                                                                                                                                  \
   } while (0)
 
-#define CHECK_BOOLEAN_EVENT_NO_OFF(field, on_event) \
-  do { \
-    if (prev->field != curr->field) { \
-      if (curr->field) { \
-        config_manager_process_can_event(on_event); \
-      } else { \
-        config_manager_stop_event(on_event); \
-      } \
-    } \
+#define CHECK_BOOLEAN_EVENT_NO_OFF(field, on_event)                                                                                                                                                    \
+  do {                                                                                                                                                                                                 \
+    if (prev->field != curr->field) {                                                                                                                                                                  \
+      if (curr->field) {                                                                                                                                                                               \
+        config_manager_process_can_event(on_event);                                                                                                                                                    \
+      } else {                                                                                                                                                                                         \
+        config_manager_stop_event(on_event);                                                                                                                                                           \
+      }                                                                                                                                                                                                \
+    }                                                                                                                                                                                                  \
   } while (0)
 
 // CAN event processing task
@@ -156,17 +156,17 @@ static void can_event_task(void *pvParameters) {
   ESP_LOGI(TAG_MAIN, "CAN events task started");
 
   // Use double buffer with pointer swapping to avoid memcpy
-  static vehicle_state_t state_buffer_a = {0};
-  static vehicle_state_t state_buffer_b = {0};
-  vehicle_state_t *curr = &state_buffer_a;
-  vehicle_state_t *prev = &state_buffer_b;
+  static vehicle_state_t state_buffer_a  = {0};
+  static vehicle_state_t state_buffer_b  = {0};
+  vehicle_state_t *curr                  = &state_buffer_a;
+  vehicle_state_t *prev                  = &state_buffer_b;
 
   // Counter for periodic BLE dashboard updates (send every 200ms = 4 iterations)
   // uint8_t ble_send_counter = 0;
-  TickType_t last_state_send_ticks = 0;
-  TickType_t last_config_send_ticks = 0;
+  TickType_t last_state_send_ticks       = 0;
+  TickType_t last_config_send_ticks      = 0;
   const TickType_t min_state_send_period = pdMS_TO_TICKS(50);
-  const TickType_t config_send_period = pdMS_TO_TICKS(2000);
+  const TickType_t config_send_period    = pdMS_TO_TICKS(2000);
 
   while (1) {
     // Copy current state (still needed once to get latest data)
@@ -183,9 +183,9 @@ static void can_event_task(void *pvParameters) {
     CHECK_BOOLEAN_EVENT_NO_OFF(turn_right, CAN_EVENT_TURN_RIGHT);
 
     // Doors
-    bool doors_open_left_now    = curr->door_front_left_open + curr->door_rear_left_open > 0;
-    bool doors_open_left_before = prev->door_front_left_open + prev->door_rear_left_open > 0;
-    bool doors_open_right_now   = curr->door_front_right_open + curr->door_rear_right_open > 0;
+    bool doors_open_left_now     = curr->door_front_left_open + curr->door_rear_left_open > 0;
+    bool doors_open_left_before  = prev->door_front_left_open + prev->door_rear_left_open > 0;
+    bool doors_open_right_now    = curr->door_front_right_open + curr->door_rear_right_open > 0;
     bool doors_open_right_before = prev->door_front_right_open + prev->door_rear_right_open > 0;
 
     if (doors_open_left_now != doors_open_left_before) {
@@ -332,76 +332,75 @@ static void can_event_task(void *pvParameters) {
 
     // Swap buffers instead of memcpy (much faster!)
     vehicle_state_t *temp = prev;
-    prev = curr;
-    curr = temp;
+    prev                  = curr;
+    curr                  = temp;
 
     // // Periodic BLE dashboard updates (every 200ms)
     // ble_send_counter++;
     // if (ble_send_counter >= 1) {  // 4 iterations * 50ms = 200ms
     //   ble_send_counter = 0;
 
-      // Send current vehicle state to BLE dashboard if connected
-      // Use mode-specific packet format based on gear (Drive vs Park)
-      if (ble_api_service_is_connected()) {
-        // Determine mode based on gear: P=1, R=2, N=3, D=4 (use prev since we swapped)
-        bool is_drive_mode = (prev->gear == 2 || prev->gear == 3 || prev->gear == 4);
+    // Send current vehicle state to BLE dashboard if connected
+    // Use mode-specific packet format based on gear (Drive vs Park)
+    if (ble_api_service_is_connected()) {
+      // Determine mode based on gear: P=1, R=2, N=3, D=4 (use prev since we swapped)
+      bool is_drive_mode = (prev->gear == 2 || prev->gear == 3 || prev->gear == 4);
 
-        vehicle_state_ble_config_t ble_config_state;
-        memset(&ble_config_state, 0, sizeof(ble_config_state));
-        vehicle_state_to_ble_config(prev, &ble_config_state);
-        size_t config_compare_size = offsetof(vehicle_state_ble_config_t, last_update_ms);
-        TickType_t now_ticks = xTaskGetTickCount();
-        bool config_ack = ble_api_service_config_ack_received();
-        bool config_changed = !last_ble_config_valid ||
-                              (memcmp(&ble_config_state, &last_ble_config, config_compare_size) != 0);
-        if (config_changed) {
-          ble_api_service_clear_config_ack();
-          config_ack = false;
+      vehicle_state_ble_config_t ble_config_state;
+      memset(&ble_config_state, 0, sizeof(ble_config_state));
+      vehicle_state_to_ble_config(prev, &ble_config_state);
+      size_t config_compare_size = offsetof(vehicle_state_ble_config_t, last_update_ms);
+      TickType_t now_ticks       = xTaskGetTickCount();
+      bool config_ack            = ble_api_service_config_ack_received();
+      bool config_changed        = !last_ble_config_valid || (memcmp(&ble_config_state, &last_ble_config, config_compare_size) != 0);
+      if (config_changed) {
+        ble_api_service_clear_config_ack();
+        config_ack = false;
+      }
+      bool config_due = !config_ack && (now_ticks - last_config_send_ticks) >= config_send_period;
+      if (!config_sended || config_changed || config_due) {
+        // Send CONFIG mode packet
+        static uint8_t ble_config_packet[1 + sizeof(vehicle_state_ble_config_t)];
+        ble_config_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_CONFIG, 0);
+        memcpy(ble_config_packet + 1, &ble_config_state, sizeof(vehicle_state_ble_config_t));
+        esp_err_t ret = ble_api_service_send_vehicle_state(ble_config_packet, sizeof(ble_config_packet));
+        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+          ESP_LOGD(TAG_MAIN, "BLE config send failed: %s", esp_err_to_name(ret));
         }
-        bool config_due = !config_ack && (now_ticks - last_config_send_ticks) >= config_send_period;
-        if (!config_sended || config_changed || config_due) {
-          // Send CONFIG mode packet 
-          static uint8_t ble_config_packet[1 + sizeof(vehicle_state_ble_config_t)];
-          ble_config_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_CONFIG, 0);
-          memcpy(ble_config_packet + 1, &ble_config_state, sizeof(vehicle_state_ble_config_t));
-          esp_err_t ret = ble_api_service_send_vehicle_state(ble_config_packet, sizeof(ble_config_packet));
-          if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-            ESP_LOGD(TAG_MAIN, "BLE config send failed: %s", esp_err_to_name(ret));
-          }
-          config_sended = true;
-          if (ret == ESP_OK) {
-            last_ble_config = ble_config_state;
-            last_ble_config_valid = true;
-            last_config_send_ticks = now_ticks;
-          }
+        config_sended = true;
+        if (ret == ESP_OK) {
+          last_ble_config        = ble_config_state;
+          last_ble_config_valid  = true;
+          last_config_send_ticks = now_ticks;
         }
+      }
 
-        if (is_drive_mode) {
-          // Send DRIVE mode packet (smaller, focused on driving metrics)
-          static vehicle_state_ble_drive_t ble_drive_state;
-          vehicle_state_to_ble_drive(prev, &ble_drive_state);
-          static uint8_t ble_drive_packet[1 + sizeof(vehicle_state_ble_drive_t)];
-          ble_drive_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_DRIVE, 0);
-          memcpy(ble_drive_packet + 1, &ble_drive_state, sizeof(vehicle_state_ble_drive_t));
-          esp_err_t ret = ble_api_service_send_vehicle_state(ble_drive_packet, sizeof(ble_drive_packet));
-          if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-            ESP_LOGD(TAG_MAIN, "BLE drive mode send failed: %s", esp_err_to_name(ret));
-          }
-        } else {
-          // Send PARK mode packet (focused on battery, charging, doors)
-          static vehicle_state_ble_park_t ble_park_state;
-          vehicle_state_to_ble_park(prev, &ble_park_state);
-          static uint8_t ble_park_packet[1 + sizeof(vehicle_state_ble_park_t)];
-          ble_park_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_PARK, 0);
-          memcpy(ble_park_packet + 1, &ble_park_state, sizeof(vehicle_state_ble_park_t));
-          esp_err_t ret = ble_api_service_send_vehicle_state(ble_park_packet, sizeof(ble_park_packet));
-          if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-            ESP_LOGD(TAG_MAIN, "BLE park mode send failed: %s", esp_err_to_name(ret));
-          }
+      if (is_drive_mode) {
+        // Send DRIVE mode packet (smaller, focused on driving metrics)
+        static vehicle_state_ble_drive_t ble_drive_state;
+        vehicle_state_to_ble_drive(prev, &ble_drive_state);
+        static uint8_t ble_drive_packet[1 + sizeof(vehicle_state_ble_drive_t)];
+        ble_drive_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_DRIVE, 0);
+        memcpy(ble_drive_packet + 1, &ble_drive_state, sizeof(vehicle_state_ble_drive_t));
+        esp_err_t ret = ble_api_service_send_vehicle_state(ble_drive_packet, sizeof(ble_drive_packet));
+        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+          ESP_LOGD(TAG_MAIN, "BLE drive mode send failed: %s", esp_err_to_name(ret));
         }
       } else {
-        config_sended = false;
+        // Send PARK mode packet (focused on battery, charging, doors)
+        static vehicle_state_ble_park_t ble_park_state;
+        vehicle_state_to_ble_park(prev, &ble_park_state);
+        static uint8_t ble_park_packet[1 + sizeof(vehicle_state_ble_park_t)];
+        ble_park_packet[0] = BLE_VEHICLE_STATE_HEADER(BLE_VEHICLE_STATE_TYPE_PARK, 0);
+        memcpy(ble_park_packet + 1, &ble_park_state, sizeof(vehicle_state_ble_park_t));
+        esp_err_t ret = ble_api_service_send_vehicle_state(ble_park_packet, sizeof(ble_park_packet));
+        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+          ESP_LOGD(TAG_MAIN, "BLE park mode send failed: %s", esp_err_to_name(ret));
+        }
       }
+    } else {
+      config_sended = false;
+    }
     // }
 
     TickType_t now = xTaskGetTickCount();
@@ -602,7 +601,7 @@ void app_main(void) {
   ESP_LOGI(TAG_MAIN, "Reset reason: %s (%d)", reset_reason_to_str(reset_reason), reset_reason);
 
   // Default: master/none. SPIFFS can override via /api/espnow/config
-  espnow_role_t default_role  = ESP_NOW_ROLE_MASTER;
+  espnow_role_t default_role       = ESP_NOW_ROLE_MASTER;
   espnow_slave_type_t default_type = ESP_NOW_SLAVE_NONE;
 
   // Reduce log level for all ESP-IDF components
@@ -673,15 +672,13 @@ void app_main(void) {
   // Initialize modules
   ESP_LOGI(TAG_MAIN, "Initializing modules...");
 
-  uint8_t saved_role_u8 = settings_get_u8("espnow_role", (uint8_t)default_role);
-  uint8_t saved_type_u8 = settings_get_u8("espnow_type", (uint8_t)default_type);
+  uint8_t saved_role_u8           = settings_get_u8("espnow_role", (uint8_t)default_role);
+  uint8_t saved_type_u8           = settings_get_u8("espnow_type", (uint8_t)default_type);
 
   espnow_role_t espnow_role       = (saved_role_u8 <= ESP_NOW_ROLE_SLAVE) ? (espnow_role_t)saved_role_u8 : default_role;
   espnow_slave_type_t espnow_type = (saved_type_u8 < ESP_NOW_SLAVE_MAX) ? (espnow_slave_type_t)saved_type_u8 : default_type;
 
-  ESP_LOGI(TAG_MAIN, "ESPNow config: saved_role=%s saved_type=%s",
-           espnow_link_role_to_str(espnow_role),
-           espnow_link_slave_type_to_str(espnow_type));
+  ESP_LOGI(TAG_MAIN, "ESPNow config: saved_role=%s saved_type=%s", espnow_link_role_to_str(espnow_role), espnow_link_slave_type_to_str(espnow_type));
   uint64_t hb = espnow_link_get_last_peer_heartbeat_us();
   ESP_LOGI(TAG_MAIN, "ESPNow initial heartbeat: %llu us", (unsigned long long)hb);
 
@@ -773,7 +770,6 @@ void app_main(void) {
                               NULL); // Increased to 8KB because of config_profile_t
   create_task_on_general_core(monitor_task, "monitor_task", 4096, NULL, 2, NULL);
 
-
   // Log streaming (Server-Sent Events for real-time logs)
   ESP_ERROR_CHECK(log_stream_init());
   esp_err_t log_file_ret = log_stream_enable_file_logging(true);
@@ -781,7 +777,7 @@ void app_main(void) {
     ESP_LOGW(TAG_MAIN, "Log file logging disabled (err=%s)", esp_err_to_name(log_file_ret));
   }
   ESP_LOGI(TAG_MAIN, "Log streaming initialized");
-  
+
   // WiFi
   status_led_set_state(STATUS_LED_WIFI_CONNECTING);
   ESP_ERROR_CHECK(wifi_manager_init());
@@ -805,8 +801,6 @@ void app_main(void) {
   ESP_ERROR_CHECK(web_server_init());
   ESP_ERROR_CHECK(web_server_start());
   ESP_LOGI(TAG_MAIN, "Web server started");
-
-
 
   if (espnow_role == ESP_NOW_ROLE_MASTER) {
     // GVRET TCP server (initialized but not started - controlled via web interface)

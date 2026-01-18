@@ -149,9 +149,7 @@ esp_err_t can_bus_init(can_bus_type_t bus_type, int tx_gpio, int rx_gpio) {
 #else
   // Older ESP-IDF versions: only one controller supported
   if (bus_type == CAN_BUS_CHASSIS) {
-    ESP_LOGW(TAG_CAN_BUS,
-             "[%s] Second CAN bus requires ESP-IDF 5.2.0+ or an external controller",
-             bus_name);
+    ESP_LOGW(TAG_CAN_BUS, "[%s] Second CAN bus requires ESP-IDF 5.2.0+ or an external controller", bus_name);
     ESP_LOGW(TAG_CAN_BUS, "[%s] Feature disabled", bus_name);
     ctx->initialized = true;
     return ESP_OK;

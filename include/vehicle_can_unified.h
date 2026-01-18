@@ -2,10 +2,10 @@
 #ifndef VEHICLE_CAN_UNIFIED_H
 #define VEHICLE_CAN_UNIFIED_H
 
+#include "esp_attr.h" // For IRAM_ATTR
 #include "vehicle_can_unified_config.h"
 
 #include <stdint.h>
-#include "esp_attr.h"  // For IRAM_ATTR
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,12 +26,12 @@ typedef struct {
   float speed_kph;
   float speed_limit;
   int8_t pedal_map;
-  int8_t gear; 
+  int8_t gear;
   uint8_t accel_pedal_pos;
   uint8_t brake_pressed; // 0/1
 
   // Locking / openings
-  uint8_t locked;           // 0/1
+  uint8_t locked; // 0/1
   uint8_t door_front_left_open;
   uint8_t door_rear_left_open;
   uint8_t door_front_right_open;
@@ -64,7 +64,7 @@ typedef struct {
   uint8_t fog_lights; // 0/1
 
   // Energy
-  float soc_percent;      // battery level (%)
+  float soc_percent; // battery level (%)
   float pack_energy;
   float remaining_energy;
   float buffer_energy;
@@ -100,7 +100,7 @@ typedef struct {
   uint8_t lane_departure_right_lv2;
 
   uint8_t forward_collision;
-  
+
   uint8_t night_mode;
   float brightness;
   uint8_t autopilot;
@@ -116,11 +116,11 @@ typedef struct {
 // Total: ~22 bytes
 typedef struct __attribute__((packed)) {
   // Driving dynamics
-  uint16_t rear_power_limit_kw_x10;       // rear motor max power * 10
-  uint16_t front_power_limit_kw_x10;      // front motor max power * 10
-  uint16_t max_regen_x10;      // regen power * 10
+  uint16_t rear_power_limit_kw_x10;  // rear motor max power * 10
+  uint16_t front_power_limit_kw_x10; // front motor max power * 10
+  uint16_t max_regen_x10;            // regen power * 10
 
-  uint8_t flags0;  // bits: train type
+  uint8_t flags0; // bits: train type
 
   // Meta
   uint32_t last_update_ms;
@@ -131,28 +131,28 @@ typedef struct __attribute__((packed)) {
 // Total: ~22 bytes
 typedef struct __attribute__((packed)) {
   // Driving dynamics
-  uint8_t speed_kph;           // speed * 10 (absolute value)
-  int16_t rear_power_kw_x10;       // rear motor power * 10
-  int16_t front_power_kw_x10;      // front motor power * 10
-  uint8_t soc_percent;         // battery %
-  uint32_t odometer_km;            // odometer (uint32 = max 4,294,967 km)
+  uint8_t speed_kph;          // speed * 10 (absolute value)
+  int16_t rear_power_kw_x10;  // rear motor power * 10
+  int16_t front_power_kw_x10; // front motor power * 10
+  uint8_t soc_percent;        // battery %
+  uint32_t odometer_km;       // odometer (uint32 = max 4,294,967 km)
 
   // uint8 values
-  int8_t gear;                     // P=1, R=2, N=3, D=4
-  int8_t pedal_map;                // driving mode (Chill/Standard/Sport)
-  uint8_t accel_pedal_pos;         // 0-100%
-  uint8_t brightness;              // 0-100%
-  uint8_t autopilot;               // autopilot state
+  int8_t gear;             // P=1, R=2, N=3, D=4
+  int8_t pedal_map;        // driving mode (Chill/Standard/Sport)
+  uint8_t accel_pedal_pos; // 0-100%
+  uint8_t brightness;      // 0-100%
+  uint8_t autopilot;       // autopilot state
 
   // Bit-packed flags for safety and indicators
   // Byte 0 (8 bits): turn signals & brake
-  uint8_t flags0;  // bits: turn_left, turn_right, hazard, brake_pressed, high_beams, headlights, fog_lights, unused
+  uint8_t flags0; // bits: turn_left, turn_right, hazard, brake_pressed, high_beams, headlights, fog_lights, unused
 
   // Byte 1 (8 bits): blindspots & collisions
-  uint8_t flags1;  // bits: blindspot_L, blindspot_R, blindspot_L_alert, blindspot_R_alert, side_collision_L, side_collision_R, forward_collision, night_mode
+  uint8_t flags1; // bits: blindspot_L, blindspot_R, blindspot_L_alert, blindspot_R_alert, side_collision_L, side_collision_R, forward_collision, night_mode
 
   // Byte 2 (8 bits): autopilot alerts & lane departure
-  uint8_t flags2;  // bits: lane_dep_L_lv1, lane_dep_L_lv2, lane_dep_R_lv1, lane_dep_R_lv2, autopilot_alert_lv1, autopilot_alert_lv2, unused, unused
+  uint8_t flags2; // bits: lane_dep_L_lv1, lane_dep_L_lv2, lane_dep_R_lv1, lane_dep_R_lv2, autopilot_alert_lv1, autopilot_alert_lv2, unused, unused
 
   // Meta
   uint32_t last_update_ms;
@@ -163,25 +163,25 @@ typedef struct __attribute__((packed)) {
 // Total: ~20 bytes
 typedef struct __attribute__((packed)) {
   // Energy
-  uint8_t soc_percent;         // battery %
-  int16_t charge_power_kw_x10;     // charge power * 10
-  uint8_t battery_voltage_LV_x10;  // 12V voltage * 10
-  int16_t battery_voltage_HV_x10;  // HV voltage * 10
-  uint32_t odometer_km;            // odometer
+  uint8_t soc_percent;            // battery %
+  int16_t charge_power_kw_x10;    // charge power * 10
+  uint8_t battery_voltage_LV_x10; // 12V voltage * 10
+  int16_t battery_voltage_HV_x10; // HV voltage * 10
+  uint32_t odometer_km;           // odometer
 
   // uint8 values
-  uint8_t charge_status;           // charge status
-  uint8_t brightness;              // 0-100%
+  uint8_t charge_status; // charge status
+  uint8_t brightness;    // 0-100%
 
   // Bit-packed flags
   // Byte 0 (8 bits): doors & locks
-  uint8_t flags0;  // bits: locked, door_FL, door_RL, door_FR, door_RR, frunk, trunk, brake_pressed
+  uint8_t flags0; // bits: locked, door_FL, door_RL, door_FR, door_RR, frunk, trunk, brake_pressed
 
   // Byte 1 (8 bits): lights
-  uint8_t flags1;  // bits: turn_left, turn_right, hazard, headlights, high_beams, fog_lights, unused, unused
+  uint8_t flags1; // bits: turn_left, turn_right, hazard, headlights, high_beams, fog_lights, unused, unused
 
   // Byte 2 (8 bits): charging & sentry
-  uint8_t flags2;  // bits: charging_cable, charging, charging_port, sentry_mode, sentry_alert, night_mode, unused, unused
+  uint8_t flags2; // bits: charging_cable, charging, charging_port, sentry_mode, sentry_alert, night_mode, unused, unused
 
   // Meta
   uint32_t last_update_ms;
@@ -209,6 +209,3 @@ void IRAM_ATTR vehicle_can_process_frame_static(const can_frame_t *frame, vehicl
 #endif
 
 #endif // VEHICLE_CAN_UNIFIED_H
-
-
-

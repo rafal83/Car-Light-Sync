@@ -73,39 +73,39 @@ typedef enum {
   EFFECT_KNIGHT_RIDER, // K2000 - clean trail without fade
   EFFECT_FADE,
   EFFECT_STROBE,
-  EFFECT_VEHICLE_SYNC,    // Synchronized with vehicle state
-  EFFECT_TURN_SIGNAL,     // Turn signals
-  EFFECT_BRAKE_LIGHT,     // Brake lights
-  EFFECT_CHARGE_STATUS,   // Charge indicator
-  EFFECT_HAZARD,          // Hazards (both sides)
-  EFFECT_BLINDSPOT_FLASH, // Directional flash for blind spot
-  EFFECT_AUDIO_REACTIVE,  // Sound reactive effect
-  EFFECT_AUDIO_BPM,       // BPM synchronized effect
-  EFFECT_FFT_SPECTRUM,    // Real-time FFT spectrum (equalizer)
-  EFFECT_FFT_BASS_PULSE,  // Pulse on bass (kick)
-  EFFECT_FFT_VOCAL_WAVE,  // Wave reactive to vocals
-  EFFECT_FFT_ENERGY_BAR,  // Spectral energy bar
-  EFFECT_COMET,           // Comet with trail
-  EFFECT_METEOR_SHOWER,   // Meteor shower
-  EFFECT_RIPPLE_WAVE,     // Concentric wave from center
-  EFFECT_DUAL_GRADIENT,   // Double gradient that breathes
-  EFFECT_SPARKLE_OVERLAY, // Soft background + rare sparkles
-  EFFECT_CENTER_OUT_SCAN, // Double scan center -> edges
-  EFFECT_POWER_METER,     // Combined power bar (front + rear)
+  EFFECT_VEHICLE_SYNC,       // Synchronized with vehicle state
+  EFFECT_TURN_SIGNAL,        // Turn signals
+  EFFECT_BRAKE_LIGHT,        // Brake lights
+  EFFECT_CHARGE_STATUS,      // Charge indicator
+  EFFECT_HAZARD,             // Hazards (both sides)
+  EFFECT_BLINDSPOT_FLASH,    // Directional flash for blind spot
+  EFFECT_AUDIO_REACTIVE,     // Sound reactive effect
+  EFFECT_AUDIO_BPM,          // BPM synchronized effect
+  EFFECT_FFT_SPECTRUM,       // Real-time FFT spectrum (equalizer)
+  EFFECT_FFT_BASS_PULSE,     // Pulse on bass (kick)
+  EFFECT_FFT_VOCAL_WAVE,     // Wave reactive to vocals
+  EFFECT_FFT_ENERGY_BAR,     // Spectral energy bar
+  EFFECT_COMET,              // Comet with trail
+  EFFECT_METEOR_SHOWER,      // Meteor shower
+  EFFECT_RIPPLE_WAVE,        // Concentric wave from center
+  EFFECT_DUAL_GRADIENT,      // Double gradient that breathes
+  EFFECT_SPARKLE_OVERLAY,    // Soft background + rare sparkles
+  EFFECT_CENTER_OUT_SCAN,    // Double scan center -> edges
+  EFFECT_POWER_METER,        // Combined power bar (front + rear)
   EFFECT_POWER_METER_CENTER, // Center power bar (zero in middle)
-  EFFECT_SEQUENTIAL_FADE, // Sequential turn signal with fade
-  EFFECT_WAVE_COLLISION,  // Two waves colliding at center
-  EFFECT_SNAKE_CHASE,     // Multiple colored segments chasing
-  EFFECT_LAVA_LAMP,       // Organic lava lamp bubbles
-  EFFECT_SPEED_PULSE,     // Pulse based on vehicle speed
-  EFFECT_THROTTLE_WAVE,   // Wave following throttle position
-  EFFECT_AURORA,          // Aurora borealis effect
-  EFFECT_DIGITAL_GLITCH,  // Digital glitch effect
-  EFFECT_FIREWORKS,       // Fireworks explosions
-  EFFECT_BINARY_CODE,     // Scrolling binary code
-  EFFECT_AUDIO_WATERFALL, // Audio FFT waterfall
-  EFFECT_BEAT_RIPPLE,     // Ripple on beat detection
-  EFFECT_STEREO_VU_METER, // Stereo VU meter
+  EFFECT_SEQUENTIAL_FADE,    // Sequential turn signal with fade
+  EFFECT_WAVE_COLLISION,     // Two waves colliding at center
+  EFFECT_SNAKE_CHASE,        // Multiple colored segments chasing
+  EFFECT_LAVA_LAMP,          // Organic lava lamp bubbles
+  EFFECT_SPEED_PULSE,        // Pulse based on vehicle speed
+  EFFECT_THROTTLE_WAVE,      // Wave following throttle position
+  EFFECT_AURORA,             // Aurora borealis effect
+  EFFECT_DIGITAL_GLITCH,     // Digital glitch effect
+  EFFECT_FIREWORKS,          // Fireworks explosions
+  EFFECT_BINARY_CODE,        // Scrolling binary code
+  EFFECT_AUDIO_WATERFALL,    // Audio FFT waterfall
+  EFFECT_BEAT_RIPPLE,        // Ripple on beat detection
+  EFFECT_STEREO_VU_METER,    // Stereo VU meter
   EFFECT_MAX
 } led_effect_t;
 

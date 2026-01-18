@@ -20,9 +20,9 @@ typedef enum {
 } signal_type_t;
 
 typedef enum {
-  SIGNAL_MUX_NONE         = 0,
-  SIGNAL_MUX_MULTIPLEXER  = 1,
-  SIGNAL_MUX_MULTIPLEXED  = 2
+  SIGNAL_MUX_NONE        = 0,
+  SIGNAL_MUX_MULTIPLEXER = 1,
+  SIGNAL_MUX_MULTIPLEXED = 2
 } signal_mux_type_t;
 
 // DBC signal definition (e.g.: DI_vehicleSpeed, UI_turnSignalLeft, etc.)

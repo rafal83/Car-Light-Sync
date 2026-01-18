@@ -3,12 +3,12 @@
 #include "config.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "espnow_link.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
 #include "status_led.h"
 #include "status_manager.h"
-#include "espnow_link.h"
 
 static const char *TAG                       = "ResetButton";
 static TaskHandle_t reset_button_task_handle = NULL;
@@ -57,19 +57,19 @@ static void reset_button_task(void *arg) {
         reset_led_shown = false;
 
         if (press_duration >= SHORT_PRESS_MIN_MS && press_duration < SHORT_PRESS_MAX_MS) {
-            // Short press
-            ESP_LOGI(TAG, "Short press detected");
-            if (espnow_link_get_role() == ESP_NOW_ROLE_SLAVE) {
-                ESP_LOGI(TAG, "Slave mode, triggering ESP-NOW pairing");
-                espnow_link_trigger_slave_pairing();
-            } else {
-                ESP_LOGI(TAG, "Master mode, short press does nothing");
-                status_manager_update_led_now();
-            }
-        } else if (press_duration < RESET_BUTTON_HOLD_TIME_MS) {
-            // Press too short or released before factory reset
-            ESP_LOGI(TAG, "Restoring normal LED state");
+          // Short press
+          ESP_LOGI(TAG, "Short press detected");
+          if (espnow_link_get_role() == ESP_NOW_ROLE_SLAVE) {
+            ESP_LOGI(TAG, "Slave mode, triggering ESP-NOW pairing");
+            espnow_link_trigger_slave_pairing();
+          } else {
+            ESP_LOGI(TAG, "Master mode, short press does nothing");
             status_manager_update_led_now();
+          }
+        } else if (press_duration < RESET_BUTTON_HOLD_TIME_MS) {
+          // Press too short or released before factory reset
+          ESP_LOGI(TAG, "Restoring normal LED state");
+          status_manager_update_led_now();
         }
       }
     }

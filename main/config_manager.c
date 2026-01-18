@@ -41,7 +41,7 @@ static bool export_profile_to_json(const config_profile_t *profile, uint16_t pro
 // ============================================================================
 
 static uint32_t calculate_checksum(const void *data, size_t length) {
-  uint32_t sum = 0;
+  uint32_t sum       = 0;
   const uint8_t *buf = (const uint8_t *)data;
 
   for (size_t i = 0; i < length; i++) {
@@ -65,17 +65,17 @@ static void migrate_profile_if_needed(config_profile_t *profile, uint16_t versio
 
 // RAM cache: active profile (stored in SPIFFS, ~2KB in RAM)
 static config_profile_t active_profile;
-static int active_profile_id             = -1;
-static bool active_profile_loaded        = false;
+static int active_profile_id      = -1;
+static bool active_profile_loaded = false;
 
 // Profile ID registry for O(1) profile existence checks (128 bytes for 1000 profiles)
 #define PROFILE_REGISTRY_SIZE ((MAX_PROFILE_SCAN_LIMIT + 7) / 8) // Bitmap: 100 profiles = 13 bytes
 static uint8_t profile_registry[PROFILE_REGISTRY_SIZE] = {0};
-static bool profile_registry_initialized = false;
+static bool profile_registry_initialized               = false;
 
 // Steering wheel control (opt-in)
-static bool wheel_control_enabled        = false;
-static uint8_t wheel_control_speed_limit = 5; // km/h
+static bool wheel_control_enabled                      = false;
+static uint8_t wheel_control_speed_limit               = 5; // km/h
 
 // Multiple event system
 #define MAX_ACTIVE_EVENTS 10
@@ -98,17 +98,20 @@ static uint8_t priority_buffer[MAX_LED_COUNT];
 
 // Profile registry helper functions for O(1) lookup
 static inline void profile_registry_set(uint16_t profile_id) {
-  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return;
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT)
+    return;
   profile_registry[profile_id / 8] |= (1 << (profile_id % 8));
 }
 
 static inline void profile_registry_clear(uint16_t profile_id) {
-  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return;
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT)
+    return;
   profile_registry[profile_id / 8] &= ~(1 << (profile_id % 8));
 }
 
 static inline bool profile_registry_exists(uint16_t profile_id) {
-  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return false;
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT)
+    return false;
   return (profile_registry[profile_id / 8] & (1 << (profile_id % 8))) != 0;
 }
 
@@ -159,7 +162,7 @@ static void load_wheel_control_settings(void) {
 bool config_manager_init(void) {
   // Initialize the active profile
   memset(&active_profile, 0, sizeof(active_profile));
-  active_profile_loaded = false;
+  active_profile_loaded          = false;
 
   // Reduce stack usage: use a dynamic buffer for temporary profiles
   config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
@@ -243,12 +246,12 @@ bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *pr
   memcpy(&file_data->data, profile, sizeof(config_profile_t));
 
   // Fill the header
-  file_data->magic = PROFILE_FILE_MAGIC;
-  file_data->version = PROFILE_FILE_VERSION;
+  file_data->magic     = PROFILE_FILE_MAGIC;
+  file_data->version   = PROFILE_FILE_VERSION;
   file_data->data_size = sizeof(config_profile_t);
 
   // Compute checksum over profile data
-  file_data->checksum = calculate_checksum(&file_data->data, sizeof(config_profile_t));
+  file_data->checksum  = calculate_checksum(&file_data->data, sizeof(config_profile_t));
 
   // Save to SPIFFS (binary)
   char filepath[64];
@@ -298,7 +301,7 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
   }
 
   size_t buffer_size = sizeof(profile_file_t);
-  esp_err_t err = spiffs_load_blob(filepath, file_data, &buffer_size);
+  esp_err_t err      = spiffs_load_blob(filepath, file_data, &buffer_size);
 
   if (err != ESP_OK) {
     ESP_LOGE(TAG_CONFIG, "SPIFFS load error for profile %d: %s", profile_id, esp_err_to_name(err));
@@ -347,7 +350,7 @@ bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile)
     return false;
   }
 
-  const uint8_t *data_ptr = (const uint8_t *)file_data + sizeof(profile_header_t);
+  const uint8_t *data_ptr  = (const uint8_t *)file_data + sizeof(profile_header_t);
   uint32_t stored_checksum = 0;
   memcpy(&stored_checksum, data_ptr + header.data_size, sizeof(uint32_t));
 
@@ -421,8 +424,8 @@ bool config_manager_delete_profile(uint16_t profile_id) {
 
   // If the active profile was deleted, look for another profile
   if (active_profile_id == profile_id) {
-    active_profile_id     = -1;
-    active_profile_loaded = false;
+    active_profile_id                = -1;
+    active_profile_loaded            = false;
 
     // Use registry to find next available profile
     config_profile_t *search_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
@@ -564,7 +567,7 @@ bool config_manager_get_dynamic_brightness(bool *enabled, uint8_t *rate) {
   }
 
   *enabled = active_profile.dynamic_brightness_enabled;
-  *rate = active_profile.dynamic_brightness_rate;
+  *rate    = active_profile.dynamic_brightness_rate;
   return true;
 }
 
@@ -673,7 +676,7 @@ void config_manager_create_default_profile(config_profile_t *profile, const char
   // with disabled default values (see config_manager_import_profile_from_json)
 
   // Timestamp parameters
-  profile->active             = false;
+  profile->active = false;
 }
 
 void config_manager_create_off_profile(config_profile_t *profile, const char *name) {
@@ -710,10 +713,10 @@ void config_manager_create_off_profile(config_profile_t *profile, const char *na
     profile->event_effects[i].effect_config.sync_mode      = SYNC_OFF;
   }
 
-  profile->dynamic_brightness_enabled = false;
-  profile->dynamic_brightness_rate    = 0;
+  profile->dynamic_brightness_enabled      = false;
+  profile->dynamic_brightness_rate         = 0;
   profile->dynamic_brightness_exclude_mask = 0;
-  profile->active                     = false;
+  profile->active                          = false;
 }
 
 bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority) {
@@ -810,8 +813,8 @@ bool config_manager_process_can_event(can_event_type_t event) {
   // If the effect is configured and enabled, use it
   if (event_effect->enabled) {
     memcpy(&effect_to_apply, &event_effect->effect_config, sizeof(effect_config_t));
-    duration_ms = event_effect->duration_ms;
-    priority    = event_effect->priority;
+    duration_ms            = event_effect->duration_ms;
+    priority               = event_effect->priority;
     // For CAN events, only use color1 for all colors
     effect_to_apply.color2 = effect_to_apply.color1;
     effect_to_apply.color3 = effect_to_apply.color1;
@@ -820,9 +823,9 @@ bool config_manager_process_can_event(can_event_type_t event) {
     // }
 
     // Find a free slot for the event
-    int slot = -1;
-    int existing_slot = -1;
-    int free_slot     = -1;
+    int slot               = -1;
+    int existing_slot      = -1;
+    int free_slot          = -1;
 
     // Check if the event is already active or find a free slot
     for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
@@ -875,7 +878,7 @@ bool config_manager_process_can_event(can_event_type_t event) {
         active_events[slot].start_time = xTaskGetTickCount();
       }
     } else {
-      active_events[slot].start_time    = xTaskGetTickCount();
+      active_events[slot].start_time = xTaskGetTickCount();
     }
 
     // DO NOT apply immediately - let config_manager_update() handle it
@@ -1294,8 +1297,6 @@ bool config_manager_factory_reset(void) {
   wheel_control_enabled     = false;
   wheel_control_speed_limit = 5;
 
-
-
   // Reset the active profile in RAM
   memset(&active_profile, 0, sizeof(active_profile));
   active_profile_id                 = -1;
@@ -1478,7 +1479,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
     return false;
   }
 
-  size_t json_len = strlen(json_string);
+  size_t json_len         = strlen(json_string);
   size_t free_heap_before = esp_get_free_heap_size();
   ESP_LOGI(TAG_CONFIG, "Parsing JSON: size=%d bytes, free heap=%d bytes", json_len, free_heap_before);
 
@@ -1571,7 +1572,7 @@ bool config_manager_import_profile_from_json(const char *json_string, config_pro
   }
 
   profile->dynamic_brightness_exclude_mask = 0;
-  const cJSON *dyn_bright_excluded = cJSON_GetObjectItem(root, "dynamic_brightness_excluded_events");
+  const cJSON *dyn_bright_excluded         = cJSON_GetObjectItem(root, "dynamic_brightness_excluded_events");
   if (dyn_bright_excluded && cJSON_IsArray(dyn_bright_excluded)) {
     const cJSON *excluded = NULL;
     cJSON_ArrayForEach(excluded, dyn_bright_excluded) {
@@ -1677,7 +1678,7 @@ bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_
     return false;
   }
 
-  size_t json_len = strlen(json_string);
+  size_t json_len  = strlen(json_string);
   size_t free_heap = esp_get_free_heap_size();
   ESP_LOGI(TAG_CONFIG, "Direct profile import %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
 
@@ -1758,9 +1759,9 @@ bool config_manager_can_create_profile(void) {
   // A binary profile is ~2.5 KB + 8KB SPIFFS overhead
   // Keep a safety margin: ensure at least 12 KB free
   const size_t BYTES_PER_PROFILE = 12 * 1024; // 12 KB per profile (2.5KB data + 8KB overhead + margin)
-  size_t spiffs_free = spiffs_total - spiffs_used;
+  size_t spiffs_free             = spiffs_total - spiffs_used;
 
-  bool can_create = spiffs_free >= BYTES_PER_PROFILE;
+  bool can_create                = spiffs_free >= BYTES_PER_PROFILE;
 
   ESP_LOGI(TAG_CONFIG,
            "SPIFFS check: free=%zu bytes, needed=%zu bytes, can_create=%d (usage=%zu%%)",

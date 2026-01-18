@@ -20,22 +20,22 @@
 
 // RAM cache for parameters
 static system_settings_t s_settings;
-static bool s_settings_loaded = false;
+static bool s_settings_loaded                   = false;
 
 // Batch mode: defer saves until explicit commit
-static bool s_batch_mode = false;
-static bool s_batch_dirty = false;
+static bool s_batch_mode                        = false;
+static bool s_batch_dirty                       = false;
 
 // Default values
 static const system_settings_t DEFAULT_SETTINGS = {
-    .active_profile_id = -1,
-    .led_count = 122, // NUM_LEDS by default
-    .wheel_control_enabled = false,
+    .active_profile_id         = -1,
+    .led_count                 = 122, // NUM_LEDS by default
+    .wheel_control_enabled     = false,
     .wheel_control_speed_limit = 5,
-    .gvret_autostart = false,
-    .canserver_autostart = false,
-    .espnow_role = 0,
-    .espnow_type = 0,
+    .gvret_autostart           = false,
+    .canserver_autostart       = false,
+    .espnow_role               = 0,
+    .espnow_type               = 0,
 };
 
 esp_err_t settings_manager_init(void) {
@@ -88,34 +88,33 @@ esp_err_t settings_manager_load(system_settings_t *settings) {
   // Load values (with fallback to defaults)
   cJSON *item;
 
-  item = cJSON_GetObjectItem(root, "active_profile_id");
-  settings->active_profile_id = item ? item->valueint : DEFAULT_SETTINGS.active_profile_id;
+  item                                = cJSON_GetObjectItem(root, "active_profile_id");
+  settings->active_profile_id         = item ? item->valueint : DEFAULT_SETTINGS.active_profile_id;
 
-  item = cJSON_GetObjectItem(root, "led_count");
-  settings->led_count = item ? (uint16_t)item->valueint : DEFAULT_SETTINGS.led_count;
+  item                                = cJSON_GetObjectItem(root, "led_count");
+  settings->led_count                 = item ? (uint16_t)item->valueint : DEFAULT_SETTINGS.led_count;
 
-  item = cJSON_GetObjectItem(root, "wheel_control_enabled");
-  settings->wheel_control_enabled = item ? cJSON_IsTrue(item) : DEFAULT_SETTINGS.wheel_control_enabled;
+  item                                = cJSON_GetObjectItem(root, "wheel_control_enabled");
+  settings->wheel_control_enabled     = item ? cJSON_IsTrue(item) : DEFAULT_SETTINGS.wheel_control_enabled;
 
-  item = cJSON_GetObjectItem(root, "wheel_control_speed_limit");
+  item                                = cJSON_GetObjectItem(root, "wheel_control_speed_limit");
   settings->wheel_control_speed_limit = item ? (uint8_t)item->valueint : DEFAULT_SETTINGS.wheel_control_speed_limit;
 
-  item = cJSON_GetObjectItem(root, "gvret_autostart");
-  settings->gvret_autostart = item ? cJSON_IsTrue(item) : DEFAULT_SETTINGS.gvret_autostart;
+  item                                = cJSON_GetObjectItem(root, "gvret_autostart");
+  settings->gvret_autostart           = item ? cJSON_IsTrue(item) : DEFAULT_SETTINGS.gvret_autostart;
 
-  item = cJSON_GetObjectItem(root, "canserver_autostart");
-  settings->canserver_autostart = item ? cJSON_IsTrue(item) : DEFAULT_SETTINGS.canserver_autostart;
+  item                                = cJSON_GetObjectItem(root, "canserver_autostart");
+  settings->canserver_autostart       = item ? cJSON_IsTrue(item) : DEFAULT_SETTINGS.canserver_autostart;
 
-  item = cJSON_GetObjectItem(root, "espnow_role");
-  settings->espnow_role = item ? (uint8_t)item->valueint : DEFAULT_SETTINGS.espnow_role;
+  item                                = cJSON_GetObjectItem(root, "espnow_role");
+  settings->espnow_role               = item ? (uint8_t)item->valueint : DEFAULT_SETTINGS.espnow_role;
 
-  item = cJSON_GetObjectItem(root, "espnow_type");
-  settings->espnow_type = item ? (uint8_t)item->valueint : DEFAULT_SETTINGS.espnow_type;
+  item                                = cJSON_GetObjectItem(root, "espnow_type");
+  settings->espnow_type               = item ? (uint8_t)item->valueint : DEFAULT_SETTINGS.espnow_type;
 
   cJSON_Delete(root);
 
-  ESP_LOGI(TAG_SETTINGS, "Parameters loaded: active_profile=%ld, led_count=%u",
-           settings->active_profile_id, settings->led_count);
+  ESP_LOGI(TAG_SETTINGS, "Parameters loaded: active_profile=%ld, led_count=%u", settings->active_profile_id, settings->led_count);
   return ESP_OK;
 }
 
@@ -138,7 +137,7 @@ esp_err_t settings_manager_save(const system_settings_t *settings) {
 
   // Convert to string
   char *json_str = cJSON_PrintUnformatted(root);
-  esp_err_t err = ESP_FAIL;
+  esp_err_t err  = ESP_FAIL;
 
   if (json_str) {
     err = spiffs_save_json(SETTINGS_FILE_PATH, json_str);
@@ -317,7 +316,7 @@ esp_err_t settings_manager_clear(void) {
 }
 
 void settings_begin_batch(void) {
-  s_batch_mode = true;
+  s_batch_mode  = true;
   s_batch_dirty = false;
   ESP_LOGD(TAG_SETTINGS, "Batch mode started (saves deferred)");
 }

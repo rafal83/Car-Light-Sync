@@ -189,9 +189,9 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
   rgb_t result;
   uint8_t effective_brightness = map_user_brightness(brightness);
   // Apply effect brightness
-  result.r = (color.r * effective_brightness) / 255;
-  result.g = (color.g * effective_brightness) / 255;
-  result.b = (color.b * effective_brightness) / 255;
+  result.r                     = (color.r * effective_brightness) / 255;
+  result.g                     = (color.g * effective_brightness) / 255;
+  result.b                     = (color.b * effective_brightness) / 255;
 
   // Apply dynamic brightness if enabled (from active profile)
   bool dynamic_enabled;
@@ -200,9 +200,9 @@ static rgb_t apply_brightness(rgb_t color, uint8_t brightness) {
     if (dynamic_enabled && !config_manager_is_dynamic_brightness_excluded(active_event_context)) {
       // Formula: final_brightness = effect_brightness x (vehicle_brightness x rate / 100)
       // Minimum 1% to ensure strip remains visible
-      float vehicle_brightness = last_vehicle_state.brightness;                                          // 0-100 from CAN
-      float rate               = (dynamic_rate ? dynamic_rate : 1) / 100.0f;                             // 0-1
-      float applied_brightness = vehicle_brightness * rate / 100.0f;                                     // normalized to 0-1
+      float vehicle_brightness = last_vehicle_state.brightness;              // 0-100 from CAN
+      float rate               = (dynamic_rate ? dynamic_rate : 1) / 100.0f; // 0-1
+      float applied_brightness = vehicle_brightness * rate / 100.0f;         // normalized to 0-1
       if (applied_brightness < 0.01f)
         applied_brightness = 0.01f; // Minimum 1%
 
@@ -512,7 +512,7 @@ static void effect_solid(void) {
     } else {
       color = color3;
     }
-    leds[i]     = apply_brightness(color, current_config.brightness);
+    leds[i] = apply_brightness(color, current_config.brightness);
   }
 }
 
@@ -566,9 +566,9 @@ static void effect_theater_chase(void) {
   int speed_divider = 256 - current_config.speed;
   if (speed_divider < ANIM_PERIOD_FAST_MIN)
     speed_divider = ANIM_PERIOD_FAST_MIN;
-  int pos = (effect_counter * 10 / speed_divider) % 3;
+  int pos           = (effect_counter * 10 / speed_divider) % 3;
 
-  int color_index = (effect_counter / 10) % 3;
+  int color_index   = (effect_counter / 10) % 3;
   rgb_t chase_color = (color_index == 0) ? color1 : (color_index == 1 ? color2 : color3);
 
   for (int i = 0; i < led_count; i++) {
@@ -840,7 +840,7 @@ static void effect_strobe(void) {
   // Flash period based on the speed parameter
   // speed: 0-255, converted to a 10-50 frame period (higher speed = shorter period
   // short = fast)
-  int period  = 50 - ((current_config.speed * 40) / 255); // Range: 50 (slow) to 10 (fast)
+  int period   = 50 - ((current_config.speed * 40) / 255); // Range: 50 (slow) to 10 (fast)
   if (period < 10)
     period = 10;
   int cycle          = effect_counter % period;
@@ -1051,12 +1051,12 @@ static void effect_meteor_shower(void) {
   if (speed_divider < 5)
     speed_divider = 5;
 
-  int cycle          = led_count + tail_length;
-  int step           = (effect_counter * 100 / speed_divider) % cycle;
+  int cycle = led_count + tail_length;
+  int step  = (effect_counter * 100 / speed_divider) % cycle;
 
   for (int m = 0; m < meteor_count; m++) {
-    int offset   = (m * cycle) / meteor_count;
-    int head_pos = (step + offset) % cycle;
+    int offset    = (m * cycle) / meteor_count;
+    int head_pos  = (step + offset) % cycle;
     uint32_t pick = esp_random() % 3;
     rgb_t meteor_color;
     if (pick == 0) {
@@ -1144,12 +1144,12 @@ static void effect_dual_gradient(void) {
 
   int denom               = (led_count > 1) ? (led_count - 1) : 1;
   for (int i = 0; i < led_count; i++) {
-    float pos      = (float)i / denom;
-    rgb_t grad_a   = rgb_lerp(color1, color2, pos);
-    rgb_t grad_b   = rgb_lerp(color2, color3, pos);
-    rgb_t color    = rgb_lerp(grad_a, grad_b, blend);
-    int idx        = current_config.reverse ? (led_count - 1 - i) : i;
-    leds[idx]      = apply_brightness(color, base_brightness);
+    float pos    = (float)i / denom;
+    rgb_t grad_a = rgb_lerp(color1, color2, pos);
+    rgb_t grad_b = rgb_lerp(color2, color3, pos);
+    rgb_t color  = rgb_lerp(grad_a, grad_b, blend);
+    int idx      = current_config.reverse ? (led_count - 1 - i) : i;
+    leds[idx]    = apply_brightness(color, base_brightness);
   }
 }
 
@@ -1179,14 +1179,11 @@ static void effect_sparkle_overlay(void) {
 
   for (int s = 0; s < sparkle_slots; s++) {
     if ((esp_random() % 100) < spawn_chance) {
-      int idx       = esp_random() % led_count;
-      uint32_t pick = esp_random() % 2;
-      rgb_t sparkle_color =
-          (pick == 0)
-              ? color_to_rgb_fallback(current_config.color2, current_config.color1)
-              : color_to_rgb_fallback(current_config.color3, current_config.color1);
-      rgb_t applied = apply_brightness(sparkle_color, current_config.brightness);
-      leds[idx]     = rgb_max(leds[idx], applied);
+      int idx             = esp_random() % led_count;
+      uint32_t pick       = esp_random() % 2;
+      rgb_t sparkle_color = (pick == 0) ? color_to_rgb_fallback(current_config.color2, current_config.color1) : color_to_rgb_fallback(current_config.color3, current_config.color1);
+      rgb_t applied       = apply_brightness(sparkle_color, current_config.brightness);
+      leds[idx]           = rgb_max(leds[idx], applied);
     }
   }
 }
@@ -1234,10 +1231,10 @@ static void effect_center_out_scan(void) {
     }
 
     for (int t = 1; t <= width; t++) {
-      rgb_t trail_color         = (t == 1) ? mid_color : tail_color;
-      uint8_t trail_brightness  = (uint8_t)((current_config.brightness * (width - (t - 1))) / (width + 1));
+      rgb_t trail_color        = (t == 1) ? mid_color : tail_color;
+      uint8_t trail_brightness = (uint8_t)((current_config.brightness * (width - (t - 1))) / (width + 1));
 
-      int l_raw                 = left_head + t;
+      int l_raw                = left_head + t;
       if (l_raw >= 0 && l_raw < led_count) {
         leds[l_raw] = apply_brightness(trail_color, trail_brightness);
       }
@@ -1304,11 +1301,11 @@ static void effect_sequential_fade(void) {
   if (period < 20)
     period = 20;
 
-  int cycle = effect_counter % period;
+  int cycle             = effect_counter % period;
 
   // Phase durations
-  int fade_in_duration = (period * 50) / 100;  // 50% of period for sequential fade in
-  int hold_duration = (period * 20) / 100;     // 20% hold all LEDs lit
+  int fade_in_duration  = (period * 50) / 100; // 50% of period for sequential fade in
+  int hold_duration     = (period * 20) / 100; // 20% hold all LEDs lit
   int fade_out_duration = (period * 20) / 100; // 20% for fade out
   // Rest is pause (not used directly, implicit in cycle logic)
 
@@ -1317,10 +1314,10 @@ static void effect_sequential_fade(void) {
   if (cycle < fade_in_duration) {
     // Phase 1: Sequential fade in
     for (int i = 0; i < led_count; i++) {
-      int led_index = current_config.reverse ? (led_count - 1 - i) : i;
+      int led_index         = current_config.reverse ? (led_count - 1 - i) : i;
 
       // Calculate when this LED should start fading in
-      int led_start_time = (i * fade_in_duration) / led_count;
+      int led_start_time    = (i * fade_in_duration) / led_count;
 
       // Fade in takes a portion of the total fade_in_duration
       int led_fade_duration = fade_in_duration / 4; // Each LED fades quickly
@@ -1332,8 +1329,8 @@ static void effect_sequential_fade(void) {
         if (elapsed < led_fade_duration) {
           // Fading in
           float fade_progress = (float)elapsed / led_fade_duration;
-          uint8_t brightness = (uint8_t)(current_config.brightness * fade_progress);
-          leds[led_index] = apply_brightness(base_color, brightness);
+          uint8_t brightness  = (uint8_t)(current_config.brightness * fade_progress);
+          leds[led_index]     = apply_brightness(base_color, brightness);
         } else {
           // Fully lit
           leds[led_index] = apply_brightness(base_color, current_config.brightness);
@@ -1347,9 +1344,9 @@ static void effect_sequential_fade(void) {
     }
   } else if (cycle < fade_in_duration + hold_duration + fade_out_duration) {
     // Phase 3: Fade out all together
-    int fade_cycle = cycle - (fade_in_duration + hold_duration);
+    int fade_cycle      = cycle - (fade_in_duration + hold_duration);
     float fade_progress = 1.0f - ((float)fade_cycle / fade_out_duration);
-    uint8_t brightness = (uint8_t)(current_config.brightness * fade_progress);
+    uint8_t brightness  = (uint8_t)(current_config.brightness * fade_progress);
 
     for (int i = 0; i < led_count; i++) {
       leds[i] = apply_brightness(base_color, brightness);
@@ -1876,14 +1873,14 @@ static void effect_fft_energy_bar(void) {
   }
 
   // Diviser le ruban en 3 sections: Bass, Mid, Treble
-  int section_size = led_count / 3;
+  int section_size   = led_count / 3;
 
   rgb_t bass_color   = color_to_rgb(current_config.color1);
   rgb_t mid_color    = color_to_rgb_fallback(current_config.color2, current_config.color1);
   rgb_t treble_color = color_to_rgb_fallback(current_config.color3, current_config.color1);
 
   // Section Bass
-  int bass_leds    = (int)(fft_data.bass_energy * section_size);
+  int bass_leds      = (int)(fft_data.bass_energy * section_size);
   for (int i = 0; i < section_size; i++) {
     int led_index = current_config.reverse ? (led_count - 1 - i) : i;
     if (i < bass_leds) {
@@ -1928,22 +1925,22 @@ static void effect_wave_collision(void) {
   if (speed_factor < 0.1f)
     speed_factor = 0.1f;
 
-  rgb_t color1 = color_to_rgb(current_config.color1);
-  rgb_t color2 = color_to_rgb_fallback(current_config.color2, 0x00FF00);
-  rgb_t color3 = color_to_rgb_fallback(current_config.color3, 0xFFFFFF);
+  rgb_t color1     = color_to_rgb(current_config.color1);
+  rgb_t color2     = color_to_rgb_fallback(current_config.color2, 0x00FF00);
+  rgb_t color3     = color_to_rgb_fallback(current_config.color3, 0xFFFFFF);
 
-  int half_strip = led_count / 2;
-  float t = effect_counter * speed_factor * 0.05f;
+  int half_strip   = led_count / 2;
+  float t          = effect_counter * speed_factor * 0.05f;
 
   // Wave parameters
   float wavelength = led_count / 4.0f;
   float wave_speed = 2.0f;
 
   for (int i = 0; i < led_count; i++) {
-    float pos = i / (float)led_count;
+    float pos            = i / (float)led_count;
 
     // Left wave (moving right)
-    float left_wave_pos = (pos * wavelength - t * wave_speed);
+    float left_wave_pos  = (pos * wavelength - t * wave_speed);
     float left_intensity = (sinf(left_wave_pos) + 1.0f) * 0.5f;
 
     // Only show left wave on left half
@@ -1956,7 +1953,7 @@ static void effect_wave_collision(void) {
     }
 
     // Right wave (moving left)
-    float right_wave_pos = ((1.0f - pos) * wavelength - t * wave_speed);
+    float right_wave_pos  = ((1.0f - pos) * wavelength - t * wave_speed);
     float right_intensity = (sinf(right_wave_pos) + 1.0f) * 0.5f;
 
     // Only show right wave on right half
@@ -1969,32 +1966,32 @@ static void effect_wave_collision(void) {
     }
 
     // Collision energy at center
-    float center_dist = fabsf((float)(i - half_strip)) / (float)half_strip;
+    float center_dist         = fabsf((float)(i - half_strip)) / (float)half_strip;
     float collision_intensity = 0.0f;
 
     if (center_dist < 0.2f) {
       // Pulsing collision effect
       float collision_pulse = (sinf(t * wave_speed * 2.0f) + 1.0f) * 0.5f;
-      collision_intensity = (1.0f - center_dist / 0.2f) * collision_pulse;
+      collision_intensity   = (1.0f - center_dist / 0.2f) * collision_pulse;
     }
 
     // Combine all intensities
-    rgb_t left_contrib = apply_brightness(color1, (uint8_t)(current_config.brightness * left_intensity));
-    rgb_t right_contrib = apply_brightness(color2, (uint8_t)(current_config.brightness * right_intensity));
+    rgb_t left_contrib      = apply_brightness(color1, (uint8_t)(current_config.brightness * left_intensity));
+    rgb_t right_contrib     = apply_brightness(color2, (uint8_t)(current_config.brightness * right_intensity));
     rgb_t collision_contrib = apply_brightness(color3, (uint8_t)(current_config.brightness * collision_intensity * 0.7f));
 
     // Mix colors with saturation
-    uint16_t r_sum = (uint16_t)left_contrib.r + (uint16_t)right_contrib.r + (uint16_t)collision_contrib.r;
-    uint16_t g_sum = (uint16_t)left_contrib.g + (uint16_t)right_contrib.g + (uint16_t)collision_contrib.g;
-    uint16_t b_sum = (uint16_t)left_contrib.b + (uint16_t)right_contrib.b + (uint16_t)collision_contrib.b;
+    uint16_t r_sum          = (uint16_t)left_contrib.r + (uint16_t)right_contrib.r + (uint16_t)collision_contrib.r;
+    uint16_t g_sum          = (uint16_t)left_contrib.g + (uint16_t)right_contrib.g + (uint16_t)collision_contrib.g;
+    uint16_t b_sum          = (uint16_t)left_contrib.b + (uint16_t)right_contrib.b + (uint16_t)collision_contrib.b;
 
     rgb_t final_color;
     final_color.r = (r_sum > 255) ? 255 : (uint8_t)r_sum;
     final_color.g = (g_sum > 255) ? 255 : (uint8_t)g_sum;
     final_color.b = (b_sum > 255) ? 255 : (uint8_t)b_sum;
 
-    int idx = current_config.reverse ? (led_count - 1 - i) : i;
-    leds[idx] = final_color;
+    int idx       = current_config.reverse ? (led_count - 1 - i) : i;
+    leds[idx]     = final_color;
   }
 }
 
@@ -2017,9 +2014,9 @@ static void effect_snake_chase(void) {
   if (snake_length > 15)
     snake_length = 15;
 
-  int gap   = 5;
-  int cycle = (snake_length + gap) * snake_count;
-  int step  = (effect_counter * 100 / speed_divider) % cycle;
+  int gap         = 5;
+  int cycle       = (snake_length + gap) * snake_count;
+  int step        = (effect_counter * 100 / speed_divider) % cycle;
 
   rgb_t colors[3] = {color_to_rgb(current_config.color1), color_to_rgb_fallback(current_config.color2, 0x00FF00), color_to_rgb_fallback(current_config.color3, 0x0000FF)};
 
@@ -2042,26 +2039,26 @@ static void effect_lava_lamp(void) {
     return;
   }
 
-  rgb_t color1 = color_to_rgb(current_config.color1);
-  rgb_t color2 = color_to_rgb_fallback(current_config.color2, 0x8000FF);
+  rgb_t color1       = color_to_rgb(current_config.color1);
+  rgb_t color2       = color_to_rgb_fallback(current_config.color2, 0x8000FF);
 
   float speed_factor = current_config.speed / 100.0f;
   if (speed_factor < 0.1f)
     speed_factor = 0.1f;
 
   for (int i = 0; i < led_count; i++) {
-    float t          = effect_counter * speed_factor * 0.01f;
-    float pos        = i / (float)led_count;
-    float wave1      = sinf(t + pos * 6.28f) * 0.5f + 0.5f;
-    float wave2      = sinf(t * 0.7f + pos * 4.0f) * 0.5f + 0.5f;
-    float wave3      = sinf(t * 1.3f - pos * 3.0f) * 0.5f + 0.5f;
-    float intensity  = (wave1 + wave2 * 0.5f + wave3 * 0.3f) / 1.8f;
+    float t         = effect_counter * speed_factor * 0.01f;
+    float pos       = i / (float)led_count;
+    float wave1     = sinf(t + pos * 6.28f) * 0.5f + 0.5f;
+    float wave2     = sinf(t * 0.7f + pos * 4.0f) * 0.5f + 0.5f;
+    float wave3     = sinf(t * 1.3f - pos * 3.0f) * 0.5f + 0.5f;
+    float intensity = (wave1 + wave2 * 0.5f + wave3 * 0.3f) / 1.8f;
 
-    rgb_t color      = rgb_lerp(color1, color2, wave2);
-    uint8_t bright   = (uint8_t)(current_config.brightness * intensity);
+    rgb_t color     = rgb_lerp(color1, color2, wave2);
+    uint8_t bright  = (uint8_t)(current_config.brightness * intensity);
 
-    int idx          = current_config.reverse ? (led_count - 1 - i) : i;
-    leds[idx]        = apply_brightness(color, bright);
+    int idx         = current_config.reverse ? (led_count - 1 - i) : i;
+    leds[idx]       = apply_brightness(color, bright);
   }
 }
 
@@ -2109,10 +2106,10 @@ static void effect_throttle_wave(void) {
   if (wave_length < 1)
     wave_length = 1;
 
-  int center = led_count / 2;
+  int center             = led_count / 2;
 
-  rgb_t color1 = color_to_rgb(current_config.color1);
-  rgb_t color2 = color_to_rgb_fallback(current_config.color2, 0xFF8000);
+  rgb_t color1           = color_to_rgb(current_config.color1);
+  rgb_t color2           = color_to_rgb_fallback(current_config.color2, 0xFF8000);
 
   float intensity_factor = throttle / 100.0f;
 
@@ -2125,12 +2122,12 @@ static void effect_throttle_wave(void) {
     uint8_t bright   = (uint8_t)(current_config.brightness * intensity_factor * (1.0f - t * 0.5f));
 
     if (offset_left >= 0) {
-      int idx      = current_config.reverse ? (led_count - 1 - offset_left) : offset_left;
-      leds[idx]    = apply_brightness(color, bright);
+      int idx   = current_config.reverse ? (led_count - 1 - offset_left) : offset_left;
+      leds[idx] = apply_brightness(color, bright);
     }
     if (offset_right < led_count && offset_right != offset_left) {
-      int idx      = current_config.reverse ? (led_count - 1 - offset_right) : offset_right;
-      leds[idx]    = apply_brightness(color, bright);
+      int idx   = current_config.reverse ? (led_count - 1 - offset_right) : offset_right;
+      leds[idx] = apply_brightness(color, bright);
     }
   }
 }
@@ -2184,7 +2181,7 @@ static void effect_digital_glitch(void) {
   fill_solid(apply_brightness(base, current_config.brightness / 4));
 
   // Glitch probability based on speed
-  int glitch_prob = 5 + (current_config.speed / 10);
+  int glitch_prob        = 5 + (current_config.speed / 10);
 
   rgb_t glitch_colors[3] = {color_to_rgb(0xFF0000), color_to_rgb(0x00FF00), color_to_rgb(0x0000FF)};
 
@@ -2232,20 +2229,20 @@ static void effect_fireworks(void) {
     rgb_t color      = colors[esp_random() % 3];
 
     for (int i = 0; i < explosion_sz; i++) {
-      int offset_left  = center - i;
-      int offset_right = center + i;
+      int offset_left   = center - i;
+      int offset_right  = center + i;
 
       uint8_t intensity = (uint8_t)(current_config.brightness * (explosion_sz - i) / explosion_sz);
 
       if (offset_left >= 0) {
-        int idx        = current_config.reverse ? (led_count - 1 - offset_left) : offset_left;
-        rgb_t new_pix  = apply_brightness(color, intensity);
-        leds[idx]      = rgb_max(leds[idx], new_pix);
+        int idx       = current_config.reverse ? (led_count - 1 - offset_left) : offset_left;
+        rgb_t new_pix = apply_brightness(color, intensity);
+        leds[idx]     = rgb_max(leds[idx], new_pix);
       }
       if (offset_right < led_count && offset_right != offset_left) {
-        int idx        = current_config.reverse ? (led_count - 1 - offset_right) : offset_right;
-        rgb_t new_pix  = apply_brightness(color, intensity);
-        leds[idx]      = rgb_max(leds[idx], new_pix);
+        int idx       = current_config.reverse ? (led_count - 1 - offset_right) : offset_right;
+        rgb_t new_pix = apply_brightness(color, intensity);
+        leds[idx]     = rgb_max(leds[idx], new_pix);
       }
     }
   }
@@ -2261,21 +2258,21 @@ static void effect_binary_code(void) {
   if (speed_divider < 10)
     speed_divider = 10;
 
-  int scroll_pos = (effect_counter * 100 / speed_divider) % led_count;
+  int scroll_pos  = (effect_counter * 100 / speed_divider) % led_count;
 
   rgb_t on_color  = color_to_rgb_fallback(current_config.color1, 0x00FF00);
   rgb_t off_color = color_to_rgb_fallback(current_config.color2, 0x001100);
 
   for (int i = 0; i < led_count; i++) {
-    int pos = (i + scroll_pos) % led_count;
+    int pos        = (i + scroll_pos) % led_count;
     // Use pseudo-random pattern based on position
-    bool is_on = ((pos * 17 + effect_counter / 10) % 2) == 0;
+    bool is_on     = ((pos * 17 + effect_counter / 10) % 2) == 0;
 
-    rgb_t color = is_on ? on_color : off_color;
+    rgb_t color    = is_on ? on_color : off_color;
     uint8_t bright = is_on ? current_config.brightness : (current_config.brightness / 8);
 
-    int idx = current_config.reverse ? (led_count - 1 - i) : i;
-    leds[idx] = apply_brightness(color, bright);
+    int idx        = current_config.reverse ? (led_count - 1 - i) : i;
+    leds[idx]      = apply_brightness(color, bright);
   }
 }
 
@@ -2306,9 +2303,9 @@ static void effect_audio_waterfall(void) {
         level = 1.0f;
 
       // Color based on frequency content
-      rgb_t low_color = color_to_rgb_fallback(current_config.color1, 0xFF0000);
-      rgb_t mid_color = color_to_rgb_fallback(current_config.color2, 0x00FF00);
-      rgb_t hi_color  = color_to_rgb_fallback(current_config.color3, 0x0000FF);
+      rgb_t low_color  = color_to_rgb_fallback(current_config.color1, 0xFF0000);
+      rgb_t mid_color  = color_to_rgb_fallback(current_config.color2, 0x00FF00);
+      rgb_t hi_color   = color_to_rgb_fallback(current_config.color3, 0x0000FF);
 
       float bass_level = audio_data.bass;
       if (bass_level < 0.5f) {
@@ -2322,7 +2319,7 @@ static void effect_audio_waterfall(void) {
     }
   }
 
-  int edge_idx = current_config.reverse ? led_count - 1 : 0;
+  int edge_idx   = current_config.reverse ? led_count - 1 : 0;
   leds[edge_idx] = new_color;
 }
 
@@ -2356,7 +2353,7 @@ static void effect_beat_ripple(void) {
   // Draw ripple expanding from center
   if ((effect_counter - last_beat_frame) < 30) {
     ripple_pos++;
-    int center = led_count / 2;
+    int center     = led_count / 2;
 
     rgb_t color    = color_to_rgb(current_config.color1);
     int max_radius = 15;
@@ -2382,17 +2379,17 @@ static void effect_stereo_vu_meter(void) {
     return;
   }
 
-  int half = led_count / 2;
+  int half          = led_count / 2;
 
   // For now, use mono audio for both sides
   // In future, could use stereo input
-  float left_level = 0.0f;
+  float left_level  = 0.0f;
   float right_level = 0.0f;
 
   if (audio_input_is_enabled()) {
     audio_data_t audio_data;
     if (audio_input_get_data(&audio_data)) {
-      left_level = audio_data.amplitude;
+      left_level  = audio_data.amplitude;
       right_level = audio_data.amplitude;
       if (left_level > 1.0f)
         left_level = 1.0f;
@@ -2404,9 +2401,9 @@ static void effect_stereo_vu_meter(void) {
   int left_leds  = (int)(half * left_level);
   int right_leds = (int)(half * right_level);
 
-  rgb_t green  = color_to_rgb_fallback(current_config.color1, 0x00FF00);
-  rgb_t yellow = color_to_rgb_fallback(current_config.color2, 0xFFFF00);
-  rgb_t red    = color_to_rgb_fallback(current_config.color3, 0xFF0000);
+  rgb_t green    = color_to_rgb_fallback(current_config.color1, 0x00FF00);
+  rgb_t yellow   = color_to_rgb_fallback(current_config.color2, 0xFFFF00);
+  rgb_t red      = color_to_rgb_fallback(current_config.color3, 0xFF0000);
 
   // Left channel
   for (int i = 0; i < half; i++) {
@@ -2444,52 +2441,52 @@ static void effect_stereo_vu_meter(void) {
 // Effect function table
 typedef void (*effect_func_t)(void);
 static const effect_func_t effect_functions[] = {
-    [EFFECT_OFF]             = NULL,
-    [EFFECT_SOLID]           = effect_solid,
-    [EFFECT_BREATHING]       = effect_breathing,
-    [EFFECT_RAINBOW]         = effect_rainbow,
-    [EFFECT_RAINBOW_CYCLE]   = effect_rainbow_cycle,
-    [EFFECT_THEATER_CHASE]   = effect_theater_chase,
-    [EFFECT_RUNNING_LIGHTS]  = effect_running_lights,
-    [EFFECT_TWINKLE]         = effect_twinkle,
-    [EFFECT_FIRE]            = effect_fire,
-    [EFFECT_SCAN]            = effect_scan,
-    [EFFECT_KNIGHT_RIDER]    = effect_knight_rider,
-    [EFFECT_FADE]            = effect_fade,
-    [EFFECT_STROBE]          = effect_strobe,
-    [EFFECT_VEHICLE_SYNC]    = effect_vehicle_sync,
-    [EFFECT_TURN_SIGNAL]     = effect_turn_signal,
-    [EFFECT_HAZARD]          = effect_hazard,
-    [EFFECT_BRAKE_LIGHT]     = effect_brake_light,
-    [EFFECT_CHARGE_STATUS]   = effect_charge_status,
-    [EFFECT_BLINDSPOT_FLASH] = effect_blindspot_flash,
-    [EFFECT_POWER_METER]     = effect_power_meter,
+    [EFFECT_OFF]                = NULL,
+    [EFFECT_SOLID]              = effect_solid,
+    [EFFECT_BREATHING]          = effect_breathing,
+    [EFFECT_RAINBOW]            = effect_rainbow,
+    [EFFECT_RAINBOW_CYCLE]      = effect_rainbow_cycle,
+    [EFFECT_THEATER_CHASE]      = effect_theater_chase,
+    [EFFECT_RUNNING_LIGHTS]     = effect_running_lights,
+    [EFFECT_TWINKLE]            = effect_twinkle,
+    [EFFECT_FIRE]               = effect_fire,
+    [EFFECT_SCAN]               = effect_scan,
+    [EFFECT_KNIGHT_RIDER]       = effect_knight_rider,
+    [EFFECT_FADE]               = effect_fade,
+    [EFFECT_STROBE]             = effect_strobe,
+    [EFFECT_VEHICLE_SYNC]       = effect_vehicle_sync,
+    [EFFECT_TURN_SIGNAL]        = effect_turn_signal,
+    [EFFECT_HAZARD]             = effect_hazard,
+    [EFFECT_BRAKE_LIGHT]        = effect_brake_light,
+    [EFFECT_CHARGE_STATUS]      = effect_charge_status,
+    [EFFECT_BLINDSPOT_FLASH]    = effect_blindspot_flash,
+    [EFFECT_POWER_METER]        = effect_power_meter,
     [EFFECT_POWER_METER_CENTER] = effect_power_meter_center,
-    [EFFECT_AUDIO_REACTIVE]  = effect_audio_reactive,
-    [EFFECT_AUDIO_BPM]       = effect_audio_bpm,
-    [EFFECT_FFT_SPECTRUM]    = effect_fft_spectrum,
-    [EFFECT_FFT_BASS_PULSE]  = effect_fft_bass_pulse,
-    [EFFECT_FFT_VOCAL_WAVE]  = effect_fft_vocal_wave,
-    [EFFECT_FFT_ENERGY_BAR]  = effect_fft_energy_bar,
-    [EFFECT_COMET]           = effect_comet,
-    [EFFECT_METEOR_SHOWER]   = effect_meteor_shower,
-    [EFFECT_RIPPLE_WAVE]     = effect_ripple_wave,
-    [EFFECT_DUAL_GRADIENT]   = effect_dual_gradient,
-    [EFFECT_SPARKLE_OVERLAY] = effect_sparkle_overlay,
-    [EFFECT_CENTER_OUT_SCAN] = effect_center_out_scan,
-    [EFFECT_SEQUENTIAL_FADE] = effect_sequential_fade,
-    [EFFECT_WAVE_COLLISION]  = effect_wave_collision,
-    [EFFECT_SNAKE_CHASE]     = effect_snake_chase,
-    [EFFECT_LAVA_LAMP]       = effect_lava_lamp,
-    [EFFECT_SPEED_PULSE]     = effect_speed_pulse,
-    [EFFECT_THROTTLE_WAVE]   = effect_throttle_wave,
-    [EFFECT_AURORA]          = effect_aurora,
-    [EFFECT_DIGITAL_GLITCH]  = effect_digital_glitch,
-    [EFFECT_FIREWORKS]       = effect_fireworks,
-    [EFFECT_BINARY_CODE]     = effect_binary_code,
-    [EFFECT_AUDIO_WATERFALL] = effect_audio_waterfall,
-    [EFFECT_BEAT_RIPPLE]     = effect_beat_ripple,
-    [EFFECT_STEREO_VU_METER] = effect_stereo_vu_meter,
+    [EFFECT_AUDIO_REACTIVE]     = effect_audio_reactive,
+    [EFFECT_AUDIO_BPM]          = effect_audio_bpm,
+    [EFFECT_FFT_SPECTRUM]       = effect_fft_spectrum,
+    [EFFECT_FFT_BASS_PULSE]     = effect_fft_bass_pulse,
+    [EFFECT_FFT_VOCAL_WAVE]     = effect_fft_vocal_wave,
+    [EFFECT_FFT_ENERGY_BAR]     = effect_fft_energy_bar,
+    [EFFECT_COMET]              = effect_comet,
+    [EFFECT_METEOR_SHOWER]      = effect_meteor_shower,
+    [EFFECT_RIPPLE_WAVE]        = effect_ripple_wave,
+    [EFFECT_DUAL_GRADIENT]      = effect_dual_gradient,
+    [EFFECT_SPARKLE_OVERLAY]    = effect_sparkle_overlay,
+    [EFFECT_CENTER_OUT_SCAN]    = effect_center_out_scan,
+    [EFFECT_SEQUENTIAL_FADE]    = effect_sequential_fade,
+    [EFFECT_WAVE_COLLISION]     = effect_wave_collision,
+    [EFFECT_SNAKE_CHASE]        = effect_snake_chase,
+    [EFFECT_LAVA_LAMP]          = effect_lava_lamp,
+    [EFFECT_SPEED_PULSE]        = effect_speed_pulse,
+    [EFFECT_THROTTLE_WAVE]      = effect_throttle_wave,
+    [EFFECT_AURORA]             = effect_aurora,
+    [EFFECT_DIGITAL_GLITCH]     = effect_digital_glitch,
+    [EFFECT_FIREWORKS]          = effect_fireworks,
+    [EFFECT_BINARY_CODE]        = effect_binary_code,
+    [EFFECT_AUDIO_WATERFALL]    = effect_audio_waterfall,
+    [EFFECT_BEAT_RIPPLE]        = effect_beat_ripple,
+    [EFFECT_STEREO_VU_METER]    = effect_stereo_vu_meter,
 };
 
 typedef struct {
@@ -2992,9 +2989,9 @@ void led_effects_show_buffer(const led_rgb_t *buffer) {
 
   // Copy the buffer
   for (uint16_t i = 0; i < led_count; i++) {
-    leds[i].r             = buffer[i].r;
-    leds[i].g             = buffer[i].g;
-    leds[i].b             = buffer[i].b;
+    leds[i].r = buffer[i].r;
+    leds[i].g = buffer[i].g;
+    leds[i].b = buffer[i].b;
   }
 
   led_strip_show();

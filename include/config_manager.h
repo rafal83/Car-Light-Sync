@@ -146,29 +146,29 @@ typedef struct {
 typedef struct {
   char name[PROFILE_NAME_MAX_LEN];
   // Metadata
-  bool active; // Active profile
+  bool active;                    // Active profile
   effect_config_t default_effect; // Default effect
 
   can_event_effect_t event_effects[CAN_EVENT_MAX]; // Effects by event
 
   // General parameters - Dynamic brightness
-  bool dynamic_brightness_enabled; // Enable dynamic brightness linked to vehicle brightness
-  uint8_t dynamic_brightness_rate; // Vehicle brightness application rate (0-100%)
+  bool dynamic_brightness_enabled;          // Enable dynamic brightness linked to vehicle brightness
+  uint8_t dynamic_brightness_rate;          // Vehicle brightness application rate (0-100%)
   uint64_t dynamic_brightness_exclude_mask; // Mask of events excluded from dynamic brightness
 
 } config_profile_t;
 
 // Binary file format for SPIFFS storage (with versioning)
-#define PROFILE_FILE_MAGIC 0x50524F46  // "PROF" en ASCII
+#define PROFILE_FILE_MAGIC 0x50524F46 // "PROF" en ASCII
 #define PROFILE_FILE_VERSION 1
 #define PROFILE_FILE_MIN_VERSION 1
 
 typedef struct __attribute__((packed)) {
-  uint32_t magic;           // 0x50524F46 ("PROF") for validation
-  uint16_t version;         // Format version (1 for v1)
-  uint16_t data_size;       // Size of config_profile_t (for verification)
-  config_profile_t data;    // Profile data
-  uint32_t checksum;        // Simple checksum of data for integrity
+  uint32_t magic;        // 0x50524F46 ("PROF") for validation
+  uint16_t version;      // Format version (1 for v1)
+  uint16_t data_size;    // Size of config_profile_t (for verification)
+  config_profile_t data; // Profile data
+  uint32_t checksum;     // Simple checksum of data for integrity
 } profile_file_t;
 
 /**
