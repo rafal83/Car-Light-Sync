@@ -1,0 +1,99 @@
+name: Build iOS Simulator App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: mobile.app/package-lock.json
+
+    - name: Install dependencies
+      working-directory: mobile.app
+      run: npm ci
+
+    - name: Add iOS platform (if missing)
+      working-directory: mobile.app
+      run: |
+        if [ ! -d ios ]; then
+          npx cap add ios
+        fi
+
+    - name: Sync Capacitor (iOS)
+      working-directory: mobile.app
+      run: npm run sync:ios
+
+    - name: Install CocoaPods
+      working-directory: mobile.app/ios/App
+      run: |
+        sudo gem install cocoapods --no-document
+        pod install
+
+    - name: Pick available iPhone simulator
+      id: sim
+      run: |
+        python - <<'PY'
+        import json, subprocess, os, sys, re
+        data = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "-j"]))
+        chosen = None
+        for runtime, devices in data.get("devices", {}).items():
+            if ".iOS-" not in runtime:
+                continue
+            m = re.search(r"iOS-([0-9]+)-([0-9]+)", runtime)
+            if not m:
+                continue
+            os_version = f"{m.group(1)}.{m.group(2)}"
+            for dev in devices:
+                if dev.get("isAvailable") and "iPhone" in dev.get("name", ""):
+                    chosen = (dev["name"], os_version)
+                    break
+            if chosen:
+                break
+        if not chosen:
+            sys.exit("No available iPhone simulator found")
+        name, os_version = chosen
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"name={name}\n")
+            f.write(f"os={os_version}\n")
+        print(f"Using simulator: {name} (iOS {os_version})")
+        PY
+
+    - name: Build iOS simulator (Debug)
+      working-directory: mobile.app/ios/App
+      run: |
+        xcodebuild \
+          -workspace App.xcworkspace \
+          -scheme App \
+          -configuration Debug \
+          -sdk iphonesimulator \
+          -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }},OS=${{ steps.sim.outputs.os }}" \
+          -derivedDataPath build \
+          build
+
+    - name: Package simulator app
+      working-directory: mobile.app/ios/App
+      run: |
+        APP_DIR="build/Build/Products/Debug-iphonesimulator/App.app"
+        if [ ! -d "$APP_DIR" ]; then
+          echo "App bundle not found at $APP_DIR"
+          exit 1
+        fi
+        cd build/Build/Products/Debug-iphonesimulator
+        zip -r app-simulator.zip App.app
+
+    - name: Upload iOS simulator artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-simulator-app
+        path: mobile.app/ios/App/build/Build/Products/Debug-iphonesimulator/app-simulator.zip
+        retention-days: 30

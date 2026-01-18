@@ -1,0 +1,26 @@
+{
+  "appId": "com.carlightsync.controller",
+  "appName": "Car Light Sync",
+  "webDir": "www",
+  "loggingBehavior": "none",
+  "android": {
+    "loggingBehavior": "none"
+  },
+  "plugins": {
+    "BluetoothLe": {
+      "displayStrings": {
+        "scanning": "Scanning for devices...",
+        "cancel": "Cancel",
+        "availableDevices": "Available devices",
+        "noDeviceFound": "No device found"
+      }
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#000000"
+    },
+    "ScreenOrientation": {
+      "orientation": "landscape"
+    }
+  }
+}

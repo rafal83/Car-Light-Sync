@@ -1,0 +1,1183 @@
+/* Dashboard - Style automobile Tesla-inspired - Landscape Mode */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Dark theme (default) */
+    --bg-gradient-start: #0a0a0a;
+    --bg-gradient-end: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+    --text-tertiary: #888888;
+    --text-quaternary: #666666;
+    --surface-primary: rgba(255, 255, 255, 0.05);
+    --surface-secondary: rgba(255, 255, 255, 0.1);
+    --surface-tertiary: rgba(255, 255, 255, 0.15);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --border-color-strong: rgba(255, 255, 255, 0.2);
+    --gauge-bg-start: rgba(30, 30, 30, 0.8);
+    --gauge-bg-end: rgba(50, 50, 50, 0.8);
+    --power-positive: #ffffff;
+    --power-positive-glow: rgba(255, 255, 255, 0.6);
+}
+
+body.light-theme {
+    /* Light theme */
+    --bg-gradient-start: #f5f5f5;
+    --bg-gradient-end: #e0e0e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-tertiary: #666666;
+    --text-quaternary: #888888;
+    --surface-primary: rgba(0, 0, 0, 0.05);
+    --surface-secondary: rgba(0, 0, 0, 0.1);
+    --surface-tertiary: rgba(0, 0, 0, 0.15);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --border-color-strong: rgba(0, 0, 0, 0.2);
+    --gauge-bg-start: rgba(230, 230, 230, 0.8);
+    --gauge-bg-end: rgba(240, 240, 240, 0.8);
+    --power-positive: #1a1a1a;
+    --power-positive-glow: rgba(0, 0, 0, 0.35);
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    color: var(--text-primary);
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    width: 100vw;
+    height: 100vh;
+}
+
+body.hud-mode {
+    background: #000000;
+    --bg-gradient-start: #000000;
+    --bg-gradient-end: #000000;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    --text-tertiary: #8a8a8a;
+    --text-quaternary: #666666;
+    --surface-primary: rgba(255, 255, 255, 0.06);
+    --surface-secondary: rgba(255, 255, 255, 0.12);
+    --surface-tertiary: rgba(255, 255, 255, 0.18);
+    --border-color: rgba(255, 255, 255, 0.12);
+    --border-color-strong: rgba(255, 255, 255, 0.24);
+    --gauge-bg-start: rgba(20, 20, 20, 0.9);
+    --gauge-bg-end: rgba(35, 35, 35, 0.9);
+}
+
+/* HUD Mode - Horizontal mirror for windshield projection */
+.dashboard-content.hud-mode {
+    transform: matrix(-1, 0, 0, 1, 0, 0) translateY(-15px) scale(1.1);
+}
+
+#dashboard-container {
+    width: 100%;
+    height: 100%;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header - Compact for landscape */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 5px 12px;
+    background: var(--surface-primary);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Hide header in drive mode */
+.dashboard-header.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff4444;
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+    animation: pulse-red 2s infinite;
+}
+
+.status-dot.connected {
+    background: #44ff44;
+    box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.status-text {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Connection progress indicator */
+.connection-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-left: 8px;
+}
+
+.progress-bar {
+    width: 150px;
+    height: 3px;
+    background: var(--surface-secondary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4299e1, #3182ce);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+.config-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.auto-brightness-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.auto-brightness-state {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: var(--surface-secondary);
+    color: var(--text-tertiary);
+    border: 1px solid var(--border-color);
+}
+
+.auto-brightness-btn.active .auto-brightness-state {
+    background: #2f855a;
+    color: #ffffff;
+    border-color: #2f855a;
+}
+
+.config-btn:hover {
+    background: var(--surface-primary);
+    color: var(--text-primary);
+    border-color: var(--border-color-strong);
+}
+
+body.light-theme .config-btn:hover {
+    background: var(--surface-primary);
+    opacity: 1;
+}
+
+.config-btn:active {
+    transform: scale(0.98);
+}
+
+/* Main content wrapper - will switch between layouts */
+.dashboard-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    transition: transform 0.5s ease, background 0.3s ease, color 0.3s ease;
+}
+
+/* Park Mode Layout */
+.park-mode {
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    width: 100%;
+    padding-top: 30px; /* Space for camera notch/cutout */
+}
+
+.park-mode .left-panel {
+    flex: 0 0 280px; /* Fixed width instead of flex: 1 to make it smaller */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-left: 50px; /* Increased margin to avoid camera area (was 10px) */
+}
+
+.park-mode .right-panel {
+    flex: 1; /* Takes remaining space */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+}
+
+/* Drive Mode Layout - Automotive Style */
+.drive-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.drive-mode .left-indicators,
+.drive-mode .right-indicators {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.drive-mode .left-indicators {
+    left: 8%;
+}
+
+.drive-mode .right-indicators {
+    right: 8%;
+}
+
+/* Individual positioned indicators */
+#ind-turn-left-drive {
+    position: absolute;
+    top: -80px;
+    left: 0;
+}
+
+#ind-blindspot-left-drive {
+    position: absolute;
+    top: 20px;
+    left: 0;
+}
+
+#ind-turn-right-drive {
+    position: absolute;
+    top: -80px;
+    right: 0;
+}
+
+#ind-blindspot-right-drive {
+    position: absolute;
+    top: 20px;
+    right: 0;
+}
+
+.drive-indicator {
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
+    background: rgba(72, 187, 120, 0.15);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(72, 187, 120, 0.7);
+    animation: pulse-blink 0.6s infinite;
+    box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+}
+
+.drive-indicator.warning-indicator {
+    width: auto;
+    height: auto;
+    border-radius: 20px;
+    padding: 12px 20px;
+    background: rgba(245, 101, 101, 0.2);
+    border: 3px solid rgba(245, 101, 101, 0.6);
+    box-shadow: 0 4px 20px rgba(245, 101, 101, 0.4);
+}
+
+.drive-indicator.autopilot-indicator {
+    width: auto;
+    height: auto;
+    border-radius: 20px;
+    padding: 12px 20px;
+    background: rgba(66, 153, 225, 0.2);
+    border: 3px solid rgba(66, 153, 225, 0.6);
+    box-shadow: 0 4px 20px rgba(66, 153, 225, 0.4);
+}
+
+.drive-indicator-icon {
+    font-size: 40px;
+    display: block;
+}
+
+.drive-indicator svg {
+    color: #48bb78;
+}
+
+.drive-indicator-label {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--text-primary);
+    margin-left: 8px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+@keyframes pulse-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+@keyframes pulse-alert {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.bottom-warnings {
+    position: absolute;
+    bottom: 18px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.warning-bar {
+    position: relative;
+    width: min(420px, 70vw);
+    height: 22px;
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.warning-bar-half {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+}
+
+.warning-bar-left {
+    left: 0;
+    border-top-left-radius: 999px;
+    border-bottom-left-radius: 999px;
+}
+
+.warning-bar-right {
+    right: 0;
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+.warning-bar-label {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    color: #0b0b0b;
+    text-transform: uppercase;
+}
+
+.warning-bar-collision .warning-bar-left {
+    background: linear-gradient(270deg, #f59e0b 0%, #f6ad55 100%);
+    animation: warning-pulse 0.8s infinite;
+}
+
+.warning-bar-collision .warning-bar-right {
+    background: linear-gradient(90deg, #f59e0b 0%, #f6ad55 100%);
+    animation: warning-pulse 0.8s infinite;
+}
+
+.warning-bar-collision .warning-bar-label {
+    color: #2b1900;
+}
+
+.warning-bar-brake .warning-bar-left {
+    background: linear-gradient(270deg, #dc2626 0%, #f87171 100%);
+    animation: warning-pulse 0.6s infinite;
+}
+
+.warning-bar-brake .warning-bar-right {
+    background: linear-gradient(90deg, #dc2626 0%, #f87171 100%);
+    animation: warning-pulse 0.6s infinite;
+}
+
+.warning-bar-brake .warning-bar-label {
+    color: #1f0000;
+}
+
+.warning-bar-autopilot .warning-bar-left {
+    background: linear-gradient(270deg, #2563eb 0%, #60a5fa 100%);
+    animation: warning-shimmer 2.2s infinite;
+}
+
+.warning-bar-autopilot .warning-bar-right {
+    background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+    animation: warning-shimmer 2.2s infinite;
+}
+
+.warning-bar-autopilot .warning-bar-label {
+    color: #0b162e;
+}
+
+@keyframes warning-pulse {
+    0%, 100% { opacity: 1; filter: saturate(1); }
+    50% { opacity: 0.75; filter: saturate(1.3); }
+}
+
+@keyframes warning-shimmer {
+    0% { opacity: 0.85; }
+    50% { opacity: 1; }
+    100% { opacity: 0.85; }
+}
+
+/* Speedometer container */
+.speedometer-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Power arcs (SVG path) - 180° arcs on left and right sides */
+.power-arc {
+    width: 400px;
+    height: 400px;
+    position: absolute;
+    pointer-events: none;
+}
+
+.power-arc-bg {
+    fill: none;
+    stroke: var(--surface-secondary);
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+
+.power-arc-fill {
+    fill: none;
+    stroke: var(--surface-secondary); /* Gris par défaut */
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 159; /* 110° arc = (110/360) × 2π × 83 ≈ 159 */
+    stroke-dashoffset: 159;
+    transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease, filter 0.3s ease;
+}
+
+/* Arc actif (quand il y a de la puissance) */
+.power-arc-fill.power-arc-negative.active {
+    stroke: #48bb78 !important; /* Vert quand actif */
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.8)) !important;
+}
+
+.power-arc-fill.power-arc-positive.active {
+    stroke: var(--power-positive) !important;
+    filter: drop-shadow(0 0 8px var(--power-positive-glow)) !important;
+}
+
+/* Pedal arc (SVG path) - 240° arc from bottom-left to bottom-right */
+.pedal-arc {
+    width: 400px;
+    height: 400px;
+    position: absolute;
+    pointer-events: none;
+}
+
+.pedal-arc-bg {
+    fill: none;
+    stroke: var(--surface-secondary);
+    stroke-width: 10;
+    stroke-linecap: round;
+}
+
+.pedal-arc-fill {
+    fill: none;
+    stroke: #4299e1;
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 341; /* 280° arc = (280/360) × 2π × 70 ≈ 341 */
+    stroke-dashoffset: 341;
+    transition: stroke-dashoffset 0.3s ease;
+    filter: drop-shadow(0 0 10px rgba(66, 153, 225, 0.6));
+}
+
+/* Blindspot arcs - WiFi-wave style on edges */
+.blindspot-arcs-left,
+.blindspot-arcs-right {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    pointer-events: none;
+    animation: pulse-blink 0.6s infinite;
+}
+
+/* Speed display */
+.speed-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+/* Power & pedal map indicators around speedometer */
+.power-pedal-indicators {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Pedal map indicator (top center) */
+.pedal-map-indicator {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-blue);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pedal-map-label {
+    padding: 4px 12px;
+    background: var(--accent-blue);
+    color: var(--background-primary);
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+/* Power indicators (bottom corners) */
+.power-indicator {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+    gap: 2px;
+}
+
+.power-rear {
+    bottom: 45px;
+    left: 45px;
+}
+
+.power-front {
+    bottom: 45px;
+    right: 45px;
+}
+
+.power-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.power-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Color coding for power (positive = acceleration, negative = regen) */
+.power-value.positive {
+    color: var(--text-success);
+}
+
+.power-value.negative {
+    color: var(--accent-blue);
+}
+
+.power-value.zero {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.power-unit {
+    font-size: 9px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    font-weight: 500;
+}
+
+/* Hide modes by default */
+.park-mode,
+.drive-mode {
+    display: none;
+}
+
+.park-mode.active,
+.drive-mode.active {
+    display: flex;
+}
+
+/* Jauges principales */
+.main-gauges {
+    display: flex;
+    flex-direction: column; /* Stack vertically instead of horizontally */
+    gap: 10px;
+    justify-content: center;
+    align-items: stretch;
+}
+
+.gauge-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.gauge {
+    background: linear-gradient(135deg, var(--gauge-bg-start) 0%, var(--gauge-bg-end) 100%);
+    border: 2px solid var(--border-color);
+    border-radius: 15px;
+    padding: 12px; /* Reduced from 20px */
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    width: 100%;
+}
+
+body.light-theme .gauge {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.speed-gauge {
+    border-color: rgba(66, 153, 225, 0.5);
+}
+
+.battery-gauge {
+    border-color: rgba(72, 187, 120, 0.5);
+}
+
+/* Battery icon with progress bar */
+.battery-icon-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px; /* Reduced from 15px */
+}
+
+.battery-icon {
+    width: 80px; /* Reduced from 120px */
+    height: 40px; /* Reduced from 60px */
+}
+
+.battery-fill {
+    transition: width 0.5s ease, fill 0.3s ease;
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.6));
+}
+
+/* Battery color based on level */
+.battery-fill.low {
+    fill: #f56565 !important;
+    filter: drop-shadow(0 0 8px rgba(245, 101, 101, 0.6)) !important;
+}
+
+.battery-fill.medium {
+    fill: #ed8936 !important;
+    filter: drop-shadow(0 0 8px rgba(237, 137, 54, 0.6)) !important;
+}
+
+.battery-fill.high {
+    fill: #48bb78 !important;
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.6)) !important;
+}
+
+.battery-fill.charging {
+    animation: pulse-charge 2s infinite;
+}
+
+@keyframes pulse-charge {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.gauge-value {
+    font-size: 32px; /* Reduced from 42px */
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 3px; /* Reduced from 5px */
+    background: linear-gradient(135deg, #ffffff 0%, #aaaaaa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Large speed display for drive mode */
+.speed-large {
+    font-size: 120px;
+    font-weight: 700;
+    line-height: 1;
+    color: #ffffff;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+body.light-theme .speed-large {
+    color: #111111;
+    text-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.speed-unit-large {
+    font-size: 24px;
+    color: #888888;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 10px;
+}
+
+body.light-theme .speed-unit-large {
+    color: #444444;
+}
+
+.gear-display-large {
+    font-size: 48px;
+    font-weight: 700;
+    color: #ffffff;
+    padding: 20px 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    margin-top: 20px;
+}
+
+/* Gear display in drive mode */
+.gear-display-drive {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 10px;
+    padding: 8px 20px;
+    background: var(--surface-primary);
+    border-radius: 10px;
+    border: 2px solid var(--border-color-strong);
+}
+
+/* Compact info display below speedometer */
+.drive-info-compact {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.drive-info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drive-info-icon {
+    font-size: 20px;
+}
+
+.drive-info-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.gauge-unit {
+    font-size: 11px; /* Reduced from 14px */
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.gauge-subtext {
+    font-size: 10px; /* Reduced from 12px */
+    color: var(--text-quaternary);
+    margin-top: 4px; /* Reduced from 8px */
+}
+
+/* Informations véhicule */
+.vehicle-info {
+    background: var(--surface-primary);
+    border-radius: 10px;
+    padding: 10px; /* Reduced from 15px */
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0; /* Reduced from 8px */
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: 11px; /* Reduced from 13px */
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 13px; /* Reduced from 16px */
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.charging-row {
+    background: rgba(72, 187, 120, 0.1);
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+/* Indicateurs d'état */
+.status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.indicator-group {
+    background: var(--surface-primary);
+    border-radius: 12px;
+    padding: 12px;
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.group-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.indicators-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+/* Compact indicators for landscape */
+.indicators-grid.compact {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.indicator {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+    transition: all 0.3s ease;
+    opacity: 0.4;
+}
+
+.indicator.active {
+    opacity: 1;
+    background: rgba(66, 153, 225, 0.2);
+    border-color: rgba(66, 153, 225, 0.5);
+    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3);
+}
+
+.indicator.warning {
+    background: rgba(237, 137, 54, 0.2);
+    border-color: rgba(237, 137, 54, 0.5);
+    box-shadow: 0 0 20px rgba(237, 137, 54, 0.3);
+}
+
+.indicator.alert {
+    background: rgba(245, 101, 101, 0.2);
+    border-color: rgba(245, 101, 101, 0.5);
+    box-shadow: 0 0 20px rgba(245, 101, 101, 0.3);
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.indicator-icon {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.indicator-label {
+    display: block;
+    font-size: 9px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Mode selector visual hint */
+.mode-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Vehicle Top View - Park Mode */
+.vehicle-top-view {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+}
+
+.vehicle-svg {
+    max-width: 100%;
+    max-height: 100%;
+    filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+    overflow: visible;
+}
+
+/* Vehicle parts - default closed state */
+.vehicle-part {
+    transition: all 0.3s ease;
+}
+
+/* Doors open animation */
+.door-fl,
+.door-fr,
+.door-rl,
+.door-rr,
+.frunk-door,
+.trunk-door {
+    transform: none;
+    transform-box: fill-box;
+    stroke-width: 1px !important;
+    opacity: 0;
+}
+
+.door-fl.open,
+.door-fr.open,
+.door-rl.open,
+.door-rr.open {
+    opacity: 1;
+}
+
+.frunk-door.open,
+.trunk-door.open {
+    opacity: 1;
+}
+
+/* Headlights active */
+.headlight-left.active,
+.headlight-right.active {
+    fill: #ffeb3b !important;
+    stroke: #ffeb3b !important;
+    filter: drop-shadow(0 0 12px rgba(255, 235, 59, 0.9));
+}
+
+/* High beams active */
+.headlight-left.high-beam,
+.headlight-right.high-beam {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+    filter: drop-shadow(0 0 18px rgba(255, 255, 255, 1));
+}
+
+/* Turn signals - blink animation */
+.turn-signal-fl.active,
+.turn-signal-rl.active {
+    fill: #ff9800;
+    animation: blink-turn 0.6s infinite;
+}
+
+.turn-signal-fr.active,
+.turn-signal-rr.active {
+    fill: #ff9800;
+    animation: blink-turn 0.6s infinite;
+}
+
+@keyframes blink-turn {
+    0%, 100% {
+        opacity: 1;
+        filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.9));
+    }
+    50% {
+        opacity: 0.2;
+        filter: drop-shadow(0 0 2px rgba(255, 152, 0, 0.3));
+    }
+}
+
+/* Hazard lights - all turn signals blink */
+.turn-signal-fl.hazard,
+.turn-signal-fr.hazard,
+.turn-signal-rl.hazard,
+.turn-signal-rr.hazard {
+    fill: #ff9800;
+    animation: blink-turn 0.6s infinite;
+}
+
+/* Fog lights glow */
+.headlight-left.fog,
+.headlight-right.fog {
+    fill: #ffd54f !important;
+    filter: drop-shadow(0 0 20px rgba(255, 213, 79, 0.6));
+}
+
+/* Charging port active */
+.charge-port.active {
+    fill: #48bb78 !important;
+    stroke: #48bb78 !important;
+    filter: drop-shadow(0 0 10px rgba(72, 187, 120, 0.8));
+}
+
+.charge-icon.active {
+    stroke: #48bb78 !important;
+    filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.9));
+}
+
+/* Lock indicator */
+.lock-bg.locked {
+    fill: #48bb78 !important;
+    stroke: #48bb78 !important;
+    filter: drop-shadow(0 0 12px rgba(72, 187, 120, 0.7));
+}
+
+.lock-icon.locked {
+    stroke: #ffffff !important;
+}
+
+.lock-bg.unlocked {
+    fill: #f56565 !important;
+    stroke: #f56565 !important;
+    filter: drop-shadow(0 0 12px rgba(245, 101, 101, 0.7));
+}
+
+.lock-icon.unlocked {
+    stroke: #ffffff !important;
+}
+
+/* Sentry mode active */
+.sentry-bg.active {
+    fill: #f56565 !important;
+    stroke: #f56565 !important;
+    filter: drop-shadow(0 0 15px rgba(245, 101, 101, 0.8));
+    animation: pulse-sentry 2s infinite;
+}
+
+.sentry-eye.active {
+    stroke: #ffffff !important;
+}
+
+.sentry-pupil.active {
+    fill: #ffffff !important;
+}
+
+@keyframes pulse-sentry {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* Night mode active */
+.night-mode-bg.active {
+    fill: rgba(100, 150, 200, 0.3) !important;
+    stroke: #64b5f6 !important;
+}
+
+.night-mode-moon.active {
+    fill: #64b5f6 !important;
+    filter: drop-shadow(0 0 8px rgba(100, 181, 246, 0.6));
+}
+
+/* Responsive - maintain landscape */
+@media (max-width: 800px) {
+    .speed-large {
+        font-size: 80px;
+    }
+
+    .gear-display-large {
+        font-size: 36px;
+        padding: 15px 30px;
+    }
+
+    .gauge-value {
+        font-size: 32px;
+    }
+
+    .indicators-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

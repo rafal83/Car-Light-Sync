@@ -1,0 +1,1 @@
+#include "vehicle_can_unified_config.generated.h"

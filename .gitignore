@@ -1,5 +1,6 @@
 # ESP-IDF
-build/
+build
+release
 sdkconfig
 sdkconfig.old
 *.pyc
@@ -25,6 +26,14 @@ __pycache__/
 venv/
 env/
 
+# Node.js
+node_modules/
+package-lock.json
+
+# Minified files (generated during build)
+data/*.min
+data/*.gz
+
 # Build artifacts
 *.o
 *.a
@@ -43,3 +52,6 @@ env/
 
 # Windows/Linux device files
 nul
+
+# Generated version header
+include/version_auto.h

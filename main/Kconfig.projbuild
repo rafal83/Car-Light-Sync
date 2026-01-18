@@ -1,4 +1,4 @@
-menu "Tesla Strip Configuration"
+menu "Car Light Sync Configuration"
 
     config LED_GPIO
         int "LED GPIO Pin"
@@ -15,33 +15,15 @@ menu "Tesla Strip Configuration"
 
     config WIFI_AP_SSID
         string "WiFi AP SSID"
-        default "Tesla-Strip"
+        default "CarLightSync"
         help
             SSID for the access point.
 
     config WIFI_AP_PASSWORD
         string "WiFi AP Password"
-        default "tesla123"
+        default ""
         help
             Password for the access point (min 8 characters).
-
-    config PANDA_WIFI_PREFIX
-        string "Panda WiFi SSID Prefix"
-        default "panda-"
-        help
-            Prefix to search for Panda Commander WiFi networks.
-
-    config PANDA_WIFI_PASSWORD
-        string "Panda WiFi Password"
-        default "testing123"
-        help
-            Password for connecting to Panda Commander.
-
-    config COMMANDER_PORT
-        int "Commander TCP Port"
-        default 1338
-        help
-            TCP port for Commander connection.
 
     config WEB_SERVER_PORT
         int "Web Server Port"

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Car Light Sync - Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <script>
+        // Load i18n.js with correct path depending on context
+        const i18nPath = window.Capacitor?.isNativePlatform() ? '/i18n.js' : '../i18n.js';
+        document.write('<script src="' + i18nPath + '"><\/script>');
+    </script>
+</head>
+<body>
+    <div id="dashboard-container">
+        <!-- Header avec contrôles -->
+        <div class="dashboard-header">
+            <div class="connection-status" id="connection-status">
+                <span class="status-dot" id="status-dot"></span>
+                <span class="status-text" id="status-text" data-i18n="dashboard.disconnected">Déconnecté</span>
+                <div class="connection-progress" id="connection-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <span class="progress-text" id="progress-text"></span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="config-btn auto-brightness-btn" id="auto-brightness-btn" aria-pressed="false">
+                    <span data-i18n="dashboard.autoBrightness">Auto Brightness</span>
+                    <span class="auto-brightness-state" id="auto-brightness-state">OFF</span>
+                </button>
+                <button class="config-btn" id="config-btn">⚙️ <span data-i18n="dashboard.config">Config</span></button>
+            </div>
+        </div>
+
+        <!-- Main content wrapper -->
+        <div class="dashboard-content">
+            <!-- PARK MODE -->
+            <div class="park-mode active" id="park-mode">
+                <!-- Left panel - Main info -->
+                <div class="left-panel">
+                    <!-- Battery & Charging -->
+                    <div class="main-gauges">
+                        <div class="gauge-container">
+                            <div class="gauge battery-gauge">
+                                <!-- Battery icon with progress bar -->
+                                <div class="battery-icon-container">
+                                    <svg class="battery-icon" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+                                        <!-- Battery outline -->
+                                        <rect x="5" y="10" width="80" height="30" rx="3" fill="none" stroke="var(--text-tertiary)" stroke-width="2"/>
+                                        <!-- Battery terminal (positive) -->
+                                        <rect x="85" y="18" width="5" height="14" rx="1" fill="var(--text-tertiary)"/>
+                                        <!-- Battery fill (progress bar) -->
+                                        <rect id="battery-fill-park" x="8" y="13" width="74" height="24" rx="2" fill="#48bb78" class="battery-fill"/>
+                                    </svg>
+                                </div>
+                                <div class="gauge-value" id="battery-value-park">0</div>
+                                <div class="gauge-unit">%</div>
+                                <div class="gauge-subtext" id="battery-voltage-park">0.0V</div>
+                            </div>
+                        </div>
+                        <div class="gauge-container" id="charging-gauge-park" style="display: none;">
+                            <div class="gauge speed-gauge">
+                                <div class="gauge-value" id="charge-power-park">0.0</div>
+                                <div class="gauge-unit">kW</div>
+                                <div class="gauge-subtext">Charge</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle info -->
+                    <div class="vehicle-info">
+                        <div class="info-row">
+                            <span class="info-label" data-i18n="vehicle.odometer">Odomètre</span>
+                            <span class="info-value" id="odometer-value-park">0 km</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label" data-i18n="vehicle.batterylv">Batterie LV</span>
+                            <span class="info-value" id="battery-lv-park">0.0V</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label" data-i18n="vehicle.gear">État</span>
+                            <span class="info-value" id="gear-display-park">P</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label" data-i18n="vehicle.trainType">Transmission</span>
+                            <span class="info-value" id="train-type">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right panel - Vehicle Top View -->
+                <div class="right-panel">
+                    <div class="vehicle-top-view">
+                        <svg class="vehicle-svg" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg">
+                            <image href="svg/vehicle.svg" class="vehicle-base" x="0" y="0" width="300" height="500"/>
+                            <image href="svg/frunk.svg" class="vehicle-part frunk-door" x="0" y="0" width="300" height="500"/>
+                            <image href="svg/trunk.svg" class="vehicle-part trunk-door" x="0" y="0" width="300" height="500"/>
+                            <image href="svg/frontleftdoor.svg" class="vehicle-part door-fl" x="0" y="0" width="300" height="500"/>
+                            <image href="svg/frontrightdoor.svg" class="vehicle-part door-fr" x="0" y="0" width="300" height="500"/>
+                            <image href="svg/rearleftdoor.svg" class="vehicle-part door-rl" x="0" y="0" width="300" height="500"/>
+                            <image href="svg/rearrightdoor.svg" class="vehicle-part door-rr" x="0" y="0" width="300" height="500"/>
+
+                            <!-- HEADLIGHTS - Sleek horizontal LED strips -->
+                            <g id="headlights" transform="translate(0 28) scale(1.4286 1.6835)">
+                                <path d="m76.507,25.256c-2.235,4.593 -6.585,7.391 -8.391,10.412 -1.849,3.093 -1.146,6.377 -2.74,8.278 -3.464,4.129 -6.081,4.489 -7.715,4.971 -3.895,1.15 -0.398,-21.644 18.846,-23.661"
+                                      fill="none"
+                                      stroke="#808080"
+                                      stroke-width="0.846"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      class="headlight-left"/>
+                                <path d="m134.918,25.256c2.235,4.593 6.585,7.391 8.391,10.412 1.849,3.093 1.146,6.377 2.74,8.278 3.464,4.129 6.081,4.489 7.715,4.971 3.895,1.15 0.398,-21.644 -18.846,-23.661"
+                                      fill="none"
+                                      stroke="#808080"
+                                      stroke-width="0.846"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      class="headlight-right"/>
+                            </g>
+
+                            <!-- TURN SIGNALS -->
+                            <g id="turn-signals">
+                                <!-- Front left -->
+                                <circle cx="85" cy="95" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-fl"/>
+                                <!-- Front right -->
+                                <circle cx="215" cy="95" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-fr"/>
+                                <!-- Rear left -->
+                                <circle cx="85" cy="415" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-rl"/>
+                                <!-- Rear right -->
+                                <circle cx="215" cy="415" r="6" fill="transparent" stroke="var(--surface-tertiary)" stroke-width="1" class="turn-signal-rr"/>
+                            </g>
+
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DRIVE MODE (D/R/N) -->
+            <div class="drive-mode" id="drive-mode">
+                <!-- Left indicators -->
+                <div class="left-indicators">
+                    <div class="drive-indicator" id="ind-turn-left-drive" style="display: none;">
+                        <svg width="40" height="40" viewBox="0 0 40 40">
+                            <path d="M30 20 L10 20 M10 20 L18 12 M10 20 L18 28" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Center speedometer with pedal arc -->
+                <div class="speedometer-container">
+                    <!-- Pedal position arc - 280° arc from -140° to +140° (0° = midi/top) -->
+                    <!-- Center at (100,100), radius 70, stroke-width 10px -->
+                    <svg class="pedal-arc" viewBox="0 0 200 200">
+                        <path class="pedal-arc-bg" d="M 55.0 153.6 A 70 70 0 1 1 145.0 153.6" fill="none"/>
+                        <path class="pedal-arc-fill" id="pedal-arc-fill" d="M 55.0 153.6 A 70 70 0 1 1 145.0 153.6" fill="none"/>
+                    </svg>
+
+                    <!-- Rear power arcs (left side) -->
+                    <!-- Center at (100,100), radius 83 (70+10+3), stroke-width 5px -->
+                    <svg class="power-arc power-arc-rear" viewBox="0 0 200 200">
+                        <!-- Background: full arc from -140° to -30° -->
+                        <path class="power-arc-bg" d="M 46.7 163.6 A 83 83 0 0 1 58.5 28.1" fill="none"/>
+                        <!-- Positive power: -90° (0kW) to -30° (max, upwards) -->
+                        <path class="power-arc-fill power-arc-positive" id="power-arc-rear-pos" d="M 17 100 A 83 83 0 0 1 58.5 28.1" fill="none"/>
+                        <!-- Negative power/regen: -90° (0kW) to -140° (min, downwards) -->
+                        <path class="power-arc-fill power-arc-negative" id="power-arc-rear-neg" d="M 17 100 A 83 83 0 0 0 46.7 163.6" fill="none"/>
+                    </svg>
+
+                    <!-- Front power arcs (right side) -->
+                    <!-- Center at (100,100), radius 83 (70+10+3), stroke-width 5px -->
+                    <svg class="power-arc power-arc-front" viewBox="0 0 200 200" id="power-arc-front">
+                        <!-- Background: full arc from +30° to +140° -->
+                        <path class="power-arc-bg" d="M 141.5 28.1 A 83 83 0 0 1 153.3 163.6" fill="none"/>
+                        <!-- Positive power: +90° (0kW) to +30° (max, upwards) -->
+                        <path class="power-arc-fill power-arc-positive" id="power-arc-front-pos" d="M 183 100 A 83 83 0 0 0 141.5 28.1" fill="none"/>
+                        <!-- Negative power/regen: +90° (0kW) to +140° (min, downwards) -->
+                        <path class="power-arc-fill power-arc-negative" id="power-arc-front-neg" d="M 183 100 A 83 83 0 0 1 153.3 163.6" fill="none"/>
+                    </svg>
+
+                    <!-- Blindspot arcs on sides (further outside) -->
+                    <svg class="blindspot-arcs-left" id="blindspot-arcs-left" viewBox="-40 0 280 200" style="display: none;">
+                        <!-- Arcs centered around y=100, positioned further left -->
+                        <path class="blindspot-lv1-1" d="M -5 110 A 110 110 0 0 1 -5 90" stroke="#ed8936" stroke-width="4" fill="none" opacity="0.7"/>
+                        <path class="blindspot-lv1-2" d="M -10 115 A 115 115 0 0 1 -10 85" stroke="#ed8936" stroke-width="4" fill="none" opacity="0.85"/>
+                        <path class="blindspot-lv1-3" d="M -15 120 A 120 120 0 0 1 -15 80" stroke="#ed8936" stroke-width="4" fill="none" opacity="1"/>
+                    </svg>
+                    <svg class="blindspot-arcs-right" id="blindspot-arcs-right" viewBox="-40 0 280 200" style="display: none;">
+                        <!-- Arcs centered around y=100, positioned further right -->
+                        <path class="blindspot-lv1-1" d="M 205 90 A 110 110 0 0 1 205 110" stroke="#ed8936" stroke-width="4" fill="none" opacity="0.7"/>
+                        <path class="blindspot-lv1-2" d="M 210 85 A 115 115 0 0 1 210 115" stroke="#ed8936" stroke-width="4" fill="none" opacity="0.85"/>
+                        <path class="blindspot-lv1-3" d="M 215 80 A 120 120 0 0 1 215 120" stroke="#ed8936" stroke-width="4" fill="none" opacity="1"/>
+                    </svg>
+
+                    <!-- Power & pedal map indicators around the speedometer -->
+                    <div class="power-pedal-indicators">
+                        <!-- Pedal map (drive mode) at top -->
+                        <div class="pedal-map-indicator" id="pedal-map-indicator">
+                            <div class="pedal-map-label">Standard</div>
+                        </div>
+
+                        <!-- Rear power at bottom-left -->
+                        <div class="power-indicator power-rear" id="power-rear-indicator">
+                            <div class="power-label">R</div>
+                            <div class="power-value" id="power-rear-value">0</div>
+                            <div class="power-unit">kW</div>
+                        </div>
+
+                        <!-- Front power at bottom-right -->
+                        <div class="power-indicator power-front" id="power-front-indicator">
+                            <div class="power-label">F</div>
+                            <div class="power-value" id="power-front-value">0</div>
+                            <div class="power-unit">kW</div>
+                        </div>
+                    </div>
+
+                    <!-- Speed display -->
+                    <div class="speed-display" id="speed-display-drive">
+                        <div class="speed-large" id="speed-value-drive">0</div>
+                        <div class="speed-unit-large">km/h</div>
+                        <div class="gear-display-drive" id="gear-display-drive">D</div>
+                    </div>
+
+                    <!-- Battery & Odometer below -->
+                    <div class="drive-info-compact">
+                        <div class="drive-info-item">
+                            <svg width="20" height="20" viewBox="0 0 20 20" style="color: var(--text-primary);">
+                                <rect x="3" y="6" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                <rect x="15" y="9" width="2" height="2" fill="currentColor"/>
+                                <rect x="5" y="8" width="8" height="4" fill="currentColor" opacity="0.5"/>
+                            </svg>
+                            <span class="drive-info-value" id="battery-drive-compact">0%</span>
+                        </div>
+                        <div class="drive-info-item">
+                            <svg width="20" height="20" viewBox="0 0 20 20" style="color: var(--text-primary);">
+                                <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                <circle cx="10" cy="10" r="2" fill="currentColor"/>
+                            </svg>
+                            <span class="drive-info-value" id="odometer-drive-compact">0km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right indicators -->
+                <div class="right-indicators">
+                    <div class="drive-indicator" id="ind-turn-right-drive" style="display: none;">
+                        <svg width="40" height="40" viewBox="0 0 40 40">
+                            <path d="M10 20 L30 20 M30 20 L22 12 M30 20 L22 28" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="drive-indicator" id="ind-blindspot-right-drive" style="display: none;">
+                        <svg width="40" height="40" viewBox="0 0 40 40">
+                            <path d="M30 30 Q30 10, 10 10" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
+                            <circle cx="10" cy="10" r="3" fill="currentColor"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Bottom warnings (collision, brake, autopilot) -->
+                <div class="bottom-warnings" id="drive-warning-bar" style="display: none;">
+                    <div class="warning-bar warning-bar-collision" id="warning-bar">
+                        <span class="warning-bar-half warning-bar-left"></span>
+                        <span class="warning-bar-half warning-bar-right"></span>
+                        <span class="warning-bar-label" id="warning-bar-label">WARNING</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
+

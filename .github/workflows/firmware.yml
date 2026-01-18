@@ -1,0 +1,64 @@
+name: Build ESP32 Firmware
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Cache PlatformIO
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.platformio
+          .pio
+        key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+
+    - name: Install PlatformIO Core
+      run: pip install -U platformio
+
+    - name: Prefetch PlatformIO dependencies
+      run: pio pkg install -e esp32c6
+
+    - name: Build firmware (esp32c6)
+      run: pio run -e esp32c6
+
+    - name: Upload firmware artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware
+        path: |
+          .pio/build/esp32c6/firmware.bin
+          .pio/build/esp32c6/firmware.elf
+          .pio/build/esp32c6/car-light-sync.map
+          .pio/build/esp32c6/bootloader.bin
+          .pio/build/esp32c6/partitions.bin
+        retention-days: 30
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run clang-format
+      uses: jidicula/clang-format-action@v4.11.0
+      with:
+        check-path: '.'
+        fallback-style: 'none'
+        clang-format-version: '18'
+
+

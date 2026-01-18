@@ -1,1554 +1,1773 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+/**
+ * @file config_manager.c
+ * @brief Profile and CAN event manager
+ *
+ * Handles:
+ * - LED effect profiles with SPIFFS storage (JSON)
+ * - CAN events with priorities and segments
+ * - Multi-pass rendering pipeline: reservation -> default effect -> events
+ * - Profile JSON import/export
+ * - Enable/disable events
+ */
+
 #include "config_manager.h"
-#include "led_effects.h"
+
+#include "audio_input.h"
+#include "cJSON.h"
 #include "config.h"
 #include "esp_log.h"
-#include "nvs_flash.h"
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "led_effects.h"
 #include "nvs.h"
-#include "cJSON.h"
+#include "nvs_flash.h"
+#include "settings_manager.h"
+#include "spiffs_storage.h"
+
+#include <dirent.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 
-static const char *TAG = "ConfigMgr";
+// Buffer for JSON export/import (full profile with all events)
+#define JSON_EXPORT_BUFFER_SIZE 16384 // 16KB buffer for JSON
 
-static config_profile_t profiles[MAX_PROFILES];
-static int active_profile_id = -1;
+// Forward declaration
+static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size);
 
-// Système d'événements multiples
-#define MAX_ACTIVE_EVENTS 4
+// ============================================================================
+// Simple checksum to validate binary profile integrity
+// ============================================================================
+
+static uint32_t calculate_checksum(const void *data, size_t length) {
+  uint32_t sum = 0;
+  const uint8_t *buf = (const uint8_t *)data;
+
+  for (size_t i = 0; i < length; i++) {
+    sum += buf[i];
+  }
+
+  return sum;
+}
+
+typedef struct __attribute__((packed)) {
+  uint32_t magic;
+  uint16_t version;
+  uint16_t data_size;
+} profile_header_t;
+
+static void migrate_profile_if_needed(config_profile_t *profile, uint16_t version) {
+  if (profile == NULL) {
+    return;
+  }
+}
+
+// RAM cache: active profile (stored in SPIFFS, ~2KB in RAM)
+static config_profile_t active_profile;
+static int active_profile_id             = -1;
+static bool active_profile_loaded        = false;
+
+// Profile ID registry for O(1) profile existence checks (128 bytes for 1000 profiles)
+#define PROFILE_REGISTRY_SIZE ((MAX_PROFILE_SCAN_LIMIT + 7) / 8) // Bitmap: 100 profiles = 13 bytes
+static uint8_t profile_registry[PROFILE_REGISTRY_SIZE] = {0};
+static bool profile_registry_initialized = false;
+
+// Steering wheel control (opt-in)
+static bool wheel_control_enabled        = false;
+static uint8_t wheel_control_speed_limit = 5; // km/h
+
+// Multiple event system
+#define MAX_ACTIVE_EVENTS 10
 typedef struct {
-    can_event_type_t event;
-    effect_config_t effect_config;
-    uint32_t start_time;
-    uint16_t duration_ms;
-    uint8_t priority;
-    bool active;
+  can_event_type_t event;
+  effect_config_t effect_config;
+  uint32_t start_time;
+  uint16_t duration_ms;
+  uint8_t priority;
+  bool active;
 } active_event_t;
 
 static active_event_t active_events[MAX_ACTIVE_EVENTS];
 static bool effect_override_active = false;
 
-// Noms des événements CAN
-static const char* event_names[] = {
-    "None",
-    "Turn Left",
-    "Turn Right",
-    "Turn Hazard",
-    "Charging",
-    "Charge Complete",
-    "Door Open",
-    "Door Close",
-    "Locked",
-    "Unlocked",
-    "Brake On",
-    "Brake Off",
-    "Blindspot Left",
-    "Blindspot Right",
-    "Night Mode On",
-    "Night Mode Off",
-    "Speed Threshold",
-    "Autopilot Engaged",
-    "Autopilot Disengaged",
-    "Gear Drive",
-    "Gear Reverse",
-    "Gear Park"
-};
+// Buffers for composed LED rendering
+static led_rgb_t composed_buffer[MAX_LED_COUNT];
+static led_rgb_t temp_buffer[MAX_LED_COUNT];
+static uint8_t priority_buffer[MAX_LED_COUNT];
+
+// Profile registry helper functions for O(1) lookup
+static inline void profile_registry_set(uint16_t profile_id) {
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return;
+  profile_registry[profile_id / 8] |= (1 << (profile_id % 8));
+}
+
+static inline void profile_registry_clear(uint16_t profile_id) {
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return;
+  profile_registry[profile_id / 8] &= ~(1 << (profile_id % 8));
+}
+
+static inline bool profile_registry_exists(uint16_t profile_id) {
+  if (profile_id >= MAX_PROFILE_SCAN_LIMIT) return false;
+  return (profile_registry[profile_id / 8] & (1 << (profile_id % 8))) != 0;
+}
+
+static void profile_registry_rebuild(void) {
+  memset(profile_registry, 0, PROFILE_REGISTRY_SIZE);
+
+  // OPTIMIZATION: Use SPIFFS directory listing instead of 100x fopen()
+  DIR *dir = opendir("/spiffs/profiles");
+  if (dir == NULL) {
+    ESP_LOGW(TAG_CONFIG, "Profile directory not found, creating...");
+    mkdir("/spiffs/profiles", 0755);
+    profile_registry_initialized = true;
+    return;
+  }
+
+  struct dirent *entry;
+  int count = 0;
+  while ((entry = readdir(dir)) != NULL) {
+    // Parse profile ID from filename (e.g., "42.bin" -> 42)
+    if (entry->d_type == DT_REG) { // Regular file only
+      int profile_id = -1;
+      if (sscanf(entry->d_name, "%d.bin", &profile_id) == 1) {
+        if (profile_id >= 0 && profile_id < MAX_PROFILE_SCAN_LIMIT) {
+          profile_registry_set(profile_id);
+          count++;
+        }
+      }
+    }
+  }
+  closedir(dir);
+
+  profile_registry_initialized = true;
+  ESP_LOGI(TAG_CONFIG, "Profile registry built (%d profiles found)", count);
+}
+
+static void load_wheel_control_settings(void) {
+  uint8_t enabled_u8        = settings_get_bool("wheel_control_enabled", 0);
+  uint8_t speed_kph         = settings_get_u8("wheel_control_speed_limit", wheel_control_speed_limit);
+
+  wheel_control_enabled     = enabled_u8 != 0;
+  wheel_control_speed_limit = speed_kph;
+  // Clamp
+  if (wheel_control_speed_limit > 100) {
+    wheel_control_speed_limit = 100;
+  }
+}
 
 bool config_manager_init(void) {
-    // Initialiser les profils
-    memset(profiles, 0, sizeof(profiles));
+  // Initialize the active profile
+  memset(&active_profile, 0, sizeof(active_profile));
+  active_profile_loaded = false;
 
-    // Charger les profils depuis NVS
-    int loaded = config_manager_load_profiles();
-    ESP_LOGI(TAG, "%d profil(s) chargé(s)", loaded);
+  // Reduce stack usage: use a dynamic buffer for temporary profiles
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Temporary profile allocation error");
+    return false;
+  }
 
-    // Si aucun profil, créer un profil par défaut
-    if (loaded == 0) {
-        // Allouer dynamiquement pour éviter le stack overflow
-        config_profile_t* default_profile = (config_profile_t*)malloc(sizeof(config_profile_t));
-        if (default_profile == NULL) {
-            ESP_LOGE(TAG, "Erreur allocation mémoire pour profil par défaut");
-            return false;
-        }
-        config_manager_create_default_profile(default_profile, "Default");
-        config_manager_save_profile(0, default_profile);
-        free(default_profile);
-        config_manager_activate_profile(0);
-        ESP_LOGI(TAG, "Profil par défaut créé");
-    } else {
-        // Appliquer le profil actif chargé depuis NVS
-        if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
-            ESP_LOGI(TAG, "Application du profil actif %d: %s", active_profile_id, profiles[active_profile_id].name);
-            led_effects_set_config(&profiles[active_profile_id].default_effect);
-            // Ne pas activer le mode nuit au démarrage, il sera activé par l'événement CAN si auto_night_mode est activé
-            led_effects_set_night_mode(false, profiles[active_profile_id].night_brightness);
-            ESP_LOGI(TAG, "Auto night mode: %s (will respond to CAN events)",
-                     profiles[active_profile_id].auto_night_mode ? "ENABLED" : "DISABLED");
-            effect_override_active = false;
-        } else {
-            ESP_LOGW(TAG, "Aucun profil actif trouvé, activation du profil 0");
-            config_manager_activate_profile(0);
-        }
+  // Build profile registry for O(1) existence checks
+  profile_registry_rebuild();
+
+  // Load steering wheel control settings (opt-in)
+  load_wheel_control_settings();
+
+  // Load the active profile ID from SPIFFS
+  int32_t saved_active_id = settings_get_i32("active_profile_id", -1);
+  if (saved_active_id >= 0) {
+    active_profile_id = saved_active_id;
+  }
+
+  // Try to load the active profile
+  bool profile_exists = false;
+  if (active_profile_id >= 0) {
+    profile_exists = config_manager_load_profile(active_profile_id, &active_profile);
+    if (profile_exists) {
+      active_profile_loaded = true;
+      ESP_LOGI(TAG_CONFIG, "Active profile %d loaded: %s", active_profile_id, active_profile.name);
+      led_effects_set_config(&active_profile.default_effect);
+      effect_override_active = false;
     }
+  }
 
-    return true;
-}
+  // If no profile exists, create a default profile
+  if (!profile_exists) {
+    ESP_LOGI(TAG_CONFIG, "No profile found, creating default profile + Off profile");
+    config_manager_create_default_profile(&active_profile, "Default");
+    config_manager_save_profile(1, &active_profile);
+    active_profile_id     = 1;
+    active_profile_loaded = true;
 
-int config_manager_load_profiles(void) {
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
+    config_manager_create_off_profile(temp_profile, "Eteint");
+    config_manager_save_profile(0, temp_profile);
 
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "Impossible d'ouvrir NVS profiles");
-        return 0;
-    }
+    // Save the active ID
+    settings_set_i32("active_profile_id", active_profile_id);
 
-    int count = 0;
-    char key[16];
-
-    for (int i = 0; i < MAX_PROFILES; i++) {
-        snprintf(key, sizeof(key), "profile_%d", i);
-        size_t required_size = 0;
-
-        // Vérifier d'abord la taille du blob
-        err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
-        if (err == ESP_OK) {
-            // Vérifier que la taille correspond à la structure actuelle
-            if (required_size != sizeof(config_profile_t)) {
-                ESP_LOGW(TAG, "Profile %d a une taille incompatible (%d vs %d) - ignoré",
-                         i, required_size, sizeof(config_profile_t));
-                continue;
-            }
-
-            // Charger le profil
-            required_size = sizeof(config_profile_t);
-            err = nvs_get_blob(nvs_handle, key, &profiles[i], &required_size);
-            if (err == ESP_OK) {
-                count++;
-                if (profiles[i].active) {
-                    active_profile_id = i;
-                }
-            }
-        }
-    }
-
-    // Charger l'ID du profil actif
-    int32_t active_id;
-    err = nvs_get_i32(nvs_handle, "active_id", &active_id);
-    if (err == ESP_OK) {
-        active_profile_id = active_id;
-    }
-
-    nvs_close(nvs_handle);
-
-    // Si aucun profil compatible n'a été chargé, avertir l'utilisateur
-    if (count == 0) {
-        ESP_LOGW(TAG, "Aucun profil compatible trouvé - un factory reset peut être nécessaire");
-    }
-
-    return count;
-}
-
-bool config_manager_save_profile(uint8_t profile_id, const config_profile_t* profile) {
-    if (profile_id >= MAX_PROFILES || profile == NULL) {
-        return false;
-    }
-    
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
-    
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
-        return false;
-    }
-    
-    char key[16];
-    snprintf(key, sizeof(key), "profile_%d", profile_id);
-
-    // Allouer dynamiquement pour éviter le stack overflow
-    config_profile_t* profile_copy = (config_profile_t*)malloc(sizeof(config_profile_t));
-    if (profile_copy == NULL) {
-        ESP_LOGE(TAG, "Erreur allocation mémoire");
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    // Mettre à jour le timestamp
-    memcpy(profile_copy, profile, sizeof(config_profile_t));
-    profile_copy->modified_timestamp = (uint32_t)time(NULL);
-
-    err = nvs_set_blob(nvs_handle, key, profile_copy, sizeof(config_profile_t));
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur sauvegarde profil: %s", esp_err_to_name(err));
-        free(profile_copy);
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
-
-    // Mettre à jour la copie en mémoire
-    memcpy(&profiles[profile_id], profile_copy, sizeof(config_profile_t));
-    free(profile_copy);
-    
-    ESP_LOGI(TAG, "Profil %d sauvegardé: %s", profile_id, profile->name);
-    return true;
-}
-
-bool config_manager_load_profile(uint8_t profile_id, config_profile_t* profile) {
-    if (profile_id >= MAX_PROFILES || profile == NULL) {
-        return false;
-    }
-
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("profiles", NVS_READONLY, &nvs_handle);
-
-    if (err != ESP_OK) {
-        return false;
-    }
-
-    char key[16];
-    snprintf(key, sizeof(key), "profile_%d", profile_id);
-
-    // Vérifier d'abord la taille du blob
-    size_t required_size = 0;
-    err = nvs_get_blob(nvs_handle, key, NULL, &required_size);
-    if (err != ESP_OK) {
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    // Vérifier que la taille correspond à la structure actuelle
-    if (required_size != sizeof(config_profile_t)) {
-        ESP_LOGW(TAG, "Profile %d a une taille incompatible (%d vs %d) - ignoré",
-                 profile_id, required_size, sizeof(config_profile_t));
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    // Charger le profil
-    required_size = sizeof(config_profile_t);
-    err = nvs_get_blob(nvs_handle, key, profile, &required_size);
-    nvs_close(nvs_handle);
-
-    return (err == ESP_OK);
-}
-
-bool config_manager_delete_profile(uint8_t profile_id) {
-    if (profile_id >= MAX_PROFILES) {
-        return false;
-    }
-
-    // Vérifier que le profil n'est pas utilisé dans un événement
-    for (int p = 0; p < MAX_PROFILES; p++) {
-        if (profiles[p].name[0] == '\0') continue; // Profil vide
-
-        for (int e = 0; e < CAN_EVENT_MAX; e++) {
-            if (profiles[p].event_effects[e].profile_id == profile_id) {
-                ESP_LOGW(TAG, "Cannot delete profile %d: used by event %d in profile %d",
-                         profile_id, e, p);
-                return false;
-            }
-        }
-    }
-
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
-
-    if (err != ESP_OK) {
-        return false;
-    }
-
-    // Supprimer le profil
-    char key[16];
-    snprintf(key, sizeof(key), "profile_%d", profile_id);
-    err = nvs_erase_key(nvs_handle, key);
-
-    if (err != ESP_OK) {
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    // Marquer comme supprimé dans le tableau RAM
-    memset(&profiles[profile_id], 0, sizeof(config_profile_t));
-
-    // Compresser les IDs : décaler tous les profils suivants
-    bool needs_compression = false;
-    for (int i = profile_id + 1; i < MAX_PROFILES; i++) {
-        if (profiles[i].name[0] != '\0') {
-            needs_compression = true;
-            break;
-        }
-    }
-
-    if (needs_compression) {
-        ESP_LOGI(TAG, "Compression des IDs de profils après suppression du profil %d", profile_id);
-
-        // Décaler tous les profils dans NVS et RAM
-        for (int i = profile_id; i < MAX_PROFILES - 1; i++) {
-            // Charger le profil suivant
-            char next_key[16];
-            snprintf(next_key, sizeof(next_key), "profile_%d", i + 1);
-
-            size_t required_size = sizeof(config_profile_t);
-            esp_err_t read_err = nvs_get_blob(nvs_handle, next_key, &profiles[i], &required_size);
-
-            if (read_err == ESP_OK) {
-                // Sauvegarder au nouvel emplacement (i au lieu de i+1)
-                char current_key[16];
-                snprintf(current_key, sizeof(current_key), "profile_%d", i);
-                nvs_set_blob(nvs_handle, current_key, &profiles[i], sizeof(config_profile_t));
-
-                // Effacer l'ancien emplacement
-                nvs_erase_key(nvs_handle, next_key);
-
-                ESP_LOGI(TAG, "Profil %d déplacé vers ID %d", i + 1, i);
-            } else {
-                // Plus de profils à décaler
-                memset(&profiles[i], 0, sizeof(config_profile_t));
-                break;
-            }
-        }
-
-        // Mettre à jour l'ID du profil actif
-        if (active_profile_id > profile_id) {
-            active_profile_id--;
-            nvs_set_i32(nvs_handle, "active_id", active_profile_id);
-            ESP_LOGI(TAG, "ID du profil actif mis à jour: %d", active_profile_id);
-        } else if (active_profile_id == profile_id) {
-            // Le profil actif a été supprimé, activer le profil 0 s'il existe
-            if (profiles[0].name[0] != '\0') {
-                active_profile_id = 0;
-                nvs_set_i32(nvs_handle, "active_id", 0);
-                ESP_LOGI(TAG, "Profil actif supprimé, activation du profil 0");
-            } else {
-                active_profile_id = -1;
-                nvs_erase_key(nvs_handle, "active_id");
-                ESP_LOGI(TAG, "Profil actif supprimé, aucun profil disponible");
-            }
-        }
-    } else {
-        // Pas de compression nécessaire
-        if (active_profile_id == profile_id) {
-            // Chercher le premier profil disponible
-            active_profile_id = -1;
-            for (int i = 0; i < MAX_PROFILES; i++) {
-                if (profiles[i].name[0] != '\0') {
-                    active_profile_id = i;
-                    nvs_set_i32(nvs_handle, "active_id", i);
-                    ESP_LOGI(TAG, "Activation automatique du profil %d", i);
-                    break;
-                }
-            }
-
-            if (active_profile_id == -1) {
-                nvs_erase_key(nvs_handle, "active_id");
-                ESP_LOGI(TAG, "Aucun profil disponible");
-            }
-        }
-    }
-
-    nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
-
-    ESP_LOGI(TAG, "Profil %d supprimé avec succès", profile_id);
-    return true;
-}
-
-bool config_manager_activate_profile(uint8_t profile_id) {
-    if (profile_id >= MAX_PROFILES) {
-        return false;
-    }
-    
-    // Vérifier que le profil existe
-    if (profiles[profile_id].name[0] == '\0') {
-        // Profil vide, essayer de charger depuis NVS
-        if (!config_manager_load_profile(profile_id, &profiles[profile_id])) {
-            ESP_LOGE(TAG, "Profil %d inexistant", profile_id);
-            return false;
-        }
-    }
-    
-    // Désactiver l'ancien profil
-    if (active_profile_id >= 0 && active_profile_id < MAX_PROFILES) {
-        profiles[active_profile_id].active = false;
-    }
-    
-    // Activer le nouveau profil
-    active_profile_id = profile_id;
-    profiles[profile_id].active = true;
-
-    // Sauvegarder l'ID actif
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
-    if (err == ESP_OK) {
-        nvs_set_i32(nvs_handle, "active_id", profile_id);
-        nvs_commit(nvs_handle);
-        nvs_close(nvs_handle);
-    }
-
-    // Appliquer l'effet par défaut
-    led_effects_set_config(&profiles[profile_id].default_effect);
-    // Ne pas activer le mode nuit lors du changement de profil, il sera activé par l'événement CAN
-    led_effects_set_night_mode(false, profiles[profile_id].night_brightness);
+    led_effects_set_config(&active_profile.default_effect);
     effect_override_active = false;
+  }
 
-    ESP_LOGI(TAG, "Profil %d activé: %s (auto night mode: %s, brightness: %d)",
-             profile_id, profiles[profile_id].name,
-             profiles[profile_id].auto_night_mode ? "ENABLED" : "DISABLED",
-             profiles[profile_id].night_brightness);
-    return true;
+  // Ensure an "Eteint" profile exists (ID 0 reserved)
+  if (!config_manager_load_profile(0, temp_profile)) {
+    config_manager_create_off_profile(temp_profile, "Eteint");
+    config_manager_save_profile(0, temp_profile);
+  }
+
+  free(temp_profile);
+
+  return true;
 }
 
-bool config_manager_get_active_profile(config_profile_t* profile) {
-    if (active_profile_id < 0 || active_profile_id >= MAX_PROFILES || profile == NULL) {
-        return false;
+// This function is no longer needed - load only the active profile on demand
+
+// ============================================================================
+// Binary save/load of profiles (binary format with CRC32)
+// ============================================================================
+
+bool config_manager_save_profile(uint16_t profile_id, const config_profile_t *profile) {
+  if (profile == NULL) {
+    return false;
+  }
+
+  // Allocate on the heap to avoid stack overflow (~2.5KB)
+  profile_file_t *file_data = (profile_file_t *)malloc(sizeof(profile_file_t));
+  if (file_data == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error while saving profile %d", profile_id);
+    return false;
+  }
+
+  // Copy data
+  memcpy(&file_data->data, profile, sizeof(config_profile_t));
+
+  // Fill the header
+  file_data->magic = PROFILE_FILE_MAGIC;
+  file_data->version = PROFILE_FILE_VERSION;
+  file_data->data_size = sizeof(config_profile_t);
+
+  // Compute checksum over profile data
+  file_data->checksum = calculate_checksum(&file_data->data, sizeof(config_profile_t));
+
+  // Save to SPIFFS (binary)
+  char filepath[64];
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
+
+  esp_err_t err = spiffs_save_blob(filepath, file_data, sizeof(profile_file_t));
+
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "SPIFFS save error for profile %d: %s", profile_id, esp_err_to_name(err));
+    free(file_data);
+    return false;
+  }
+
+  // Update the active profile in RAM if it is the one we just saved
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    memcpy(&active_profile, &file_data->data, sizeof(config_profile_t));
+  }
+
+  ESP_LOGI(TAG_CONFIG, "Profile %d saved (binary, %d bytes): %s", profile_id, sizeof(profile_file_t), profile->name);
+  free(file_data);
+
+  // Update registry
+  profile_registry_set(profile_id);
+
+  return true;
+}
+
+bool config_manager_load_profile(uint16_t profile_id, config_profile_t *profile) {
+  if (profile == NULL) {
+    return false;
+  }
+
+  // Load from SPIFFS (binary)
+  char filepath[64];
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
+
+  // Check if the file exists
+  if (!spiffs_file_exists(filepath)) {
+    return false;
+  }
+
+  // Allocate on the heap to avoid stack overflow (~2.5KB)
+  profile_file_t *file_data = (profile_file_t *)malloc(sizeof(profile_file_t));
+  if (file_data == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error while loading profile %d", profile_id);
+    return false;
+  }
+
+  size_t buffer_size = sizeof(profile_file_t);
+  esp_err_t err = spiffs_load_blob(filepath, file_data, &buffer_size);
+
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "SPIFFS load error for profile %d: %s", profile_id, esp_err_to_name(err));
+    free(file_data);
+    return false;
+  }
+
+  if (buffer_size < (sizeof(profile_header_t) + sizeof(uint32_t))) {
+    ESP_LOGE(TAG_CONFIG, "Invalid file size for profile %d: %d bytes (too small)", profile_id, buffer_size);
+    free(file_data);
+    return false;
+  }
+
+  profile_header_t header;
+  memcpy(&header, file_data, sizeof(profile_header_t));
+  const size_t expected_size = sizeof(profile_header_t) + header.data_size + sizeof(uint32_t);
+
+  if (buffer_size < expected_size) {
+    ESP_LOGE(TAG_CONFIG, "Invalid file size for profile %d: %d bytes (expected >= %d)", profile_id, buffer_size, expected_size);
+    free(file_data);
+    return false;
+  }
+
+  // Check the magic number
+  if (header.magic != PROFILE_FILE_MAGIC) {
+    ESP_LOGE(TAG_CONFIG, "Invalid magic number for profile %d: 0x%08X", profile_id, header.magic);
+    free(file_data);
+    return false;
+  }
+
+  if (header.version > PROFILE_FILE_VERSION) {
+    ESP_LOGE(TAG_CONFIG, "Unsupported profile version %d (current: v%d)", header.version, PROFILE_FILE_VERSION);
+    free(file_data);
+    return false;
+  }
+  if (header.version < PROFILE_FILE_MIN_VERSION) {
+    ESP_LOGW(TAG_CONFIG, "Profile version %d is older than min supported %d, attempting migration", header.version, PROFILE_FILE_MIN_VERSION);
+  }
+  if (header.version != PROFILE_FILE_VERSION) {
+    ESP_LOGW(TAG_CONFIG, "Different version for profile %d: v%d (current: v%d)", profile_id, header.version, PROFILE_FILE_VERSION);
+  }
+
+  if (header.data_size == 0 || header.data_size > sizeof(config_profile_t)) {
+    ESP_LOGE(TAG_CONFIG, "Invalid profile data size for profile %d: %d", profile_id, header.data_size);
+    free(file_data);
+    return false;
+  }
+
+  const uint8_t *data_ptr = (const uint8_t *)file_data + sizeof(profile_header_t);
+  uint32_t stored_checksum = 0;
+  memcpy(&stored_checksum, data_ptr + header.data_size, sizeof(uint32_t));
+
+  uint32_t calculated_checksum = calculate_checksum(data_ptr, header.data_size);
+  if (calculated_checksum != stored_checksum) {
+    ESP_LOGE(TAG_CONFIG, "Invalid checksum for profile %d: 0x%08X (expected 0x%08X)", profile_id, calculated_checksum, stored_checksum);
+    free(file_data);
+    return false;
+  }
+
+  // Copy the data (accept older profile sizes)
+  memset(profile, 0, sizeof(config_profile_t));
+  memcpy(profile, data_ptr, header.data_size);
+  migrate_profile_if_needed(profile, header.version);
+
+  if (header.version != PROFILE_FILE_VERSION) {
+    ESP_LOGI(TAG_CONFIG, "Migrating profile %d from v%d to v%d", profile_id, header.version, PROFILE_FILE_VERSION);
+    config_manager_save_profile(profile_id, profile);
+  }
+
+  ESP_LOGD(TAG_CONFIG, "Profile %d loaded (binary, %d bytes): %s", profile_id, buffer_size, profile->name);
+  free(file_data);
+  return true;
+}
+
+bool config_manager_delete_profile(uint16_t profile_id) {
+  // Verify that the profile exists
+  char filepath[64];
+  snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", profile_id);
+
+  if (!spiffs_file_exists(filepath)) {
+    ESP_LOGW(TAG_CONFIG, "Profile %d does not exist", profile_id);
+    return false;
+  }
+
+  // Ensure the profile is not used in events from other profiles
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error");
+    return false;
+  }
+
+  // Use registry to scan only existing profiles (O(1) existence check)
+  for (int p = 0; p < MAX_PROFILE_SCAN_LIMIT; p++) {
+    if (p == profile_id)
+      continue;
+
+    // Skip non-existent profiles using registry
+    if (!profile_registry_exists(p))
+      continue;
+
+    if (config_manager_load_profile(p, temp_profile)) {
+      // Check whether this profile references the profile to delete
+      for (int e = 0; e < CAN_EVENT_MAX; e++) {
+        if (temp_profile->event_effects[e].action_type == EVENT_ACTION_SWITCH_PROFILE && temp_profile->event_effects[e].profile_id == profile_id) {
+          ESP_LOGW(TAG_CONFIG, "Cannot delete profile %d: used by event %d in profile %d", profile_id, e, p);
+          free(temp_profile);
+          return false;
+        }
+      }
     }
-    
-    memcpy(profile, &profiles[active_profile_id], sizeof(config_profile_t));
-    return true;
+  }
+  free(temp_profile);
+
+  // Delete the SPIFFS file
+  esp_err_t err = spiffs_delete_file(filepath);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Error deleting profile file %d", profile_id);
+    return false;
+  }
+
+  // If the active profile was deleted, look for another profile
+  if (active_profile_id == profile_id) {
+    active_profile_id     = -1;
+    active_profile_loaded = false;
+
+    // Use registry to find next available profile
+    config_profile_t *search_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+    if (search_profile != NULL) {
+      for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT; i++) {
+        // Skip non-existent profiles using registry
+        if (!profile_registry_exists(i))
+          continue;
+
+        if (config_manager_load_profile(i, search_profile)) {
+          memcpy(&active_profile, search_profile, sizeof(config_profile_t));
+          active_profile_id     = i;
+          active_profile_loaded = true;
+          settings_set_i32("active_profile_id", i);
+          ESP_LOGI(TAG_CONFIG, "Active profile deleted, activating profile %d", i);
+          break;
+        }
+      }
+      free(search_profile);
+    }
+
+    if (active_profile_id == -1) {
+      settings_set_i32("active_profile_id", -1);
+      memset(&active_profile, 0, sizeof(active_profile));
+      ESP_LOGI(TAG_CONFIG, "No profile available");
+    }
+  }
+
+  ESP_LOGI(TAG_CONFIG, "Profile %d deleted successfully from SPIFFS", profile_id);
+
+  // Update registry
+  profile_registry_clear(profile_id);
+
+  return true;
+}
+
+bool config_manager_rename_profile(uint16_t profile_id, const char *new_name) {
+  if (new_name == NULL) {
+    return false;
+  }
+
+  size_t name_len = strnlen(new_name, PROFILE_NAME_MAX_LEN);
+  if (name_len == 0) {
+    return false;
+  }
+
+  // Allocate dynamically to avoid stack overflow
+  config_profile_t *profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error for rename");
+    return false;
+  }
+
+  if (!config_manager_load_profile(profile_id, profile)) {
+    ESP_LOGW(TAG_CONFIG, "Profile %d not found for rename", profile_id);
+    free(profile);
+    return false;
+  }
+
+  bool was_active = profile->active;
+
+  memset(profile->name, 0, PROFILE_NAME_MAX_LEN);
+  strncpy(profile->name, new_name, PROFILE_NAME_MAX_LEN - 1);
+
+  bool success = config_manager_save_profile(profile_id, profile);
+  free(profile);
+
+  if (success && was_active) {
+    // Reapply to preserve the active state and effect
+    config_manager_activate_profile(profile_id);
+  }
+
+  return success;
+}
+
+bool config_manager_activate_profile(uint16_t profile_id) {
+  // Load the new profile from SPIFFS
+  if (!config_manager_load_profile(profile_id, &active_profile)) {
+    ESP_LOGE(TAG_CONFIG, "Profile %d does not exist", profile_id);
+    return false;
+  }
+
+  // Update the active ID
+  active_profile_id     = profile_id;
+  active_profile_loaded = true;
+
+  // Save the active ID in SPIFFS
+  settings_set_i32("active_profile_id", profile_id);
+
+  // Stop all active events before applying the new effect
+  config_manager_stop_all_events();
+
+  // Apply the default effect
+  led_effects_set_config(&active_profile.default_effect);
+  effect_override_active = false;
+
+  ESP_LOGI(TAG_CONFIG, "Profile %d activated: %s", profile_id, active_profile.name);
+  return true;
+}
+
+bool config_manager_get_active_profile(config_profile_t *profile) {
+  if (!active_profile_loaded || profile == NULL) {
+    return false;
+  }
+
+  memcpy(profile, &active_profile, sizeof(config_profile_t));
+  return true;
 }
 
 int config_manager_get_active_profile_id(void) {
-    return active_profile_id;
+  return active_profile_id;
 }
 
-int config_manager_list_profiles(config_profile_t* profile_list, int max_profiles) {
-    int count = 0;
-    
-    for (int i = 0; i < MAX_PROFILES && count < max_profiles; i++) {
-        if (profiles[i].name[0] != '\0') {
-            memcpy(&profile_list[count], &profiles[i], sizeof(config_profile_t));
-            count++;
-        }
+bool config_manager_cycle_active_profile(int direction) {
+  if (!active_profile_loaded || (direction != 1 && direction != -1)) {
+    return false;
+  }
+
+  int start_id = active_profile_id < 0 ? 0 : active_profile_id;
+  for (int step = 1; step < MAX_PROFILE_SCAN_LIMIT; step++) {
+    int candidate = start_id + direction * step;
+    if (candidate < 0 || candidate >= MAX_PROFILE_SCAN_LIMIT) {
+      break;
     }
-    
-    return count;
+
+    // Check whether the profile exists (without fully loading it)
+    char filepath[64];
+    snprintf(filepath, sizeof(filepath), "/spiffs/profiles/profile_%d.bin", candidate);
+    if (spiffs_file_exists(filepath)) {
+      return config_manager_activate_profile((uint16_t)candidate);
+    }
+  }
+  return false;
 }
 
-void config_manager_create_default_profile(config_profile_t* profile, const char* name) {
+bool config_manager_get_dynamic_brightness(bool *enabled, uint8_t *rate) {
+  if (!active_profile_loaded || !enabled || !rate) {
+    return false;
+  }
+
+  *enabled = active_profile.dynamic_brightness_enabled;
+  *rate = active_profile.dynamic_brightness_rate;
+  return true;
+}
+
+bool config_manager_is_dynamic_brightness_excluded(can_event_type_t event) {
+  if (!active_profile_loaded) {
+    return false;
+  }
+  if (event <= CAN_EVENT_NONE || event >= CAN_EVENT_MAX) {
+    return false;
+  }
+  return (active_profile.dynamic_brightness_exclude_mask & (1ULL << event)) != 0;
+}
+
+bool config_manager_get_wheel_control_enabled(void) {
+  return wheel_control_enabled;
+}
+
+bool config_manager_set_wheel_control_enabled(bool enabled) {
+  wheel_control_enabled = enabled;
+  esp_err_t err         = settings_set_bool("wheel_control_enabled", enabled);
+  return err == ESP_OK;
+}
+
+int config_manager_get_wheel_control_speed_limit(void) {
+  return (int)wheel_control_speed_limit;
+}
+
+bool config_manager_set_wheel_control_speed_limit(int speed_kph) {
+  if (speed_kph < 0) {
+    speed_kph = 0;
+  }
+  if (speed_kph > 100) {
+    speed_kph = 100;
+  }
+  wheel_control_speed_limit = (uint8_t)speed_kph;
+  esp_err_t err             = settings_set_u8("wheel_control_speed_limit", wheel_control_speed_limit);
+  return err == ESP_OK;
+}
+
+int config_manager_list_profiles(config_profile_t *profile_list, int max_profiles) {
+  if (profile_list == NULL || max_profiles <= 0) {
+    return 0;
+  }
+
+  // Rebuild registry if not initialized
+  if (!profile_registry_initialized) {
+    profile_registry_rebuild();
+  }
+
+  int count = 0;
+
+  // Use registry for O(1) existence check instead of O(n) file reads
+  for (int i = 0; i < MAX_PROFILE_SCAN_LIMIT && count < max_profiles; i++) {
+    if (profile_registry_exists(i)) {
+      if (config_manager_load_profile(i, &profile_list[count])) {
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+// Embedded JSON file - default.json
+extern const uint8_t default_json_start[] asm("_binary_default_json_start");
+extern const uint8_t default_json_end[] asm("_binary_default_json_end");
+
+void config_manager_create_default_profile(config_profile_t *profile, const char *name) {
+  bool success        = false;
+
+  // 1. Load the embedded JSON file (default.json)
+  size_t json_size    = default_json_end - default_json_start;
+
+  // Allocate buffer for JSON (with null terminator)
+  char *embedded_json = (char *)malloc(json_size + 1);
+  if (embedded_json != NULL) {
+    memcpy(embedded_json, default_json_start, json_size);
+    embedded_json[json_size] = '\0'; // Null terminator
+
+    ESP_LOGI(TAG_CONFIG, "Loading embedded default.json (%zu bytes)", json_size);
+    success = config_manager_import_profile_from_json(embedded_json, profile);
+    free(embedded_json);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Failed to allocate memory for embedded JSON");
+  }
+
+  // 2. If it fails, minimal fallback
+  if (!success) {
+    ESP_LOGE(TAG_CONFIG, "Failed to import embedded preset, using minimal fallback");
     memset(profile, 0, sizeof(config_profile_t));
-    
     strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
-    
-    // Effet par défaut: rainbow
-    profile->default_effect.effect = EFFECT_SCAN;
-    profile->default_effect.brightness = 128;
-    profile->default_effect.speed = 50;
-    profile->default_effect.color1 = 0xFF0000;
-    
-    // Effet mode nuit: breathing doux
-    profile->night_mode_effect.effect = EFFECT_BREATHING;
-    profile->night_mode_effect.brightness = 30;
-    profile->night_mode_effect.speed = 20;
-    profile->night_mode_effect.color1 = 0x0000FF;
-    
-    // Configurer les effets pour événements
-    // Clignotant gauche
-    profile->event_effects[CAN_EVENT_TURN_LEFT].event = CAN_EVENT_TURN_LEFT;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].profile_id = -1;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.effect = EFFECT_TURN_SIGNAL;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.brightness = 200;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.speed = 200;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.color1 = 0xFF8000;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].effect_config.reverse = true; // Animation depuis centre vers gauche
-    profile->event_effects[CAN_EVENT_TURN_LEFT].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].priority = 200;
-    profile->event_effects[CAN_EVENT_TURN_LEFT].enabled = true;
+    profile->default_effect.effect     = EFFECT_SOLID;
+    profile->default_effect.brightness = 20;
+    profile->default_effect.speed      = 1;
+    profile->default_effect.color1     = 0xFFFFFF;
+    profile->active                    = false;
+    return;
+  }
 
-    // Clignotant droite (identique)
-    memcpy(&profile->event_effects[CAN_EVENT_TURN_RIGHT],
-           &profile->event_effects[CAN_EVENT_TURN_LEFT],
-           sizeof(can_event_effect_t));
-    profile->event_effects[CAN_EVENT_TURN_RIGHT].event = CAN_EVENT_TURN_RIGHT;
-    profile->event_effects[CAN_EVENT_TURN_RIGHT].effect_config.reverse = false; // Animation depuis centre vers droite
+  // Optional: Override name if provided
+  if (name != NULL && strlen(name) > 0) {
+    strncpy(profile->name, name, PROFILE_NAME_MAX_LEN - 1);
+  }
 
-    // Charge
-    profile->event_effects[CAN_EVENT_CHARGING].event = CAN_EVENT_CHARGING;
-    profile->event_effects[CAN_EVENT_CHARGING].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_CHARGING].profile_id = -1;
-    profile->event_effects[CAN_EVENT_CHARGING].effect_config.effect = EFFECT_CHARGE_STATUS;
-    profile->event_effects[CAN_EVENT_CHARGING].effect_config.brightness = 150;
-    profile->event_effects[CAN_EVENT_CHARGING].effect_config.speed = 50;
-    profile->event_effects[CAN_EVENT_CHARGING].effect_config.color1 = 0x00FF00;
-    profile->event_effects[CAN_EVENT_CHARGING].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_CHARGING].priority = 150;
-    profile->event_effects[CAN_EVENT_CHARGING].enabled = true;
-    
-    // Blindspot
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].event = CAN_EVENT_BLINDSPOT_LEFT;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].profile_id = -1;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.effect = EFFECT_BLINDSPOT_FLASH;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.brightness = 255;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.speed = 250;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.color1 = 0xFF0000;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].effect_config.reverse = true; // Animation depuis centre vers gauche
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].priority = 250;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT].enabled = true;
+  // Note: Missing events are already filled by the import function
+  // with disabled default values (see config_manager_import_profile_from_json)
 
-    // Blindspot droite (identique)
-    memcpy(&profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT],
-           &profile->event_effects[CAN_EVENT_BLINDSPOT_LEFT],
-           sizeof(can_event_effect_t));
-    profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT].event = CAN_EVENT_BLINDSPOT_RIGHT;
-    profile->event_effects[CAN_EVENT_BLINDSPOT_RIGHT].effect_config.reverse = false; // Animation depuis centre vers droite
-
-    // Hazard/Warning (clignotants de détresse)
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].event = CAN_EVENT_TURN_HAZARD;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].profile_id = -1;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.effect = EFFECT_HAZARD;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.brightness = 255;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.speed = 100;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].effect_config.color1 = 0xFF8000;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].priority = 220;
-    profile->event_effects[CAN_EVENT_TURN_HAZARD].enabled = true;
-
-    // Charge complète
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].event = CAN_EVENT_CHARGE_COMPLETE;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].profile_id = -1;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.effect = EFFECT_BREATHING;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.brightness = 200;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.speed = 30;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].effect_config.color1 = 0x00FF00;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].priority = 140;
-    profile->event_effects[CAN_EVENT_CHARGE_COMPLETE].enabled = true;
-
-    // Porte ouverte
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].event = CAN_EVENT_DOOR_OPEN;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].profile_id = -1;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.effect = EFFECT_BREATHING;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.brightness = 180;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.speed = 80;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].effect_config.color1 = 0xFFFFFF;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].duration_ms = 5000; // 5 secondes
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].priority = 100;
-    profile->event_effects[CAN_EVENT_DOOR_OPEN].enabled = true;
-
-    // Porte fermée
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].event = CAN_EVENT_DOOR_CLOSE;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].profile_id = -1;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.effect = EFFECT_BREATHING;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.brightness = 100;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.speed = 120;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].effect_config.color1 = 0x0000FF;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].duration_ms = 2000; // 2 secondes
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].priority = 90;
-    profile->event_effects[CAN_EVENT_DOOR_CLOSE].enabled = true;
-
-    // Verrouillé
-    profile->event_effects[CAN_EVENT_LOCKED].event = CAN_EVENT_LOCKED;
-    profile->event_effects[CAN_EVENT_LOCKED].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_LOCKED].profile_id = -1;
-    profile->event_effects[CAN_EVENT_LOCKED].effect_config.effect = EFFECT_STROBE;
-    profile->event_effects[CAN_EVENT_LOCKED].effect_config.brightness = 200;
-    profile->event_effects[CAN_EVENT_LOCKED].effect_config.speed = 150;
-    profile->event_effects[CAN_EVENT_LOCKED].effect_config.color1 = 0xFF0000;
-    profile->event_effects[CAN_EVENT_LOCKED].duration_ms = 1000; // 1 seconde
-    profile->event_effects[CAN_EVENT_LOCKED].priority = 110;
-    profile->event_effects[CAN_EVENT_LOCKED].enabled = true;
-
-    // Déverrouillé
-    profile->event_effects[CAN_EVENT_UNLOCKED].event = CAN_EVENT_UNLOCKED;
-    profile->event_effects[CAN_EVENT_UNLOCKED].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_UNLOCKED].profile_id = -1;
-    profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.effect = EFFECT_BREATHING;
-    profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.brightness = 200;
-    profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.speed = 100;
-    profile->event_effects[CAN_EVENT_UNLOCKED].effect_config.color1 = 0x00FF00;
-    profile->event_effects[CAN_EVENT_UNLOCKED].duration_ms = 1500; // 1.5 secondes
-    profile->event_effects[CAN_EVENT_UNLOCKED].priority = 110;
-    profile->event_effects[CAN_EVENT_UNLOCKED].enabled = true;
-
-    // Frein activé
-    profile->event_effects[CAN_EVENT_BRAKE_ON].event = CAN_EVENT_BRAKE_ON;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].profile_id = -1;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.effect = EFFECT_BRAKE_LIGHT;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.brightness = 255;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.speed = 100;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].effect_config.color1 = 0xFF0000;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].priority = 180;
-    profile->event_effects[CAN_EVENT_BRAKE_ON].enabled = true;
-
-    // Frein relâché
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].event = CAN_EVENT_BRAKE_OFF;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].profile_id = -1;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.effect = EFFECT_FADE;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.brightness = 100;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.speed = 150;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].effect_config.color1 = 0xFF0000;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].duration_ms = 500; // 0.5 seconde
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].priority = 170;
-    profile->event_effects[CAN_EVENT_BRAKE_OFF].enabled = false; // Désactivé par défaut
-
-    // Mode nuit activé - DÉSACTIVÉ par défaut (le mode nuit est géré globalement, pas comme un effet)
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].event = CAN_EVENT_NIGHT_MODE_ON;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].profile_id = -1;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.effect = EFFECT_OFF;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.brightness = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.speed = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].effect_config.color1 = 0x000000;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].priority = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_ON].enabled = false; // Toujours désactivé
-
-    // Mode nuit désactivé - DÉSACTIVÉ par défaut (le mode nuit est géré globalement, pas comme un effet)
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].event = CAN_EVENT_NIGHT_MODE_OFF;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].profile_id = -1;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.effect = EFFECT_OFF;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.brightness = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.speed = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].effect_config.color1 = 0x000000;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].priority = 0;
-    profile->event_effects[CAN_EVENT_NIGHT_MODE_OFF].enabled = false; // Toujours désactivé
-
-    // Seuil de vitesse
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].event = CAN_EVENT_SPEED_THRESHOLD;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].action_type = EVENT_ACTION_APPLY_EFFECT;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].profile_id = -1;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.effect = EFFECT_RUNNING_LIGHTS;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.brightness = 200;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.speed = 120;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].effect_config.color1 = 0x00FFFF;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].duration_ms = 0;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].priority = 60;
-    profile->event_effects[CAN_EVENT_SPEED_THRESHOLD].enabled = false; // Désactivé par défaut
-
-    // Paramètres généraux
-    profile->auto_night_mode = false; // Désactivé par défaut, l'utilisateur peut l'activer manuellement
-    profile->night_brightness = 30;
-    profile->speed_threshold = 50;  // 50 km/h
-    
-    profile->active = false;
-    profile->created_timestamp = (uint32_t)time(NULL);
-    profile->modified_timestamp = profile->created_timestamp;
+  // Timestamp parameters
+  profile->active             = false;
 }
 
-bool config_manager_set_event_effect(uint8_t profile_id, 
-                                     can_event_type_t event,
-                                     const effect_config_t* effect_config,
-                                     uint16_t duration_ms,
-                                     uint8_t priority) {
-    if (profile_id >= MAX_PROFILES || event >= CAN_EVENT_MAX || effect_config == NULL) {
-        return false;
-    }
-    
-    profiles[profile_id].event_effects[event].event = event;
-    memcpy(&profiles[profile_id].event_effects[event].effect_config, 
-           effect_config, sizeof(effect_config_t));
-    profiles[profile_id].event_effects[event].duration_ms = duration_ms;
-    profiles[profile_id].event_effects[event].priority = priority;
-    profiles[profile_id].event_effects[event].enabled = true;
+void config_manager_create_off_profile(config_profile_t *profile, const char *name) {
+  memset(profile, 0, sizeof(config_profile_t));
+  strncpy(profile->name, name ? name : "Eteint", PROFILE_NAME_MAX_LEN - 1);
 
-    return true;
+  profile->default_effect.effect         = EFFECT_OFF;
+  profile->default_effect.brightness     = 0;
+  profile->default_effect.speed          = 1;
+  profile->default_effect.color1         = 0;
+  profile->default_effect.segment_start  = 0;
+  profile->default_effect.segment_length = 0;
+  profile->default_effect.audio_reactive = false;
+  profile->default_effect.reverse        = false;
+  profile->default_effect.sync_mode      = SYNC_OFF;
+
+  for (int i = 0; i < CAN_EVENT_MAX; i++) {
+    profile->event_effects[i].event                        = (can_event_type_t)i;
+    profile->event_effects[i].action_type                  = EVENT_ACTION_APPLY_EFFECT;
+    profile->event_effects[i].enabled                      = false;
+    profile->event_effects[i].priority                     = 0;
+    profile->event_effects[i].duration_ms                  = 0;
+    profile->event_effects[i].profile_id                   = -1;
+    profile->event_effects[i].effect_config.effect         = EFFECT_OFF;
+    profile->event_effects[i].effect_config.brightness     = 0;
+    profile->event_effects[i].effect_config.speed          = 1;
+    profile->event_effects[i].effect_config.color1         = 0;
+    profile->event_effects[i].effect_config.color2         = 0;
+    profile->event_effects[i].effect_config.color3         = 0;
+    profile->event_effects[i].effect_config.segment_start  = 0;
+    profile->event_effects[i].effect_config.segment_length = 0;
+    profile->event_effects[i].effect_config.audio_reactive = false;
+    profile->event_effects[i].effect_config.reverse        = false;
+    profile->event_effects[i].effect_config.sync_mode      = SYNC_OFF;
+  }
+
+  profile->dynamic_brightness_enabled = false;
+  profile->dynamic_brightness_rate    = 0;
+  profile->dynamic_brightness_exclude_mask = 0;
+  profile->active                     = false;
 }
 
-bool config_manager_set_event_enabled(uint8_t profile_id, can_event_type_t event, bool enabled) {
-    if (profile_id >= MAX_PROFILES || event >= CAN_EVENT_MAX) {
-        return false;
-    }
+bool config_manager_set_event_effect(uint16_t profile_id, can_event_type_t event, const effect_config_t *effect_config, uint16_t duration_ms, uint8_t priority) {
+  if (event >= CAN_EVENT_MAX || effect_config == NULL) {
+    return false;
+  }
 
-    profiles[profile_id].event_effects[event].enabled = enabled;
+  // If this is the active profile, modify directly
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    active_profile.event_effects[event].event = event;
+    memcpy(&active_profile.event_effects[event].effect_config, effect_config, sizeof(effect_config_t));
+    active_profile.event_effects[event].duration_ms = duration_ms;
+    active_profile.event_effects[event].priority    = priority;
+    active_profile.event_effects[event].enabled     = true;
     return true;
+  }
+
+  // Otherwise, load the profile, modify it, and save it
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error");
+    return false;
+  }
+
+  if (!config_manager_load_profile(profile_id, temp_profile)) {
+    free(temp_profile);
+    return false;
+  }
+
+  temp_profile->event_effects[event].event = event;
+  memcpy(&temp_profile->event_effects[event].effect_config, effect_config, sizeof(effect_config_t));
+  temp_profile->event_effects[event].duration_ms = duration_ms;
+  temp_profile->event_effects[event].priority    = priority;
+  temp_profile->event_effects[event].enabled     = true;
+
+  bool success                                   = config_manager_save_profile(profile_id, temp_profile);
+  free(temp_profile);
+
+  return success;
+}
+
+bool config_manager_set_event_enabled(uint16_t profile_id, can_event_type_t event, bool enabled) {
+  if (event >= CAN_EVENT_MAX) {
+    return false;
+  }
+
+  // If this is the active profile, modify directly
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    active_profile.event_effects[event].enabled = enabled;
+    return true;
+  }
+
+  // Otherwise, load the profile, modify it, and save it
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error");
+    return false;
+  }
+
+  if (!config_manager_load_profile(profile_id, temp_profile)) {
+    free(temp_profile);
+    return false;
+  }
+
+  temp_profile->event_effects[event].enabled = enabled;
+
+  bool success                               = config_manager_save_profile(profile_id, temp_profile);
+  free(temp_profile);
+
+  return success;
 }
 
 bool config_manager_process_can_event(can_event_type_t event) {
-    if (active_profile_id < 0 || event >= CAN_EVENT_MAX) {
-        return false;
+  if (!active_profile_loaded || event > CAN_EVENT_MAX) {
+    return false;
+  }
+
+  can_event_effect_t *event_effect = &active_profile.event_effects[event];
+  effect_config_t effect_to_apply;
+  uint16_t duration_ms = 0;
+  uint8_t priority     = 0;
+
+  // Handle profile changes if configured (independent from the enabled flag)
+  if (event_effect->action_type != EVENT_ACTION_APPLY_EFFECT) {
+    // EVENT_ACTION_SWITCH_PROFILE
+    if (event_effect->profile_id >= 0) {
+      ESP_LOGI(TAG_CONFIG, "Event %d: Switching to profile %d", event, event_effect->profile_id);
+      config_manager_activate_profile(event_effect->profile_id);
+
+      return false;
     }
+  }
 
-    can_event_effect_t* event_effect = &profiles[active_profile_id].event_effects[event];
-    effect_config_t effect_to_apply;
-    uint16_t duration_ms;
-    uint8_t priority;
+  // If the effect is configured and enabled, use it
+  if (event_effect->enabled) {
+    memcpy(&effect_to_apply, &event_effect->effect_config, sizeof(effect_config_t));
+    duration_ms = event_effect->duration_ms;
+    priority    = event_effect->priority;
+    // For CAN events, only use color1 for all colors
+    effect_to_apply.color2 = effect_to_apply.color1;
+    effect_to_apply.color3 = effect_to_apply.color1;
+    // if(effect_to_apply.segment_length == 0) {
+    //   effect_to_apply.segment_length = total_leds;
+    // }
 
-    // Gérer le changement de profil si configuré (indépendant du flag enabled)
-    if (event_effect->action_type != EVENT_ACTION_APPLY_EFFECT) {
-        // EVENT_ACTION_SWITCH_PROFILE ou EVENT_ACTION_BOTH
-        if (event_effect->profile_id >= 0 && event_effect->profile_id < MAX_PROFILES) {
-            ESP_LOGI(TAG, "Event %d: Switching to profile %d", event, event_effect->profile_id);
-            config_manager_activate_profile(event_effect->profile_id);
-
-            // Si c'est uniquement un changement de profil, on s'arrête ici
-            if (event_effect->action_type == EVENT_ACTION_SWITCH_PROFILE) {
-                return true;
-            }
-            // Sinon (EVENT_ACTION_BOTH), on continue pour appliquer l'effet
-        }
-    }
-
-    // Si l'effet est configuré et activé, l'utiliser
-    if (event_effect->enabled) {
-        memcpy(&effect_to_apply, &event_effect->effect_config, sizeof(effect_config_t));
-        duration_ms = event_effect->duration_ms;
-        priority = event_effect->priority;
-
-        // IMPORTANT: La zone doit être déterminée par le type d'événement CAN, pas par la config
-        // Cela garantit que les événements latéralisés gardent toujours leur latéralité
-        switch (event) {
-            case CAN_EVENT_TURN_LEFT:
-            case CAN_EVENT_BLINDSPOT_LEFT:
-                effect_to_apply.zone = LED_ZONE_LEFT;
-                break;
-            case CAN_EVENT_TURN_RIGHT:
-            case CAN_EVENT_BLINDSPOT_RIGHT:
-                effect_to_apply.zone = LED_ZONE_RIGHT;
-                break;
-            default:
-                // Pour les autres événements, garder la zone configurée (ou FULL par défaut)
-                if (effect_to_apply.zone != LED_ZONE_LEFT && effect_to_apply.zone != LED_ZONE_RIGHT) {
-                    effect_to_apply.zone = LED_ZONE_FULL;
-                }
-                break;
-        }
-    } else {
-        // Sinon, créer un effet par défaut basé sur le type d'événement
-        memset(&effect_to_apply, 0, sizeof(effect_config_t));
-        duration_ms = 5000; // 5 secondes par défaut
-        priority = 100;
-
-        switch (event) {
-            case CAN_EVENT_TURN_LEFT:
-                effect_to_apply.effect = EFFECT_TURN_SIGNAL;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF8000; // Orange
-                effect_to_apply.reverse = true; // Côté gauche
-                effect_to_apply.zone = LED_ZONE_LEFT; // Zone gauche
-                priority = 200;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_TURN_RIGHT:
-                effect_to_apply.effect = EFFECT_TURN_SIGNAL;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF8000; // Orange
-                effect_to_apply.reverse = false; // Côté droit
-                effect_to_apply.zone = LED_ZONE_RIGHT; // Zone droite
-                priority = 200;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_TURN_HAZARD:
-                // Pour les warnings, on active les deux côtés simultanément
-                effect_to_apply.effect = EFFECT_HAZARD;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF8000; // Orange
-                effect_to_apply.reverse = false; // Non utilisé pour hazard
-                priority = 200;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_CHARGING:
-                effect_to_apply.effect = EFFECT_CHARGE_STATUS;
-                effect_to_apply.brightness = 150;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0x00FF00; // Vert
-                priority = 150;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_CHARGE_COMPLETE:
-                effect_to_apply.effect = EFFECT_SOLID;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0x00FF00; // Vert
-                priority = 150;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_DOOR_OPEN:
-            case CAN_EVENT_UNLOCKED:
-                effect_to_apply.effect = EFFECT_BREATHING;
-                effect_to_apply.brightness = 150;
-                effect_to_apply.speed = 80;
-                effect_to_apply.color1 = 0x0080FF; // Bleu clair
-                priority = 120;
-                break;
-
-            case CAN_EVENT_DOOR_CLOSE:
-            case CAN_EVENT_LOCKED:
-                effect_to_apply.effect = EFFECT_STROBE;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 150;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                priority = 120;
-                duration_ms = 2000; // 2 secondes
-                break;
-
-            case CAN_EVENT_BRAKE_ON:
-                effect_to_apply.effect = EFFECT_SOLID;
-                effect_to_apply.brightness = 255;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                priority = 180;
-                duration_ms = 0; // Permanent tant que frein activé
-                break;
-
-            case CAN_EVENT_BRAKE_OFF:
-                // Retour à l'effet par défaut
-                memcpy(&effect_to_apply, &profiles[active_profile_id].default_effect, sizeof(effect_config_t));
-                priority = 50;
-                duration_ms = 0;
-                break;
-
-            case CAN_EVENT_BLINDSPOT_LEFT:
-                effect_to_apply.effect = EFFECT_STROBE;
-                effect_to_apply.brightness = 255;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                effect_to_apply.reverse = true; // Côté gauche
-                effect_to_apply.zone = LED_ZONE_LEFT; // Zone gauche
-                priority = 250;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_BLINDSPOT_RIGHT:
-                effect_to_apply.effect = EFFECT_STROBE;
-                effect_to_apply.brightness = 255;
-                effect_to_apply.speed = 200;
-                effect_to_apply.color1 = 0xFF0000; // Rouge
-                effect_to_apply.reverse = false; // Côté droit
-                effect_to_apply.zone = LED_ZONE_RIGHT; // Zone droite
-                priority = 250;
-                duration_ms = 0; // Permanent
-                break;
-
-            case CAN_EVENT_NIGHT_MODE_ON:
-                // Activer le mode nuit global seulement si auto_night_mode est activé
-                if (profiles[active_profile_id].auto_night_mode) {
-                    led_effects_set_night_mode(true, profiles[active_profile_id].night_brightness);
-                    ESP_LOGI(TAG, "Night mode ON: brightness=%d", profiles[active_profile_id].night_brightness);
-                } else {
-                    ESP_LOGI(TAG, "Night mode ON event ignored (auto_night_mode disabled)");
-                }
-                return true; // Ne pas ajouter d'événement actif
-
-            case CAN_EVENT_NIGHT_MODE_OFF:
-                // Désactiver le mode nuit global seulement si auto_night_mode est activé
-                if (profiles[active_profile_id].auto_night_mode) {
-                    led_effects_set_night_mode(false, 255);
-                    ESP_LOGI(TAG, "Night mode OFF");
-                } else {
-                    ESP_LOGI(TAG, "Night mode OFF event ignored (auto_night_mode disabled)");
-                }
-                return true; // Ne pas ajouter d'événement actif
-
-            case CAN_EVENT_SPEED_THRESHOLD:
-                effect_to_apply.effect = EFFECT_RAINBOW;
-                effect_to_apply.brightness = 200;
-                effect_to_apply.speed = 120;
-                effect_to_apply.color1 = 0xFF0000;
-                priority = 110;
-                duration_ms = 0; // Permanent
-                break;
-
-            default:
-                // Effet par défaut générique
-                effect_to_apply.effect = EFFECT_SOLID;
-                effect_to_apply.brightness = 150;
-                effect_to_apply.speed = 50;
-                effect_to_apply.color1 = 0xFFFFFF; // Blanc
-                break;
-        }
-
-        ESP_LOGI(TAG, "Utilisation effet par défaut pour '%s'",
-                config_manager_get_event_name(event));
-    }
-
-    // Trouver un slot libre pour l'événement
-    int free_slot = -1;
+    // Find a free slot for the event
+    int slot = -1;
     int existing_slot = -1;
+    int free_slot     = -1;
 
-    // Chercher si l'événement est déjà actif ou trouver un slot libre
+    // Check if the event is already active or find a free slot
     for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-        if (active_events[i].active && active_events[i].event == event) {
-            existing_slot = i;
-            break;
-        }
-        if (!active_events[i].active && free_slot == -1) {
-            free_slot = i;
-        }
+      if (active_events[i].active && active_events[i].event == event) {
+        existing_slot = i;
+        break;
+      }
+      if (!active_events[i].active && free_slot == -1) {
+        free_slot = i;
+      }
     }
 
-    // Si l'événement existe déjà, le mettre à jour
-    int slot = (existing_slot >= 0) ? existing_slot : free_slot;
+    // If the event already exists, update it
+    slot = (existing_slot >= 0) ? existing_slot : free_slot;
 
     if (slot < 0) {
-        // Pas de slot libre, vérifier si on peut écraser un événement de priorité inférieure
-        int lowest_priority_slot = -1;
-        uint8_t lowest_priority = 255;
+      // No free slot, check if a lower priority event can be overwritten
+      // lower priority BUT only if it is the same zone or if the new
+      // event is FULL
+      int lowest_priority_slot = -1;
+      uint8_t lowest_priority  = 255;
 
-        for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-            if (active_events[i].active && active_events[i].priority < priority &&
-                active_events[i].priority < lowest_priority) {
-                lowest_priority = active_events[i].priority;
-                lowest_priority_slot = i;
-            }
+      for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+        if (active_events[i].active && active_events[i].priority < priority && active_events[i].priority < lowest_priority) {
+          // New event has higher priority, we can overwrite
+          lowest_priority      = active_events[i].priority;
+          lowest_priority_slot = i;
         }
+      }
 
-        if (lowest_priority_slot >= 0) {
-            slot = lowest_priority_slot;
-            ESP_LOGI(TAG, "Écrasement événement priorité %d par priorité %d", lowest_priority, priority);
-        } else {
-            ESP_LOGW(TAG, "Événement '%s' ignoré (pas de slot disponible)",
-                    config_manager_get_event_name(event));
-            return false;
-        }
+      if (lowest_priority_slot >= 0) {
+        slot = lowest_priority_slot;
+        ESP_LOGI(TAG_CONFIG, "Overwriting event priority %d with priority %d", lowest_priority, priority);
+      } else {
+        ESP_LOGW(TAG_CONFIG, "Event '%s' ignored (no available slot)", config_manager_enum_to_id(event));
+        return false;
+      }
     }
 
-    // Enregistrer l'événement actif
-    active_events[slot].event = event;
+    // Save the active event
+    active_events[slot].event         = event;
     active_events[slot].effect_config = effect_to_apply;
-    active_events[slot].start_time = xTaskGetTickCount();
-    active_events[slot].duration_ms = duration_ms;
-    active_events[slot].priority = priority;
-    active_events[slot].active = true;
+    active_events[slot].duration_ms   = duration_ms;
+    active_events[slot].priority      = priority;
+    active_events[slot].active        = true;
 
-    // Appliquer immédiatement l'effet de plus haute priorité actif
-    led_effects_set_config(&effect_to_apply);
-    effect_override_active = true;
+    if (existing_slot >= 0) {
+      // Keep animation phase; only reset timer for finite-duration events
+      if (duration_ms > 0) {
+        active_events[slot].start_time = xTaskGetTickCount();
+      }
+    } else {
+      active_events[slot].start_time    = xTaskGetTickCount();
+    }
+
+    // DO NOT apply immediately - let config_manager_update() handle it
+    // according to per-zone priority to avoid visual glitches
 
     if (duration_ms > 0) {
-        ESP_LOGI(TAG, "Effet '%s' activé pour %dms (priorité %d)",
-                config_manager_get_event_name(event),
-                duration_ms,
-                priority);
+      ESP_LOGI(TAG_CONFIG, "Effect '%s' enabled for %dms (priority %d)", config_manager_enum_to_id(event), duration_ms, priority);
     } else {
-        ESP_LOGI(TAG, "Effet '%s' activé (permanent, priorité %d)",
-                config_manager_get_event_name(event),
-                priority);
+      ESP_LOGI(TAG_CONFIG, "Effect '%s' enabled (permanent, priority %d)", config_manager_enum_to_id(event), priority);
     }
 
     return true;
+  } else {
+    // ESP_LOGW(TAG_CONFIG, "Default effect ignored for '%s'",
+    //         config_manager_enum_to_id(event));
+  }
+
+  return false;
 }
 
 void config_manager_stop_event(can_event_type_t event) {
-    // Désactiver tous les slots qui correspondent à cet événement
-    for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-        if (active_events[i].active && active_events[i].event == event) {
-            ESP_LOGI(TAG, "Arrêt manuel de l'événement '%s'", config_manager_get_event_name(event));
-            active_events[i].active = false;
-        }
+  // Verify that the event is valid
+  if (event >= CAN_EVENT_MAX) {
+    return;
+  }
+
+  // Disable all slots that match this event
+  for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+    if (active_events[i].active && active_events[i].event == event) {
+      ESP_LOGI(TAG_CONFIG, "Stopping event '%s'", config_manager_enum_to_id(event));
+      active_events[i].active = false;
     }
+  }
+}
+
+void config_manager_stop_all_events(void) {
+  for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+    if (active_events[i].active) {
+      ESP_LOGI(TAG_CONFIG, "Stopping event '%s' globally", config_manager_enum_to_id(active_events[i].event));
+      active_events[i].active = false;
+    }
+  }
 }
 
 void config_manager_update(void) {
-    uint32_t now = xTaskGetTickCount();
-    bool any_active = false;
+  if (led_effects_is_ota_display_active()) {
+    effect_override_active = false;
+    return;
+  }
 
-    // Vérifier et expirer les événements actifs
-    for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-        if (!active_events[i].active) continue;
+  uint32_t now        = xTaskGetTickCount();
+  uint16_t total_leds = led_effects_get_led_count();
+  bool any_active     = false;
 
-        // Vérifier si l'événement est expiré (si durée > 0)
-        if (active_events[i].duration_ms > 0) {
-            uint32_t elapsed = now - active_events[i].start_time;
-            if (elapsed >= pdMS_TO_TICKS(active_events[i].duration_ms)) {
-                ESP_LOGD(TAG, "Événement '%s' terminé", config_manager_get_event_name(active_events[i].event));
-                active_events[i].active = false;
-                continue;
-            }
-        }
+  if (total_leds == 0) {
+    total_leds = NUM_LEDS;
+  }
+  if (total_leds == 0 || total_leds > MAX_LED_COUNT) {
+    total_leds = MAX_LED_COUNT;
+  }
 
-        any_active = true;
+  // Check and expire active events
+  for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+    if (!active_events[i].active)
+      continue;
+
+    // Check if the event has expired (if duration > 0)
+    if (active_events[i].duration_ms > 0) {
+      uint32_t elapsed = now - active_events[i].start_time;
+      if (elapsed >= pdMS_TO_TICKS(active_events[i].duration_ms)) {
+        ESP_LOGI(TAG_CONFIG, "Event '%s' completed", config_manager_enum_to_id(active_events[i].event));
+        active_events[i].active = false;
+        continue;
+      }
     }
 
-    // Si des événements sont actifs
-    if (any_active) {
-        // Trouver la priorité maximale parmi tous les événements actifs
-        int max_priority = -1;
-        for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-            if (active_events[i].active && active_events[i].priority > max_priority) {
-                max_priority = active_events[i].priority;
-            }
-        }
+    any_active = true;
+  }
 
-        // Chercher les effets avec la priorité maximale
-        bool left_active = false;
-        bool right_active = false;
-        bool full_active = false;
-        int left_slot = -1;
-        int right_slot = -1;
-        int full_slot = -1;
+  // Optimization: if no active event, let the default effect render
+  if (!any_active) {
+    effect_override_active = false;
+    return;
+  }
 
-        for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-            if (!active_events[i].active || active_events[i].priority != max_priority) continue;
+  // Initialize buffers
+  memset(priority_buffer, 0, total_leds * sizeof(uint8_t));
+  memset(composed_buffer, 0, total_leds * sizeof(led_rgb_t));
 
-            if (active_events[i].effect_config.zone == LED_ZONE_LEFT) {
-                left_active = true;
-                left_slot = i;
-            } else if (active_events[i].effect_config.zone == LED_ZONE_RIGHT) {
-                right_active = true;
-                right_slot = i;
-            } else if (active_events[i].effect_config.zone == LED_ZONE_FULL) {
-                full_active = true;
-                full_slot = i;
-            }
-        }
+  uint32_t frame_counter = led_effects_get_frame_counter();
+  bool needs_fft         = false;
 
-        // Priorité au FULL si présent, sinon combiner LEFT/RIGHT
-        if (full_active) {
-            // Effet FULL avec la plus haute priorité
-            led_effects_set_config(&active_events[full_slot].effect_config);
-            effect_override_active = true;
-        } else if (left_active && right_active) {
-            // Deux effets directionnels avec la même priorité maximale
-            led_effects_set_dual_directional(
-                &active_events[left_slot].effect_config,
-                &active_events[right_slot].effect_config
-            );
-            effect_override_active = true;
-        } else if (left_active) {
-            // Seulement gauche
-            led_effects_set_config(&active_events[left_slot].effect_config);
-            effect_override_active = true;
-        } else if (right_active) {
-            // Seulement droite
-            led_effects_set_config(&active_events[right_slot].effect_config);
-            effect_override_active = true;
-        } else {
-            // Pas d'effets avec la priorité maximale (?), appliquer le premier actif
-            int highest_priority = -1;
-            int highest_priority_slot = -1;
+  // Render the default effect as a base layer
+  if (active_profile_loaded) {
+    effect_config_t base    = active_profile.default_effect;
 
-            for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
-                if (active_events[i].active && active_events[i].priority > highest_priority) {
-                    highest_priority = active_events[i].priority;
-                    highest_priority_slot = i;
-                }
-            }
+    // Use the segment configured in the profile (or full strip if none)
+    uint16_t default_start  = base.segment_start;
+    uint16_t default_length = base.segment_length;
 
-            if (highest_priority_slot >= 0) {
-                led_effects_set_config(&active_events[highest_priority_slot].effect_config);
-                effect_override_active = true;
-            }
-        }
-    } else if (!any_active && effect_override_active) {
-        // Plus aucun événement actif, retour à l'effet par défaut
-        if (active_profile_id >= 0) {
-            led_effects_set_config(&profiles[active_profile_id].default_effect);
-        }
-        effect_override_active = false;
-        ESP_LOGD(TAG, "Retour à l'effet par défaut");
+    // Normalize segment
+    led_effects_normalize_segment(&default_start, &default_length, total_leds);
+
+    // Modulate by accel_pedal_pos if enabled
+    if (base.accel_pedal_pos_enabled) {
+      default_length = led_effects_apply_accel_modulation(default_length, led_effects_get_accel_pedal_pos(), base.accel_pedal_offset);
     }
+
+    memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
+    led_effects_set_event_context(CAN_EVENT_NONE);
+    led_effects_render_to_buffer(&base, default_start, default_length, frame_counter, temp_buffer);
+
+    for (uint16_t idx = 0; idx < total_leds; idx++) {
+      composed_buffer[idx] = temp_buffer[idx];
+    }
+
+    needs_fft |= led_effects_requires_fft(active_profile.default_effect.effect);
+  }
+
+  // Render events on top of the base layer (per-LED priority)
+  for (int i = 0; i < MAX_ACTIVE_EVENTS; i++) {
+    if (!active_events[i].active)
+      continue;
+
+    uint16_t start  = active_events[i].effect_config.segment_start;
+    uint16_t length = active_events[i].effect_config.segment_length;
+
+    // Normalize length == 0 -> full strip
+    if (length == 0) {
+      length = total_leds;
+    }
+
+    if (start >= total_leds) {
+      continue;
+    }
+    if ((uint32_t)start + length > total_leds) {
+      length = total_leds - start;
+    }
+
+    memset(temp_buffer, 0, total_leds * sizeof(led_rgb_t));
+
+    effect_config_t event_config = active_events[i].effect_config;
+    event_config.segment_start   = 0;
+    event_config.segment_length  = length;
+
+    led_effects_set_event_context(active_events[i].event);
+    led_effects_render_to_buffer(&event_config, 0, length, frame_counter, temp_buffer);
+
+    // Apply per-LED priority overlay (segment-local buffer)
+    for (uint16_t j = 0; j < length; j++) {
+      uint16_t idx = start + j;
+      if (idx >= total_leds) {
+        break;
+      }
+      if (active_events[i].priority >= priority_buffer[idx]) {
+        composed_buffer[idx] = temp_buffer[j];
+        priority_buffer[idx] = active_events[i].priority;
+      }
+    }
+
+    if (led_effects_requires_fft(active_events[i].effect_config.effect)) {
+      needs_fft = true;
+    }
+  }
+
+  audio_input_set_fft_enabled(needs_fft);
+
+  led_effects_set_event_context(CAN_EVENT_NONE);
+  led_effects_show_buffer(composed_buffer);
+
+  effect_override_active = any_active;
 }
 
-const char* config_manager_get_event_name(can_event_type_t event) {
-    if (event >= 0 && event < CAN_EVENT_MAX) {
-        return event_names[event];
-    }
-    return "Unknown";
+bool config_manager_has_active_events(void) {
+  return effect_override_active;
 }
 
-// Table de correspondance enum -> ID alphanumérique
-const char* config_manager_enum_to_id(can_event_type_t event) {
-    switch (event) {
-        case CAN_EVENT_NONE:                return EVENT_ID_NONE;
-        case CAN_EVENT_TURN_LEFT:           return EVENT_ID_TURN_LEFT;
-        case CAN_EVENT_TURN_RIGHT:          return EVENT_ID_TURN_RIGHT;
-        case CAN_EVENT_TURN_HAZARD:         return EVENT_ID_TURN_HAZARD;
-        case CAN_EVENT_CHARGING:            return EVENT_ID_CHARGING;
-        case CAN_EVENT_CHARGE_COMPLETE:     return EVENT_ID_CHARGE_COMPLETE;
-        case CAN_EVENT_DOOR_OPEN:           return EVENT_ID_DOOR_OPEN;
-        case CAN_EVENT_DOOR_CLOSE:          return EVENT_ID_DOOR_CLOSE;
-        case CAN_EVENT_LOCKED:              return EVENT_ID_LOCKED;
-        case CAN_EVENT_UNLOCKED:            return EVENT_ID_UNLOCKED;
-        case CAN_EVENT_BRAKE_ON:            return EVENT_ID_BRAKE_ON;
-        case CAN_EVENT_BRAKE_OFF:           return EVENT_ID_BRAKE_OFF;
-        case CAN_EVENT_BLINDSPOT_LEFT:      return EVENT_ID_BLINDSPOT_LEFT;
-        case CAN_EVENT_BLINDSPOT_RIGHT:     return EVENT_ID_BLINDSPOT_RIGHT;
-        case CAN_EVENT_NIGHT_MODE_ON:       return EVENT_ID_NIGHT_MODE_ON;
-        case CAN_EVENT_NIGHT_MODE_OFF:      return EVENT_ID_NIGHT_MODE_OFF;
-        case CAN_EVENT_SPEED_THRESHOLD:     return EVENT_ID_SPEED_THRESHOLD;
-        case CAN_EVENT_AUTOPILOT_ENGAGED:   return EVENT_ID_AUTOPILOT_ENGAGED;
-        case CAN_EVENT_AUTOPILOT_DISENGAGED: return EVENT_ID_AUTOPILOT_DISENGAGED;
-        case CAN_EVENT_GEAR_DRIVE:          return EVENT_ID_GEAR_DRIVE;
-        case CAN_EVENT_GEAR_REVERSE:        return EVENT_ID_GEAR_REVERSE;
-        case CAN_EVENT_GEAR_PARK:           return EVENT_ID_GEAR_PARK;
-        default:                            return EVENT_ID_NONE;
-    }
+// Mapping table enum -> alphanumeric ID
+const char *config_manager_enum_to_id(can_event_type_t event) {
+  switch (event) {
+  case CAN_EVENT_NONE:
+    return EVENT_ID_NONE;
+  case CAN_EVENT_TURN_LEFT:
+    return EVENT_ID_TURN_LEFT;
+  case CAN_EVENT_TURN_RIGHT:
+    return EVENT_ID_TURN_RIGHT;
+  case CAN_EVENT_TURN_HAZARD:
+    return EVENT_ID_TURN_HAZARD;
+  case CAN_EVENT_CHARGING:
+    return EVENT_ID_CHARGING;
+  case CAN_EVENT_CHARGE_COMPLETE:
+    return EVENT_ID_CHARGE_COMPLETE;
+  case CAN_EVENT_CHARGING_STARTED:
+    return EVENT_ID_CHARGING_STARTED;
+  case CAN_EVENT_CHARGING_STOPPED:
+    return EVENT_ID_CHARGING_STOPPED;
+  case CAN_EVENT_CHARGING_CABLE_CONNECTED:
+    return EVENT_ID_CHARGING_CABLE_CONNECTED;
+  case CAN_EVENT_CHARGING_CABLE_DISCONNECTED:
+    return EVENT_ID_CHARGING_CABLE_DISCONNECTED;
+  case CAN_EVENT_CHARGING_PORT_OPENED:
+    return EVENT_ID_CHARGING_PORT_OPENED;
+  case CAN_EVENT_DOOR_OPEN_LEFT:
+    return EVENT_ID_DOOR_OPEN_LEFT;
+  case CAN_EVENT_DOOR_CLOSE_LEFT:
+    return EVENT_ID_DOOR_CLOSE_LEFT;
+  case CAN_EVENT_DOOR_OPEN_RIGHT:
+    return EVENT_ID_DOOR_OPEN_RIGHT;
+  case CAN_EVENT_DOOR_CLOSE_RIGHT:
+    return EVENT_ID_DOOR_CLOSE_RIGHT;
+  case CAN_EVENT_LOCKED:
+    return EVENT_ID_LOCKED;
+  case CAN_EVENT_UNLOCKED:
+    return EVENT_ID_UNLOCKED;
+  case CAN_EVENT_BRAKE_ON:
+    return EVENT_ID_BRAKE_ON;
+  case CAN_EVENT_BLINDSPOT_LEFT:
+    return EVENT_ID_BLINDSPOT_LEFT;
+  case CAN_EVENT_BLINDSPOT_RIGHT:
+    return EVENT_ID_BLINDSPOT_RIGHT;
+  case CAN_EVENT_BLINDSPOT_LEFT_ALERT:
+    return EVENT_ID_BLINDSPOT_LEFT_ALERT;
+  case CAN_EVENT_BLINDSPOT_RIGHT_ALERT:
+    return EVENT_ID_BLINDSPOT_RIGHT_ALERT;
+  case CAN_EVENT_SIDE_COLLISION_LEFT:
+    return EVENT_ID_SIDE_COLLISION_LEFT;
+  case CAN_EVENT_SIDE_COLLISION_RIGHT:
+    return EVENT_ID_SIDE_COLLISION_RIGHT;
+  case CAN_EVENT_FORWARD_COLLISION:
+    return EVENT_ID_FORWARD_COLLISION;
+  case CAN_EVENT_LANE_DEPARTURE_LEFT_LV1:
+    return EVENT_ID_LANE_DEPARTURE_LEFT_LV1;
+  case CAN_EVENT_LANE_DEPARTURE_LEFT_LV2:
+    return EVENT_ID_LANE_DEPARTURE_LEFT_LV2;
+  case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1:
+    return EVENT_ID_LANE_DEPARTURE_RIGHT_LV1;
+  case CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2:
+    return EVENT_ID_LANE_DEPARTURE_RIGHT_LV2;
+  case CAN_EVENT_SPEED_THRESHOLD:
+    return EVENT_ID_SPEED_THRESHOLD;
+  case CAN_EVENT_AUTOPILOT_ENGAGED:
+    return EVENT_ID_AUTOPILOT_ENGAGED;
+  case CAN_EVENT_AUTOPILOT_DISENGAGED:
+    return EVENT_ID_AUTOPILOT_DISENGAGED;
+  case CAN_EVENT_AUTOPILOT_ALERT_LV1:
+    return EVENT_ID_AUTOPILOT_ALERT_LV1;
+  case CAN_EVENT_AUTOPILOT_ALERT_LV2:
+    return EVENT_ID_AUTOPILOT_ALERT_LV2;
+  case CAN_EVENT_GEAR_DRIVE:
+    return EVENT_ID_GEAR_DRIVE;
+  case CAN_EVENT_GEAR_REVERSE:
+    return EVENT_ID_GEAR_REVERSE;
+  case CAN_EVENT_GEAR_PARK:
+    return EVENT_ID_GEAR_PARK;
+  case CAN_EVENT_SENTRY_MODE_ON:
+    return EVENT_ID_SENTRY_MODE_ON;
+  case CAN_EVENT_SENTRY_MODE_OFF:
+    return EVENT_ID_SENTRY_MODE_OFF;
+  case CAN_EVENT_SENTRY_ALERT:
+    return EVENT_ID_SENTRY_ALERT;
+  default:
+    return EVENT_ID_NONE;
+  }
 }
 
-// Table de correspondance ID alphanumérique -> enum
-can_event_type_t config_manager_id_to_enum(const char* id) {
-    if (id == NULL) return CAN_EVENT_NONE;
-
-    if (strcmp(id, EVENT_ID_NONE) == 0)                 return CAN_EVENT_NONE;
-    if (strcmp(id, EVENT_ID_TURN_LEFT) == 0)            return CAN_EVENT_TURN_LEFT;
-    if (strcmp(id, EVENT_ID_TURN_RIGHT) == 0)           return CAN_EVENT_TURN_RIGHT;
-    if (strcmp(id, EVENT_ID_TURN_HAZARD) == 0)          return CAN_EVENT_TURN_HAZARD;
-    if (strcmp(id, EVENT_ID_CHARGING) == 0)             return CAN_EVENT_CHARGING;
-    if (strcmp(id, EVENT_ID_CHARGE_COMPLETE) == 0)      return CAN_EVENT_CHARGE_COMPLETE;
-    if (strcmp(id, EVENT_ID_DOOR_OPEN) == 0)            return CAN_EVENT_DOOR_OPEN;
-    if (strcmp(id, EVENT_ID_DOOR_CLOSE) == 0)           return CAN_EVENT_DOOR_CLOSE;
-    if (strcmp(id, EVENT_ID_LOCKED) == 0)               return CAN_EVENT_LOCKED;
-    if (strcmp(id, EVENT_ID_UNLOCKED) == 0)             return CAN_EVENT_UNLOCKED;
-    if (strcmp(id, EVENT_ID_BRAKE_ON) == 0)             return CAN_EVENT_BRAKE_ON;
-    if (strcmp(id, EVENT_ID_BRAKE_OFF) == 0)            return CAN_EVENT_BRAKE_OFF;
-    if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT) == 0)       return CAN_EVENT_BLINDSPOT_LEFT;
-    if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)      return CAN_EVENT_BLINDSPOT_RIGHT;
-    if (strcmp(id, EVENT_ID_NIGHT_MODE_ON) == 0)        return CAN_EVENT_NIGHT_MODE_ON;
-    if (strcmp(id, EVENT_ID_NIGHT_MODE_OFF) == 0)       return CAN_EVENT_NIGHT_MODE_OFF;
-    if (strcmp(id, EVENT_ID_SPEED_THRESHOLD) == 0)      return CAN_EVENT_SPEED_THRESHOLD;
-    if (strcmp(id, EVENT_ID_AUTOPILOT_ENGAGED) == 0)    return CAN_EVENT_AUTOPILOT_ENGAGED;
-    if (strcmp(id, EVENT_ID_AUTOPILOT_DISENGAGED) == 0) return CAN_EVENT_AUTOPILOT_DISENGAGED;
-    if (strcmp(id, EVENT_ID_GEAR_DRIVE) == 0)           return CAN_EVENT_GEAR_DRIVE;
-    if (strcmp(id, EVENT_ID_GEAR_REVERSE) == 0)         return CAN_EVENT_GEAR_REVERSE;
-    if (strcmp(id, EVENT_ID_GEAR_PARK) == 0)            return CAN_EVENT_GEAR_PARK;
-
-    ESP_LOGW(TAG, "ID d'événement inconnu: %s", id);
+// Mapping table alphanumeric ID -> enum
+can_event_type_t config_manager_id_to_enum(const char *id) {
+  if (id == NULL)
     return CAN_EVENT_NONE;
+
+  if (strcmp(id, EVENT_ID_NONE) == 0)
+    return CAN_EVENT_NONE;
+  if (strcmp(id, EVENT_ID_TURN_LEFT) == 0)
+    return CAN_EVENT_TURN_LEFT;
+  if (strcmp(id, EVENT_ID_TURN_RIGHT) == 0)
+    return CAN_EVENT_TURN_RIGHT;
+  if (strcmp(id, EVENT_ID_TURN_HAZARD) == 0)
+    return CAN_EVENT_TURN_HAZARD;
+  if (strcmp(id, EVENT_ID_CHARGING) == 0)
+    return CAN_EVENT_CHARGING;
+  if (strcmp(id, EVENT_ID_CHARGE_COMPLETE) == 0)
+    return CAN_EVENT_CHARGE_COMPLETE;
+  if (strcmp(id, EVENT_ID_CHARGING_STARTED) == 0)
+    return CAN_EVENT_CHARGING_STARTED;
+  if (strcmp(id, EVENT_ID_CHARGING_STOPPED) == 0)
+    return CAN_EVENT_CHARGING_STOPPED;
+  if (strcmp(id, EVENT_ID_CHARGING_CABLE_CONNECTED) == 0)
+    return CAN_EVENT_CHARGING_CABLE_CONNECTED;
+  if (strcmp(id, EVENT_ID_CHARGING_CABLE_DISCONNECTED) == 0)
+    return CAN_EVENT_CHARGING_CABLE_DISCONNECTED;
+  if (strcmp(id, EVENT_ID_CHARGING_PORT_OPENED) == 0)
+    return CAN_EVENT_CHARGING_PORT_OPENED;
+  if (strcmp(id, EVENT_ID_DOOR_OPEN_LEFT) == 0)
+    return CAN_EVENT_DOOR_OPEN_LEFT;
+  if (strcmp(id, EVENT_ID_DOOR_CLOSE_LEFT) == 0)
+    return CAN_EVENT_DOOR_CLOSE_LEFT;
+  if (strcmp(id, EVENT_ID_DOOR_OPEN_RIGHT) == 0)
+    return CAN_EVENT_DOOR_OPEN_RIGHT;
+  if (strcmp(id, EVENT_ID_DOOR_CLOSE_RIGHT) == 0)
+    return CAN_EVENT_DOOR_CLOSE_RIGHT;
+  if (strcmp(id, EVENT_ID_LOCKED) == 0)
+    return CAN_EVENT_LOCKED;
+  if (strcmp(id, EVENT_ID_UNLOCKED) == 0)
+    return CAN_EVENT_UNLOCKED;
+  if (strcmp(id, EVENT_ID_BRAKE_ON) == 0)
+    return CAN_EVENT_BRAKE_ON;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT) == 0)
+    return CAN_EVENT_BLINDSPOT_LEFT;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT) == 0)
+    return CAN_EVENT_BLINDSPOT_RIGHT;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_LEFT_ALERT) == 0)
+    return CAN_EVENT_BLINDSPOT_LEFT_ALERT;
+  if (strcmp(id, EVENT_ID_BLINDSPOT_RIGHT_ALERT) == 0)
+    return CAN_EVENT_BLINDSPOT_RIGHT_ALERT;
+  if (strcmp(id, EVENT_ID_SIDE_COLLISION_LEFT) == 0)
+    return CAN_EVENT_SIDE_COLLISION_LEFT;
+  if (strcmp(id, EVENT_ID_SIDE_COLLISION_RIGHT) == 0)
+    return CAN_EVENT_SIDE_COLLISION_RIGHT;
+  if (strcmp(id, EVENT_ID_FORWARD_COLLISION) == 0)
+    return CAN_EVENT_FORWARD_COLLISION;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_LEFT_LV1) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_LEFT_LV1;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_LEFT_LV2) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_LEFT_LV2;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_RIGHT_LV1) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_RIGHT_LV1;
+  if (strcmp(id, EVENT_ID_LANE_DEPARTURE_RIGHT_LV2) == 0)
+    return CAN_EVENT_LANE_DEPARTURE_RIGHT_LV2;
+  if (strcmp(id, EVENT_ID_SPEED_THRESHOLD) == 0)
+    return CAN_EVENT_SPEED_THRESHOLD;
+  if (strcmp(id, EVENT_ID_AUTOPILOT_ENGAGED) == 0)
+    return CAN_EVENT_AUTOPILOT_ENGAGED;
+  if (strcmp(id, EVENT_ID_AUTOPILOT_DISENGAGED) == 0)
+    return CAN_EVENT_AUTOPILOT_DISENGAGED;
+  if (strcmp(id, EVENT_ID_AUTOPILOT_ALERT_LV1) == 0)
+    return CAN_EVENT_AUTOPILOT_ALERT_LV1;
+  if (strcmp(id, EVENT_ID_AUTOPILOT_ALERT_LV2) == 0)
+    return CAN_EVENT_AUTOPILOT_ALERT_LV2;
+  if (strcmp(id, EVENT_ID_GEAR_DRIVE) == 0)
+    return CAN_EVENT_GEAR_DRIVE;
+  if (strcmp(id, EVENT_ID_GEAR_REVERSE) == 0)
+    return CAN_EVENT_GEAR_REVERSE;
+  if (strcmp(id, EVENT_ID_GEAR_PARK) == 0)
+    return CAN_EVENT_GEAR_PARK;
+  if (strcmp(id, EVENT_ID_SENTRY_MODE_ON) == 0)
+    return CAN_EVENT_SENTRY_MODE_ON;
+  if (strcmp(id, EVENT_ID_SENTRY_MODE_OFF) == 0)
+    return CAN_EVENT_SENTRY_MODE_OFF;
+  if (strcmp(id, EVENT_ID_SENTRY_ALERT) == 0)
+    return CAN_EVENT_SENTRY_ALERT;
+
+  ESP_LOGW(TAG_CONFIG, "Unknown event ID: %s", id);
+  return CAN_EVENT_NONE;
 }
 
-// Vérifie si un événement peut déclencher un changement de profil
+// Check if an event can trigger a profile change
 bool config_manager_event_can_switch_profile(can_event_type_t event) {
-    switch (event) {
-        case CAN_EVENT_NIGHT_MODE_ON:
-        case CAN_EVENT_NIGHT_MODE_OFF:
-        case CAN_EVENT_CHARGING:
-        case CAN_EVENT_CHARGE_COMPLETE:
-        case CAN_EVENT_SPEED_THRESHOLD:
-        case CAN_EVENT_LOCKED:
-        case CAN_EVENT_UNLOCKED:
-        case CAN_EVENT_AUTOPILOT_ENGAGED:
-        case CAN_EVENT_AUTOPILOT_DISENGAGED:
-        case CAN_EVENT_GEAR_DRIVE:
-        case CAN_EVENT_GEAR_REVERSE:
-        case CAN_EVENT_GEAR_PARK:
-            return true;
-        default:
-            return false;
-    }
-}
-
-// Réinitialisation usine complète
-bool config_manager_factory_reset(void) {
-    ESP_LOGI(TAG, "Factory reset: Erasing all profiles and settings...");
-
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("profiles", NVS_READWRITE, &nvs_handle);
-
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open NVS for factory reset");
-        return false;
-    }
-
-    // Effacer tout le namespace "profiles"
-    err = nvs_erase_all(nvs_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to erase profiles namespace");
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    err = nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
-
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to commit profile erasure");
-        return false;
-    }
-
-    // Effacer la configuration matérielle LED
-    err = nvs_open("led_config", NVS_READWRITE, &nvs_handle);
-    if (err == ESP_OK) {
-        nvs_erase_all(nvs_handle);
-        nvs_commit(nvs_handle);
-        nvs_close(nvs_handle);
-    }
-
-    // Réinitialiser les profils en RAM
-    memset(profiles, 0, sizeof(profiles));
-    active_profile_id = -1;
-
-    // Créer un profil par défaut (allouer dynamiquement pour éviter stack overflow)
-    config_profile_t* default_profile = (config_profile_t*)malloc(sizeof(config_profile_t));
-    if (default_profile == NULL) {
-        ESP_LOGE(TAG, "Erreur allocation mémoire pour profil par défaut");
-        return false;
-    }
-    config_manager_create_default_profile(default_profile, "Default");
-    profiles[0] = *default_profile;
-    config_manager_save_profile(0, default_profile);
-    free(default_profile);
-    config_manager_activate_profile(0);
-
-    ESP_LOGI(TAG, "Factory reset complete. Default profile created.");
+  switch (event) {
+  case CAN_EVENT_DOOR_OPEN_LEFT:
+  case CAN_EVENT_DOOR_CLOSE_LEFT:
+  case CAN_EVENT_DOOR_OPEN_RIGHT:
+  case CAN_EVENT_DOOR_CLOSE_RIGHT:
+  case CAN_EVENT_CHARGING:
+  case CAN_EVENT_CHARGE_COMPLETE:
+  case CAN_EVENT_SPEED_THRESHOLD:
+  case CAN_EVENT_LOCKED:
+  case CAN_EVENT_UNLOCKED:
+  case CAN_EVENT_AUTOPILOT_ENGAGED:
+  case CAN_EVENT_AUTOPILOT_DISENGAGED:
+  case CAN_EVENT_AUTOPILOT_ALERT_LV1:
+  case CAN_EVENT_AUTOPILOT_ALERT_LV2:
+  case CAN_EVENT_FORWARD_COLLISION:
+  case CAN_EVENT_GEAR_DRIVE:
+  case CAN_EVENT_GEAR_REVERSE:
+  case CAN_EVENT_GEAR_PARK:
+  case CAN_EVENT_SENTRY_MODE_ON:
+  case CAN_EVENT_SENTRY_MODE_OFF:
     return true;
+  default:
+    return false;
+  }
 }
 
-bool config_manager_export_profile(uint8_t profile_id, char* json_buffer, size_t buffer_size) {
-    if (profile_id >= MAX_PROFILES || json_buffer == NULL) {
-        return false;
+// Full factory reset
+bool config_manager_factory_reset(void) {
+  ESP_LOGI(TAG_CONFIG, "Factory reset: Erasing NVS and SPIFFS...");
+
+  // Completely erase NVS (WiFi credentials, etc.)
+  esp_err_t err = nvs_flash_erase();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to erase NVS: %s", esp_err_to_name(err));
+    return false;
+  }
+
+  // Reset the NVS
+  err = nvs_flash_init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to reinit NVS: %s", esp_err_to_name(err));
+    return false;
+  }
+
+  // Fully format the SPIFFS (erase everything)
+  err = spiffs_format();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to format SPIFFS: %s", esp_err_to_name(err));
+    return false;
+  }
+
+  // Reset the settings manager (will create the settings.json file)
+  err = settings_manager_init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_CONFIG, "Failed to reinit settings manager");
+    return false;
+  }
+
+  wheel_control_enabled     = false;
+  wheel_control_speed_limit = 5;
+
+
+
+  // Reset the active profile in RAM
+  memset(&active_profile, 0, sizeof(active_profile));
+  active_profile_id                 = -1;
+  active_profile_loaded             = false;
+
+  // Create base profiles without using the stack (avoid httpd overflow)
+  config_profile_t *default_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  config_profile_t *off_profile     = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (off_profile) {
+    config_manager_create_off_profile(off_profile, "Eteint");
+    config_manager_save_profile(0, off_profile);
+  }
+  if (default_profile) {
+    config_manager_create_default_profile(default_profile, "Default");
+    config_manager_save_profile(1, default_profile);
+    memcpy(&active_profile, default_profile, sizeof(config_profile_t));
+    active_profile_id     = 1;
+    active_profile_loaded = true;
+  }
+  config_manager_activate_profile(1);
+  if (default_profile) {
+    free(default_profile);
+  }
+  if (off_profile) {
+    free(off_profile);
+  }
+
+  ESP_LOGI(TAG_CONFIG, "Factory reset complete. Default profile created.");
+  return true;
+}
+
+// Conversion 0-255 to percentage 1-100
+static uint8_t value_to_percent(uint8_t value) {
+  if (value == 0) {
+    return 1;
+  }
+  uint8_t percent = (value * 100 + 127) / 255; // Round to nearest
+  return (percent < 1) ? 1 : (percent > 100) ? 100 : percent;
+}
+
+// Conversion percentage 1-100 to 0-255
+static uint8_t percent_to_value(uint8_t percent) {
+  if (percent < 1)
+    percent = 1;
+  if (percent > 100)
+    percent = 100;
+  return (percent * 255 + 50) / 100; // Round to nearest
+}
+
+// Internal function to export a profile to JSON (directly from the structure)
+static bool export_profile_to_json(const config_profile_t *profile, uint16_t profile_id, char *json_buffer, size_t buffer_size) {
+  if (profile == NULL || json_buffer == NULL) {
+    return false;
+  }
+
+  cJSON *root = cJSON_CreateObject();
+
+  // Metadata
+  cJSON_AddStringToObject(root, "name", profile->name);
+  cJSON_AddNumberToObject(root, "version", 1);
+
+  // Default effect - convert to percentage for export
+  cJSON *default_effect = cJSON_CreateObject();
+  cJSON_AddStringToObject(default_effect, "effect_id", led_effects_enum_to_id(profile->default_effect.effect));
+  cJSON_AddNumberToObject(default_effect, "brightness", value_to_percent(profile->default_effect.brightness));
+  cJSON_AddNumberToObject(default_effect, "speed", value_to_percent(profile->default_effect.speed));
+  cJSON_AddNumberToObject(default_effect, "color1", profile->default_effect.color1);
+  cJSON_AddNumberToObject(default_effect, "color2", profile->default_effect.color2);
+  cJSON_AddNumberToObject(default_effect, "color3", profile->default_effect.color3);
+  cJSON_AddBoolToObject(default_effect, "reverse", profile->default_effect.reverse);
+  cJSON_AddBoolToObject(default_effect, "audio_reactive", profile->default_effect.audio_reactive);
+  cJSON_AddNumberToObject(default_effect, "segment_start", profile->default_effect.segment_start);
+  cJSON_AddNumberToObject(default_effect, "segment_length", profile->default_effect.segment_length);
+  cJSON_AddBoolToObject(default_effect, "accel_pedal_pos_enabled", profile->default_effect.accel_pedal_pos_enabled);
+  cJSON_AddNumberToObject(default_effect, "accel_pedal_offset", profile->default_effect.accel_pedal_offset);
+  cJSON_AddItemToObject(root, "default_effect", default_effect);
+
+  // Dynamic brightness parameters
+  cJSON_AddBoolToObject(root, "dynamic_brightness_enabled", profile->dynamic_brightness_enabled);
+  cJSON_AddNumberToObject(root, "dynamic_brightness_rate", profile->dynamic_brightness_rate);
+  cJSON *dyn_excluded = cJSON_CreateArray();
+  for (int i = CAN_EVENT_NONE + 1; i < CAN_EVENT_MAX; i++) {
+    if (profile->dynamic_brightness_exclude_mask & (1ULL << i)) {
+      cJSON_AddItemToArray(dyn_excluded, cJSON_CreateString(config_manager_enum_to_id((can_event_type_t)i)));
+    }
+  }
+  cJSON_AddItemToObject(root, "dynamic_brightness_excluded_events", dyn_excluded);
+
+  // CAN events
+  cJSON *events = cJSON_CreateArray();
+  for (int i = 0; i < CAN_EVENT_MAX; i++) {
+    if (profile->event_effects[i].enabled) {
+      cJSON *event         = cJSON_CreateObject();
+      // Use the alphanumeric ID instead of the enum for compatibility
+      const char *event_id = config_manager_enum_to_id(profile->event_effects[i].event);
+      cJSON_AddStringToObject(event, "event_id", event_id);
+      cJSON_AddBoolToObject(event, "enabled", profile->event_effects[i].enabled);
+      cJSON_AddNumberToObject(event, "priority", profile->event_effects[i].priority);
+      cJSON_AddNumberToObject(event, "duration_ms", profile->event_effects[i].duration_ms);
+
+      cJSON *event_effect = cJSON_CreateObject();
+      cJSON_AddStringToObject(event_effect, "effect_id", led_effects_enum_to_id(profile->event_effects[i].effect_config.effect));
+      cJSON_AddNumberToObject(event_effect, "brightness", value_to_percent(profile->event_effects[i].effect_config.brightness));
+      cJSON_AddNumberToObject(event_effect, "speed", value_to_percent(profile->event_effects[i].effect_config.speed));
+      cJSON_AddNumberToObject(event_effect, "color1", profile->event_effects[i].effect_config.color1);
+      cJSON_AddNumberToObject(event_effect, "color2", profile->event_effects[i].effect_config.color2);
+      cJSON_AddNumberToObject(event_effect, "color3", profile->event_effects[i].effect_config.color3);
+      cJSON_AddBoolToObject(event_effect, "reverse", profile->event_effects[i].effect_config.reverse);
+      cJSON_AddNumberToObject(event_effect, "segment_start", profile->event_effects[i].effect_config.segment_start);
+      cJSON_AddNumberToObject(event_effect, "segment_length", profile->event_effects[i].effect_config.segment_length);
+      cJSON_AddItemToObject(event, "effect_config", event_effect);
+
+      cJSON_AddItemToArray(events, event);
+    }
+  }
+  cJSON_AddItemToObject(root, "event_effects", events);
+
+  // Convert to JSON string
+  char *json_str = cJSON_PrintUnformatted(root);
+  bool success   = false;
+
+  if (json_str) {
+    size_t len = strlen(json_str);
+    if (len < buffer_size) {
+      strcpy(json_buffer, json_str);
+      ESP_LOGD(TAG_CONFIG, "Profile %d exported successfully (%d bytes)", profile_id, len);
+      success = true;
+    } else {
+      ESP_LOGE(TAG_CONFIG, "Buffer too small to export profile %d: %d bytes needed, %d available", profile_id, len + 1, buffer_size);
+    }
+    free(json_str);
+  } else {
+    size_t free_heap = esp_get_free_heap_size();
+    ESP_LOGE(TAG_CONFIG, "cJSON_PrintUnformatted error for profile %d - Heap after failure: %d bytes", profile_id, free_heap);
+  }
+
+  cJSON_Delete(root);
+  return success;
+}
+
+// Public function to export a profile (loads from SPIFFS if needed)
+bool config_manager_export_profile(uint16_t profile_id, char *json_buffer, size_t buffer_size) {
+  if (json_buffer == NULL) {
+    return false;
+  }
+
+  // Load the profile (or use the active profile if it matches)
+  config_profile_t *profile      = NULL;
+  config_profile_t *temp_profile = NULL;
+
+  if (profile_id == active_profile_id && active_profile_loaded) {
+    profile = &active_profile;
+  } else {
+    temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+    if (temp_profile == NULL) {
+      ESP_LOGE(TAG_CONFIG, "Memory allocation error");
+      return false;
     }
 
-    config_profile_t* profile = &profiles[profile_id];
-
-    // Vérifier que le profil existe
-    if (profile->name[0] == '\0') {
-        ESP_LOGW(TAG, "Profil %d inexistant, impossible d'exporter", profile_id);
-        return false;
+    if (!config_manager_load_profile(profile_id, temp_profile)) {
+      ESP_LOGW(TAG_CONFIG, "Profile %d does not exist, cannot export", profile_id);
+      free(temp_profile);
+      return false;
     }
 
-    cJSON *root = cJSON_CreateObject();
-    if (!root) {
-        ESP_LOGE(TAG, "Erreur création JSON root");
-        return false;
+    profile = temp_profile;
+  }
+
+  bool success = export_profile_to_json(profile, profile_id, json_buffer, buffer_size);
+
+  if (temp_profile != NULL) {
+    free(temp_profile);
+  }
+
+  return success;
+}
+
+bool config_manager_import_profile_from_json(const char *json_string, config_profile_t *profile) {
+  if (json_string == NULL || profile == NULL) {
+    return false;
+  }
+
+  size_t json_len = strlen(json_string);
+  size_t free_heap_before = esp_get_free_heap_size();
+  ESP_LOGI(TAG_CONFIG, "Parsing JSON: size=%d bytes, free heap=%d bytes", json_len, free_heap_before);
+
+  // Estimate memory needed: roughly 3x JSON size for cJSON tree
+  size_t estimated_needed = json_len * 3;
+  if (free_heap_before < estimated_needed) {
+    ESP_LOGW(TAG_CONFIG, "Low memory: free=%d, estimated needed=%d bytes", free_heap_before, estimated_needed);
+  }
+
+  cJSON *root = cJSON_Parse(json_string);
+  if (!root) {
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if (error_ptr != NULL) {
+      // Calculate position of error in JSON
+      size_t error_pos = error_ptr - json_string;
+      ESP_LOGE(TAG_CONFIG, "JSON parsing error at position %d (heap before: %d bytes)", error_pos, free_heap_before);
+      // Show a snippet of JSON around the error
+      if (error_pos >= 20) {
+        char snippet[41];
+        strncpy(snippet, error_ptr - 20, 40);
+        snippet[40] = '\0';
+        ESP_LOGE(TAG_CONFIG, "Error near: ...%s", snippet);
+      }
+    } else {
+      ESP_LOGE(TAG_CONFIG, "JSON parsing error (likely out of memory, free heap: %d bytes)", free_heap_before);
     }
+    return false;
+  }
 
-    // Métadonnées
-    cJSON_AddStringToObject(root, "name", profile->name);
-    cJSON_AddNumberToObject(root, "version", 1);
-    cJSON_AddNumberToObject(root, "created_timestamp", profile->created_timestamp);
-    cJSON_AddNumberToObject(root, "modified_timestamp", profile->modified_timestamp);
+  size_t free_heap_after = esp_get_free_heap_size();
+  ESP_LOGI(TAG_CONFIG, "JSON parsed successfully, heap used=%d bytes", free_heap_before - free_heap_after);
 
-    // Paramètres généraux
-    cJSON_AddBoolToObject(root, "auto_night_mode", profile->auto_night_mode);
-    cJSON_AddNumberToObject(root, "night_brightness", profile->night_brightness);
-    cJSON_AddNumberToObject(root, "speed_threshold", profile->speed_threshold);
+  memset(profile, 0, sizeof(config_profile_t));
 
-    // Effet par défaut
-    cJSON *default_effect = cJSON_CreateObject();
-    cJSON_AddNumberToObject(default_effect, "effect", profile->default_effect.effect);
-    cJSON_AddNumberToObject(default_effect, "brightness", profile->default_effect.brightness);
-    cJSON_AddNumberToObject(default_effect, "speed", profile->default_effect.speed);
-    cJSON_AddNumberToObject(default_effect, "color1", profile->default_effect.color1);
-    cJSON_AddNumberToObject(default_effect, "color2", profile->default_effect.color2);
-    cJSON_AddNumberToObject(default_effect, "color3", profile->default_effect.color3);
-    cJSON_AddNumberToObject(default_effect, "zone", profile->default_effect.zone);
-    cJSON_AddBoolToObject(default_effect, "reverse", profile->default_effect.reverse);
-    cJSON_AddItemToObject(root, "default_effect", default_effect);
-
-    // Effet mode nuit
-    cJSON *night_effect = cJSON_CreateObject();
-    cJSON_AddNumberToObject(night_effect, "effect", profile->night_mode_effect.effect);
-    cJSON_AddNumberToObject(night_effect, "brightness", profile->night_mode_effect.brightness);
-    cJSON_AddNumberToObject(night_effect, "speed", profile->night_mode_effect.speed);
-    cJSON_AddNumberToObject(night_effect, "color1", profile->night_mode_effect.color1);
-    cJSON_AddNumberToObject(night_effect, "color2", profile->night_mode_effect.color2);
-    cJSON_AddNumberToObject(night_effect, "color3", profile->night_mode_effect.color3);
-    cJSON_AddNumberToObject(night_effect, "zone", profile->night_mode_effect.zone);
-    cJSON_AddBoolToObject(night_effect, "reverse", profile->night_mode_effect.reverse);
-    cJSON_AddItemToObject(root, "night_mode_effect", night_effect);
-
-    // Événements CAN
-    cJSON *events = cJSON_CreateArray();
-    for (int i = 0; i < CAN_EVENT_MAX; i++) {
-        if (profile->event_effects[i].enabled) {
-            cJSON *event = cJSON_CreateObject();
-            cJSON_AddNumberToObject(event, "event", profile->event_effects[i].event);
-            cJSON_AddBoolToObject(event, "enabled", profile->event_effects[i].enabled);
-            cJSON_AddNumberToObject(event, "priority", profile->event_effects[i].priority);
-            cJSON_AddNumberToObject(event, "duration_ms", profile->event_effects[i].duration_ms);
-
-            cJSON *event_effect = cJSON_CreateObject();
-            cJSON_AddNumberToObject(event_effect, "effect", profile->event_effects[i].effect_config.effect);
-            cJSON_AddNumberToObject(event_effect, "brightness", profile->event_effects[i].effect_config.brightness);
-            cJSON_AddNumberToObject(event_effect, "speed", profile->event_effects[i].effect_config.speed);
-            cJSON_AddNumberToObject(event_effect, "color1", profile->event_effects[i].effect_config.color1);
-            cJSON_AddNumberToObject(event_effect, "color2", profile->event_effects[i].effect_config.color2);
-            cJSON_AddNumberToObject(event_effect, "color3", profile->event_effects[i].effect_config.color3);
-            cJSON_AddNumberToObject(event_effect, "zone", profile->event_effects[i].effect_config.zone);
-            cJSON_AddBoolToObject(event_effect, "reverse", profile->event_effects[i].effect_config.reverse);
-            cJSON_AddItemToObject(event, "effect_config", event_effect);
-
-            cJSON_AddItemToArray(events, event);
-        }
-    }
-    cJSON_AddItemToObject(root, "event_effects", events);
-
-    // Convertir en chaîne JSON
-    char* json_str = cJSON_Print(root);
-    if (json_str) {
-        size_t len = strlen(json_str);
-        if (len < buffer_size) {
-            strcpy(json_buffer, json_str);
-            free(json_str);
-            cJSON_Delete(root);
-            ESP_LOGI(TAG, "Profil %d exporté avec succès (%d octets)", profile_id, len);
-            return true;
-        } else {
-            ESP_LOGE(TAG, "Buffer trop petit: %d nécessaires, %d disponibles", len + 1, buffer_size);
-            free(json_str);
-        }
-    }
-
+  // Metadata
+  const cJSON *name = cJSON_GetObjectItem(root, "name");
+  if (name && cJSON_IsString(name)) {
+    strncpy(profile->name, name->valuestring, PROFILE_NAME_MAX_LEN - 1);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Missing or invalid 'name' field");
     cJSON_Delete(root);
     return false;
-}
+  }
+  profile->active             = false;
 
-bool config_manager_import_profile(uint8_t profile_id, const char* json_string) {
-    if (profile_id >= MAX_PROFILES || json_string == NULL) {
-        return false;
+  // Default effect
+  const cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
+  if (default_effect && cJSON_IsObject(default_effect)) {
+    cJSON *item;
+    if ((item = cJSON_GetObjectItem(default_effect, "effect_id")) && cJSON_IsString(item)) {
+      profile->default_effect.effect = led_effects_id_to_enum(item->valuestring);
     }
+    if ((item = cJSON_GetObjectItem(default_effect, "brightness")) && cJSON_IsNumber(item))
+      profile->default_effect.brightness = percent_to_value(item->valueint);
+    if ((item = cJSON_GetObjectItem(default_effect, "speed")) && cJSON_IsNumber(item))
+      profile->default_effect.speed = percent_to_value(item->valueint);
+    if ((item = cJSON_GetObjectItem(default_effect, "color1")) && cJSON_IsNumber(item))
+      profile->default_effect.color1 = item->valueint;
+    if ((item = cJSON_GetObjectItem(default_effect, "color2")) && cJSON_IsNumber(item))
+      profile->default_effect.color2 = item->valueint;
+    if ((item = cJSON_GetObjectItem(default_effect, "color3")) && cJSON_IsNumber(item))
+      profile->default_effect.color3 = item->valueint;
+    if ((item = cJSON_GetObjectItem(default_effect, "reverse")) && cJSON_IsBool(item))
+      profile->default_effect.reverse = cJSON_IsTrue(item);
+    if ((item = cJSON_GetObjectItem(default_effect, "audio_reactive")) && cJSON_IsBool(item))
+      profile->default_effect.audio_reactive = cJSON_IsTrue(item);
+    if ((item = cJSON_GetObjectItem(default_effect, "segment_start")) && cJSON_IsNumber(item))
+      profile->default_effect.segment_start = item->valueint;
+    if ((item = cJSON_GetObjectItem(default_effect, "segment_length")) && cJSON_IsNumber(item))
+      profile->default_effect.segment_length = item->valueint;
+    if ((item = cJSON_GetObjectItem(default_effect, "accel_pedal_pos_enabled")) && cJSON_IsBool(item))
+      profile->default_effect.accel_pedal_pos_enabled = cJSON_IsTrue(item);
+    if ((item = cJSON_GetObjectItem(default_effect, "accel_pedal_offset")) && cJSON_IsNumber(item))
+      profile->default_effect.accel_pedal_offset = item->valueint;
+  }
 
-    cJSON *root = cJSON_Parse(json_string);
-    if (!root) {
-        ESP_LOGE(TAG, "Erreur parsing JSON");
-        return false;
-    }
+  // Dynamic brightness parameters
+  const cJSON *dyn_bright_enabled = cJSON_GetObjectItem(root, "dynamic_brightness_enabled");
+  if (dyn_bright_enabled && cJSON_IsBool(dyn_bright_enabled)) {
+    profile->dynamic_brightness_enabled = cJSON_IsTrue(dyn_bright_enabled);
+  } else {
+    profile->dynamic_brightness_enabled = false; // Default
+  }
 
-    // Allouer dynamiquement pour éviter stack overflow
-    config_profile_t* imported_profile = (config_profile_t*)malloc(sizeof(config_profile_t));
-    if (imported_profile == NULL) {
-        ESP_LOGE(TAG, "Erreur allocation mémoire");
-        cJSON_Delete(root);
-        return false;
-    }
-    memset(imported_profile, 0, sizeof(config_profile_t));
+  const cJSON *dyn_bright_rate = cJSON_GetObjectItem(root, "dynamic_brightness_rate");
+  if (dyn_bright_rate && cJSON_IsNumber(dyn_bright_rate)) {
+    profile->dynamic_brightness_rate = dyn_bright_rate->valueint;
+  } else {
+    profile->dynamic_brightness_rate = 50; // Default
+  }
 
-    // Métadonnées
-    cJSON *name = cJSON_GetObjectItem(root, "name");
-    if (name && cJSON_IsString(name)) {
-        strncpy(imported_profile->name, name->valuestring, PROFILE_NAME_MAX_LEN - 1);
-    } else {
-        ESP_LOGE(TAG, "Champ 'name' manquant ou invalide");
-        cJSON_Delete(root);
-        free(imported_profile);
-        return false;
-    }
-
-    cJSON *created = cJSON_GetObjectItem(root, "created_timestamp");
-    if (created && cJSON_IsNumber(created)) {
-        imported_profile->created_timestamp = created->valueint;
-    }
-
-    cJSON *modified = cJSON_GetObjectItem(root, "modified_timestamp");
-    if (modified && cJSON_IsNumber(modified)) {
-        imported_profile->modified_timestamp = modified->valueint;
-    }
-
-    // Paramètres généraux
-    cJSON *auto_night = cJSON_GetObjectItem(root, "auto_night_mode");
-    if (auto_night && cJSON_IsBool(auto_night)) {
-        imported_profile->auto_night_mode = cJSON_IsTrue(auto_night);
-    }
-
-    cJSON *night_bright = cJSON_GetObjectItem(root, "night_brightness");
-    if (night_bright && cJSON_IsNumber(night_bright)) {
-        imported_profile->night_brightness = night_bright->valueint;
-    }
-
-    cJSON *speed_thresh = cJSON_GetObjectItem(root, "speed_threshold");
-    if (speed_thresh && cJSON_IsNumber(speed_thresh)) {
-        imported_profile->speed_threshold = speed_thresh->valueint;
-    }
-
-    // Effet par défaut
-    cJSON *default_effect = cJSON_GetObjectItem(root, "default_effect");
-    if (default_effect && cJSON_IsObject(default_effect)) {
-        cJSON *item;
-        if ((item = cJSON_GetObjectItem(default_effect, "effect")) && cJSON_IsNumber(item))
-            imported_profile->default_effect.effect = item->valueint;
-        if ((item = cJSON_GetObjectItem(default_effect, "brightness")) && cJSON_IsNumber(item))
-            imported_profile->default_effect.brightness = item->valueint;
-        if ((item = cJSON_GetObjectItem(default_effect, "speed")) && cJSON_IsNumber(item))
-            imported_profile->default_effect.speed = item->valueint;
-        if ((item = cJSON_GetObjectItem(default_effect, "color1")) && cJSON_IsNumber(item))
-            imported_profile->default_effect.color1 = item->valueint;
-        if ((item = cJSON_GetObjectItem(default_effect, "color2")) && cJSON_IsNumber(item))
-            imported_profile->default_effect.color2 = item->valueint;
-        if ((item = cJSON_GetObjectItem(default_effect, "color3")) && cJSON_IsNumber(item))
-            imported_profile->default_effect.color3 = item->valueint;
-        if ((item = cJSON_GetObjectItem(default_effect, "zone")) && cJSON_IsNumber(item))
-            imported_profile->default_effect.zone = item->valueint;
-        if ((item = cJSON_GetObjectItem(default_effect, "reverse")) && cJSON_IsBool(item))
-            imported_profile->default_effect.reverse = cJSON_IsTrue(item);
-    }
-
-    // Effet mode nuit
-    cJSON *night_effect = cJSON_GetObjectItem(root, "night_mode_effect");
-    if (night_effect && cJSON_IsObject(night_effect)) {
-        cJSON *item;
-        if ((item = cJSON_GetObjectItem(night_effect, "effect")) && cJSON_IsNumber(item))
-            imported_profile->night_mode_effect.effect = item->valueint;
-        if ((item = cJSON_GetObjectItem(night_effect, "brightness")) && cJSON_IsNumber(item))
-            imported_profile->night_mode_effect.brightness = item->valueint;
-        if ((item = cJSON_GetObjectItem(night_effect, "speed")) && cJSON_IsNumber(item))
-            imported_profile->night_mode_effect.speed = item->valueint;
-        if ((item = cJSON_GetObjectItem(night_effect, "color1")) && cJSON_IsNumber(item))
-            imported_profile->night_mode_effect.color1 = item->valueint;
-        if ((item = cJSON_GetObjectItem(night_effect, "color2")) && cJSON_IsNumber(item))
-            imported_profile->night_mode_effect.color2 = item->valueint;
-        if ((item = cJSON_GetObjectItem(night_effect, "color3")) && cJSON_IsNumber(item))
-            imported_profile->night_mode_effect.color3 = item->valueint;
-        if ((item = cJSON_GetObjectItem(night_effect, "zone")) && cJSON_IsNumber(item))
-            imported_profile->night_mode_effect.zone = item->valueint;
-        if ((item = cJSON_GetObjectItem(night_effect, "reverse")) && cJSON_IsBool(item))
-            imported_profile->night_mode_effect.reverse = cJSON_IsTrue(item);
-    }
-
-    // Événements CAN
-    cJSON *events = cJSON_GetObjectItem(root, "event_effects");
-    if (events && cJSON_IsArray(events)) {
-        cJSON *event = NULL;
-        cJSON_ArrayForEach(event, events) {
-            cJSON *event_type = cJSON_GetObjectItem(event, "event");
-            if (!event_type || !cJSON_IsNumber(event_type)) continue;
-
-            int evt = event_type->valueint;
-            if (evt < 0 || evt >= CAN_EVENT_MAX) continue;
-
-            cJSON *enabled = cJSON_GetObjectItem(event, "enabled");
-            if (enabled && cJSON_IsBool(enabled)) {
-                imported_profile->event_effects[evt].enabled = cJSON_IsTrue(enabled);
-            }
-
-            cJSON *priority = cJSON_GetObjectItem(event, "priority");
-            if (priority && cJSON_IsNumber(priority)) {
-                imported_profile->event_effects[evt].priority = priority->valueint;
-            }
-
-            cJSON *duration = cJSON_GetObjectItem(event, "duration_ms");
-            if (duration && cJSON_IsNumber(duration)) {
-                imported_profile->event_effects[evt].duration_ms = duration->valueint;
-            }
-
-            imported_profile->event_effects[evt].event = evt;
-
-            cJSON *effect_config = cJSON_GetObjectItem(event, "effect_config");
-            if (effect_config && cJSON_IsObject(effect_config)) {
-                cJSON *item;
-                if ((item = cJSON_GetObjectItem(effect_config, "effect")) && cJSON_IsNumber(item))
-                    imported_profile->event_effects[evt].effect_config.effect = item->valueint;
-                if ((item = cJSON_GetObjectItem(effect_config, "brightness")) && cJSON_IsNumber(item))
-                    imported_profile->event_effects[evt].effect_config.brightness = item->valueint;
-                if ((item = cJSON_GetObjectItem(effect_config, "speed")) && cJSON_IsNumber(item))
-                    imported_profile->event_effects[evt].effect_config.speed = item->valueint;
-                if ((item = cJSON_GetObjectItem(effect_config, "color1")) && cJSON_IsNumber(item))
-                    imported_profile->event_effects[evt].effect_config.color1 = item->valueint;
-                if ((item = cJSON_GetObjectItem(effect_config, "color2")) && cJSON_IsNumber(item))
-                    imported_profile->event_effects[evt].effect_config.color2 = item->valueint;
-                if ((item = cJSON_GetObjectItem(effect_config, "color3")) && cJSON_IsNumber(item))
-                    imported_profile->event_effects[evt].effect_config.color3 = item->valueint;
-                if ((item = cJSON_GetObjectItem(effect_config, "zone")) && cJSON_IsNumber(item))
-                    imported_profile->event_effects[evt].effect_config.zone = item->valueint;
-                if ((item = cJSON_GetObjectItem(effect_config, "reverse")) && cJSON_IsBool(item))
-                    imported_profile->event_effects[evt].effect_config.reverse = cJSON_IsTrue(item);
-            }
+  profile->dynamic_brightness_exclude_mask = 0;
+  const cJSON *dyn_bright_excluded = cJSON_GetObjectItem(root, "dynamic_brightness_excluded_events");
+  if (dyn_bright_excluded && cJSON_IsArray(dyn_bright_excluded)) {
+    const cJSON *excluded = NULL;
+    cJSON_ArrayForEach(excluded, dyn_bright_excluded) {
+      if (excluded && cJSON_IsString(excluded)) {
+        can_event_type_t evt = config_manager_id_to_enum(excluded->valuestring);
+        if (evt > CAN_EVENT_NONE && evt < CAN_EVENT_MAX) {
+          profile->dynamic_brightness_exclude_mask |= (1ULL << evt);
         }
+      }
     }
+  }
 
-    cJSON_Delete(root);
+  // CAN events
+  cJSON *events = cJSON_GetObjectItem(root, "event_effects");
+  if (events && cJSON_IsArray(events)) {
+    const cJSON *event = NULL;
+    cJSON_ArrayForEach(event, events) {
+      // New format: use event_id (alphanumeric string)
+      const cJSON *event_id_obj = cJSON_GetObjectItem(event, "event_id");
+      int evt                   = -1;
 
-    // Sauvegarder le profil importé
-    bool success = config_manager_save_profile(profile_id, imported_profile);
-    if (success) {
-        ESP_LOGI(TAG, "Profil %d importé avec succès: %s", profile_id, imported_profile->name);
-    } else {
-        ESP_LOGE(TAG, "Erreur lors de la sauvegarde du profil %d", profile_id);
+      if (event_id_obj && cJSON_IsString(event_id_obj)) {
+        // New format with alphanumeric ID
+        evt = config_manager_id_to_enum(event_id_obj->valuestring);
+      } else {
+        // Old format with enum number (backward compatibility)
+        const cJSON *event_type = cJSON_GetObjectItem(event, "event");
+        if (event_type && cJSON_IsNumber(event_type)) {
+          evt = event_type->valueint;
+        }
+      }
+
+      if (evt < 0 || evt >= CAN_EVENT_MAX)
+        continue;
+
+      const cJSON *enabled = cJSON_GetObjectItem(event, "enabled");
+      if (enabled && cJSON_IsBool(enabled)) {
+        profile->event_effects[evt].enabled = cJSON_IsTrue(enabled);
+      }
+
+      const cJSON *priority = cJSON_GetObjectItem(event, "priority");
+      if (priority && cJSON_IsNumber(priority)) {
+        profile->event_effects[evt].priority = priority->valueint;
+      }
+
+      const cJSON *duration = cJSON_GetObjectItem(event, "duration_ms");
+      if (duration && cJSON_IsNumber(duration)) {
+        profile->event_effects[evt].duration_ms = duration->valueint;
+      }
+
+      profile->event_effects[evt].event = evt;
+
+      const cJSON *effect_config        = cJSON_GetObjectItem(event, "effect_config");
+      if (effect_config && cJSON_IsObject(effect_config)) {
+        cJSON *item;
+        if ((item = cJSON_GetObjectItem(effect_config, "effect_id")) && cJSON_IsString(item)) {
+          profile->event_effects[evt].effect_config.effect = led_effects_id_to_enum(item->valuestring);
+        }
+        if ((item = cJSON_GetObjectItem(effect_config, "brightness")) && cJSON_IsNumber(item))
+          profile->event_effects[evt].effect_config.brightness = percent_to_value(item->valueint);
+        if ((item = cJSON_GetObjectItem(effect_config, "speed")) && cJSON_IsNumber(item))
+          profile->event_effects[evt].effect_config.speed = percent_to_value(item->valueint);
+        if ((item = cJSON_GetObjectItem(effect_config, "color1")) && cJSON_IsNumber(item))
+          profile->event_effects[evt].effect_config.color1 = item->valueint;
+        if ((item = cJSON_GetObjectItem(effect_config, "color2")) && cJSON_IsNumber(item))
+          profile->event_effects[evt].effect_config.color2 = item->valueint;
+        if ((item = cJSON_GetObjectItem(effect_config, "color3")) && cJSON_IsNumber(item))
+          profile->event_effects[evt].effect_config.color3 = item->valueint;
+        if ((item = cJSON_GetObjectItem(effect_config, "reverse")) && cJSON_IsBool(item))
+          profile->event_effects[evt].effect_config.reverse = cJSON_IsTrue(item);
+        if ((item = cJSON_GetObjectItem(effect_config, "segment_start")) && cJSON_IsNumber(item))
+          profile->event_effects[evt].effect_config.segment_start = item->valueint;
+        if ((item = cJSON_GetObjectItem(effect_config, "segment_length")) && cJSON_IsNumber(item))
+          profile->event_effects[evt].effect_config.segment_length = item->valueint;
+      }
     }
+  }
 
-    free(imported_profile);
-    return success;
+  // Fill any missing events with default disabled values
+  // Allows managing new events added after the preset was created
+  for (int evt = CAN_EVENT_NONE; evt < CAN_EVENT_MAX; evt++) {
+    // If the event was not initialized (effect_config.effect == 0 and enabled == false)
+    // AND it is not NONE, complete it with default values
+    if (evt != CAN_EVENT_NONE && profile->event_effects[evt].event == 0 && !profile->event_effects[evt].enabled) {
+      profile->event_effects[evt].event                = evt;
+      profile->event_effects[evt].enabled              = false;
+      profile->event_effects[evt].effect_config.effect = EFFECT_OFF;
+      profile->event_effects[evt].priority             = 1;
+      profile->event_effects[evt].duration_ms          = 0;
+      profile->event_effects[evt].action_type          = EVENT_ACTION_APPLY_EFFECT;
+      profile->event_effects[evt].profile_id           = -1;
+    }
+  }
+
+  cJSON_Delete(root);
+  ESP_LOGD(TAG_CONFIG, "Profile parsed from JSON: %s", profile->name);
+  return true;
 }
 
-bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t* event_effect) {
-    if (active_profile_id < 0 || active_profile_id >= MAX_PROFILES ||
-        event >= CAN_EVENT_MAX || event_effect == NULL) {
-        return false;
-    }
+// Import depuis JSON avec sauvegarde binaire
+bool config_manager_import_profile_direct(uint16_t profile_id, const char *json_string) {
+  if (json_string == NULL) {
+    return false;
+  }
 
-    memcpy(event_effect, &profiles[active_profile_id].event_effects[event],
-           sizeof(can_event_effect_t));
-    return true;
+  size_t json_len = strlen(json_string);
+  size_t free_heap = esp_get_free_heap_size();
+  ESP_LOGI(TAG_CONFIG, "Direct profile import %d: JSON size=%d bytes, heap free=%d bytes", profile_id, json_len, free_heap);
+
+  // Allocate on the heap to avoid stack overflow (~2.2KB)
+  config_profile_t *temp_profile = (config_profile_t *)malloc(sizeof(config_profile_t));
+  if (temp_profile == NULL) {
+    ESP_LOGE(TAG_CONFIG, "Memory allocation error while importing profile %d", profile_id);
+    return false;
+  }
+
+  // Parse JSON into structure
+  if (!config_manager_import_profile_from_json(json_string, temp_profile)) {
+    free(temp_profile);
+    return false;
+  }
+
+  // Save in binary (uses the standard function that handles CRC32, etc.)
+  bool success = config_manager_save_profile(profile_id, temp_profile);
+
+  if (success) {
+    ESP_LOGI(TAG_CONFIG, "Profile %d imported and saved in binary: %s", profile_id, temp_profile->name);
+  } else {
+    ESP_LOGE(TAG_CONFIG, "Profile save error for %d", profile_id);
+  }
+
+  free(temp_profile);
+  return success;
+}
+
+bool config_manager_get_effect_for_event(can_event_type_t event, can_event_effect_t *event_effect) {
+  if (!active_profile_loaded || event >= CAN_EVENT_MAX || event_effect == NULL) {
+    return false;
+  }
+
+  memcpy(event_effect, &active_profile.event_effects[event], sizeof(can_event_effect_t));
+  return true;
 }
 
 uint16_t config_manager_get_led_count(void) {
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("led_hw", NVS_READONLY, &nvs_handle);
-
-    if (err != ESP_OK) {
-        return NUM_LEDS; // Valeur par défaut
-    }
-
-    uint16_t led_count;
-    err = nvs_get_u16(nvs_handle, "led_count", &led_count);
-    nvs_close(nvs_handle);
-
-    if (err != ESP_OK) {
-        return NUM_LEDS; // Valeur par défaut
-    }
-
-    return led_count;
+  return settings_get_u16("led_count", NUM_LEDS);
 }
 
-uint8_t config_manager_get_led_pin(void) {
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("led_hw", NVS_READONLY, &nvs_handle);
+bool config_manager_set_led_count(uint16_t led_count) {
+  // Validation
+  if (led_count < 1 || led_count > 200) {
+    ESP_LOGE(TAG_CONFIG, "Invalid LED count: %d (1-200)", led_count);
+    return false;
+  }
 
-    if (err != ESP_OK) {
-        return LED_PIN; // Valeur par défaut
-    }
-
-    uint8_t data_pin;
-    err = nvs_get_u8(nvs_handle, "data_pin", &data_pin);
-    nvs_close(nvs_handle);
-
-    if (err != ESP_OK) {
-        return LED_PIN; // Valeur par défaut
-    }
-
-    return data_pin;
-}
-
-bool config_manager_set_led_hardware(uint16_t led_count, uint8_t data_pin) {
-    // Validation
-    if (led_count < 1 || led_count > 1000) {
-        ESP_LOGE(TAG, "Nombre de LEDs invalide: %d (1-1000)", led_count);
-        return false;
-    }
-
-    if (data_pin > 39) {
-        ESP_LOGE(TAG, "Pin GPIO invalide: %d (0-39)", data_pin);
-        return false;
-    }
-
-    nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("led_hw", NVS_READWRITE, &nvs_handle);
-
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur ouverture NVS: %s", esp_err_to_name(err));
-        return false;
-    }
-
-    err = nvs_set_u16(nvs_handle, "led_count", led_count);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur sauvegarde led_count: %s", esp_err_to_name(err));
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    err = nvs_set_u8(nvs_handle, "data_pin", data_pin);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erreur sauvegarde data_pin: %s", esp_err_to_name(err));
-        nvs_close(nvs_handle);
-        return false;
-    }
-
-    nvs_commit(nvs_handle);
-    nvs_close(nvs_handle);
-
-    ESP_LOGI(TAG, "Configuration matérielle LED sauvegardée: %d LEDs, GPIO %d",
-             led_count, data_pin);
+  esp_err_t err = settings_set_u16("led_count", led_count);
+  if (err == ESP_OK) {
+    ESP_LOGI(TAG_CONFIG, "LED configuration saved: %d LEDs", led_count);
     return true;
+  }
+  return false;
+}
+
+void config_manager_reapply_default_effect(void) {
+  if (!active_profile_loaded) {
+    ESP_LOGW(TAG_CONFIG, "No active profile, cannot reapply effect");
+    return;
+  }
+
+  // Reapply the default effect from the active profile
+  led_effects_set_config(&active_profile.default_effect);
+  ESP_LOGI(TAG_CONFIG, "Default effect re-applied (audio_reactive=%d)", active_profile.default_effect.audio_reactive);
+}
+
+bool config_manager_can_create_profile(void) {
+  size_t spiffs_total = 0, spiffs_used = 0;
+  esp_err_t err = spiffs_get_stats(&spiffs_total, &spiffs_used);
+
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG_CONFIG, "Unable to retrieve SPIFFS stats");
+    return false;
+  }
+
+  // A binary profile is ~2.5 KB + 8KB SPIFFS overhead
+  // Keep a safety margin: ensure at least 12 KB free
+  const size_t BYTES_PER_PROFILE = 12 * 1024; // 12 KB per profile (2.5KB data + 8KB overhead + margin)
+  size_t spiffs_free = spiffs_total - spiffs_used;
+
+  bool can_create = spiffs_free >= BYTES_PER_PROFILE;
+
+  ESP_LOGI(TAG_CONFIG,
+           "SPIFFS check: free=%zu bytes, needed=%zu bytes, can_create=%d (usage=%zu%%)",
+           spiffs_free,
+           BYTES_PER_PROFILE,
+           can_create,
+           (spiffs_total > 0) ? (spiffs_used * 100 / spiffs_total) : 0);
+
+  return can_create;
 }
