@@ -162,7 +162,7 @@ static void can_event_task(void *pvParameters) {
   vehicle_state_t *prev = &state_buffer_b;
 
   // Counter for periodic BLE dashboard updates (send every 200ms = 4 iterations)
-  uint8_t ble_send_counter = 0;
+  // uint8_t ble_send_counter = 0;
   TickType_t last_state_send_ticks = 0;
   TickType_t last_config_send_ticks = 0;
   const TickType_t min_state_send_period = pdMS_TO_TICKS(50);

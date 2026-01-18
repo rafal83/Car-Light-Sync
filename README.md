@@ -1,58 +1,58 @@
 # Car Light Sync
 
-Système de contrôle LED RGB WS2812 synchronisé au bus CAN, avec interface web/mobile et mises à jour OTA. Projet open source, non lucratif et orienté communauté.
+WS2812 RGB LED control system synchronized to CAN bus, with web/mobile interface and OTA updates. Open source, non-profit, and community-oriented project.
 
-## ☕ Soutenir le projet
-Car Light Sync est maintenu sur mon temps libre. Tu peux aider en :
-- Mettre une étoile au dépôt et partager le projet
-- Contribuer au code, à la doc ou aux tests (issues/PR bienvenues)
-- Offrir un café pour financer matériel, hébergement et prototypes : [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/raphael.d)
+## ☕ Support the project
+Car Light Sync is maintained in my free time. You can help by:
+- Starring the repository and sharing the project
+- Contributing to code, docs, or tests (issues/PRs welcome)
+- Buying a coffee to fund hardware, hosting, and prototypes: [![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/raphael.d)
 
-Merci ! Ton soutien garde le projet libre et accessible.
+Thank you! Your support keeps the project free and accessible.
 
-## 🚀 Aperçu rapide
-- LEDs WS2812/WS2812B avec effets audio-réactifs
-- Intégration CAN multi-véhicules (architecture unifiée, double TWAI requis → ESP32-C6 + ESP-IDF ≥ 5.2)
-- Interface web responsive + app mobile (BLE)
-- Dashboard automobile avec modes Park/Drive (affichage vitesse, arc pédale, indicateurs WiFi-wave blindspot)
-- OTA intégrée et profilage d'effets événementiels
-- Passerelles CAN intégrées : GVRET TCP (SavvyCAN) + CANServer UDP
-- ESP-NOW : rôle maître par défaut, profils satellites disponibles (blindspot, speedometer)
+## 🚀 Quick Overview
+- WS2812/WS2812B LEDs with audio-reactive effects
+- Multi-vehicle CAN integration (unified architecture, dual TWAI required → ESP32-C6 + ESP-IDF ≥ 5.2)
+- Responsive web interface + mobile app (BLE)
+- Automotive dashboard with Park/Drive modes (speed display, pedal arc, WiFi-wave blindspot indicators)
+- Integrated OTA and event-based effect profiling
+- Integrated CAN gateways: GVRET TCP (SavvyCAN) + CANServer UDP
+- ESP-NOW: Master role by default, satellite profiles available (blindspot, speedometer)
 
-## ⚡ Démarrer vite
-1. Cloner : `git clone https://github.com/rafal83/car-light-sync.git`
-2. Ouvrir le repo et installer **PlatformIO**.
-3. Flasher : `pio run -e esp32c6 -t upload` puis `pio device monitor`.
-4. Se connecter au WiFi `CarLightSync` et ouvrir `http://192.168.4.1`.
-→ Détails et variantes ESP32-S3 : voir [docs/logiciel.md](docs/logiciel.md).
+## ⚡ Quick Start
+1. Clone: `git clone https://github.com/rafal83/car-light-sync.git`
+2. Open the repo and install **PlatformIO**.
+3. Flash: `pio run -e esp32c6 -t upload` then `pio device monitor`.
+4. Connect to WiFi `CarLightSync` and open `http://192.168.4.1`.
+→ Details and ESP32-S3 variants: see [docs/software.md](docs/software.md).
 
-## 📚 Documentation détaillée
-- Matériel : [docs/materiel.md](docs/materiel.md)
-- Logiciel (build/flash, interface, OTA) : [docs/logiciel.md](docs/logiciel.md)
-- Firmware & code (architecture, effets, CAN, audio) : [docs/firmware.md](docs/firmware.md)
-- Problèmes, dépannage & sécurité : [docs/problemes.md](docs/problemes.md)
+## 📚 Detailed Documentation
+- Hardware: [docs/hardware.md](docs/hardware.md)
+- Software (build/flash, interface, OTA): [docs/software.md](docs/software.md)
+- Firmware & Code (architecture, effects, CAN, audio): [docs/firmware.md](docs/firmware.md)
+- Troubleshooting & Security: [docs/troubleshooting.md](docs/troubleshooting.md)
 
-## Sources & références 🔗
-- 🚗 DBC Tesla Model 3 : https://github.com/joshwardell/model3dbc (base des signaux CAN)
-- 📕 Opendbc (DBC communautaires) : https://github.com/commaai/opendbc
-- 🚙 Onyx M2 DBC : https://github.com/onyx-m2/onyx-m2-dbc (DBC Onyx M2)
-- 🛰️ Protocole GVRET / SavvyCAN : https://github.com/collin80/SavvyCAN/blob/master/connections/gvretserial.cpp (passerelle TCP)
-- 📡 CANserver (UDP Panda) : https://github.com/commaai/canserver (format et passerelle UDP)
-- 📘 ESP-IDF SDK : https://docs.espressif.com/projects/esp-idf/en/stable/esp32/ (guide complet)
+## Sources & References 🔗
+- 🚗 Tesla Model 3 DBC: https://github.com/joshwardell/model3dbc (base CAN signals)
+- 📕 Opendbc (Community DBCs): https://github.com/commaai/opendbc
+- 🚙 Onyx M2 DBC: https://github.com/onyx-m2/onyx-m2-dbc (Onyx M2 DBC)
+- 🛰️ GVRET / SavvyCAN Protocol: https://github.com/collin80/SavvyCAN/blob/master/connections/gvretserial.cpp (TCP gateway)
+- 📡 CANserver (UDP Panda): https://github.com/commaai/canserver (UDP format and gateway)
+- 📘 ESP-IDF SDK: https://docs.espressif.com/projects/esp-idf/en/stable/esp32/ (complete guide)
 
 ## 🤝 Contribution
-- Fork, 
-- branche `feature/...`, 
-- PR. Zones utiles : configs CAN (autres véhicules), nouveaux effets LED, perfs, doc/traductions, tests.
+- Fork,
+- Branch `feature/...`,
+- PR. Useful areas: CAN configs (other vehicles), new LED effects, performance, docs/translations, tests.
 
-## 📄 Licence
-- voir [LICENSE](LICENSE)
+## 📄 License
+- see [LICENSE](LICENSE)
 
-## 💬 Support & communauté
-- **Issues GitHub** : Pour signaler bugs et proposer fonctionnalités
-- **Discussions** : Pour questions et partage d'expériences
-- **Wiki** : Documentation communautaire et guides
+## 💬 Support & Community
+- **GitHub Issues**: To report bugs and propose features
+- **Discussions**: For questions and sharing experiences
+- **Wiki**: Community documentation and guides
 
 ---
 
-**Développé avec ❤️ pour la communauté automobile**
+**Developed with ❤️ for the automotive community**

@@ -617,13 +617,13 @@ void vehicle_state_apply_signal(const can_message_def_t *msg, const can_signal_d
       return;
     }
 
-    if (id == 0x3F8) {
-      if(strcmp(name, "UI_adaptiveSetSpeedEnable") == 0) {
-        UPDATE_AND_SEND_U8(state->cruise, value, state);
-        return;
-      }
-      return;
-    }
+    // if (id == 0x3F8) {
+    //   if(strcmp(name, "UI_adaptiveSetSpeedEnable") == 0) {
+    //     UPDATE_AND_SEND_U8(state->cruise, value, state);
+    //     return;
+    //   }
+    //   return;
+    // }
   
     if (id == 0x22E) {
       if (strcmp(name, "PARK_sdiSensor12RawDistData") == 0) {

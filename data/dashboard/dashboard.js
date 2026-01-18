@@ -751,27 +751,27 @@ function updateDriveWarningBar(state) {
     let type = '';
     let text = '';
 
-    if (state.forward_collision) {
-        type = 'collision';
-        text = 'WARNING';
-    } else if (state.brake_pressed) {
-        type = 'brake';
-        text = 'BRAKE';
-    } else {
-        const autopilotMap = {
-            2: 'AVAILABLE',
-            3: 'ACTIVE_NOMINAL',
-            4: 'ACTIVE_RESTRICTED',
-            5: 'ACTIVE_NAV',
-            8: 'ABORTING',
-            9: 'ABORTED'
-        };
-        const autopilotKey = typeof state.autopilot === 'number' ? state.autopilot : parseInt(state.autopilot, 10);
-        if (autopilotMap[autopilotKey]) {
-            type = 'autopilot';
-            text = autopilotMap[autopilotKey];
-        }
-    }
+    // if (state.forward_collision) {
+    //     type = 'collision';
+    //     text = 'WARNING';
+    // } else if (state.brake_pressed) {
+    //     type = 'brake';
+    //     text = 'BRAKE';
+    // } else {
+    //     const autopilotMap = {
+    //         2: 'AVAILABLE',
+    //         3: 'ACTIVE_NOMINAL',
+    //         4: 'ACTIVE_RESTRICTED',
+    //         5: 'ACTIVE_NAV',
+    //         8: 'ABORTING',
+    //         9: 'ABORTED'
+    //     };
+    //     const autopilotKey = typeof state.autopilot === 'number' ? state.autopilot : parseInt(state.autopilot, 10);
+    //     if (autopilotMap[autopilotKey]) {
+    //         type = 'autopilot';
+    //         text = autopilotMap[autopilotKey];
+    //     }
+    // }
 
     if (!type) {
         domCache.driveWarningBar.style.display = 'none';
