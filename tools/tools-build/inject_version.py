@@ -4,7 +4,21 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 
+import os
+
 def get_version_string():
+    # Try to get the current tag
+    try:
+        tag = subprocess.check_output(
+            ["git", "describe", "--tags", "--exact-match"],
+            stderr=subprocess.STDOUT,
+            encoding="utf-8",
+        ).strip()
+        if tag:
+            return tag
+    except Exception:
+        pass
+
     try:
         now = datetime.now(timezone.utc)
         iso_weekday = now.isoweekday()  # Monday=1
@@ -26,7 +40,7 @@ def get_version_string():
     except Exception:
         weekly_count = "0"
 
-    today = datetime.utcnow().isocalendar()
+    today = datetime.now(timezone.utc).isocalendar()
     year = today[0]
     week = today[1]
 
@@ -38,6 +52,15 @@ def get_version_string():
 print(f"[version] Retrieve version")
 git_version = get_version_string()
 print(f"[version] Firmware version: {git_version}")
+
+# Export to GitHub Actions if running in CI
+if "GITHUB_OUTPUT" in os.environ:
+    with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+        f.write(f"version={git_version}\n")
+
+if "GITHUB_ENV" in os.environ:
+    with open(os.environ["GITHUB_ENV"], "a") as f:
+        f.write(f"APP_VERSION={git_version}\n")
 
 project_dir = Path(env['PROJECT_DIR'])
 header_path = project_dir / "include" / "version_auto.h"

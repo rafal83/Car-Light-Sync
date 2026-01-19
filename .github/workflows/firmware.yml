@@ -18,6 +18,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: 'recursive'
+        fetch-depth: 0
 
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -39,12 +40,13 @@ jobs:
       run: pio pkg install -e esp32c6
 
     - name: Build firmware (esp32c6)
+      id: build_firmware
       run: pio run -e esp32c6
 
     - name: Upload firmware artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: firmware
+        name: firmware-${{ env.APP_VERSION }}
         path: |
           .pio/build/esp32c6/firmware.bin
           .pio/build/esp32c6/firmware.elf
@@ -57,6 +59,7 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
+        name: Release ${{ env.APP_VERSION }}
         files: |
           .pio/build/esp32c6/firmware.bin
           .pio/build/esp32c6/bootloader.bin
