@@ -2,6 +2,8 @@
 
 WS2812 RGB LED control system synchronized to CAN bus, with web/mobile interface and OTA updates. Open source, non-profit, and community-oriented project.
 
+Video in action: https://www.youtube.com/watch?v=E1jWqWCXaEc
+
 ## ☕ Support the project
 Car Light Sync is maintained in my free time. You can help by:
 - Starring the repository and sharing the project
